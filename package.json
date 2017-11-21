@@ -1,0 +1,16 @@
+{
+  "name": "oblecto",
+  "version": "1.0.0",
+  "description": "A free and opensource media server",
+  "author": "Robin <robin@decker.cx>",
+  "private": true,
+  "scripts": {},
+  "dependencies": {
+    "async": "latest",
+    "node-tvdb": "^3.2.0",
+    "request": "latest",
+    "restify": "latest",
+    "restify-cors-middleware": "^1.0.1",
+    "sequelize": "^4.22.11"
+  }
+}

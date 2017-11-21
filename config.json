@@ -1,0 +1,25 @@
+{
+  "indexer": {
+    "concurrency": 10,
+    "runAtBoot": true
+  },
+  "tvdb": {
+    "key": ""
+  },
+  "mysql": {
+    "host": "localhost",
+    "username": "root",
+    "password": "root",
+    "database": "Oblecto"
+  },
+  "server": {
+    "port": 8080
+  },
+  "tvshows": {
+    "directories": [
+      {
+        "path": "/mnt/SMB/TV Shows/"
+      }
+    ]
+  }
+}

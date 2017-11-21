@@ -1,0 +1,4 @@
+cache/episodes/*.png
+cache/poster/*.png
+node_modules
+.idea
