@@ -8,6 +8,7 @@
   "dependencies": {
     "async": "latest",
     "node-tvdb": "^3.2.0",
+    "recursive-readdir": "^2.2.1",
     "request": "latest",
     "restify": "latest",
     "restify-cors-middleware": "^1.0.1",
