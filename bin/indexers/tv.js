@@ -65,6 +65,7 @@ class indexer {
                     task.self.episodes.create({
                         tvdbid: task.episode.id,
                         showid: task.showid,
+                        tvshowId: task.tvshowid,
 
                         episodeName: task.episode.episodeName,
 
@@ -106,33 +107,37 @@ class indexer {
                 },
                 (data, callback) => {
                     // Insert item into the database
-                    task.self.tvshow.create({
-                        tvdbid: data.id,
-                        imdbid: data.imdbId,
-                        zap2itId: data.zap2itId,
+                    task.self.tvshow
+                        .findOrCreate({where: {tvdbid: data.id}, defaults: {
+                                seriesId: data.seriesId,
+                                imdbid: data.imdbId,
+                                zap2itId: data.zap2itId,
 
-                        seriesName: data.seriesName,
-                        alias: JSON.stringify(data.aliases),
-                        genre: JSON.stringify(data.genre),
-                        seriesId: data.seriesId,
-                        status: data.status,
-                        firstAired: data.firstAired,
-                        network: data.network,
-                        runtime: data.runtime,
-                        overview: data.overview,
-                        airsDayOfWeek: data.airsDayOfWeek,
-                        airsTime: data.airsTime,
-                        rating: data.rating,
+                                seriesName: data.seriesName,
+                                alias: JSON.stringify(data.aliases),
+                                genre: JSON.stringify(data.genre),
+                                status: data.status,
+                                firstAired: data.firstAired,
+                                network: data.network,
+                                runtime: data.runtime,
+                                overview: data.overview,
+                                airsDayOfWeek: data.airsDayOfWeek,
+                                airsTime: data.airsTime,
+                                rating: data.rating,
 
-                        siteRating: data.siteRating,
-                        siteRatingCount: data.siteRatingCount,
+                                siteRating: data.siteRating,
+                                siteRatingCount: data.siteRatingCount,
 
-                        directory: task.path
-                    })
-                        .then(() => callback(null, data))
-                        .catch((err) => callback(null, data));
+                                directory: task.path
+                            }})
+                        .spread((show, created) => {
+                            callback(null, data, show.get({
+                                plain: true
+                            }))
+                        });
                 },
-                (data, callback) => {
+                (data, show, callback) => {
+                    console.log(show);
                     // Instead of scanning the directory for episode files, instead retrieve all episodes for
                     // TVDB and check if a corresponding file exists
                     task.self.tvdb.getEpisodesBySeriesId(data.id)
@@ -142,6 +147,7 @@ class indexer {
                                 task.self.episodequeue.push({
                                     episode: episode,
                                     showid: data.id,
+                                    tvshowid: show.id,
                                     path: task.path,
                                     self: task.self
                                 }, 20);

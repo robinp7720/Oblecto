@@ -23,13 +23,14 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
         acquire: 30000,
         idle: 10000
     },
-
 });
 
 // Import models for sequelize
 const tvshow = sequelize.import(__dirname + "/models/tvshow.js");
 const episode = sequelize.import(__dirname + "/models/episode.js");
 const user = sequelize.import(__dirname + "/models/user.js");
+
+episode.belongsTo(tvshow);
 
 TVShowIndexer = new TvIndexer(config, tvshow, episode, tvdb);
 
@@ -94,6 +95,7 @@ server.use(restify.plugins.bodyParser({ mapParams: true }));
 
 // User interactions
 server.post('/auth/login', function (req, res, next) {
+    // TODO: Implement password hashing
     user.findOne({where: {username: req.params.username}}).then(user => {
         require('crypto').randomBytes(48, function(err, buffer) {
             var token = buffer.toString('hex');
@@ -133,13 +135,23 @@ server.get('/shows/recent', requiresAuth, function (req, res, next) {
         order: [
             ['createdAt', 'DESC']
         ],
-        limit: 30
     })
         .then((results) => res.send(results));
 });
 
 server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next) {
     tvshow.findAll({
+        order: [
+            [req.params.sorting, req.params.order]
+        ],
+        limit: 30
+    })
+        .then((results) => res.send(results));
+});
+
+server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
+    episode.findAll({
+        include: [ tvshow ],
         order: [
             [req.params.sorting, req.params.order]
         ],
@@ -159,6 +171,7 @@ server.get('/series/:id/info', requiresAuth, function (req, res, next) {
 server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     // search for attributes
     episode.findAll({
+        include: [ tvshow ],
         where: {showid: req.params.id},
         order: [
             ['airedSeason', 'ASC'],
