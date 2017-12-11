@@ -13,6 +13,8 @@ const Op = Sequelize.Op;
 const tvdb = new TVDB(config.tvdb.key);
 const TvIndexer = require('./bin/indexers/tv');
 
+const jwt = require('jsonwebtoken');
+
 const sequelize = new Sequelize(config.mysql.database, config.mysql.username, config.mysql.password, {
     host: config.mysql.host,
     dialect: 'mysql',
@@ -68,11 +70,12 @@ const server = restify.createServer();
 const requiresAuth = function(req, res, next) {
     if (req.authorization === undefined)
         return next(false);
-    user.findOne({where: {access_token: req.authorization.credentials}}).then(user => {
-        if (user === null)
+
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+        if (err)
             return next(false);
         next();
-    })
+    });
 };
 
 
@@ -96,26 +99,26 @@ server.use(restify.plugins.bodyParser({ mapParams: true }));
 // User interactions
 server.post('/auth/login', function (req, res, next) {
     // TODO: Implement password hashing
-    user.findOne({where: {username: req.params.username}}).then(user => {
-        require('crypto').randomBytes(48, function(err, buffer) {
-            var token = buffer.toString('hex');
-            user.set("access_token", token).save();
-            res.send(user);
-            next();
-        });
+    user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email']}).then(user => {
+        let token = jwt.sign(user.toJSON(), config.authentication.secret);
+        //user.set("access_token", token).save();
+        user['access_token'] = token;
+        res.send(user);
+        next();
     })
 });
 
 server.get('/auth/isAuthenticated', function (req, res, next) {
     if (req.authorization === undefined)
-        res.send([false]);
-    user.findOne({where: {access_token: req.authorization.credentials}}).then(user => {
-        if (user === null)
+        return res.send([false]);
+
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+        if (err)
             res.send([false]);
         else
             res.send([true]);
         next();
-    })
+    });
 });
 
 // Show retrieval
