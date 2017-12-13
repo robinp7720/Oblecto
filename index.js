@@ -1,6 +1,6 @@
 const config = require('./config.json');
 
-const socketio    = require("socket.io");
+const socketio = require("socket.io");
 
 const restify = require('restify'),
     request = require("request"),
@@ -16,6 +16,10 @@ const tvdb = new TVDB(config.tvdb.key);
 const TvIndexer = require('./bin/indexers/tv');
 
 const jwt = require('jsonwebtoken');
+
+// Load Oblecto submodules
+const zeroconf = require('./submodules/zeroconf');
+zeroconf.start(config.server.port);
 
 const sequelize = new Sequelize(config.mysql.database, config.mysql.username, config.mysql.password, {
     host: config.mysql.host,
@@ -70,11 +74,11 @@ async.series([
 // Initialize REST based server
 const server = restify.createServer();
 
-const requiresAuth = function(req, res, next) {
+const requiresAuth = function (req, res, next) {
     if (req.authorization === undefined)
         return next(false);
 
-    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function (err, decoded) {
         if (err)
             return next(false);
         next();
@@ -92,16 +96,16 @@ const cors = corsMiddleware({
 server.pre(cors.preflight);
 server.use(cors.actual);
 server.use(restify.plugins.authorizationParser());
-server.use(restify.plugins.bodyParser({ mapParams: true }));
+server.use(restify.plugins.bodyParser({mapParams: true}));
 
 // Temporary storage for high volume user information
 let UserStorage = [];
 
-server.use( function (req, res, next) {
+server.use(function (req, res, next) {
     if (req.authorization === undefined)
         return next();
 
-    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function (err, decoded) {
         if (err)
             return next();
         req.authorization.jwt = decoded;
@@ -128,7 +132,7 @@ server.get('/auth/isAuthenticated', function (req, res, next) {
     if (req.authorization === undefined)
         return res.send([false]);
 
-    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function (err, decoded) {
         if (err)
             res.send([false]);
         else
@@ -170,7 +174,7 @@ server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next
 
 server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
     episode.findAll({
-        include: [ tvshow ],
+        include: [tvshow],
         order: [
             [req.params.sorting, req.params.order]
         ],
@@ -190,7 +194,7 @@ server.get('/series/:id/info', requiresAuth, function (req, res, next) {
 server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     // search for attributes
     episode.findAll({
-        include: [ tvshow ],
+        include: [tvshow],
         where: {showid: req.params.id},
         order: [
             ['airedSeason', 'ASC'],
@@ -360,7 +364,7 @@ io.on('connection', function (socket) {
     clients[socket.id] = socket;
 
     socket.on('authenticate', function (msg) {
-        jwt.verify(msg.token, config.authentication.secret, function(err, decoded) {
+        jwt.verify(msg.token, config.authentication.secret, function (err, decoded) {
             if (err)
                 return false;
             socket.authentication = decoded;

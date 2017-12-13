@@ -14,6 +14,8 @@
     "request": "latest",
     "restify": "latest",
     "restify-cors-middleware": "^1.0.1",
-    "sequelize": "^4.22.11"
+    "sequelize": "^4.22.11",
+    "socketio": "^4.5.0",
+    "mdns": "latest"
   }
 }
