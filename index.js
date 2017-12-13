@@ -1,5 +1,7 @@
 const config = require('./config.json');
 
+const socketio    = require("socket.io");
+
 const restify = require('restify'),
     request = require("request"),
     async = require('async'),
@@ -18,6 +20,7 @@ const jwt = require('jsonwebtoken');
 const sequelize = new Sequelize(config.mysql.database, config.mysql.username, config.mysql.password, {
     host: config.mysql.host,
     dialect: 'mysql',
+    logging: false,
 
     pool: {
         max: 5,
@@ -78,7 +81,6 @@ const requiresAuth = function(req, res, next) {
     });
 };
 
-
 // Allow remote clients to connect to the backend
 const cors = corsMiddleware({
     preflightMaxAge: 5, //Optional
@@ -87,21 +89,35 @@ const cors = corsMiddleware({
     exposeHeaders: ['API-Token-Expiry']
 });
 
-
 server.pre(cors.preflight);
 server.use(cors.actual);
-
 server.use(restify.plugins.authorizationParser());
-
-
 server.use(restify.plugins.bodyParser({ mapParams: true }));
+
+// Temporary storage for high volume user information
+let UserStorage = [];
+
+server.use( function (req, res, next) {
+    if (req.authorization === undefined)
+        return next();
+
+    jwt.verify(req.authorization.credentials, config.authentication.secret, function(err, decoded) {
+        if (err)
+            return next();
+        req.authorization.jwt = decoded;
+
+        if (!UserStorage[decoded.username])
+            UserStorage[decoded.username] = {};
+
+        next();
+    });
+});
 
 // User interactions
 server.post('/auth/login', function (req, res, next) {
     // TODO: Implement password hashing
     user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email']}).then(user => {
         let token = jwt.sign(user.toJSON(), config.authentication.secret);
-        //user.set("access_token", token).save();
         user['access_token'] = token;
         res.send(user);
         next();
@@ -287,6 +303,13 @@ server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
     episode.findOne({
         where: {tvdbid: req.params.id},
     }).then(episode => {
+        console.log("test", req.authorization.jwt, UserStorage[req.authorization.jwt.username][episode.tvdbid]);
+
+        episode = episode.toJSON();
+
+        if (UserStorage[req.authorization.jwt.username][episode.tvdbid])
+            episode.watchTime = UserStorage[req.authorization.jwt.username][episode.tvdbid].time;
+
         res.send(episode);
     })
 });
@@ -323,6 +346,35 @@ server.get('/episode/:id/next', requiresAuth, function (req, res, next) {
     })
 });
 
+// Socket connection
+let clients = [];
+
+let io = socketio.listen(server.server, {
+    log: false,
+    agent: false,
+    origins: '*:*',
+    transports: ['websocket', 'polling']
+});
+
+io.on('connection', function (socket) {
+    clients[socket.id] = socket;
+
+    socket.on('authenticate', function (msg) {
+        jwt.verify(msg.token, config.authentication.secret, function(err, decoded) {
+            if (err)
+                return false;
+            socket.authentication = decoded;
+        });
+    });
+
+    socket.on('playing', function (msg) {
+        if (!socket.authentication)
+            return false;
+        if (msg.time && msg.time > 0)
+            UserStorage[socket.authentication.username][msg.tvshow] = msg;
+    })
+});
+// Start restify server
 server.listen(config.server.port, function () {
     console.log('%s listening at %s', server.name, server.url);
 });
