@@ -8,6 +8,7 @@
   "dependencies": {
     "async": "latest",
     "jsonwebtoken": "^8.1.0",
+    "mdns": "latest",
     "mysql2": "^1.5.1",
     "node-tvdb": "^3.2.0",
     "recursive-readdir": "^2.2.1",
@@ -15,7 +16,6 @@
     "restify": "latest",
     "restify-cors-middleware": "^1.0.1",
     "sequelize": "^4.22.11",
-    "socketio": "^4.5.0",
-    "mdns": "latest"
+    "socket.io": "^2.0.4"
   }
 }
