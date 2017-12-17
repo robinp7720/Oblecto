@@ -152,15 +152,6 @@ server.get('/search/:name', requiresAuth, function (req, res, next) {
         .then((results) => res.send(results));
 });
 
-server.get('/shows/recent', requiresAuth, function (req, res, next) {
-    tvshow.findAll({
-        order: [
-            ['createdAt', 'DESC']
-        ],
-    })
-        .then((results) => res.send(results));
-});
-
 server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next) {
     tvshow.findAll({
         order: [
