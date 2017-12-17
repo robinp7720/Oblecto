@@ -140,6 +140,14 @@ server.get('/auth/isAuthenticated', function (req, res, next) {
     });
 });
 
+// Maintenance tasks
+server.get('/maintenance/reindex', requiresAuth, function (req, res, next) {
+    res.send([true]);
+    TVShowIndexer.indexAll(() => {
+
+    });
+});
+
 // Show retrieval
 server.get('/search/:name', requiresAuth, function (req, res, next) {
     tvshow.findAll({
