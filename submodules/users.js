@@ -7,6 +7,11 @@ var users = {
     userConnected: (socket) => {
         socket.on('authenticate', (data) => users.userAuthenticate(socket, data));
         socket.on('playing', (data) => users.trackProgress(socket, data));
+
+        socket.on('disconnect', () => {
+            if (socket.authentication)
+                users.userRemove(socket.authentication);
+        })
     },
 
     userAuthenticate: (socket, data) => {
@@ -21,6 +26,13 @@ var users = {
 
             socket.authentication = decoded;
         });
+    },
+
+    userRemove: (authentication) => {
+        if (!users.users[authentication.username])
+            return false;
+
+        delete users.users[authentication.username];
     },
 
     userAdd: (authentication) => {
