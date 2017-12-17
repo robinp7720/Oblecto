@@ -67,6 +67,15 @@ var users = {
 
     getSavedProgress: (username, tvdbid) => {
         return users.users[username]['storage'][tvdbid]
+    },
+
+    // Function to send a message to all users
+    sendToAll: (channel, message) => {
+        async.each(users.users, (user) => {
+            user.socket.emit(channel, message)
+        }, () => {
+
+        });
     }
 };
 
