@@ -10,6 +10,8 @@ const restify = require('restify'),
     fs = require('fs'),
     corsMiddleware = require('restify-cors-middleware');
 
+const databases = require('./submodules/database');
+
 const Op = Sequelize.Op;
 
 const tvdb = new TVDB(config.tvdb.key);
@@ -22,56 +24,12 @@ const zeroconf = require('./submodules/zeroconf');
 zeroconf.start(config.server.port);
 const UserManager = require('./submodules/users');
 
+TVShowIndexer = new TvIndexer(config, databases.tvshow, databases.episode, tvdb);
 
-const sequelize = new Sequelize(config.mysql.database, config.mysql.username, config.mysql.password, {
-    host: config.mysql.host,
-    dialect: 'mysql',
-    logging: false,
-
-    pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-    },
-});
-
-// Import models for sequelize
-const tvshow = sequelize.import(__dirname + "/models/tvshow.js");
-const episode = sequelize.import(__dirname + "/models/episode.js");
-const user = sequelize.import(__dirname + "/models/user.js");
-
-episode.belongsTo(tvshow);
-
-TVShowIndexer = new TvIndexer(config, tvshow, episode, tvdb);
-
-async.series([
-    (callback) => {
-        sequelize
-            .authenticate()
-            .then(callback)
-            .catch((err) => {
-                console.log(err);
-            });
-
-    },
-    (callback) => {
-        tvshow.sync().then(() => callback());
-    },
-    (callback) => {
-        episode.sync().then(() => callback());
-    },
-    (callback) => {
-        user.sync().then(() => callback());
-    },
-    (callback) => {
-        if (config.indexer.runAtBoot)
-            return TVShowIndexer.indexAll(callback);
-        return callback();
-    }
-], (err) => {
-
-});
+if (config.indexer.runAtBoot)
+    TVShowIndexer.indexAll(() => {
+        console.log("Initial index complete");
+    });
 
 // Initialize REST based server
 const server = restify.createServer();
@@ -119,7 +77,7 @@ server.use(function (req, res, next) {
 // User interactions
 server.post('/auth/login', function (req, res, next) {
     // TODO: Implement password hashing
-    user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email']}).then(user => {
+    databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email']}).then(user => {
         let token = jwt.sign(user.toJSON(), config.authentication.secret);
         user['access_token'] = token;
         res.send(user);
@@ -150,7 +108,7 @@ server.get('/maintenance/reindex', requiresAuth, function (req, res, next) {
 
 // Show retrieval
 server.get('/search/:name', requiresAuth, function (req, res, next) {
-    tvshow.findAll({
+    databases.tvshow.findAll({
         where: {
             seriesName: {
                 [Op.like]: "%" + req.params.name + "%"
@@ -161,7 +119,7 @@ server.get('/search/:name', requiresAuth, function (req, res, next) {
 });
 
 server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next) {
-    tvshow.findAll({
+    databases.tvshow.findAll({
         order: [
             [req.params.sorting, req.params.order]
         ],
@@ -171,8 +129,8 @@ server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next
 });
 
 server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
-    episode.findAll({
-        include: [tvshow],
+    databases.episode.findAll({
+        include: [databases.tvshow],
         order: [
             [req.params.sorting, req.params.order]
         ],
@@ -183,7 +141,7 @@ server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, n
 
 server.get('/series/:id/info', requiresAuth, function (req, res, next) {
     // search for attributes
-    tvshow.findOne({where: {tvdbid: req.params.id}}).then(show => {
+    databases.tvshow.findOne({where: {tvdbid: req.params.id}}).then(show => {
         show.genre = JSON.parse(show.genre);
         res.send(show)
     })
@@ -191,8 +149,8 @@ server.get('/series/:id/info', requiresAuth, function (req, res, next) {
 
 server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     // search for attributes
-    episode.findAll({
-        include: [tvshow],
+    databases.episode.findAll({
+        include: [databases.tvshow],
         where: {showid: req.params.id},
         order: [
             ['airedSeason', 'ASC'],
@@ -263,7 +221,7 @@ server.get('/episode/:name/image.png', function (req, res, next) {
 
 server.get('/episode/:id/play', function (req, res, next) {
     // search for attributes
-    episode.findOne({
+    databases.episode.findOne({
         where: {tvdbid: req.params.id},
     }).then(episode => {
         let path = episode.file;
@@ -302,7 +260,7 @@ server.get('/episode/:id/play', function (req, res, next) {
 
 server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
     // search for attributes
-    episode.findOne({
+    databases.episode.findOne({
         where: {tvdbid: req.params.id},
     }).then(episode => {
         episode = episode.toJSON();
@@ -316,7 +274,7 @@ server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
 
 server.get('/episode/:id/next', requiresAuth, function (req, res, next) {
     // search for attributes
-    episode.findOne({
+    databases.episode.findOne({
         where: {tvdbid: req.params.id},
     }).then(results => {
         episode.findOne({
