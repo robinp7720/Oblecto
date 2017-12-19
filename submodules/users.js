@@ -51,11 +51,20 @@ var users = {
         };
 
         // Load the progress of the newly added user
-        users.loadProgress(authentication.username);
+        users.loadProgress(authentication);
     },
 
-    loadProgress: (username) => {
-
+    loadProgress: (authentication) => {
+        databases.track.findAll({ where: { userId: authentication.id } }).then(tracks => {
+            tracks.forEach((v) => {
+                let item = v.toJSON();
+                users.users[authentication.username].storage[item.tvshowId] = {
+                    time: item.time,
+                    progress: item.progress,
+                    tvshow: item.tvshowId
+                }
+            })
+        })
     },
 
 
@@ -71,6 +80,9 @@ var users = {
     saveUserProgress: (username, callback) => {
         let userInfo = users.users[username];
         let storage = userInfo.storage;
+
+        if (!userInfo.socket)
+            return false;
 
         async.each(storage,
             (show, callback) => {
@@ -98,12 +110,12 @@ var users = {
     saveAllUserProgress: (callback) => async.each(Object.keys(users.users), users.saveUserProgress, callback),
 
     // Method to check if a certain user has save progress in a show
-    hasSavedProgress: (username, tvdbid) => {
-        return users.users[username]['storage'][tvdbid] !== undefined
+    hasSavedProgress: (username, tvid) => {
+        return users.users[username]['storage'][tvid] !== undefined
     },
 
-    getSavedProgress: (username, tvdbid) => {
-        return users.users[username]['storage'][tvdbid]
+    getSavedProgress: (username, tvid) => {
+        return users.users[username]['storage'][tvid]
     },
 
     // Function to send a message to all users
