@@ -265,8 +265,8 @@ server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
     }).then(episode => {
         episode = episode.toJSON();
 
-        if (UserManager.hasSavedProgress(req.authorization.jwt.username, episode.tvshowId))
-            episode.watchTime = UserManager.getSavedProgress(req.authorization.jwt.username, episode.tvshowId).time;
+        if (UserManager.hasSavedProgress(req.authorization.jwt.username, episode.id))
+            episode.watchTime = UserManager.getSavedProgress(req.authorization.jwt.username, episode.id).time;
 
         res.send(episode);
     })

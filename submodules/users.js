@@ -58,10 +58,11 @@ var users = {
         databases.track.findAll({ where: { userId: authentication.id } }).then(tracks => {
             tracks.forEach((v) => {
                 let item = v.toJSON();
-                users.users[authentication.username].storage[item.tvshowId] = {
+                users.users[authentication.username].storage[item.episodeId] = {
                     time: item.time,
                     progress: item.progress,
-                    tvshow: item.tvshowId
+                    tvshow: item.tvshowId,
+                    episode: item.episodeId
                 }
             })
         })
@@ -73,7 +74,7 @@ var users = {
         if (!socket.authentication)
             return false;
         if (data.time && data.time > 0)
-            users.users[socket.authentication.username]['storage'][data.tvshow] = data;
+            users.users[socket.authentication.username]['storage'][data.episode] = data;
     },
 
     // Save the temporary storage of a show into the MySQL database
@@ -89,7 +90,7 @@ var users = {
                 databases.track.findOrCreate({
                     where: {
                         userId: userInfo.socket.authentication.id,
-                        tvshowId: show.tvshow
+                        episodeId: show.episode
                     },
                     defaults: {
                         time: show.time,

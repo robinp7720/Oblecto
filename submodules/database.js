@@ -25,7 +25,7 @@ const track = sequelize.import(__dirname + "/../models/track.js");
 episode.belongsTo(tvshow);
 
 track.belongsTo(user);
-track.belongsTo(tvshow);
+track.belongsTo(episode);
 
 async.series([
     (callback) => {
