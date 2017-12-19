@@ -304,6 +304,30 @@ server.get('/episode/:id/next', requiresAuth, function (req, res, next) {
     })
 });
 
+
+server.get('/watching', requiresAuth, function (req, res, next) {
+    // search for attributes
+    databases.track.findAll({
+        include: [
+            {
+                model: databases.episode,
+                include: [databases.tvshow]
+            }
+        ],
+        where: {
+            userId: req.authorization.jwt.id,
+            progress: {[Op.lt]: 0.9}
+        },
+        order: [
+            ['updatedAt', 'DESC'],
+        ],
+    }).then(episodes => {
+        res.send(episodes.map((episode)=> {
+            return episode.episode.toJSON();
+        }))
+    })
+});
+
 // Socket connection
 let io = socketio.listen(server.server, {
     log: false,
