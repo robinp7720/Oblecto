@@ -15,7 +15,7 @@ var users = {
 
         socket.on('disconnect', () => {
             if (socket.authentication)
-                users.userRemove(socket.authentication);
+                users.socketDisconnect(socket);
         })
     },
 
@@ -24,30 +24,42 @@ var users = {
             if (err)
                 return false;
 
-            console.log(decoded);
-
             // Add user first into memory if the user isn't there
             users.userAdd(decoded);
 
-            users.users[decoded.username].socket = socket;
+            // Save socket to user storage
+            users.users[decoded.username].sockets[socket.id] = socket;
 
+            // Add decoded jwt token to socket
             socket.authentication = decoded;
         });
     },
 
-    userRemove: (authentication) => {
-        if (!users.users[authentication.username])
+    socketDisconnect: (socket) => {
+        // Ignore if the socket wasn't authenticated
+        if (!socket.authentication)
             return false;
 
-        delete users.users[authentication.username];
+        if (!users.users[socket.authentication.username])
+            return false;
+
+        // Remove the socket from the user
+        delete users.users[socket.authentication.username].sockets[socket.id];
+
+        // If there are no open sockets for the user, delete the user entity
+        if (users.users[socket.authentication.username].sockets.length < 1)
+            delete users.users[authentication.username]
     },
 
     userAdd: (authentication) => {
+        // Return if the user already exists to avoid overwriting an exist user session
         if (users.users[authentication.username])
             return false;
 
         users.users[authentication.username] = {
-            storage: {}
+            storage: {},
+            sockets: {},
+            id: authentication.id
         };
 
         // Load the progress of the newly added user
@@ -73,6 +85,7 @@ var users = {
     trackProgress: (socket, data) => {
         if (!socket.authentication)
             return false;
+
         if (data.time && data.time > 0)
             users.users[socket.authentication.username]['storage'][data.episode] = data;
     },
@@ -82,14 +95,11 @@ var users = {
         let userInfo = users.users[username];
         let storage = userInfo.storage;
 
-        if (!userInfo.socket)
-            return false;
-
         async.each(storage,
             (show, callback) => {
                 databases.track.findOrCreate({
                     where: {
-                        userId: userInfo.socket.authentication.id,
+                        userId: userInfo.id,
                         episodeId: show.episode
                     },
                     defaults: {
