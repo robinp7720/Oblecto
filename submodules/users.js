@@ -1,5 +1,10 @@
 const jwt = require('jsonwebtoken');
+const async = require('async');
+
 const config = require('../config.json');
+
+const databases = require('./database');
+
 
 var users = {
     users: {},
@@ -18,6 +23,8 @@ var users = {
         jwt.verify(data.token, config.authentication.secret, function (err, decoded) {
             if (err)
                 return false;
+
+            console.log(decoded);
 
             // Add user first into memory if the user isn't there
             users.userAdd(decoded);
@@ -59,6 +66,36 @@ var users = {
         if (data.time && data.time > 0)
             users.users[socket.authentication.username]['storage'][data.tvshow] = data;
     },
+
+    // Save the temporary storage of a show into the MySQL database
+    saveUserProgress: (username, callback) => {
+        let userInfo = users.users[username];
+        let storage = userInfo.storage;
+
+        async.each(storage,
+            (show, callback) => {
+                databases.track.findOrCreate({
+                    where: {
+                        userId: userInfo.socket.authentication.id,
+                        tvshowId: show.tvshow
+                    },
+                    defaults: {
+                        time: show.time,
+                        progress: show.progress
+                    }
+                }).spread((item, created) => {
+                    item.updateAttributes({
+                        time: show.time,
+                        progress: show.progress
+                    });
+
+                    callback();
+                })
+            }, callback)
+    },
+
+    // Run saveUserProgress on all keys in the users array
+    saveAllUserProgress: (callback) => async.each(Object.keys(users.users), users.saveUserProgress, callback),
 
     // Method to check if a certain user has save progress in a show
     hasSavedProgress: (username, tvdbid) => {

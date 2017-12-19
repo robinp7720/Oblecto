@@ -77,7 +77,7 @@ server.use(function (req, res, next) {
 // User interactions
 server.post('/auth/login', function (req, res, next) {
     // TODO: Implement password hashing
-    databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email']}).then(user => {
+    databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email', 'id']}).then(user => {
         let token = jwt.sign(user.toJSON(), config.authentication.secret);
         user['access_token'] = token;
         res.send(user);
@@ -277,7 +277,7 @@ server.get('/episode/:id/next', requiresAuth, function (req, res, next) {
     databases.episode.findOne({
         where: {tvdbid: req.params.id},
     }).then(results => {
-        episode.findOne({
+        databases.episode.findOne({
             where: {
                 showid: results.showid,
                 [Op.or]: [
@@ -318,3 +318,13 @@ io.on('connection', UserManager.userConnected);
 server.listen(config.server.port, function () {
     console.log('%s listening at %s', server.name, server.url);
 });
+
+
+// Periodically save the user storage to the database
+setInterval(() => {
+    UserManager.saveAllUserProgress(() => {
+        console.log('User progress save');
+    })
+}, 2000);
+
+
