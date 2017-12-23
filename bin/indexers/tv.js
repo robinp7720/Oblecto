@@ -1,6 +1,7 @@
 const async = require("async"),
     fs = require("fs"),
-    recursive = require("recursive-readdir");
+    recursive = require("recursive-readdir"),
+    path = require("path");
 
 class indexer {
     constructor(config, tvshows, episodes, tvdb) {
@@ -131,13 +132,17 @@ class indexer {
                                 directory: task.path
                             }})
                         .spread((show, created) => {
+                            if (created)
+                                console.log(show.seriesName, 'added to database');
+                            else
+                                console.log(show.seriesName, 'was already in the database')
+
                             callback(null, data, show.get({
                                 plain: true
                             }))
                         });
                 },
                 (data, show, callback) => {
-                    console.log(show);
                     // Instead of scanning the directory for episode files, instead retrieve all episodes for
                     // TVDB and check if a corresponding file exists
                     task.self.tvdb.getEpisodesBySeriesId(data.id)
@@ -162,23 +167,27 @@ class indexer {
                 callback();
             });
         }, config.indexer.concurrency);
-    }
+    };
+
+    indexShow(directory) {
+        let self = this;
+
+        self.showqueue.push({
+            path: directory,
+            name: path.basename(directory),
+            self: self
+        }, 20);
+    };
 
     index(directory, callback) {
         let self = this;
 
-        fs.readdir(directory.path, (err, files) => {
+        fs.readdir(directory, (err, files) => {
             if (err)
                 return callback(err);
-
             async.each(files, (file, callback) => {
                 // Add file to the queue
-                self.showqueue.push({
-                    path: directory.path + file,
-                    name: file,
-                    self: self
-                }, 20);
-
+                self.indexShow(directory + file, callback);
                 callback();
             }, callback);
         })
@@ -187,7 +196,7 @@ class indexer {
     indexAll(callback) {
         // Index all the directories specified in the config file
         async.each(this.config.tvshows.directories, (directory, callback) => {
-            this.index(directory, callback)
+            this.index(directory.path, callback)
         }, callback);
     };
 }

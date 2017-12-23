@@ -148,6 +148,16 @@ server.get('/series/:id/info', requiresAuth, function (req, res, next) {
     })
 });
 
+server.get('/series/:id/index', requiresAuth, function (req, res, next) {
+    databases.tvshow.findById(req.params.id).then(show => {
+        TVShowIndexer.indexShow(show.directory, () => {
+
+        });
+
+        res.send([true])
+    })
+});
+
 server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     // search for attributes
     databases.episode.findAll({
