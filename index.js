@@ -8,7 +8,8 @@ const restify = require('restify'),
     TVDB = require('node-tvdb'),
     Sequelize = require('sequelize'),
     fs = require('fs'),
-    corsMiddleware = require('restify-cors-middleware');
+    corsMiddleware = require('restify-cors-middleware'),
+    path = require('path');
 
 const databases = require('./submodules/database');
 
@@ -141,7 +142,7 @@ server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, n
 
 server.get('/series/:id/info', requiresAuth, function (req, res, next) {
     // search for attributes
-    databases.tvshow.findOne({where: {tvdbid: req.params.id}}).then(show => {
+    databases.tvshow.findById(req.params.id).then(show => {
         show.genre = JSON.parse(show.genre);
         res.send(show)
     })
@@ -151,7 +152,7 @@ server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     // search for attributes
     databases.episode.findAll({
         include: [databases.tvshow],
-        where: {showid: req.params.id},
+        where: {tvshowId: req.params.id},
         order: [
             ['airedSeason', 'ASC'],
             ['airedEpisodeNumber', 'ASC']
@@ -161,69 +162,87 @@ server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
     })
 });
 
-server.get('/series/:name/poster', function (req, res, next) {
-    fs.exists('cache/poster/' + req.params.name + '.png', function (exists) {
-        if (exists) {
-            fs.createReadStream('cache/poster/' + req.params.name + '.png').pipe(res)
-        } else {
-            tvdb.getSeriesPosters(req.params.name)
-                .then(function (data) {
-                    console.log("Downloading poster image for", req.params.name, "http://thetvdb.com/banners/" + data[0].fileName);
-                    request.get({
-                        uri: "http://thetvdb.com/banners/" + data[0].fileName,
-                        encoding: null
-                    }, function (err, response, body) {
-                        fs.writeFile('cache/poster/' + req.params.name + '.png', body, function (error) {
-                            if (!error)
-                                console.log("Poster downloaded for", req.params.name);
-                        });
-                        res.contentType = 'image/png';
-                        res.send(body);
-                        next()
+server.get('/series/:id/poster', function (req, res, next) {
+    databases.tvshow.findById(req.params.id).then(show => {
+        let showPath = show.directory;
+        let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
+
+        // Check if the poster image already exits
+        fs.exists(posterPath, function (exists) {
+            if (exists) {
+                // If the image exits, simply pipe it to the client
+                fs.createReadStream(posterPath).pipe(res)
+            } else {
+                // If it doesn't exist, download a new one and snd it to the client
+                tvdb.getSeriesPosters(show.tvdbid)
+                    .then(function (data) {
+                        console.log("Downloading poster image for", show.seriesName, "http://thetvdb.com/banners/" + data[0].fileName);
+                        request.get({
+                            uri: "http://thetvdb.com/banners/" + data[0].fileName,
+                            encoding: null
+                        }, function (err, response, body) {
+                            fs.writeFile(posterPath, body, function (error) {
+                                if (!error)
+                                    console.log("Poster downloaded for", show.seriesName);
+                            });
+                            res.contentType = 'image/jpeg';
+                            res.send(body);
+                            next()
+                        })
                     })
-                })
-                .catch(function (error) {
-                    res.send("");
-                    next();
-                })
-        }
+                    .catch(function (error) {
+                        res.send("");
+                        next();
+                    })
+            }
+        });
     });
 });
 
 
-server.get('/episode/:name/image.png', function (req, res, next) {
-    fs.exists('cache/episodes/' + req.params.name + '.png', function (exists) {
-        if (exists) {
-            fs.createReadStream('cache/episodes/' + req.params.name + '.png').pipe(res)
-        } else {
-            tvdb.getEpisodeById(req.params.name)
-                .then(function (data) {
-                    request.get({
-                        uri: "https://thetvdb.com/banners/_cache/" + data.filename,
-                        encoding: null
-                    }, function (err, response, body) {
-                        fs.writeFile('cache/episodes/' + req.params.name + '.png', body, function (error) {
-                            if (!error)
-                                console.log("Image downloaded for", req.params.name);
-                        });
-                        res.contentType = 'image/png';
-                        res.send(body);
-                        next()
+server.get('/episode/:id/image.png', function (req, res, next) {
+    // Get episode data
+    databases.episode.findById(req.params.id).then(episode => {
+        let episodePath = episode.file;
+
+        // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+        let thumbnailPath = episodePath.replace(path.extname(episodePath), "-thumb.jpg");
+
+        // Check if the thumbnail exists
+        fs.exists(thumbnailPath, function (exists) {
+            if (exists) {
+                // If the thumbnail exists, simply pipe that to the client
+                fs.createReadStream(thumbnailPath).pipe(res)
+            } else {
+                // If no thumbnail was found, download one from thetvdb
+                tvdb.getEpisodeById(episode.tvdbid)
+                    .then(function (data) {
+                        request.get({
+                            uri: "https://thetvdb.com/banners/_cache/" + data.filename,
+                            encoding: null
+                        }, function (err, response, body) {
+                            fs.writeFile(thumbnailPath, body, function (error) {
+                                if (!error)
+                                    console.log("Image downloaded for", episode.episodeName);
+                            });
+                            res.contentType = 'image/jpeg';
+                            res.send(body);
+                            next()
+                        })
                     })
-                })
-                .catch(function (error) {
-                    res.send(error);
-                    next();
-                })
-        }
+                    .catch(function (error) {
+                        res.send(error);
+                        next();
+                    })
+            }
+        });
     });
+
 });
 
 server.get('/episode/:id/play', function (req, res, next) {
     // search for attributes
-    databases.episode.findOne({
-        where: {tvdbid: req.params.id},
-    }).then(episode => {
+    databases.episode.findById(req.params.id).then(episode => {
         let path = episode.file;
         var stat = fs.statSync(path);
         var total = stat.size;
@@ -260,9 +279,7 @@ server.get('/episode/:id/play', function (req, res, next) {
 
 server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
     // search for attributes
-    databases.episode.findOne({
-        where: {tvdbid: req.params.id},
-    }).then(episode => {
+    databases.episode.findById(req.params.id).then(episode => {
         episode = episode.toJSON();
 
         if (UserManager.hasSavedProgress(req.authorization.jwt.username, episode.id))
@@ -274,9 +291,7 @@ server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
 
 server.get('/episode/:id/next', requiresAuth, function (req, res, next) {
     // search for attributes
-    databases.episode.findOne({
-        where: {tvdbid: req.params.id},
-    }).then(results => {
+    databases.episode.findById(req.params.id).then(results => {
         databases.episode.findOne({
             where: {
                 showid: results.showid,
