@@ -57,7 +57,10 @@ var users = {
             return false;
 
         users.users[authentication.username] = {
-            storage: {},
+            storage: {
+                tv: {},
+                movies: {}
+            },
             sockets: {},
             id: authentication.id
         };
@@ -67,14 +70,15 @@ var users = {
     },
 
     loadProgress: (authentication) => {
+        // Load progress for TV shows
         databases.track.findAll({ where: { userId: authentication.id } }).then(tracks => {
             tracks.forEach((v) => {
                 let item = v.toJSON();
-                users.users[authentication.username].storage[item.episodeId] = {
+                users.users[authentication.username].storage['tv'][item.episodeId] = {
                     time: item.time,
                     progress: item.progress,
-                    tvshow: item.tvshowId,
-                    episode: item.episodeId
+                    tvshowId: item.tvshowId,
+                    episodeId: item.episodeId
                 }
             })
         })
@@ -83,11 +87,34 @@ var users = {
 
     // Save progress of a user to memory
     trackProgress: (socket, data) => {
+        // Return if the user is not authenticated
         if (!socket.authentication)
             return false;
 
-        if (data.time && data.time > 0)
-            users.users[socket.authentication.username]['storage'][data.episode] = data;
+        // Return if the type is not defined
+        if (data.type === undefined)
+            return false;
+
+        // Return if the time is not defined or if the time is 0 as this generally means that the video has not yet been loaded
+        if (data.time === undefined || data.time === 0)
+            return false;
+
+        // If the item is a tv show episode, store it in the tv show temp storage of the user
+        if (data.type === 'tv')
+            return users.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
+                time: data.time,
+                progress: data.progress,
+                tvshowId: data.tvshowId,
+                episodeId: data.episodeId
+            };
+
+        // If the item is a movie, store it in the movie temp storage of the user
+        if (data.type === 'movie')
+            return users.users[socket.authentication.username]['movie'][data.movieId] = {
+                time: data.time,
+                progress: data.progress,
+                movieId: data.movieId
+            };
     },
 
     // Save the temporary storage of a show into the MySQL database
@@ -95,12 +122,12 @@ var users = {
         let userInfo = users.users[username];
         let storage = userInfo.storage;
 
-        async.each(storage,
+        async.each(storage['tv'],
             (show, callback) => {
                 databases.track.findOrCreate({
                     where: {
                         userId: userInfo.id,
-                        episodeId: show.episode
+                        episodeId: show.episodeId
                     },
                     defaults: {
                         time: show.time,
@@ -121,12 +148,12 @@ var users = {
     saveAllUserProgress: (callback) => async.each(Object.keys(users.users), users.saveUserProgress, callback),
 
     // Method to check if a certain user has save progress in a show
-    hasSavedProgress: (username, tvid) => {
-        return users.users[username]['storage'][tvid] !== undefined
+    hasSavedProgress: (username, episodeId) => {
+        return users.users[username]['storage']['tv'][episodeId] !== undefined
     },
 
-    getSavedProgress: (username, tvid) => {
-        return users.users[username]['storage'][tvid]
+    getSavedProgress: (username, episodeId) => {
+        return users.users[username]['storage']['tv'][episodeId]
     },
 
     // Function to send a message to all users
