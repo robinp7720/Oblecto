@@ -24,5 +24,8 @@
   },
   "authentication": {
     "secret": "secret"
+  },
+  "tracker": {
+    "interval": 10
   }
 }

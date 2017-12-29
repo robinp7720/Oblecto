@@ -5,7 +5,6 @@ const socketio = require("socket.io");
 const restify = require('restify'),
     request = require("request"),
     async = require('async'),
-    TVDB = require('node-tvdb'),
     Sequelize = require('sequelize'),
     fs = require('fs'),
     corsMiddleware = require('restify-cors-middleware'),
@@ -15,8 +14,7 @@ const databases = require('./submodules/database');
 
 const Op = Sequelize.Op;
 
-const tvdb = new TVDB(config.tvdb.key);
-const TvIndexer = require('./bin/indexers/tv');
+const TVShowIndexer = require('./bin/indexers/tv');
 
 const jwt = require('jsonwebtoken');
 
@@ -24,8 +22,7 @@ const jwt = require('jsonwebtoken');
 const zeroconf = require('./submodules/zeroconf');
 zeroconf.start(config.server.port);
 const UserManager = require('./submodules/users');
-
-TVShowIndexer = new TvIndexer(config, databases.tvshow, databases.episode, tvdb);
+const tvdb = require('./submodules/tvdb');
 
 if (config.indexer.runAtBoot)
     TVShowIndexer.indexAll(() => {
@@ -346,9 +343,9 @@ server.get('/watching', requiresAuth, function (req, res, next) {
         order: [
             ['updatedAt', 'DESC'],
         ],
-    }).then(episodes => {
-        res.send(episodes.map((episode)=> {
-            return episode.episode.toJSON();
+    }).then(tracks => {
+        res.send(tracks.map((track)=> {
+            return track.episode.toJSON();
         }))
     })
 });
@@ -374,6 +371,6 @@ setInterval(() => {
     UserManager.saveAllUserProgress(() => {
         console.log('User progress save');
     })
-}, 2000);
+}, 1000 * config.tracker.interval);
 
 
