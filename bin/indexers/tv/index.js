@@ -33,7 +33,7 @@ let indexer = {
             // Loop through all the sub directories in the directory and add it to the index queue
             async.each(files, (file, callback) => {
                 // Add file to the queue
-                indexer.indexShow(directory + file, callback);
+                indexer.indexShow(directory + file);
 
                 callback();
             }, callback);
