@@ -10,11 +10,11 @@ const fs = require("fs");
 let indexer = {
     showQueue: async.priorityQueue((task, callback) => {
         indexer.processShow(task.name, task.path, callback)
-    }, config.indexer.concurrency),
+    }, config.tvshows.concurrency),
 
     episodeQueue: async.priorityQueue((task, callback) => {
         indexer.processEpisode(task.path, task.episode, task.showid, task.localId, callback)
-    }, config.indexer.concurrency),
+    }, config.tvshows.concurrency),
 
     indexShow(directory) {
         indexer.showQueue.push({

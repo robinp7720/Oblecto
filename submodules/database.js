@@ -19,6 +19,7 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
 // Import models for sequelize
 const tvshow = sequelize.import(__dirname + "/../models/tvshow.js");
 const episode = sequelize.import(__dirname + "/../models/episode.js");
+const movie = sequelize.import(__dirname + "/../models/movie.js");
 const user = sequelize.import(__dirname + "/../models/user.js");
 const track = sequelize.import(__dirname + "/../models/track.js");
 
@@ -44,6 +45,9 @@ async.series([
         episode.sync().then(() => callback());
     },
     (callback) => {
+        movie.sync().then(() => callback());
+    },
+    (callback) => {
         user.sync().then(() => callback());
     },
     (callback) => {
@@ -56,6 +60,7 @@ async.series([
 module.exports = {
     tvshow,
     episode,
+    movie,
     user,
     track
 };

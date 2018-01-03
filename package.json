@@ -9,6 +9,7 @@
     "async": "latest",
     "jsonwebtoken": "^8.1.0",
     "mdns": "latest",
+    "moviedb": "^0.2.10",
     "mysql2": "^1.5.1",
     "node-tvdb": "^3.2.0",
     "recursive-readdir": "^2.2.1",

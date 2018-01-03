@@ -15,6 +15,7 @@ const databases = require('./submodules/database');
 const Op = Sequelize.Op;
 
 const TVShowIndexer = require('./bin/indexers/tv');
+const MovieIndexer = require('./bin/indexers/movies');
 
 const jwt = require('jsonwebtoken');
 
@@ -24,10 +25,13 @@ zeroconf.start(config.server.port);
 const UserManager = require('./submodules/users');
 const tvdb = require('./submodules/tvdb');
 
-if (config.indexer.runAtBoot)
-    TVShowIndexer.indexAll(() => {
-        console.log("Initial index complete");
-    });
+if (config.indexer.runAtBoot) {
+    // Index TV Shows
+    TVShowIndexer.indexAll(() => {});
+
+    // Index movies
+    MovieIndexer.indexAll(() => {});
+}
 
 // Initialize REST based server
 const server = restify.createServer();

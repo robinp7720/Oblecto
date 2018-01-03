@@ -1,9 +1,11 @@
 {
   "indexer": {
-    "concurrency": 10,
     "runAtBoot": true
   },
   "tvdb": {
+    "key": ""
+  },
+  "themoviedb": {
     "key": ""
   },
   "mysql": {
@@ -16,10 +18,17 @@
     "port": 8080
   },
   "tvshows": {
+    "concurrency": 10,
     "directories": [
       {
         "path": "/mnt/SMB/TV Shows/"
       }
+    ]
+  },
+  "movies": {
+    "concurrency": 1,
+    "directories": [
+      "/mnt/SMB/Movies/"
     ]
   },
   "authentication": {
