@@ -14,8 +14,8 @@ const databases = require('./submodules/database');
 
 const Op = Sequelize.Op;
 
-const TVShowIndexer = require('./bin/indexers/tv');
-const MovieIndexer = require('./bin/indexers/movies');
+const TVShowIndexer = require('./lib/indexers/tv');
+const MovieIndexer = require('./lib/indexers/movies');
 
 const jwt = require('jsonwebtoken');
 
