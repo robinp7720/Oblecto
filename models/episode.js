@@ -14,7 +14,5 @@ module.exports = (sequelize, DataTypes) => {
 
         firstAired: DataTypes.DATEONLY,
         overview: DataTypes.TEXT,
-
-        file: DataTypes.STRING
     })
 }

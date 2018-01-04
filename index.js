@@ -213,8 +213,9 @@ server.get('/series/:id/poster', function (req, res, next) {
 
 server.get('/episode/:id/image.png', function (req, res, next) {
     // Get episode data
-    databases.episode.findById(req.params.id).then(episode => {
-        let episodePath = episode.file;
+    databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
+        let episodePath = episode.files[0].path;
+        console.log(episodePath);
 
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
         let thumbnailPath = episodePath.replace(path.extname(episodePath), "-thumb.jpg");
@@ -253,8 +254,8 @@ server.get('/episode/:id/image.png', function (req, res, next) {
 
 server.get('/episode/:id/play', function (req, res, next) {
     // search for attributes
-    databases.episode.findById(req.params.id).then(episode => {
-        let path = episode.file;
+    databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
+        let path = episode.files[0].path;
         var stat = fs.statSync(path);
         var total = stat.size;
 
@@ -290,7 +291,7 @@ server.get('/episode/:id/play', function (req, res, next) {
 
 server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
     // search for attributes
-    databases.episode.findById(req.params.id).then(episode => {
+    databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
         episode = episode.toJSON();
 
         if (UserManager.hasSavedProgress(req.authorization.jwt.username, episode.id))

@@ -8,7 +8,5 @@ module.exports = (sequelize, DataTypes) => {
 
         releaseDate: DataTypes.DATEONLY,
         overview: DataTypes.TEXT,
-
-        file: DataTypes.STRING
     })
 }
