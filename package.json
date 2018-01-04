@@ -4,7 +4,9 @@
   "description": "A free and opensource media server",
   "author": "Robin <robin@decker.cx>",
   "private": true,
-  "scripts": {},
+  "scripts": {
+  	"start": "babel-node index.js --presets es2015,stage-2"
+  },
   "dependencies": {
     "async": "latest",
     "jsonwebtoken": "^8.1.0",
@@ -18,5 +20,10 @@
     "restify-cors-middleware": "^1.0.1",
     "sequelize": "^4.22.11",
     "socket.io": "^2.0.4"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1"
   }
 }
