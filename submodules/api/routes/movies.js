@@ -5,6 +5,7 @@ import fs from 'fs';
 import config from "../../../config";
 import databases from "../../../submodules/database";
 import tvdb from "../../tvdb";
+import UserManager from "../../users";
 
 export default (server) => {
 
@@ -69,6 +70,58 @@ export default (server) => {
                 }
             });
         });
+    });
+
+    // Endpoint to retrieve episode details based on the local movie ID
+    server.get('/movie/:id/info', requiresAuth, function (req, res, next) {
+        // search for attributes
+        databases.movie.findById(req.params.id, {include: [databases.file]}).then(movie => {
+            movie = movie.toJSON();
+
+            if (UserManager.hasSavedMovieProgress(req.authorization.jwt.username, movie.id))
+                movie.watchTime = UserManager.getSavedMovieProgress(req.authorization.jwt.username, movie.id).time;
+
+            res.send(movie);
+        })
+    });
+
+    // Endpoint to send episode video file to the client
+    // TODO: move this to the file route and use file id to play, abstracting this from episodes
+    server.get('/movie/:id/play', function (req, res, next) {
+        // search for attributes
+        databases.movie.findById(req.params.id, {include: [databases.file]}).then(episode => {
+            let path = episode.files[0].path;
+            var stat = fs.statSync(path);
+            var total = stat.size;
+
+            if (req.headers.range) {   // meaning client (browser) has moved the forward/back slider
+                // which has sent this request back to this server logic ... cool
+                var range = req.headers.range;
+                var parts = range.replace(/bytes=/, "").split("-");
+                var partialstart = parts[0];
+                var partialend = parts[1];
+
+                var start = parseInt(partialstart, 10);
+                var end = partialend ? parseInt(partialend, 10) : total - 1;
+                var chunksize = (end - start) + 1;
+                console.log('RANGE: ' + start + ' - ' + end + ' = ' + chunksize);
+
+                var file = fs.createReadStream(path, {start: start, end: end});
+                res.writeHead(206, {
+                    'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize,
+                    'Content-Type': 'video/mp4'
+                });
+                file.pipe(res);
+
+            } else {
+
+                console.log('ALL: ' + total);
+                res.writeHead(200, {'Content-Length': total, 'Content-Type': 'video/mp4'});
+                fs.createReadStream(path).pipe(res);
+            }
+        })
     });
 
 };

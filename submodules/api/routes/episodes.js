@@ -124,8 +124,8 @@ export default (server) => {
         databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
             episode = episode.toJSON();
 
-            if (UserManager.hasSavedProgress(req.authorization.jwt.username, episode.id))
-                episode.watchTime = UserManager.getSavedProgress(req.authorization.jwt.username, episode.id).time;
+            if (UserManager.hasSavedTVProgress(req.authorization.jwt.username, episode.id))
+                episode.watchTime = UserManager.getSavedTVProgress(req.authorization.jwt.username, episode.id).time;
 
             res.send(episode);
         })

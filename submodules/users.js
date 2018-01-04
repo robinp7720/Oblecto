@@ -110,7 +110,7 @@ var users = {
 
         // If the item is a movie, store it in the movie temp storage of the user
         if (data.type === 'movie')
-            return users.users[socket.authentication.username]['movie'][data.movieId] = {
+            return users.users[socket.authentication.username]['storage']['movies'][data.movieId] = {
                 time: data.time,
                 progress: data.progress,
                 movieId: data.movieId
@@ -148,12 +148,21 @@ var users = {
     saveAllUserProgress: (callback) => async.each(Object.keys(users.users), users.saveUserProgress, callback),
 
     // Method to check if a certain user has save progress in a show
-    hasSavedProgress: (username, episodeId) => {
+    hasSavedTVProgress: (username, episodeId) => {
         return users.users[username]['storage']['tv'][episodeId] !== undefined
     },
 
-    getSavedProgress: (username, episodeId) => {
+    getSavedTVProgress: (username, episodeId) => {
         return users.users[username]['storage']['tv'][episodeId]
+    },
+
+    // Method to check if a certain user has save progress in a movie
+    hasSavedMovieProgress: (username, episodeId) => {
+        return users.users[username]['storage']['movies'][episodeId] !== undefined
+    },
+
+    getSavedMovieProgress: (username, episodeId) => {
+        return users.users[username]['storage']['movies'][episodeId]
     },
 
     // Function to send a message to all users
