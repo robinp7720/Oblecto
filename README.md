@@ -12,7 +12,7 @@ Edit config.json to suit your needs. Please pay attention to the mysql database 
 
 ```bash
 npm install
-node .
+npm start
 ```
 
 On run, Oblecto will create its database if requireded and start indexing files as defined in the config.json file.
