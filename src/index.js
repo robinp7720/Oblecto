@@ -5,8 +5,8 @@ const config = require('./config.json');
 
 const socketio = require("socket.io");
 
-const TVShowIndexer = require('./lib/indexers/tv');
-const MovieIndexer = require('./lib/indexers/movies');
+const TVShowIndexer = require('./lib/indexers/tv/index');
+const MovieIndexer = require('./lib/indexers/movies/index');
 
 
 // Load Oblecto submodules

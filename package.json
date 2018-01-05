@@ -5,7 +5,7 @@
   "author": "Robin <robin@decker.cx>",
   "private": true,
   "scripts": {
-    "start": "babel-node index.js"
+    "start": "babel-node src",
   },
   "dependencies": {
     "async": "latest",
