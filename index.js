@@ -1,4 +1,5 @@
 import restapi from "./submodules/api";
+import UserManager from "./submodules/users";
 
 const config = require('./config.json');
 
@@ -11,8 +12,6 @@ const MovieIndexer = require('./lib/indexers/movies');
 // Load Oblecto submodules
 const zeroconf = require('./submodules/zeroconf');
 zeroconf.start(config.server.port);
-const UserManager = require('./submodules/users');
-
 // Start the rest api
 let server = restapi();
 
@@ -33,13 +32,11 @@ let io = socketio.listen(server.server, {
     transports: ['websocket', 'polling']
 });
 
-io.on('connection', UserManager.userConnected);
+io.on('connection', socket => UserManager.userConnected(socket));
 
 // Periodically save the user storage to the database
 setInterval(() => {
-    UserManager.saveAllUserProgress(() => {
-        console.log('User progress save');
-    })
+    UserManager.saveAllUserProgress()
 }, 1000 * config.tracker.interval);
 
 

@@ -1,62 +1,60 @@
-const jwt = require('jsonwebtoken');
-const async = require('async');
+import jwt from "jsonwebtoken";
+import async from "promise-async";
+import config from "../config.json";
+import databases from "./database";
 
-const config = require('../config.json');
-
-const databases = require('./database');
-
-
-var users = {
+export default {
     users: {},
 
-    userConnected: (socket) => {
-        socket.on('authenticate', (data) => users.userAuthenticate(socket, data));
-        socket.on('playing', (data) => users.trackProgress(socket, data));
+    userConnected (socket) {
+        socket.on('authenticate', (data) => this.userAuthenticate(socket, data));
+        socket.on('playing', (data) => this.trackProgress(socket, data));
 
         socket.on('disconnect', () => {
-            if (socket.authentication)
-                users.socketDisconnect(socket);
+            if (socket.authentication) {
+                this.socketDisconnect(socket);
+            }
         })
     },
 
-    userAuthenticate: (socket, data) => {
-        jwt.verify(data.token, config.authentication.secret, function (err, decoded) {
+    userAuthenticate (socket, data) {
+        jwt.verify(data.token, config.authentication.secret, (err, decoded) => {
             if (err)
                 return false;
 
             // Add user first into memory if the user isn't there
-            users.userAdd(decoded);
+            this.userAdd(decoded);
 
             // Save socket to user storage
-            users.users[decoded.username].sockets[socket.id] = socket;
+            this.users[decoded.username].sockets[socket.id] = socket;
 
             // Add decoded jwt token to socket
             socket.authentication = decoded;
         });
     },
 
-    socketDisconnect: (socket) => {
+    socketDisconnect (socket) {
         // Ignore if the socket wasn't authenticated
         if (!socket.authentication)
             return false;
 
-        if (!users.users[socket.authentication.username])
+        if (!this.users[socket.authentication.username])
             return false;
 
         // Remove the socket from the user
-        delete users.users[socket.authentication.username].sockets[socket.id];
+        delete this.users[socket.authentication.username].sockets[socket.id];
 
         // If there are no open sockets for the user, delete the user entity
-        if (users.users[socket.authentication.username].sockets.length < 1)
-            delete users.users[authentication.username]
+        if (this.users[socket.authentication.username].sockets.length < 1)
+            delete this.users[authentication.username]
     },
 
-    userAdd: (authentication) => {
+    userAdd (authentication) {
         // Return if the user already exists to avoid overwriting an exist user session
-        if (users.users[authentication.username])
+        if (this.users[authentication.username])
             return false;
 
-        users.users[authentication.username] = {
+        this.users[authentication.username] = {
             storage: {
                 tv: {},
                 movies: {}
@@ -66,27 +64,27 @@ var users = {
         };
 
         // Load the progress of the newly added user
-        users.loadProgress(authentication);
+        this.loadProgress(authentication);
     },
 
-    loadProgress: (authentication) => {
+    async loadProgress (authentication) {
         // Load progress for TV shows
-        databases.track.findAll({ where: { userId: authentication.id } }).then(tracks => {
-            tracks.forEach((v) => {
-                let item = v.toJSON();
-                users.users[authentication.username].storage['tv'][item.episodeId] = {
-                    time: item.time,
-                    progress: item.progress,
-                    tvshowId: item.tvshowId,
-                    episodeId: item.episodeId
-                }
-            })
+        let tracks = await databases.track.findAll({where: {userId: authentication.id}})
+
+        tracks.forEach(v => {
+            let item = v.toJSON();
+            this.users[authentication.username].storage['tv'][item.episodeId] = {
+                time: item.time,
+                progress: item.progress,
+                tvshowId: item.tvshowId,
+                episodeId: item.episodeId
+            }
         })
     },
 
 
     // Save progress of a user to memory
-    trackProgress: (socket, data) => {
+    trackProgress (socket, data) {
         // Return if the user is not authenticated
         if (!socket.authentication)
             return false;
@@ -100,31 +98,33 @@ var users = {
             return false;
 
         // If the item is a tv show episode, store it in the tv show temp storage of the user
-        if (data.type === 'tv')
-            return users.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
+        if (data.type === 'tv') {
+            return this.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
                 time: data.time,
                 progress: data.progress,
                 tvshowId: data.tvshowId,
                 episodeId: data.episodeId
             };
+        }
 
         // If the item is a movie, store it in the movie temp storage of the user
-        if (data.type === 'movie')
-            return users.users[socket.authentication.username]['storage']['movies'][data.movieId] = {
+        if (data.type === 'movie') {
+            return this.users[socket.authentication.username]['storage']['movies'][data.movieId] = {
                 time: data.time,
                 progress: data.progress,
                 movieId: data.movieId
             };
+        }
     },
 
     // Save the temporary storage of a show into the MySQL database
-    saveUserProgress: (username, callback) => {
-        let userInfo = users.users[username];
+    async saveUserProgress (username) {
+        let userInfo = this.users[username];
         let storage = userInfo.storage;
 
-        async.each(storage['tv'],
-            (show, callback) => {
-                databases.track.findOrCreate({
+        return await async.each(storage['tv'],
+             async show => {
+                let [item, created] = await databases.track.findOrCreate({
                     where: {
                         userId: userInfo.id,
                         episodeId: show.episodeId
@@ -133,46 +133,48 @@ var users = {
                         time: show.time,
                         progress: show.progress
                     }
-                }).spread((item, created) => {
-                    item.updateAttributes({
-                        time: show.time,
-                        progress: show.progress
-                    });
+                });
 
-                    callback();
-                })
-            }, callback)
+                item.updateAttributes({
+                    time: show.time,
+                    progress: show.progress
+                });
+
+                return created;
+            })
     },
 
     // Run saveUserProgress on all keys in the users array
-    saveAllUserProgress: (callback) => async.each(Object.keys(users.users), users.saveUserProgress, callback),
-
-    // Method to check if a certain user has save progress in a show
-    hasSavedTVProgress: (username, episodeId) => {
-        return users.users[username]['storage']['tv'][episodeId] !== undefined
+    saveAllUserProgress () {
+        Object.entries(this.users).forEach(([username, user]) => {
+            this.saveUserProgress(username)
+        });
     },
 
-    getSavedTVProgress: (username, episodeId) => {
-        return users.users[username]['storage']['tv'][episodeId]
+    // Method to check if a certain user has save progress in a show
+    hasSavedTVProgress (username, episodeId) {
+        return this.users[username]['storage']['tv'][episodeId] !== undefined
+    },
+
+    getSavedTVProgress (username, episodeId) {
+        return this.users[username]['storage']['tv'][episodeId]
     },
 
     // Method to check if a certain user has save progress in a movie
-    hasSavedMovieProgress: (username, episodeId) => {
-        return users.users[username]['storage']['movies'][episodeId] !== undefined
+    hasSavedMovieProgress (username, episodeId) {
+        return this.users[username]['storage']['movies'][episodeId] !== undefined
     },
 
-    getSavedMovieProgress: (username, episodeId) => {
-        return users.users[username]['storage']['movies'][episodeId]
+    getSavedMovieProgress (username, episodeId) {
+        return this.users[username]['storage']['movies'][episodeId]
     },
 
     // Function to send a message to all users
     sendToAll: (channel, message) => {
-        async.each(users.users, (user) => {
+        async.each(this.users, (user) => {
             user.socket.emit(channel, message)
         }, () => {
 
         });
     }
 };
-
-module.exports = users;

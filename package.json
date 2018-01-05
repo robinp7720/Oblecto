@@ -5,7 +5,7 @@
   "author": "Robin <robin@decker.cx>",
   "private": true,
   "scripts": {
-  	"start": "babel-node index.js --presets es2015,stage-2"
+    "start": "babel-node index.js"
   },
   "dependencies": {
     "async": "latest",
@@ -14,6 +14,7 @@
     "moviedb": "^0.2.10",
     "mysql2": "^1.5.1",
     "node-tvdb": "^3.2.0",
+    "promise-async": "^0.2.0",
     "recursive-readdir": "^2.2.1",
     "request": "latest",
     "restify": "latest",
@@ -23,7 +24,6 @@
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-preset-stage-2": "^6.24.1"
+    "babel-preset-env": "^1.6.1"
   }
 }
