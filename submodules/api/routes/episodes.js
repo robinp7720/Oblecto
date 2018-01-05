@@ -42,7 +42,6 @@ export default (server) => {
         // Get episode data
         databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
             let episodePath = episode.files[0].path;
-            console.log(episodePath);
 
             // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
             let thumbnailPath = episodePath.replace(path.extname(episodePath), "-thumb.jpg");
