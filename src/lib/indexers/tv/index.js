@@ -14,7 +14,7 @@ const scan = async function (EpisodePath) {
 
     let EpisodeData = result.getData();
     let PathParsed = path.parse(EpisodePath);
-    let ParentName = path.parse(PathParsed.dir);
+    let ParentName = path.parse(PathParsed.dir).name;
 
     if (EpisodeData.filetype !== 'video' ||
         EpisodeData.subtype  !== 'episode') {
@@ -44,7 +44,21 @@ const scan = async function (EpisodePath) {
     }
 
     // Search for all shows with the title on TVDB
-    let TvdbSearch = await tvdb.getSeriesByName(EpisodeData.series);
+    let TvdbSearch = [];
+
+    console.log(EpisodeData.series, ParentName);
+
+    if (EpisodeData.series) {
+        try {
+            TvdbSearch = await tvdb.getSeriesByName(EpisodeData.series);
+        } catch (e) {
+            // Use the directory name if an error occured when using the name of the file
+            TvdbSearch = await tvdb.getSeriesByName(ParentName);
+        }
+    } else {
+        // If the Series name could not be found in the filename, use the directory name
+        TvdbSearch = await tvdb.getSeriesByName(ParentName);
+    }
 
 
     let PossibleShows = [];
@@ -55,10 +69,12 @@ const scan = async function (EpisodePath) {
             if (item.firstAired.substr(0, 4) == EpisodeData.series_year)
                 PossibleShows.push(item);
         })
+    } else {
+        PossibleShows = TvdbSearch;
     }
 
-    // If no appropriate show could be found, try using the directory name instead
-    if (PossibleShows.length < 1) {
+    // If no appropriate show could be found and the series name was available in the file name, try using the directory name instead
+    if (PossibleShows.length < 1 && EpisodeData.series) {
         PossibleShows = await tvdb.getSeriesByName(ParentName);
     }
 
