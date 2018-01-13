@@ -5,6 +5,7 @@ import fs from 'fs';
 import tvdb from "../../../submodules/tvdb";
 import databases from "../../../submodules/database";
 import config from "../../../config";
+import TVShowIndexer from "../../../lib/indexers/tv/index";
 
 export default (server) => {
 
@@ -41,9 +42,7 @@ export default (server) => {
     // Endpoint to request a re-index of a series based on the local ID
     server.get('/series/:id/index', requiresAuth, function (req, res, next) {
         databases.tvshow.findById(req.params.id).then(show => {
-            TVShowIndexer.indexShow(show.directory, () => {
-
-            });
+            TVShowIndexer.indexDirectory(show.directory);
 
             res.send([true])
         })

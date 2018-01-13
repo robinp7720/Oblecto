@@ -1,11 +1,11 @@
 import restapi from "./submodules/api";
 import UserManager from "./submodules/users";
 
+import TVShowIndexer from "./lib/indexers/tv/index";
+
 const config = require('./config.json');
 
 const socketio = require("socket.io");
-
-const TVShowIndexer = require('./lib/indexers/tv/index');
 const MovieIndexer = require('./lib/indexers/movies/index');
 
 
@@ -18,7 +18,7 @@ let server = restapi();
 
 if (config.indexer.runAtBoot) {
     // Index TV Shows
-    TVShowIndexer.indexAll(() => {});
+    TVShowIndexer.indexAll();
 
     // Index movies
     MovieIndexer.indexAll(() => {});

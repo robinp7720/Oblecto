@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "async": "latest",
+    "epinfer": "^1.1.4",
     "jsonwebtoken": "^8.1.0",
     "mdns": "latest",
     "moviedb": "^0.2.10",
@@ -18,8 +19,8 @@
     "recursive-readdir": "^2.2.1",
     "request": "latest",
     "restify": "latest",
-    "restify-cors-middleware": "^1.0.1",
-    "sequelize": "^4.22.11",
+    "restify-cors-middleware": "^1.1.0",
+    "sequelize": "^4.31.0",
     "socket.io": "^2.0.4"
   },
   "devDependencies": {
