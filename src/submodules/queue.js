@@ -12,10 +12,7 @@ export default async.queue((task, callback) => {
             TvScanner(task.path).then(callback).catch(callback);
             break;
         case "movie":
-            MovieScanner(task.path).then(callback).catch(err => {
-                console.log(err);
-                callback();
-            });
+            MovieScanner(task.path).then(callback).catch(callback);
             break;
         case "download":
             request.get({
