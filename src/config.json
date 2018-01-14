@@ -2,6 +2,9 @@
   "indexer": {
     "runAtBoot": true
   },
+  "queue": {
+    "concurrency": 1
+  },
   "tvdb": {
     "key": "4908EBCEE2556E3D"
   },
@@ -18,7 +21,6 @@
     "port": 8080
   },
   "tvshows": {
-    "concurrency": 10,
     "directories": [
       {
         "path": "/mnt/SMB/TV Shows/"
@@ -28,7 +30,9 @@
   "movies": {
     "concurrency": 1,
     "directories": [
-      "/mnt/SMB/Movies/"
+      {
+        "path": "/mnt/SMB/Movies/"
+      }
     ]
   },
   "authentication": {

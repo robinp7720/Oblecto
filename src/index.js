@@ -1,27 +1,24 @@
 import restapi from "./submodules/api";
 import UserManager from "./submodules/users";
-
-import TVShowIndexer from "./lib/indexers/tv/index";
+import TVShowIndexer from "./lib/indexers/tv";
+import MovieIndexer from "./lib/indexers/movies";
 
 const config = require('./config.json');
 
 const socketio = require("socket.io");
-const MovieIndexer = require('./lib/indexers/movies/index');
-
-
 // Load Oblecto submodules
 const zeroconf = require('./submodules/zeroconf');
 zeroconf.start(config.server.port);
+
 // Start the rest api
 let server = restapi();
-
 
 if (config.indexer.runAtBoot) {
     // Index TV Shows
     TVShowIndexer.indexAll();
 
     // Index movies
-    MovieIndexer.indexAll(() => {});
+    MovieIndexer.indexAll();
 }
 
 // Socket connection
