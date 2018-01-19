@@ -37,7 +37,7 @@ export default (server) => {
             ],
         }).then(tracks => {
             res.send(tracks.map((track)=> {
-                return track.episode.toJSON();
+                return track.episode;
             }))
         })
     });
