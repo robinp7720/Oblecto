@@ -2,6 +2,7 @@ import epinfer from 'epinfer';
 import path from "path"
 import tvdb from "../../../submodules/tvdb";
 import databases from "../../../submodules/database";
+import queue from "../../../submodules/queue";
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
@@ -155,6 +156,11 @@ export default async function (EpisodePath) {
             overview: SelectedEpisode.overview,
         }
     });
+
+    queue.push({task: "DownloadEpisodeBanner", id: Episode.id}, function (err) {
+
+    });
+
 
 
     // Link the file to the episode

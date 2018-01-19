@@ -5,6 +5,8 @@ import request from "request"
 import TvScanner from "../lib/indexers/tv/scanner";
 import MovieScanner from "../lib/indexers/movies/scanner";
 
+import TVShowArt from "../lib/indexers/tv/art";
+
 
 export default async.queue((task, callback) => {
     switch (task.task) {
@@ -13,6 +15,12 @@ export default async.queue((task, callback) => {
             break;
         case "movie":
             MovieScanner(task.path).then(callback).catch(callback);
+            break;
+        case "DownloadEpisodeBanner":
+            TVShowArt.DownloadEpisodeBanner(task.id).then(callback).catch((err) => {
+                console.log(err);
+                callback()
+            });
             break;
         case "download":
             request.get({

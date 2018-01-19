@@ -11,7 +11,6 @@ import UserManager from '../../../submodules/users';
 const Op = sequelize.Op;
 
 export default (server) => {
-
     const requiresAuth = function (req, res, next) {
         if (req.authorization === undefined)
             return next(false);
@@ -47,31 +46,10 @@ export default (server) => {
             let thumbnailPath = episodePath.replace(path.extname(episodePath), "-thumb.jpg");
 
             // Check if the thumbnail exists
-            fs.exists(thumbnailPath, function (exists) {
-                if (exists) {
+            fs.stat(thumbnailPath, function (err, stat) {
+                if (!err) {
                     // If the thumbnail exists, simply pipe that to the client
                     fs.createReadStream(thumbnailPath).pipe(res)
-                } else {
-                    // If no thumbnail was found, download one from thetvdb
-                    tvdb.getEpisodeById(episode.tvdbid)
-                        .then(function (data) {
-                            request.get({
-                                uri: "https://thetvdb.com/banners/_cache/" + data.filename,
-                                encoding: null
-                            }, function (err, response, body) {
-                                fs.writeFile(thumbnailPath, body, function (error) {
-                                    if (!error)
-                                        console.log("Image downloaded for", episode.episodeName);
-                                });
-                                res.contentType = 'image/jpeg';
-                                res.send(body);
-                                next()
-                            })
-                        })
-                        .catch(function (error) {
-                            res.send(error);
-                            next();
-                        })
                 }
             });
         });

@@ -5,6 +5,7 @@ import fs from 'fs';
 import config from "../../../../config";
 import TVShowIndexer from "../../../../lib/indexers/tv/index";
 import MovieIndexer from "../../../../lib/indexers/movies/index";
+import TVShowArt from "../../../../lib/indexers/tv/art";
 
 export default (server) => {
 
@@ -34,6 +35,15 @@ export default (server) => {
                 MovieIndexer.indexAll();
                 break;
         }
+
+        res.send([true]);
+    });
+
+    // API Endpoint to request a re-index of certain library types
+    server.get('/settings/maintenance/tvshows/download/art', requiresAuth, function (req, res, next) {
+        TVShowArt.DownloadAllEpisodeBanners().catch((err) => {
+            console.log(err);
+        });
 
         res.send([true]);
     });
