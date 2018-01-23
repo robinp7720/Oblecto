@@ -133,8 +133,11 @@ export default async function (EpisodePath) {
         }
     });
 
-    if (!SelectedEpisode)
-        console.log(EpisodeData);
+    if (!SelectedEpisode) {
+        console.log("File count not be matched:", EpisodePath);
+
+        return false;
+    }
 
     // Insert the episode into the database
     let [Episode] = await databases.episode.findOrCreate({

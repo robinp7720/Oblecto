@@ -99,7 +99,14 @@ export default {
 
         // If the item is a tv show episode, store it in the tv show temp storage of the user
         if (data.type === 'tv') {
-            return this.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
+            if (!data.episodeId ||
+                !data.tvshowId  ||
+                !data.progress  ||
+                !data.time) {
+                return false;
+            }
+
+            this.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
                 time: data.time,
                 progress: data.progress,
                 tvshowId: data.tvshowId,
@@ -109,7 +116,13 @@ export default {
 
         // If the item is a movie, store it in the movie temp storage of the user
         if (data.type === 'movie') {
-            return this.users[socket.authentication.username]['storage']['movies'][data.movieId] = {
+            if (!data.movieId ||
+                !data.progress  ||
+                !data.time) {
+                return false;
+            }
+
+            this.users[socket.authentication.username]['storage']['movies'][data.movieId] = {
                 time: data.time,
                 progress: data.progress,
                 movieId: data.movieId
