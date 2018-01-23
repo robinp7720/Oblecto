@@ -7,6 +7,15 @@ export default (server) => {
     server.post('/auth/login', function (req, res, next) {
         // TODO: Implement password hashing
         databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email', 'id']}).then(user => {
+            // Don't send a token if the user doesn't exist
+            if (!user) {
+                return res.send({
+                    "error": "User does not exist"
+                })
+            }
+
+            // TODO: implement password checking
+
             let token = jwt.sign(user.toJSON(), config.authentication.secret);
             user['access_token'] = token;
             res.send(user);

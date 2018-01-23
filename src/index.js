@@ -6,6 +6,7 @@ import MovieIndexer from "./lib/indexers/movies";
 const config = require('./config.json');
 
 const socketio = require("socket.io");
+
 // Load Oblecto submodules
 const zeroconf = require('./submodules/zeroconf');
 zeroconf.start(config.server.port);
