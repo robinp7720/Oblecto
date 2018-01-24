@@ -10,7 +10,7 @@
   "dependencies": {
     "async": "latest",
     "epinfer": "^1.1.4",
-    "jsonwebtoken": "^8.1.0",
+    "jsonwebtoken": "^8.1.1",
     "mdns": "latest",
     "moviedb": "^0.2.10",
     "moviedb-promise": "^1.2.1",
@@ -21,7 +21,7 @@
     "request": "latest",
     "restify": "latest",
     "restify-cors-middleware": "^1.1.0",
-    "sequelize": "^4.31.0",
+    "sequelize": "^4.32.1",
     "socket.io": "^2.0.4"
   },
   "devDependencies": {

@@ -52,7 +52,7 @@ export default async function (moviePath) {
                     task: "download",
                     path: posterPath,
                     url: "https://image.tmdb.org/t/p/w500" + data.poster_path
-                }, 20);
+                });
 
             }
         });
@@ -63,7 +63,7 @@ export default async function (moviePath) {
                     task: "download",
                     path: fanartPath,
                     url: "https://image.tmdb.org/t/p/w500" + data.backdrop_path
-                }, 20);
+                });
             }
         });
 
