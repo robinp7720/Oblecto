@@ -41,7 +41,7 @@ export default (server) => {
 
     // API Endpoint to request a re-index of certain library types
     server.get('/settings/maintenance/tvshows/download/art', requiresAuth, function (req, res, next) {
-        TVShowArt.DownloadAllEpisodeBanners().catch((err) => {
+        TVShowArt.DownloadAll().catch((err) => {
             console.log(err);
         });
 

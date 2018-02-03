@@ -74,28 +74,6 @@ export default (server) => {
                 if (exists) {
                     // If the image exits, simply pipe it to the client
                     fs.createReadStream(posterPath).pipe(res)
-                } else {
-                    // If it doesn't exist, download a new one and snd it to the client
-                    tvdb.getSeriesPosters(show.tvdbid)
-                        .then(function (data) {
-                            console.log("Downloading poster image for", show.seriesName, "http://thetvdb.com/banners/" + data[0].fileName);
-                            request.get({
-                                uri: "http://thetvdb.com/banners/" + data[0].fileName,
-                                encoding: null
-                            }, function (err, response, body) {
-                                fs.writeFile(posterPath, body, function (error) {
-                                    if (!error)
-                                        console.log("Poster downloaded for", show.seriesName);
-                                });
-                                res.contentType = 'image/jpeg';
-                                res.send(body);
-                                next()
-                            })
-                        })
-                        .catch(function (error) {
-                            res.send("");
-                            next();
-                        })
                 }
             });
         });

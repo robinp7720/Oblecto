@@ -24,6 +24,12 @@ export default async.queue((task, callback) => {
                 callback()
             });
             break;
+        case "DownloadSeriesPoster":
+            TVShowArt.DownloadSeriesPoster(task.id).then(callback).catch((err) => {
+                console.log(err);
+                callback()
+            });
+            break;
         case "download":
             request.get({
                 uri: task.url,

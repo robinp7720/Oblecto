@@ -40,6 +40,32 @@ export default {
         }
     },
 
+    async DownloadSeriesPoster(id) {
+        let show = await databases.tvshow.findById(id);
+
+        let showPath = show.directory;
+        let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
+
+        // Check if the poster image already exits
+        let exists = fs.existsSync(posterPath);
+
+        // Only download the poster if it doesn't exist
+        if (exists) {
+            let data = await tvdb.getSeriesPosters(show.tvdbid);
+
+            console.log("Downloading poster image for", show.seriesName, "http://thetvdb.com/banners/" + data[0].fileName);
+            request.get({
+                uri: "http://thetvdb.com/banners/" + data[0].fileName,
+                encoding: null
+            }, function (err, response, body) {
+                fs.writeFile(posterPath, body, function (error) {
+                    if (!error)
+                        console.log("Poster downloaded for", show.seriesName);
+                });
+            })
+        }
+    },
+
     async DownloadAllEpisodeBanners() {
         let Episodes = databases.episode.findAll();
 
@@ -48,5 +74,20 @@ export default {
 
             });
         })
+    },
+
+    async DownloadAllSeriesPosters() {
+        let Shows = databases.tvshow.findAll();
+
+        Shows.each((Show) => {
+            queue.push({task: "DownloadSeriesPoster", id: Show.id}, function (err) {
+
+            });
+        })
+    },
+
+    async DownloadAll() {
+        await this.DownloadAllEpisodeBanners();
+        await this.DownloadAllSeriesPosters();
     }
 }
