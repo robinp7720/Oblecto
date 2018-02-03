@@ -7,6 +7,8 @@ import MovieScanner from "../lib/indexers/movies/scanner";
 
 import TVShowArt from "../lib/indexers/tv/art";
 
+import config from "../config.json";
+
 
 export default async.queue((task, callback) => {
     switch (task.task) {
@@ -35,4 +37,4 @@ export default async.queue((task, callback) => {
             break;
     }
 
-}, 1);
+}, config.queue.concurrency);
