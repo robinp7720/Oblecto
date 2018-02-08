@@ -21,6 +21,7 @@
     "port": 8080
   },
   "tvshows": {
+    "doReIndex": true,
     "directories": [
       {
         "path": "/mnt/SMB/TV Shows/"

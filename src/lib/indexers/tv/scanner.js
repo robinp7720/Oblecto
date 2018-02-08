@@ -7,7 +7,7 @@ import queue from "../../../submodules/queue";
 let ShowInfoCache = {};
 let EpisodeCache  = {};
 
-export default async function (EpisodePath) {
+export default async function (EpisodePath, reIndex) {
     let result = epinfer.process(EpisodePath);
 
     let EpisodeData = result.getData();
@@ -16,24 +16,37 @@ export default async function (EpisodePath) {
 
     if (EpisodeData.filetype !== 'video' ||
         EpisodeData.subtype  !== 'episode') {
+        console.log(EpisodePath, " is not an episode");
         return false;
     }
 
-    // Insert the file into the database and skip if file was already indexed
+    // First insert the file into the database so we know if the file was already indexed before
+    // We can assume that if the file was already in the database it was already indexed by this indexer.
+    // However, there is the option to not quit and continue indexing the file even if the file was already in the
+    // database
+
     let [File, Created] = await databases.file.findOrCreate({
         where: {path: EpisodePath},
         defaults: {
             name: PathParsed.name,
             directory: PathParsed.dir,
             extension: PathParsed.ext
-        }
+        },
+        //include: [databases.episode]
     });
 
     if (Created) {
         console.log("File inserted:", EpisodePath);
     } else {
         console.log("File already in database:", EpisodePath);
-        return false;
+
+        // If reIndexing is disabled, quit now and don't attempt to classify file again
+        // Quiting may result in problems if the file was inserted but there was an error with the classifier on
+        // the first run.
+
+        if (!reIndex) {
+            return false;
+        }
     }
 
     // Assume season 1 if season number is not present

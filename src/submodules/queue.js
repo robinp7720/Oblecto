@@ -13,7 +13,7 @@ import config from "../config.json";
 export default async.queue((task, callback) => {
     switch (task.task) {
         case "episode":
-            TvScanner(task.path).then(callback).catch(callback);
+            TvScanner(task.path, config.tvshows.doReIndex).then(callback).catch(callback);
             break;
         case "movie":
             MovieScanner(task.path).then(callback).catch(callback);
