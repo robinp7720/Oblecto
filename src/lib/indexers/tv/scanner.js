@@ -57,8 +57,6 @@ export default async function (EpisodePath, reIndex) {
     // Search for all shows with the title on TVDB
     let TvdbSearch = [];
 
-    console.log(EpisodeData.series, ParentName);
-
     if (EpisodeData.series) {
         try {
             TvdbSearch = await tvdb.getSeriesByName(EpisodeData.series);
