@@ -50,7 +50,7 @@ export default {
         let exists = fs.existsSync(posterPath);
 
         // Only download the poster if it doesn't exist
-        if (exists) {
+        if (!exists) {
             let data = await tvdb.getSeriesPosters(show.tvdbid);
 
             console.log("Downloading poster image for", show.seriesName, "http://thetvdb.com/banners/" + data[0].fileName);
@@ -66,6 +66,9 @@ export default {
         }
     },
 
+    /**
+     * @return {boolean}
+     */
     async DownloadAllEpisodeBanners() {
         let Episodes = databases.episode.findAll();
 
@@ -73,9 +76,14 @@ export default {
             queue.push({task: "DownloadEpisodeBanner", id: Episode.id}, function (err) {
 
             });
-        })
+        });
+
+        return true;
     },
 
+    /**
+     * @return {boolean}
+     */
     async DownloadAllSeriesPosters() {
         let Shows = databases.tvshow.findAll();
 
@@ -83,7 +91,9 @@ export default {
             queue.push({task: "DownloadSeriesPoster", id: Show.id}, function (err) {
 
             });
-        })
+        });
+
+        return true;
     },
 
     async DownloadAll() {
