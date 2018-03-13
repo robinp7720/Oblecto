@@ -38,6 +38,11 @@ export default (server) => {
     server.get('/movie/:id/poster', function (req, res, next) {
         // Get episode data
         databases.movie.findById(req.params.id, {include: [databases.file]}).then(movie => {
+            if (!movie.files[0]) {
+                res.errorCode = 404;
+                return res.send()
+            }
+
             let moviePath = movie.files[0].path;
 
             // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
@@ -48,6 +53,9 @@ export default (server) => {
                 if (exists) {
                     // If the thumbnail exists, simply pipe that to the client
                     fs.createReadStream(posterPath).pipe(res)
+                } else {
+                    res.errorCode = 404;
+                    return res.send()
                 }
             });
         });
