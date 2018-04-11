@@ -3,6 +3,7 @@ import fs from "fs";
 import databases from "../../../submodules/database";
 import queue from "../../../submodules/queue";
 import tmdb from "../../../submodules/tmdb";
+import UserManager from "../../../submodules/users";
 
 // TODO: Add config option to use the parent directory to identify movies
 
@@ -80,6 +81,9 @@ export default async function (moviePath) {
 
         if (MovieInserted) {
             console.log(movie.movieName, 'added to database');
+
+            // Inform all connected clients that a new movie has been imported
+            UserManager.sendToAll("indexer", {event: "added", type: "movie"});
         } else {
             console.log(movie.movieName, 'was already in the database');
         }

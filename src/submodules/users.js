@@ -174,18 +174,22 @@ export default {
     },
 
     // Method to check if a certain user has save progress in a movie
-    hasSavedMovieProgress (username, episodeId) {
-        return this.users[username]['storage']['movies'][episodeId] !== undefined
+    hasSavedMovieProgress (username, movieId) {
+        return this.users[username]['storage']['movies'][movieId] !== undefined
     },
 
-    getSavedMovieProgress (username, episodeId) {
-        return this.users[username]['storage']['movies'][episodeId]
+    getSavedMovieProgress (username, movieId) {
+        return this.users[username]['storage']['movies'][movieId]
     },
 
     // Function to send a message to all users
-    sendToAll: (channel, message) => {
+    sendToAll (channel, message) {
         async.each(this.users, (user) => {
-            user.socket.emit(channel, message)
+            async.each(user.sockets, (socket) => {
+                socket.emit(channel, message)
+            }, () => {
+
+            });
         }, () => {
 
         });

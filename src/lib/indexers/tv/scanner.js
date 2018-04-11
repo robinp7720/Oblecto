@@ -3,6 +3,7 @@ import path from "path"
 import tvdb from "../../../submodules/tvdb";
 import databases from "../../../submodules/database";
 import queue from "../../../submodules/queue";
+import UserManager from "../../../submodules/users";
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
@@ -11,6 +12,7 @@ export default async function (EpisodePath, reIndex) {
     let result = epinfer.process(EpisodePath);
 
     let EpisodeData = result.getData();
+
     let PathParsed = path.parse(EpisodePath);
     let ParentName = path.parse(PathParsed.dir).name;
 
@@ -75,7 +77,7 @@ export default async function (EpisodePath, reIndex) {
     // If the series year is defined in the title of the episode, search for all shows with that same year
     if (EpisodeData.series_year) {
         TvdbSearch.forEach(item => {
-            if (item.firstAired.substr(0, 4) == EpisodeData.series_year)
+            if (item.firstAired.substr(0, 4) === EpisodeData.series_year)
                 PossibleShows.push(item);
         })
     } else {
@@ -87,7 +89,7 @@ export default async function (EpisodePath, reIndex) {
         PossibleShows = await tvdb.getSeriesByName(ParentName);
     }
 
-    // Select the first show of that list
+    // Select thme first show of that list
     let SelectedShow = PossibleShows[0];
 
     // Get detailed info about the show
@@ -151,7 +153,7 @@ export default async function (EpisodePath, reIndex) {
     }
 
     // Insert the episode into the database
-    let [Episode] = await databases.episode.findOrCreate({
+    let [Episode, EpisodeInserted] = await databases.episode.findOrCreate({
         where: {tvdbid: SelectedEpisode.id},
         defaults: {
             showid: ShowInfo.id,
@@ -171,11 +173,16 @@ export default async function (EpisodePath, reIndex) {
         }
     });
 
+    if (EpisodeInserted) {
+        // Inform all connected clients that a new episode has been imported
+        UserManager.sendToAll("indexer", {event: "added", type: "episode"});
+    } else {
+
+    }
+
     queue.push({task: "DownloadEpisodeBanner", id: Episode.id}, function (err) {
 
     });
-
-
 
     // Link the file to the episode
     Episode.addFile(File);
