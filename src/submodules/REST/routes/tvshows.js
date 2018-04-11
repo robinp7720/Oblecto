@@ -66,6 +66,11 @@ export default (server) => {
     // Endpoint to get the poster for a series
     server.get('/series/:id/poster', function (req, res, next) {
         databases.tvshow.findById(req.params.id).then(show => {
+            if (!show) {
+                res.errorCode = 404;
+                return res.send();
+            }
+
             let showPath = show.directory;
             let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
 
@@ -74,6 +79,9 @@ export default (server) => {
                 if (exists) {
                     // If the image exits, simply pipe it to the client
                     fs.createReadStream(posterPath).pipe(res)
+                } else {
+                    res.errorCode = 404;
+                    res.send();
                 }
             });
         });
