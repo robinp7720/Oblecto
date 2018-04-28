@@ -54,7 +54,13 @@ export default (server) => {
         databases.episode.findAll({
             include: [
                 databases.tvshow,
-                databases.track
+                {
+                    model: databases.track,
+                    required: false,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
             ],
             where: {tvshowId: req.params.id},
             order: [

@@ -31,6 +31,7 @@ export default (server) => {
                 databases.tvshow,
                 {
                     model: databases.track,
+                    required: false,
                     where: {
                         userId: req.authorization.jwt.id
                     }
