@@ -22,6 +22,9 @@ export default {
             if (err)
                 return false;
 
+            if (socket.authentication)
+                return false;
+
             // Add user first into memory if the user isn't there
             this.userAdd(decoded);
 
