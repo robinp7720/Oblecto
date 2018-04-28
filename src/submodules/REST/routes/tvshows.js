@@ -52,7 +52,10 @@ export default (server) => {
     server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
         // search for attributes
         databases.episode.findAll({
-            include: [databases.tvshow],
+            include: [
+                databases.tvshow,
+                databases.track
+            ],
             where: {tvshowId: req.params.id},
             order: [
                 ['airedSeason', 'ASC'],
