@@ -36,6 +36,8 @@ movie.belongsToMany(file, {through: movieFiles});
 track.belongsTo(user);
 track.belongsTo(episode);
 
+episode.hasMany(track);
+
 async.series([
     (callback) => {
         sequelize

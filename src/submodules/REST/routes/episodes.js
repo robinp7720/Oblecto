@@ -27,7 +27,15 @@ export default (server) => {
     // Endpoint to get a list of episodes from all series
     server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
         databases.episode.findAll({
-            include: [databases.tvshow],
+            include: [
+                databases.tvshow,
+                {
+                    model: databases.track,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
+            ],
             order: [
                 [req.params.sorting, req.params.order]
             ],
@@ -98,7 +106,11 @@ export default (server) => {
     // Endpoint to retrieve episode details based on the local episode ID
     server.get('/episode/:id/info', requiresAuth, function (req, res, next) {
         // search for attributes
-        databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
+        databases.episode.findById(req.params.id,
+            {
+                include: [databases.file]
+            })
+            .then(episode => {
             episode = episode.toJSON();
 
             if (UserManager.hasSavedTVProgress(req.authorization.jwt.username, episode.id))
