@@ -1,7 +1,11 @@
-import restapi from "./submodules/api";
+import restapi from "./submodules/REST";
 import UserManager from "./submodules/users";
 import TVShowIndexer from "./lib/indexers/tv";
 import MovieIndexer from "./lib/indexers/movies";
+
+import TVShowCleaner from "./lib/indexers/tv/cleaner";
+import MovieCleaner from "./lib/indexers/movies/cleaner"
+
 
 const config = require('./config.json');
 
@@ -21,6 +25,11 @@ if (config.indexer.runAtBoot) {
     // Index movies
     MovieIndexer.indexAll();
 }
+
+// Clean up old library entries
+TVShowCleaner.removeFileLessEpisodes();
+TVShowCleaner.removePathLessShows();
+MovieCleaner.removeFileLessMovies();
 
 // Socket connection
 let io = socketio.listen(server.server, {
