@@ -25,7 +25,16 @@ export default (server) => {
             include: [
                 {
                     model: databases.episode,
-                    include: [databases.tvshow]
+                    include: [
+                        databases.tvshow,
+                        {
+                            model: databases.track,
+                            required: false,
+                            where: {
+                                userId: req.authorization.jwt.id
+                            }
+                        }
+                    ]
                 }
             ],
             where: {
