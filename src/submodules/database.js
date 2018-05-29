@@ -38,44 +38,7 @@ trackEpisodes.belongsTo(episode);
 
 episode.hasMany(trackEpisodes);
 
-async.series([
-    (callback) => {
-        sequelize
-            .authenticate()
-            .then(callback)
-            .catch((err) => {
-                console.log(err);
-            });
-    },
-    (callback) => {
-        file.sync().then(() => callback());
-    },
-    (callback) => {
-        tvshow.sync().then(() => callback());
-    },
-    (callback) => {
-        episode.sync().then(() => callback());
-    },
-    (callback) => {
-        movie.sync().then(() => callback());
-    },
-    (callback) => {
-        episodeFiles.sync().then(() => callback());
-    },
-    (callback) => {
-        movieFiles.sync().then(() => callback());
-    },
-    (callback) => {
-        user.sync().then(() => callback());
-    },
-    (callback) => {
-        trackEpisodes.sync().then(() => callback());
-    }
-], (err) => {
-
-});
-
-module.exports = {
+let databases = {
     tvshow,
     episode,
     movie,
@@ -83,3 +46,18 @@ module.exports = {
     trackEpisodes,
     file
 };
+
+sequelize
+    .authenticate()
+    .then(() => {
+        // Create databases if connection to the database could be established
+        for (let prop in databases) {
+            databases[prop].sync();
+        }
+    })
+    .catch((err) => {
+        console.log(err);
+    });
+
+
+module.exports = databases;
