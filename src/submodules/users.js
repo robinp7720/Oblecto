@@ -72,7 +72,7 @@ export default {
 
     async loadProgress (authentication) {
         // Load progress for TV shows
-        let tracks = await databases.track.findAll({where: {userId: authentication.id}})
+        let tracks = await databases.trackEpisodes.findAll({where: {userId: authentication.id}})
 
         tracks.forEach(v => {
             let item = v.toJSON();
@@ -140,7 +140,7 @@ export default {
 
         return await async.each(storage['tv'],
              async show => {
-                let [item, created] = await databases.track.findOrCreate({
+                let [item, created] = await databases.trackEpisodes.findOrCreate({
                     where: {
                         userId: userInfo.id,
                         episodeId: show.episodeId

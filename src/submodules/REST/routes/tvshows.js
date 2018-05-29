@@ -55,7 +55,7 @@ export default (server) => {
             include: [
                 databases.tvshow,
                 {
-                    model: databases.track,
+                    model: databases.trackEpisodes,
                     required: false,
                     where: {
                         userId: req.authorization.jwt.id

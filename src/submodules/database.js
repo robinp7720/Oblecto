@@ -21,7 +21,7 @@ const tvshow = sequelize.import(__dirname + "/../models/tvshow.js");
 const episode = sequelize.import(__dirname + "/../models/episode.js");
 const movie = sequelize.import(__dirname + "/../models/movie.js");
 const user = sequelize.import(__dirname + "/../models/user.js");
-const track = sequelize.import(__dirname + "/../models/track.js");
+const trackEpisodes = sequelize.import(__dirname + "/../models/trackEpisodes.js");
 const file = sequelize.import(__dirname + "/../models/file.js");
 
 const episodeFiles = sequelize.import(__dirname + "/../models/episodeFiles.js");
@@ -33,10 +33,10 @@ episode.belongsTo(tvshow);
 episode.belongsToMany(file, {through: episodeFiles});
 movie.belongsToMany(file, {through: movieFiles});
 
-track.belongsTo(user);
-track.belongsTo(episode);
+trackEpisodes.belongsTo(user);
+trackEpisodes.belongsTo(episode);
 
-episode.hasMany(track);
+episode.hasMany(trackEpisodes);
 
 async.series([
     (callback) => {
@@ -69,7 +69,7 @@ async.series([
         user.sync().then(() => callback());
     },
     (callback) => {
-        track.sync().then(() => callback());
+        trackEpisodes.sync().then(() => callback());
     }
 ], (err) => {
 
@@ -80,6 +80,6 @@ module.exports = {
     episode,
     movie,
     user,
-    track,
+    trackEpisodes,
     file
 };

@@ -23,14 +23,13 @@ export default (server) => {
         });
     };
 
-
     // Endpoint to get a list of episodes from all series
     server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
         databases.episode.findAll({
             include: [
                 databases.tvshow,
                 {
-                    model: databases.track,
+                    model: databases.trackEpisodes,
                     required: false,
                     where: {
                         userId: req.authorization.jwt.id

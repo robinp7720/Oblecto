@@ -21,14 +21,14 @@ export default (server) => {
     // Endpoint to get the files currently being watched
     server.get('/watching', requiresAuth, function (req, res, next) {
         // search for attributes
-        databases.track.findAll({
+        databases.trackEpisodes.findAll({
             include: [
                 {
                     model: databases.episode,
                     include: [
                         databases.tvshow,
                         {
-                            model: databases.track,
+                            model: databases.trackEpisodes,
                             required: false,
                             where: {
                                 userId: req.authorization.jwt.id
