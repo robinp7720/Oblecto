@@ -25,6 +25,19 @@ export default (server) => {
 
     // Endpoint to get a list of episodes from all series
     server.get('/episodes/list/:sorting/:order', requiresAuth, function (req, res, next) {
+
+        let AllowedOrders = ["desc", "asc"];
+
+        if (AllowedOrders.indexOf(req.params.order) === -1)
+            return res.send({
+                error: "Ordering direction invalid"
+            });
+
+        if (!(req.params.sorting in databases.episode.attributes))
+            return res.send({
+                error: "Sorting method invalid"
+            });
+
         databases.episode.findAll({
             include: [
                 databases.tvshow,
@@ -61,6 +74,14 @@ export default (server) => {
                 }
             });
         });
+    });
+
+    // Endpoint to list all stored files for the specific episode
+    server.get('/episode/:id/files', function (req, res, next) {
+        databases.episode.findById(req.params.id, {include: [databases.file]}).then(episode => {
+            res.send(episode.files);
+            next();
+        })
     });
 
 
