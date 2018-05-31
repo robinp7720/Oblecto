@@ -3,8 +3,9 @@ import UserManager from "./submodules/users";
 import TVShowIndexer from "./lib/indexers/tv";
 import MovieIndexer from "./lib/indexers/movies";
 
+import FileCleaner from "./lib/indexers/files/cleaner"
 import TVShowCleaner from "./lib/indexers/tv/cleaner";
-import MovieCleaner from "./lib/indexers/movies/cleaner"
+import MovieCleaner from "./lib/indexers/movies/cleaner";
 
 
 const config = require('./config.json');
@@ -27,6 +28,7 @@ if (config.indexer.runAtBoot) {
 }
 
 // Clean up old library entries
+FileCleaner.removedDeletedFiled();
 TVShowCleaner.removeFileLessEpisodes();
 TVShowCleaner.removePathLessShows();
 MovieCleaner.removeFileLessMovies();
