@@ -25,6 +25,7 @@ export default (server) => {
             include: [
                 {
                     model: databases.episode,
+                    required: true,
                     include: [
                         databases.tvshow,
                         {
