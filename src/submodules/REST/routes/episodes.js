@@ -28,7 +28,7 @@ export default (server) => {
 
         let AllowedOrders = ["desc", "asc"];
 
-        if (AllowedOrders.indexOf(req.params.order) === -1)
+        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
             return res.send({
                 error: "Ordering direction invalid"
             });
