@@ -29,7 +29,6 @@ if (config.indexer.runAtBoot) {
 
 // Clean up old library entries
 FileCleaner.removedDeletedFiled();
-TVShowCleaner.removeFileLessEpisodes();
 TVShowCleaner.removePathLessShows();
 MovieCleaner.removeFileLessMovies();
 
