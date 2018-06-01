@@ -42,6 +42,8 @@ let databases = {
     tvshow,
     episode,
     movie,
+    episodeFiles,
+    movieFiles,
     user,
     trackEpisodes,
     file
