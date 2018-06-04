@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define("track", {
+    return sequelize.define("trackEpisodes", {
         time: DataTypes.FLOAT,
         progress: DataTypes.FLOAT,
     })
