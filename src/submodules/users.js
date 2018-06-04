@@ -72,9 +72,9 @@ export default {
 
     async loadProgress (authentication) {
         // Load progress for TV shows
-        let tracks = await databases.trackEpisodes.findAll({where: {userId: authentication.id}})
+        let episodeTracks = await databases.trackEpisodes.findAll({where: {userId: authentication.id}});
 
-        tracks.forEach(v => {
+        episodeTracks.forEach(v => {
             let item = v.toJSON();
             this.users[authentication.username].storage['tv'][item.episodeId] = {
                 time: item.time,
@@ -82,7 +82,19 @@ export default {
                 tvshowId: item.tvshowId,
                 episodeId: item.episodeId
             }
-        })
+        });
+
+        // Load progress for Movies
+        let movieTracks = await databases.trackMovies.findAll({where: {userId: authentication.id}});
+
+        movieTracks.forEach(v => {
+            let item = v.toJSON();
+            this.users[authentication.username].storage['movies'][item.movieId] = {
+                time: item.time,
+                progress: item.progress,
+                movieId: item.movieId
+            }
+        });
     },
 
 
@@ -133,13 +145,12 @@ export default {
         }
     },
 
-    // Save the temporary storage of a show into the MySQL database
-    async saveUserProgress (username) {
+    async saveUserEpisodeProgress (username) {
         let userInfo = this.users[username];
         let storage = userInfo.storage;
 
         return await async.each(storage['tv'],
-             async show => {
+            async show => {
                 let [item, created] = await databases.trackEpisodes.findOrCreate({
                     where: {
                         userId: userInfo.id,
@@ -158,6 +169,38 @@ export default {
 
                 return created;
             })
+    },
+
+    async saveUserMovieProgress (username) {
+        let userInfo = this.users[username];
+        let storage = userInfo.storage;
+
+        return await async.each(storage['movies'],
+            async movie => {
+                let [item, created] = await databases.trackMovies.findOrCreate({
+                    where: {
+                        userId: userInfo.id,
+                        movieId: movie.movieId
+                    },
+                    defaults: {
+                        time: movie.time,
+                        progress: movie.progress
+                    }
+                });
+
+                item.updateAttributes({
+                    time: movie.time,
+                    progress: movie.progress
+                });
+
+                return created;
+            })
+    },
+
+    // Save the temporary storage of a show into the MySQL database
+    async saveUserProgress (username) {
+        this.saveUserEpisodeProgress(username);
+        this.saveUserMovieProgress(username);
     },
 
     // Run saveUserProgress on all keys in the users array

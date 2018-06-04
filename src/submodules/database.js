@@ -20,8 +20,12 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
 const tvshow = sequelize.import(__dirname + "/../models/tvshow.js");
 const episode = sequelize.import(__dirname + "/../models/episode.js");
 const movie = sequelize.import(__dirname + "/../models/movie.js");
+
 const user = sequelize.import(__dirname + "/../models/user.js");
+
 const trackEpisodes = sequelize.import(__dirname + "/../models/trackEpisodes.js");
+const trackMovies = sequelize.import(__dirname + "/../models/trackMovies.js");
+
 const file = sequelize.import(__dirname + "/../models/file.js");
 
 const episodeFiles = sequelize.import(__dirname + "/../models/episodeFiles.js");
@@ -36,6 +40,9 @@ movie.belongsToMany(file, {through: movieFiles});
 trackEpisodes.belongsTo(user);
 trackEpisodes.belongsTo(episode);
 
+trackMovies.belongsTo(user);
+trackMovies.belongsTo(movie);
+
 episode.hasMany(trackEpisodes);
 
 let databases = {
@@ -46,6 +53,7 @@ let databases = {
     movieFiles,
     user,
     trackEpisodes,
+    trackMovies,
     file
 };
 
