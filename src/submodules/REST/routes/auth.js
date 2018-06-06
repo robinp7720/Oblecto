@@ -5,23 +5,28 @@ import databases from "../../../submodules/database";
 import config from "../../../config";
 
 export default (server) => {
-    server.post('/auth/login', function (req, res, next) {
+    server.post('/auth/login', async function (req, res, next) {
         if (!req.params.username)
             return next(new errors.BadRequestError('Username is missing'))
 
         // TODO: Implement password hashing
-        databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email', 'id']}).then(user => {
-            // Don't send a token if the user doesn't exist
-            if (!user)
-                return next(new errors.UnauthorizedError('Username is incorrect'))
-
-            // TODO: implement password checking
-
-            let token = jwt.sign(user.toJSON(), config.authentication.secret);
-            user['access_token'] = token;
-            res.send(user);
-            next();
+        let user = await databases.user.findOne({
+            where: {
+                username: req.params.username
+            },
+            attributes: ['username', 'name', 'email', 'id']
         })
+        
+        // Don't send a token if the user doesn't exist
+        if (!user)
+            return next(new errors.UnauthorizedError('Username is incorrect'))
+
+        // TODO: implement password checking
+        let token = jwt.sign(user.toJSON(), config.authentication.secret);
+        user['access_token'] = token;
+        res.send(user);
+        next();
+
     });
 
     server.get('/auth/isAuthenticated', function (req, res, next) {
