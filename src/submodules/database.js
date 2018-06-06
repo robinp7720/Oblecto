@@ -17,19 +17,19 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
 });
 
 // Import models for sequelize
-const tvshow = sequelize.import(__dirname + "/../models/tvshow.js");
-const episode = sequelize.import(__dirname + "/../models/episode.js");
-const movie = sequelize.import(__dirname + "/../models/movie.js");
+const tvshow = sequelize.import("tvshow", require(__dirname + "/../models/tvshow"));
+const episode = sequelize.import("episodes", require(__dirname + "/../models/episode.js"));
+const movie = sequelize.import("movies", require(__dirname + "/../models/movie.js"));
 
-const user = sequelize.import(__dirname + "/../models/user.js");
+const user = sequelize.import("users", require(__dirname + "/../models/user.js"));
 
-const trackEpisodes = sequelize.import(__dirname + "/../models/trackEpisodes.js");
-const trackMovies = sequelize.import(__dirname + "/../models/trackMovies.js");
+const trackEpisodes = sequelize.import("trackEpisodes", require(__dirname + "/../models/trackEpisodes.js"));
+const trackMovies = sequelize.import("trackMovies", require(__dirname + "/../models/trackMovies.js"));
 
-const file = sequelize.import(__dirname + "/../models/file.js");
+const file = sequelize.import("file", require(__dirname + "/../models/file.js"));
 
-const episodeFiles = sequelize.import(__dirname + "/../models/episodeFiles.js");
-const movieFiles = sequelize.import(__dirname + "/../models/movieFiles.js");
+const episodeFiles = sequelize.import("episodeFiles", require(__dirname + "/../models/episodeFiles.js"));
+const movieFiles = sequelize.import("movieFiles", require(__dirname + "/../models/movieFiles.js"));
 
 
 episode.belongsTo(tvshow);
@@ -60,10 +60,8 @@ let databases = {
 sequelize
     .authenticate()
     .then(() => {
-        // Create databases if connection to the database could be established
-        for (let prop in databases) {
-            databases[prop].sync();
-        }
+        // Create databases if connection to the database could be establishe
+        sequelize.sync();
     })
     .catch((err) => {
         console.log(err);
