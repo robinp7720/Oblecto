@@ -3,7 +3,7 @@
     "runAtBoot": true
   },
   "queue": {
-    "concurrency": 1
+    "concurrency": 2
   },
   "tvdb": {
     "key": "4908EBCEE2556E3D"
@@ -29,7 +29,6 @@
     ]
   },
   "movies": {
-    "concurrency": 1,
     "directories": [
       {
         "path": "/mnt/SMB/Movies/"
@@ -37,7 +36,8 @@
     ]
   },
   "authentication": {
-    "secret": "secret"
+    "secret": "secret",
+    "saltRounds": 10
   },
   "tracker": {
     "interval": 10
