@@ -1,18 +1,19 @@
 import jwt from "jsonwebtoken";
+import errors from "restify-errors"
 
 import databases from "../../../submodules/database";
 import config from "../../../config";
 
 export default (server) => {
     server.post('/auth/login', function (req, res, next) {
+        if (!req.params.username)
+            return next(new errors.BadRequestError('Username is missing'))
+
         // TODO: Implement password hashing
         databases.user.findOne({where: {username: req.params.username}, attributes: ['username', 'name', 'email', 'id']}).then(user => {
             // Don't send a token if the user doesn't exist
-            if (!user) {
-                return res.send({
-                    "error": "User does not exist"
-                })
-            }
+            if (!user)
+                return next(new errors.UnauthorizedError('Username is incorrect'))
 
             // TODO: implement password checking
 
