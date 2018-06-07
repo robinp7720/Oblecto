@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "babel-node src",
-    "debug": "nodemon src --exec 'babel-node --inspect '",
+    "debug": "nodemon src --exec 'babel-node --inspect=0.0.0.0:9229 '",
     "build": "babel src -d dist",
     "serve": "node dist/",
     "pack": "webpack-cli",
@@ -41,6 +41,8 @@
     "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
+    "eslint": "^4.19.1",
+    "jshint": "^2.9.5",
     "nexe": "^2.0.0-rc.29",
     "nodemon": "^1.17.5",
     "webpack": "^4.11.1",

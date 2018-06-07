@@ -2,3 +2,7 @@ cache/episodes/*.png
 cache/poster/*.png
 node_modules
 .idea
+.vscode-upload.json
+dist/
+build/
+.vscode/launch.json

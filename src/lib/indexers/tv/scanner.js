@@ -1,9 +1,9 @@
 import epinfer from 'epinfer';
-import path from "path"
-import tvdb from "../../../submodules/tvdb";
-import databases from "../../../submodules/database";
-import queue from "../../../submodules/queue";
-import UserManager from "../../../submodules/users";
+import path from 'path';
+import tvdb from '../../../submodules/tvdb';
+import databases from '../../../submodules/database';
+import queue from '../../../submodules/queue';
+import UserManager from '../../../submodules/users';
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
@@ -18,7 +18,7 @@ export default async function (EpisodePath, reIndex) {
 
     if (EpisodeData.filetype !== 'video' ||
         EpisodeData.subtype  !== 'episode') {
-        console.log(EpisodePath, " is not an episode");
+        console.log(EpisodePath, ' is not an episode');
         return false;
     }
 
@@ -38,9 +38,9 @@ export default async function (EpisodePath, reIndex) {
     });
 
     if (Created) {
-        console.log("File inserted:", EpisodePath);
+        console.log('File inserted:', EpisodePath);
     } else {
-        console.log("File already in database:", EpisodePath);
+        console.log('File already in database:', EpisodePath);
 
         // If reIndexing is disabled, quit now and don't attempt to classify file again
         // Quiting may result in problems if the file was inserted but there was an error with the classifier on
@@ -53,7 +53,7 @@ export default async function (EpisodePath, reIndex) {
 
     // Assume season 1 if season number is not present
     if (EpisodeData.season === undefined) {
-        EpisodeData.season = 1
+        EpisodeData.season = 1;
     }
 
     // Search for all shows with the title on TVDB
@@ -79,7 +79,7 @@ export default async function (EpisodePath, reIndex) {
         TvdbSearch.forEach(item => {
             if (item.firstAired.substr(0, 4) === EpisodeData.series_year)
                 PossibleShows.push(item);
-        })
+        });
     } else {
         PossibleShows = TvdbSearch;
     }
@@ -98,7 +98,7 @@ export default async function (EpisodePath, reIndex) {
         ShowInfo = await tvdb.getSeriesById(SelectedShow.id);
         ShowInfoCache[SelectedShow.id] = ShowInfo;
     } else {
-        ShowInfo = ShowInfoCache[SelectedShow.id]
+        ShowInfo = ShowInfoCache[SelectedShow.id];
     }
 
     // Insert the TVShow info into the database
@@ -133,7 +133,7 @@ export default async function (EpisodePath, reIndex) {
         AllEpisodes = await tvdb.getEpisodesBySeriesId(ShowInfo.id);
         EpisodeCache[SelectedShow.id] = AllEpisodes;
     } else {
-        AllEpisodes = EpisodeCache[SelectedShow.id]
+        AllEpisodes = EpisodeCache[SelectedShow.id];
     }
 
     let SelectedEpisode = null;
@@ -147,7 +147,7 @@ export default async function (EpisodePath, reIndex) {
     });
 
     if (!SelectedEpisode) {
-        console.log("File count not be matched:", EpisodePath);
+        console.log('File count not be matched:', EpisodePath);
 
         return false;
     }
@@ -175,12 +175,12 @@ export default async function (EpisodePath, reIndex) {
 
     if (EpisodeInserted) {
         // Inform all connected clients that a new episode has been imported
-        UserManager.sendToAll("indexer", {event: "added", type: "episode"});
+        UserManager.sendToAll('indexer', {event: 'added', type: 'episode'});
     } else {
 
     }
 
-    queue.push({task: "DownloadEpisodeBanner", id: Episode.id}, function (err) {
+    queue.push({task: 'DownloadEpisodeBanner', id: Episode.id}, function (err) {
 
     });
 
@@ -188,4 +188,4 @@ export default async function (EpisodePath, reIndex) {
     Episode.addFile(File);
 
     return true;
-};
+}

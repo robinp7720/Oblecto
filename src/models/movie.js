@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define("movies", {
+    return sequelize.define('movies', {
         tmdbid: { type: DataTypes.INTEGER, unique: true },
 
         movieName: DataTypes.STRING,
@@ -8,5 +8,5 @@ module.exports = (sequelize, DataTypes) => {
 
         releaseDate: DataTypes.DATEONLY,
         overview: DataTypes.TEXT,
-    })
-}
+    });
+};

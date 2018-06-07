@@ -1,4 +1,4 @@
-import databases from "../../../submodules/database";
+import databases from '../../../submodules/database';
 
 export default {
     async removeFileLessMovies() {
@@ -14,4 +14,4 @@ export default {
         });
 
     }
-}
+};

@@ -1,6 +1,6 @@
-import databases from "../../../submodules/database";
+import databases from '../../../submodules/database';
 
-export default {
+export default { 
     async removeFileLessEpisodes() {
         let results = await databases.episode.findAll({
             include: [databases.file]
@@ -18,8 +18,8 @@ export default {
     async removePathLessShows() {
         let results = await databases.tvshow.destroy({
             where: {
-                directory: ""
+                directory: ''
             }
         });
     }
-}
+};

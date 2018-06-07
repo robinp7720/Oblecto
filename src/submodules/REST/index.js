@@ -1,16 +1,16 @@
-import jwt from "jsonwebtoken";
-import restify from "restify";
+import jwt from 'jsonwebtoken';
+import restify from 'restify';
 import routes from './routes';
-import corsMiddleware from "restify-cors-middleware";
-import UserManager from "../../submodules/users";
-import config from "../../config";
+import corsMiddleware from 'restify-cors-middleware';
+import UserManager from '../../submodules/users';
+import config from '../../config';
 
 export default () => {
 
 // Initialize REST based server
     const server = restify.createServer();
 
-// Allow remote clients to connect to the backend
+    // Allow remote clients to connect to the backend
     const cors = corsMiddleware({
         preflightMaxAge: 5, //Optional
         origins: ['*'],
@@ -23,7 +23,7 @@ export default () => {
     server.use(restify.plugins.authorizationParser());
     server.use(restify.plugins.bodyParser({mapParams: true}));
 
-// Added user authentication information to the request if the user is authenticated
+    // Added user authentication information to the request if the user is authenticated
     server.use(function (req, res, next) {
         if (req.authorization === undefined)
             return next();
@@ -40,10 +40,10 @@ export default () => {
         });
     });
 
-// Add routes routes
+    // Add routes routes
     routes(server);
 
-// Start restify server
+    // Start restify server
     server.listen(config.server.port, function () {
         console.log('%s listening at %s', server.name, server.url);
     });

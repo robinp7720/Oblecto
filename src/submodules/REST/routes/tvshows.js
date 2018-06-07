@@ -1,55 +1,45 @@
-import path from "path";
-import jwt from "jsonwebtoken";
+import path from 'path';
+import jwt from 'jsonwebtoken';
 import fs from 'fs';
 
-import tvdb from "../../../submodules/tvdb";
-import databases from "../../../submodules/database";
-import config from "../../../config";
-import TVShowIndexer from "../../../lib/indexers/tv/index";
+import tvdb from '../../../submodules/tvdb';
+import databases from '../../../submodules/database';
+import config from '../../../config';
+import TVShowIndexer from '../../../lib/indexers/tv/index';
+import authMiddleWare from '../middleware/auth';
 
 export default (server) => {
 
-    const requiresAuth = function (req, res, next) {
-        if (req.authorization === undefined)
-            return next(false);
-
-        jwt.verify(req.authorization.credentials, config.authentication.secret, function (err, decoded) {
-            if (err)
-                return next(false);
-
-            next();
-        });
-    };
-
-    server.get('/shows/list/:sorting/:order', requiresAuth, function (req, res, next) {
-        databases.tvshow.findAll({
+    server.get('/shows/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let tvShows = await databases.tvshow.findAll({
             order: [
                 [req.params.sorting, req.params.order]
             ],
             limit: 30
-        })
-            .then((results) => res.send(results));
+        });
+
+        res.send(tvShows);
     });
 
     // Endpoint to request info based on the local series ID
-    server.get('/series/:id/info', requiresAuth, function (req, res, next) {
-        databases.tvshow.findById(req.params.id).then(show => {
-            show.genre = JSON.parse(show.genre);
-            res.send(show)
-        })
+    server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let show = await databases.tvshow.findById(req.params.id);
+
+        show.genre = JSON.parse(show.genre);
+        res.send(show);
     });
 
     // Endpoint to request a re-index of a series based on the local ID
-    server.get('/series/:id/index', requiresAuth, function (req, res, next) {
+    server.get('/series/:id/index', authMiddleWare.requiresAuth, function (req, res, next) {
         databases.tvshow.findById(req.params.id).then(show => {
             TVShowIndexer.indexDirectory(show.directory);
 
-            res.send([true])
-        })
+            res.send([true]);
+        });
     });
 
     // Endpoint to get all episodes within a series
-    server.get('/series/:id/episodes', requiresAuth, function (req, res, next) {
+    server.get('/series/:id/episodes', authMiddleWare.requiresAuth, function (req, res, next) {
         // search for attributes
         databases.episode.findAll({
             include: [
@@ -68,8 +58,8 @@ export default (server) => {
                 ['airedEpisodeNumber', 'ASC']
             ],
         }).then(show => {
-            res.send(show)
-        })
+            res.send(show);
+        });
     });
 
     // Endpoint to get the poster for a series
@@ -87,7 +77,7 @@ export default (server) => {
             fs.exists(posterPath, function (exists) {
                 if (exists) {
                     // If the image exits, simply pipe it to the client
-                    fs.createReadStream(posterPath).pipe(res)
+                    fs.createReadStream(posterPath).pipe(res);
                 } else {
                     res.errorCode = 404;
                     res.send();

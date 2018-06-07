@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define("episodes", {
+    return sequelize.define('episodes', {
         tvdbid: { type: DataTypes.INTEGER, unique: true },
         showid: DataTypes.INTEGER,
 
@@ -14,5 +14,5 @@ module.exports = (sequelize, DataTypes) => {
 
         firstAired: DataTypes.DATEONLY,
         overview: DataTypes.TEXT,
-    })
-}
+    });
+};

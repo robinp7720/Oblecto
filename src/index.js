@@ -1,16 +1,16 @@
-import restapi from "./submodules/REST";
-import UserManager from "./submodules/users";
-import TVShowIndexer from "./lib/indexers/tv";
-import MovieIndexer from "./lib/indexers/movies";
+import restapi from './submodules/REST';
+import UserManager from './submodules/users';
+import TVShowIndexer from './lib/indexers/tv';
+import MovieIndexer from './lib/indexers/movies';
 
-import FileCleaner from "./lib/indexers/files/cleaner"
-import TVShowCleaner from "./lib/indexers/tv/cleaner";
-import MovieCleaner from "./lib/indexers/movies/cleaner";
+import FileCleaner from './lib/indexers/files/cleaner';
+import TVShowCleaner from './lib/indexers/tv/cleaner';
+import MovieCleaner from './lib/indexers/movies/cleaner';
 
 
 const config = require('./config.json');
 
-const socketio = require("socket.io");
+const socketio = require('socket.io');
 
 // Load Oblecto submodules
 const zeroconf = require('./submodules/zeroconf');
@@ -44,7 +44,7 @@ io.on('connection', socket => UserManager.userConnected(socket));
 
 // Periodically save the user storage to the database
 setInterval(() => {
-    UserManager.saveAllUserProgress()
+    UserManager.saveAllUserProgress();
 }, 1000 * config.tracker.interval);
 
 

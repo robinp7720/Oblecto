@@ -1,5 +1,5 @@
-import fs from "fs";
-import databases from "../../../submodules/database";
+import fs from 'fs';
+import databases from '../../../submodules/database';
 
 export default {
     async removedDeletedFiled () {
@@ -10,10 +10,10 @@ export default {
                 if (!err)
                     return false;
 
-                console.log("Deleting", item.path, "because the file doesn't exist anymore");
+                console.log('Deleting', item.path, 'because the file doesn\'t exist anymore');
                 item.destroy();
             });
         });
 
     },
-}
+};

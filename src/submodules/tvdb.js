@@ -1,5 +1,5 @@
-import TVDB from "node-tvdb";
-import config from "../config.json";
+import TVDB from 'node-tvdb';
+import config from '../config.json';
 
 let tvdb = new TVDB(config.tvdb.key);
 
@@ -11,7 +11,7 @@ setInterval(function () {
         })
         .catch(function (err) {
             tvdb = new TVDB(config.tvdb.key);
-        })
+        });
 }, 1000 * 60 * 60);
 
-export default tvdb
+export default tvdb;

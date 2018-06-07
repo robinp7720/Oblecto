@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define("tvshow", {
+    return sequelize.define('tvshow', {
         tvdbid: { type: DataTypes.INTEGER, unique: true },
         imdbid: { type: DataTypes.STRING(64) },
         seriesId: { type: DataTypes.INTEGER },
@@ -21,5 +21,5 @@ module.exports = (sequelize, DataTypes) => {
         siteRatingCount: DataTypes.INTEGER,
 
         directory: DataTypes.STRING
-    })
-}
+    });
+};

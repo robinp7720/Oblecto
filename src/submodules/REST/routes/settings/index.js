@@ -1,5 +1,5 @@
-import maintenance from './maintenance'
+import maintenance from './maintenance';
 
 export default (server) => {
     maintenance(server);
-}
+};

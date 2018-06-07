@@ -1,7 +1,7 @@
-import jwt from "jsonwebtoken";
-import async from "promise-async";
-import config from "../config.json";
-import databases from "./database";
+import jwt from 'jsonwebtoken';
+import async from 'promise-async';
+import config from '../config.json';
+import databases from './database';
 
 export default {
     users: {},
@@ -14,7 +14,7 @@ export default {
             if (socket.authentication) {
                 this.socketDisconnect(socket);
             }
-        })
+        });
     },
 
     userAuthenticate (socket, data) {
@@ -49,7 +49,7 @@ export default {
 
         // If there are no open sockets for the user, delete the user entity
         if (this.users[socket.authentication.username].sockets.length < 1)
-            delete this.users[authentication.username]
+            delete this.users[authentication.username];
     },
 
     userAdd (authentication) {
@@ -81,7 +81,7 @@ export default {
                 progress: item.progress,
                 tvshowId: item.tvshowId,
                 episodeId: item.episodeId
-            }
+            };
         });
 
         // Load progress for Movies
@@ -93,7 +93,7 @@ export default {
                 time: item.time,
                 progress: item.progress,
                 movieId: item.movieId
-            }
+            };
         });
     },
 
@@ -168,7 +168,7 @@ export default {
                 });
 
                 return created;
-            })
+            });
     },
 
     async saveUserMovieProgress (username) {
@@ -194,7 +194,7 @@ export default {
                 });
 
                 return created;
-            })
+            });
     },
 
     // Save the temporary storage of a show into the MySQL database
@@ -206,33 +206,33 @@ export default {
     // Run saveUserProgress on all keys in the users array
     saveAllUserProgress () {
         Object.entries(this.users).forEach(([username, user]) => {
-            this.saveUserProgress(username)
+            this.saveUserProgress(username);
         });
     },
 
     // Method to check if a certain user has save progress in a show
     hasSavedTVProgress (username, episodeId) {
-        return this.users[username]['storage']['tv'][episodeId] !== undefined
+        return this.users[username]['storage']['tv'][episodeId] !== undefined;
     },
 
     getSavedTVProgress (username, episodeId) {
-        return this.users[username]['storage']['tv'][episodeId]
+        return this.users[username]['storage']['tv'][episodeId];
     },
 
     // Method to check if a certain user has save progress in a movie
     hasSavedMovieProgress (username, movieId) {
-        return this.users[username]['storage']['movies'][movieId] !== undefined
+        return this.users[username]['storage']['movies'][movieId] !== undefined;
     },
 
     getSavedMovieProgress (username, movieId) {
-        return this.users[username]['storage']['movies'][movieId]
+        return this.users[username]['storage']['movies'][movieId];
     },
 
     // Function to send a message to all users
     sendToAll (channel, message) {
         async.each(this.users, (user) => {
             async.each(user.sockets, (socket) => {
-                socket.emit(channel, message)
+                socket.emit(channel, message);
             }, () => {
 
             });

@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define("episodeFiles", {
+    return sequelize.define('episodeFiles', {
 
-    })
+    });
 };

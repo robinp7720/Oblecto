@@ -1,7 +1,7 @@
-import path from "path";
-import recursive from "recursive-readdir";
-import queue from "../../../submodules/queue";
-import config from "../../../config.json";
+import path from 'path';
+import recursive from 'recursive-readdir';
+import queue from '../../../submodules/queue';
+import config from '../../../config.json';
 
 // TODO: Add config option to use the parent directory to identify movies
 // TODO: Seperate Scanning and identifying
@@ -14,16 +14,16 @@ export default {
             let extension = path.parse(file).ext;
 
             if (['.mp4','.avi'].indexOf(extension) !== -1) {
-                queue.push({task: "movie", path: file}, function (err) {
+                queue.push({task: 'movie', path: file}, function (err) {
 
                 });
             }
-        })
+        });
     },
 
     async indexAll() {
         config.movies.directories.forEach(directory => {
-            this.indexDirectory(directory.path)
+            this.indexDirectory(directory.path);
         });
     }
 };
