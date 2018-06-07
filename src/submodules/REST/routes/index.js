@@ -4,6 +4,7 @@ import files from './files';
 import movies from './movies';
 import tvshows from './tvshows';
 import settings from './settings';
+import users from './users';
 
 export default (server) => {
     auth(server);
@@ -12,4 +13,5 @@ export default (server) => {
     movies(server);
     tvshows(server);
     settings(server);
+    users(server);
 };
