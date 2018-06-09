@@ -5,6 +5,7 @@ module.exports = (sequelize, DataTypes) => {
         name: DataTypes.STRING,
         directory: DataTypes.STRING,
         extension: DataTypes.STRING,
+        container: DataTypes.STRING,
 
     });
 };

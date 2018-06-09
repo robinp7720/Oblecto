@@ -32,7 +32,8 @@ export default async function (EpisodePath, reIndex) {
         defaults: {
             name: PathParsed.name,
             directory: PathParsed.dir,
-            extension: PathParsed.ext
+            extension: EpisodeData.extension,
+            container: EpisodeData.container
         },
         //include: [databases.episode]
     });
@@ -41,6 +42,10 @@ export default async function (EpisodePath, reIndex) {
         console.log('File inserted:', EpisodePath);
     } else {
         console.log('File already in database:', EpisodePath);
+
+        File.updateAttributes({
+            container: EpisodeData.container
+        });
 
         // If reIndexing is disabled, quit now and don't attempt to classify file again
         // Quiting may result in problems if the file was inserted but there was an error with the classifier on
