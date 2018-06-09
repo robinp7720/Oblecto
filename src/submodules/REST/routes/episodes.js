@@ -42,7 +42,7 @@ export default (server) => {
     });
 
     // Endpoint to get a banner image for an episode based on the local episode ID
-    server.get('/episode/:id/image.png', async function (req, res, next) {
+    server.get('/episode/:id/banner', async function (req, res, next) {
         // Get episode data
         let episode = await databases.episode.findById(req.params.id, {
             include: [databases.file]
