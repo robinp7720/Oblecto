@@ -49,7 +49,7 @@ export default {
 
         // If there are no open sockets for the user, delete the user entity
         if (this.users[socket.authentication.username].sockets.length < 1)
-            delete this.users[authentication.username];
+            delete this.users[socket.authentication.username];
     },
 
     userAdd (authentication) {
