@@ -101,7 +101,7 @@ export default (server) => {
 
             res.writeHead(200, {
                 'Content-Length': total,
-                'Content-Type': 'video/mp4'
+                'Content-Type': mime
             });
 
             fs.createReadStream(path).pipe(res);
