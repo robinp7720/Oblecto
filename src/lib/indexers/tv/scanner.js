@@ -8,53 +8,9 @@ import UserManager from '../../../submodules/users';
 let ShowInfoCache = {};
 let EpisodeCache  = {};
 
-export default async function (EpisodePath, reIndex) {
-    let result = epinfer.process(EpisodePath);
 
-    let EpisodeData = result.getData();
-
-    let PathParsed = path.parse(EpisodePath);
+async function MatchTVDB (File, EpisodeData, PathParsed) {
     let ParentName = path.parse(PathParsed.dir).name;
-
-    if (EpisodeData.filetype !== 'video' ||
-        EpisodeData.subtype  !== 'episode') {
-        console.log(EpisodePath, ' is not an episode');
-        return false;
-    }
-
-    // First insert the file into the database so we know if the file was already indexed before
-    // We can assume that if the file was already in the database it was already indexed by this indexer.
-    // However, there is the option to not quit and continue indexing the file even if the file was already in the
-    // database
-
-    let [File, Created] = await databases.file.findOrCreate({
-        where: {path: EpisodePath},
-        defaults: {
-            name: PathParsed.name,
-            directory: PathParsed.dir,
-            extension: EpisodeData.extension,
-            container: EpisodeData.container
-        },
-        //include: [databases.episode]
-    });
-
-    if (Created) {
-        console.log('File inserted:', EpisodePath);
-    } else {
-        console.log('File already in database:', EpisodePath);
-
-        File.updateAttributes({
-            container: EpisodeData.container
-        });
-
-        // If reIndexing is disabled, quit now and don't attempt to classify file again
-        // Quiting may result in problems if the file was inserted but there was an error with the classifier on
-        // the first run.
-
-        if (!reIndex) {
-            return false;
-        }
-    }
 
     // Assume season 1 if season number is not present
     if (EpisodeData.season === undefined) {
@@ -106,6 +62,54 @@ export default async function (EpisodePath, reIndex) {
         ShowInfo = ShowInfoCache[SelectedShow.id];
     }
 
+    return ShowInfo;
+}
+
+export default async function (EpisodePath, reIndex) {
+    let result = epinfer.process(EpisodePath);
+
+    let EpisodeData = result.getData();
+
+    let PathParsed = path.parse(EpisodePath);
+
+    if (EpisodeData.filetype !== 'video' ||
+        EpisodeData.subtype  !== 'episode') {
+        console.log(EpisodePath, ' is not an episode');
+        return false;
+    }
+
+    // First insert the file into the database so we know if the file was already indexed before
+    // We can assume that if the file was already in the database it was already indexed by this indexer.
+    // However, there is the option to not quit and continue indexing the file even if the file was already in the
+    // database
+
+    let [File, Created] = await databases.file.findOrCreate({
+        where: {path: EpisodePath},
+        defaults: {
+            name: PathParsed.name,
+            directory: PathParsed.dir,
+            extension: EpisodeData.extension,
+            container: EpisodeData.container
+        },
+        //include: [databases.episode]
+    });
+
+    if (Created) {
+        console.log('File inserted:', EpisodePath);
+    } else {
+        console.log('File already in database:', EpisodePath);
+
+        // If reIndexing is disabled, quit now and don't attempt to classify file again
+        // Quiting may result in problems if the file was inserted but there was an error with the classifier on
+        // the first run.
+
+        if (!reIndex) {
+            return false;
+        }
+    }
+
+    let ShowInfo = await MatchTVDB(File, EpisodeData, PathParsed);
+
     // Insert the TVShow info into the database
     let [ShowEntry] = await databases.tvshow
         .findOrCreate({
@@ -134,11 +138,11 @@ export default async function (EpisodePath, reIndex) {
         });
 
     let AllEpisodes = {};
-    if (EpisodeCache[SelectedShow.id] === undefined) {
+    if (EpisodeCache[ShowInfo.id] === undefined) {
         AllEpisodes = await tvdb.getEpisodesBySeriesId(ShowInfo.id);
-        EpisodeCache[SelectedShow.id] = AllEpisodes;
+        EpisodeCache[ShowInfo.id] = AllEpisodes;
     } else {
-        AllEpisodes = EpisodeCache[SelectedShow.id];
+        AllEpisodes = EpisodeCache[ShowInfo.id];
     }
 
     let SelectedEpisode = null;
