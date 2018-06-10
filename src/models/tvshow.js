@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
         imdbid: { type: DataTypes.STRING(64) },
         seriesId: { type: DataTypes.INTEGER },
         zap2itId: { type: DataTypes.STRING(64)},
-        tmdb: { type: DataTypes.INTEGER},
+        tmdbid: { type: DataTypes.INTEGER},
 
         seriesName: DataTypes.STRING,
         alias: DataTypes.STRING,
@@ -17,6 +17,7 @@ module.exports = (sequelize, DataTypes) => {
         airsDayOfWeek: DataTypes.STRING,
         airsTime: DataTypes.STRING,
         rating: DataTypes.STRING,
+        popularity: DataTypes.FLOAT,
 
         siteRating: DataTypes.DOUBLE,
         siteRatingCount: DataTypes.INTEGER,

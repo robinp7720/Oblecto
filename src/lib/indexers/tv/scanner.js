@@ -1,12 +1,16 @@
 import epinfer from 'epinfer';
 import path from 'path';
 import tvdb from '../../../submodules/tvdb';
+import tmdb from '../../../submodules/tmdb';
 import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import UserManager from '../../../submodules/users';
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
+
+let TMDBShowInfoCache = {};
+let TMDBEpisodeCache  = {};
 
 
 async function MatchTVDB (File, EpisodeData, PathParsed) {
@@ -65,6 +69,60 @@ async function MatchTVDB (File, EpisodeData, PathParsed) {
     return ShowInfo;
 }
 
+async function MatchTMDB (File, EpisodeData, PathParsed) {
+    let ParentName = path.parse(PathParsed.dir).name;
+
+    // Assume season 1 if season number is not present
+    if (EpisodeData.season === undefined) {
+        EpisodeData.season = 1;
+    }
+
+    // Search for all shows with the title on TMDB
+    let TMDBSearch = [];
+
+    if (EpisodeData.series) {
+        try {
+            TMDBSearch = await tmdb.searchTv({ query: EpisodeData.series });
+        } catch (e) {
+            // Use the directory name if an error occured when using the name of the file
+            TMDBSearch = await tmdb.searchTv({ query: ParentName });
+        }
+    } else {
+        // If the Series name could not be found in the filename, use the directory name
+        TMDBSearch = await tmdb.searchTv({ query: ParentName });
+    }
+
+    TMDBSearch = TMDBSearch.results;
+
+    let PossibleShows = [];
+
+    // If the series year is defined in the title of the episode, search for all shows with that same year
+    if (EpisodeData.series_year) {
+        TMDBSearch.forEach(item => {
+            if (item.firstAired.substr(0, 4) === EpisodeData.series_year)
+                PossibleShows.push(item);
+        });
+    } else {
+        PossibleShows = TMDBSearch;
+    }
+
+    
+
+    // Select thme first show of that list
+    let SelectedShow = PossibleShows[0];
+
+    // Get detailed info about the show
+    let ShowInfo = {};
+    if (TMDBShowInfoCache[SelectedShow.id] === undefined) {
+        ShowInfo = await tmdb.tvInfo(SelectedShow.id);
+        TMDBShowInfoCache[SelectedShow.id] = ShowInfo;
+    } else {
+        ShowInfo = TMDBShowInfoCache[SelectedShow.id];
+    }
+
+    return ShowInfo;
+}
+
 export default async function (EpisodePath, reIndex) {
     let result = epinfer.process(EpisodePath);
 
@@ -109,6 +167,7 @@ export default async function (EpisodePath, reIndex) {
     }
 
     let ShowInfo = await MatchTVDB(File, EpisodeData, PathParsed);
+    let TMDBInfo = await MatchTMDB(File, EpisodeData, PathParsed);
 
     // Insert the TVShow info into the database
     let [ShowEntry] = await databases.tvshow
@@ -117,6 +176,7 @@ export default async function (EpisodePath, reIndex) {
                 seriesId: ShowInfo.seriesId,
                 imdbid: ShowInfo.imdbId,
                 zap2itId: ShowInfo.zap2itId,
+                tmdbid: TMDBInfo.id,
 
                 seriesName: ShowInfo.seriesName,
                 alias: JSON.stringify(ShowInfo.aliases),
@@ -129,6 +189,7 @@ export default async function (EpisodePath, reIndex) {
                 airsDayOfWeek: ShowInfo.airsDayOfWeek,
                 airsTime: ShowInfo.airsTime,
                 rating: ShowInfo.rating,
+                popularity: TMDBInfo.popularity,
 
                 siteRating: ShowInfo.siteRating,
                 siteRatingCount: ShowInfo.siteRatingCount,
