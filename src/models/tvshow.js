@@ -4,6 +4,7 @@ module.exports = (sequelize, DataTypes) => {
         imdbid: { type: DataTypes.STRING(64) },
         seriesId: { type: DataTypes.INTEGER },
         zap2itId: { type: DataTypes.STRING(64)},
+        tmdb: { type: DataTypes.INTEGER},
 
         seriesName: DataTypes.STRING,
         alias: DataTypes.STRING,
