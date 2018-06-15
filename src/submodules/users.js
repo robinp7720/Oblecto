@@ -115,7 +115,6 @@ export default {
         // If the item is a tv show episode, store it in the tv show temp storage of the user
         if (data.type === 'tv') {
             if (!data.episodeId ||
-                !data.tvshowId  ||
                 !data.progress  ||
                 !data.time) {
                 return false;
@@ -124,7 +123,6 @@ export default {
             this.users[socket.authentication.username]['storage']['tv'][data.episodeId] = {
                 time: data.time,
                 progress: data.progress,
-                tvshowId: data.tvshowId,
                 episodeId: data.episodeId
             };
         }
