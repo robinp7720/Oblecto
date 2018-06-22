@@ -52,7 +52,7 @@ export default async function (moviePath) {
             queue.push({
                 task: 'download',
                 path: posterPath,
-                url: 'https://image.tmdb.org/t/p/w500' + data.poster_path
+                url: 'https://image.tmdb.org/t/p/original' + data.poster_path
             });
 
         }
@@ -63,7 +63,7 @@ export default async function (moviePath) {
             queue.push({
                 task: 'download',
                 path: fanartPath,
-                url: 'https://image.tmdb.org/t/p/w500' + data.backdrop_path
+                url: 'https://image.tmdb.org/t/p/original' + data.backdrop_path
             });
         }
     });
