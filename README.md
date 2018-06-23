@@ -1,3 +1,4 @@
+![Oblecto logo](https://github.com/robinp7720/Oblecto/blob/master/images/logotype.png?raw=true)
 # Oblecto
 ## What is it?
 Oblecto is a media server, similar to Plex, Emby, Netflix and others. It runs in the background on a home server to index your media such as movies and TV shows to make them searchable and streamable through a REST based interface.
@@ -17,3 +18,5 @@ npm start
 
 On run, Oblecto will create its database if required and start indexing files as defined in the config.json file.
 User accounts must currently be created manually in the database.
+
+All logo images courtesy of dee-y 
