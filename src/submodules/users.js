@@ -79,7 +79,6 @@ export default {
             this.users[authentication.username].storage['tv'][item.episodeId] = {
                 time: item.time,
                 progress: item.progress,
-                tvshowId: item.tvshowId,
                 episodeId: item.episodeId
             };
         });
