@@ -36,7 +36,6 @@ async function MatchTVDB (File, EpisodeData, PathParsed) {
         TvdbSearch = await tvdb.getSeriesByName(ParentName);
     }
 
-
     let PossibleShows = [];
 
     // If the series year is defined in the title of the episode, search for all shows with that same year
@@ -54,7 +53,7 @@ async function MatchTVDB (File, EpisodeData, PathParsed) {
         PossibleShows = await tvdb.getSeriesByName(ParentName);
     }
 
-    // Select thme first show of that list
+    // Select the first show of that list
     let SelectedShow = PossibleShows[0];
 
     // Get detailed info about the show
@@ -105,8 +104,6 @@ async function MatchTMDB (File, EpisodeData, PathParsed) {
     } else {
         PossibleShows = TMDBSearch;
     }
-
-    
 
     // Select thme first show of that list
     let SelectedShow = PossibleShows[0];
