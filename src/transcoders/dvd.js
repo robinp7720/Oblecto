@@ -16,6 +16,6 @@ export default {
                     progress.eta
                 )
             })
-            .on('end', () => callback);
+            .on('complete', () => callback);
     }
 }

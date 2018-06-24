@@ -1,5 +1,6 @@
 import path from 'path';
 import dvd from './dvd';
+import fs from 'fs';
 import config from '../config';
 
 export default {
@@ -9,8 +10,12 @@ export default {
         console.log(extension);
         switch (extension) {
             case 'iso':
-                console.log("File is an iso disk image. Starting transcode")
-                dvd.transcode(input, input.replace('iso', 'mp4'), callback);
+                fs.exists(input.replace('iso', 'mp4'), function (exists) {
+                    if (exists)
+                        return callback();
+                    console.log("File is an iso disk image. Starting transcode");
+                    dvd.transcode(input, input.replace('iso', 'mp4'), callback);
+                });
                 break;
             default:
                 console.log('Cannot transcode', input);
