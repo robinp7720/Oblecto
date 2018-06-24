@@ -7,7 +7,7 @@ import authMiddleWare from '../middleware/auth';
 
 
 export default (server) => {
-    server.get('/users', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/users', async function (req, res, next) {
         let users = await databases.user.findAll({
             attributes: ['username', 'name', 'email', 'id']
         });
