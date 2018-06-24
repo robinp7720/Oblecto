@@ -44,6 +44,7 @@ trackMovies.belongsTo(user);
 trackMovies.belongsTo(movie);
 
 episode.hasMany(trackEpisodes);
+movie.hasMany(trackMovies);
 
 let databases = {
     tvshow,

@@ -11,6 +11,15 @@ export default (server) => {
     // Endpoint to get a list of episodes from all series
     server.get('/movies/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res) {
         let results = await databases.movie.findAll({
+            include: [
+                {
+                    model: databases.trackMovies,
+                    required: false,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
+            ],
             order: [
                 [req.params.sorting, req.params.order]
             ],
