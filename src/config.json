@@ -41,5 +41,11 @@
   },
   "tracker": {
     "interval": 10
+  },
+  "transcoding": {
+    "everything": true,
+    "target": {
+      "formats": ["mp4"]
+    }
   }
 }

@@ -18,6 +18,7 @@
     "async": "^2.6.1",
     "bcrypt": "^2.0.1",
     "epinfer": "^1.1.4",
+    "handbrake-js": "^3.0.3",
     "jsonwebtoken": "^8.2.2",
     "mdns": "^2.4.0",
     "moviedb": "^0.2.10",

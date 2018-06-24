@@ -4,6 +4,8 @@ import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
+import config from "../../../config.json";
+
 
 // TODO: Add config option to use the parent directory to identify movies
 
@@ -15,7 +17,7 @@ export default async function (moviePath) {
         defaults: {
             name: path.parse(moviePath).name,
             directory: path.parse(moviePath).dir,
-            extension: path.parse(moviePath).ext
+            extension: path.parse(moviePath).ext.replace('.', '')
         }
     });
 
@@ -23,7 +25,6 @@ export default async function (moviePath) {
         console.log('File inserted:', moviePath);
     } else {
         console.log('File already in database:', moviePath);
-        return false;
     }
 
 
@@ -89,6 +90,12 @@ export default async function (moviePath) {
     }
 
     movie.addFile(file);
+
+    if (config.transcoding.everything) {
+        queue.push({task: 'transcode', path: moviePath}, function (err) {
+
+        });
+    }
 
     return true;
 }

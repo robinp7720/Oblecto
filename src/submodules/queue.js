@@ -6,6 +6,7 @@ import TvScanner from '../lib/indexers/tv/scanner';
 import MovieScanner from '../lib/indexers/movies/scanner';
 
 import TVShowArt from '../lib/indexers/tv/art';
+import transcoder from '../transcoders';
 
 import config from '../config.json';
 
@@ -29,6 +30,9 @@ export default async.queue((task, callback) => {
             console.log(err);
             callback();
         });
+        break;
+    case 'transcode':
+        transcoder.transcode(task.path, callback);
         break;
     case 'download':
         request.get({
