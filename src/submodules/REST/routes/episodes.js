@@ -4,7 +4,6 @@ import fs from 'fs';
 import errors from 'restify-errors';
 
 import databases from '../../../submodules/database';
-import UserManager from '../../../submodules/users';
 import authMiddleWare from '../middleware/auth';
 
 const Op = sequelize.Op;
@@ -48,6 +47,9 @@ export default (server) => {
             include: [databases.file]
         });
 
+        if (episode.files[0] === undefined)
+            return next(new errors.NotFoundError('No banner found'));
+
         let episodePath = episode.files[0].path;
 
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
@@ -56,7 +58,7 @@ export default (server) => {
         // Check if the thumbnail exists
         fs.stat(thumbnailPath, function (err) {
             if (err)
-                return next(new errors.NotFoundError('Thumbnnail does not exist for episode'));
+                return next(new errors.NotFoundError('No banner found'));
 
             // If the thumbnail exists, simply pipe that to the client
             fs.createReadStream(thumbnailPath).pipe(res);
@@ -93,13 +95,17 @@ export default (server) => {
     server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let episode = await databases.episode.findById(req.params.id, {
-            include: [databases.file]
+            include: [
+                databases.file,
+                {
+                    model: databases.trackEpisodes,
+                    required: false,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
+            ]
         });
-
-        episode = episode.toJSON();
-
-        if (UserManager.hasSavedTVProgress(req.authorization.jwt.username, episode.id))
-            episode.watchTime = UserManager.getSavedTVProgress(req.authorization.jwt.username, episode.id).time;
 
         res.send(episode);
 
