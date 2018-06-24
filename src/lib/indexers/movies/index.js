@@ -13,7 +13,7 @@ export default {
         files.forEach(file => {
             let extension = path.parse(file).ext;
 
-            if (['.mp4','.avi'].indexOf(extension) !== -1) {
+            if (['.mp4','.avi', '.iso'].indexOf(extension) !== -1) {
                 queue.push({task: 'movie', path: file}, function (err) {
 
                 });
