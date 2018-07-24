@@ -3,6 +3,8 @@ import tvdb from '../../../submodules/tvdb';
 import tmdb from '../../../submodules/tmdb';
 import queue from '../../../submodules/queue';
 
+import config from "../../../config.json";
+
 import path from 'path';
 import fs from 'fs';
 import request from 'request';
@@ -48,7 +50,7 @@ export default {
 
                 fs.writeFile(thumbnailPath, body, function (error) {
                     if (error) {
-                        console.error('An error has occured when downloading banner for', episodePath);
+                        reject(error)
                     }
 
                     console.log('Image downloaded for', episodePath);
@@ -76,7 +78,7 @@ export default {
 
                 fs.writeFile(thumbnailPath, body, function (error) {
                     if (error) {
-                        console.error('An error has occured when downloading banner for', episodePath);
+                        reject(error)
                     }
 
                     console.log('Image downloaded for', episodePath);
@@ -99,14 +101,20 @@ export default {
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
         let thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
 
+        if (!config.assets.storeWithFile) {
+            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
+        }
+
         if (this.imageExists(thumbnailPath))
             return;
 
-        // If no thumbnail was found, download one from TMDB or TVDB
-        this.DownloadTMDBEpisodeBanner(episode, episodePath, thumbnailPath)
+
+        return this.DownloadTMDBEpisodeBanner(episode, episodePath, thumbnailPath)
             .catch(() => {
-                this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
-            });
+                return this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
+            }
+        )
+
 
     },
 
@@ -117,12 +125,14 @@ export default {
 
         let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
 
+        if (!config.assets.storeWithFile) {
+            posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + ".jpg"
+        }
 
         if (this.imageExists(posterPath))
             return;
 
         // Only download the poster if it doesn't exist
-
         let data = await tvdb.getSeriesPosters(show.tvdbid);
 
         console.log('Downloading poster image for', show.seriesName, 'http://thetvdb.com/banners/' + data[0].fileName);

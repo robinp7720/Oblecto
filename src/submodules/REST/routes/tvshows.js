@@ -73,6 +73,10 @@ export default (server) => {
             let showPath = show.directory;
             let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
 
+            if (!config.assets.storeWithFile) {
+                posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + ".jpg"
+            }
+
             // Check if the poster image already exits
             fs.exists(posterPath, function (exists) {
                 if (exists) {

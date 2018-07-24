@@ -5,6 +5,7 @@ import errors from 'restify-errors';
 
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
+import config from "../../../config";
 
 const Op = sequelize.Op;
 
@@ -54,6 +55,10 @@ export default (server) => {
 
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
         let thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
+
+        if (!config.assets.storeWithFile) {
+            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
+        }
 
         // Check if the thumbnail exists
         fs.stat(thumbnailPath, function (err) {
