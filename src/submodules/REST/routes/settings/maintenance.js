@@ -1,6 +1,7 @@
 import TVShowIndexer from '../../../../lib/indexers/tv/index';
 import MovieIndexer from '../../../../lib/indexers/movies/index';
 import TVShowArt from '../../../../lib/indexers/tv/art';
+import MovieArt from '../../../../lib/indexers/movies/art';
 
 import authMiddleWare from '../../middleware/auth';
 
@@ -26,6 +27,15 @@ export default (server) => {
     // API Endpoint to request a re-index of certain library types
     server.get('/settings/maintenance/tvshows/download/art', authMiddleWare.requiresAuth, function (req, res) {
         TVShowArt.DownloadAll().catch((err) => {
+            console.log(err);
+        });
+
+        res.send([true]);
+    });
+
+
+    server.get('/settings/maintenance/movies/download/art', authMiddleWare.requiresAuth, function (req, res) {
+        MovieArt.DownloadAll().catch((err) => {
             console.log(err);
         });
 

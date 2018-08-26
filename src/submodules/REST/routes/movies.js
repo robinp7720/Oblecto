@@ -6,6 +6,8 @@ import databases from '../../../submodules/database';
 import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
 
+import config from '../../../config.json';
+
 export default (server) => {
 
     // Endpoint to get a list of episodes from all series
@@ -38,6 +40,7 @@ export default (server) => {
             include: [databases.file]
         });
 
+
         if (!movie.files[0])
             return next(new errors.NotFoundError('Movie does not exist'));
 
@@ -45,6 +48,10 @@ export default (server) => {
 
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
         let posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
+
+        if (!config.assets.storeWithFile) {
+            posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + ".jpg"
+        }
 
         // Check if the thumbnail exists
         fs.exists(posterPath, function (exists) {
@@ -72,6 +79,10 @@ export default (server) => {
 
         // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
         let fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
+
+        if (!config.assets.storeWithFile) {
+            fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + ".jpg"
+        }
 
         // Check if the thumbnail exists
         fs.exists(fanartPath, function (exists) {
@@ -104,7 +115,14 @@ export default (server) => {
     server.get('/movie/:id/play', async function (req, res, next) {
         // search for attributes
         let movie = await databases.movie.findById(req.params.id, {
-            include: [databases.file]
+            include: [
+                {
+                    model: databases.file,
+                    where: {
+                        extension: 'mp4'
+                    }
+                }
+            ]
         });
 
         let file = movie.files[0];

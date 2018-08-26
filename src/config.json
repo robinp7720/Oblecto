@@ -11,7 +11,9 @@
   "assets": {
     "storeWithFile": false,
     "episodeBannerLocation": "assets/episodeBanners/",
-    "showPosterLocation": "assets/showPosters/"
+    "showPosterLocation": "assets/showPosters/",
+    "moviePosterLocation": "assets/moviePosters/",
+    "movieFanartLocation": "assets/movieFanart/"
   },
   "themoviedb": {
     "key": "b06b4917705eeed4e4b273d4c90fe158"
