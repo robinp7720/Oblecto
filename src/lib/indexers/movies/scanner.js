@@ -55,30 +55,6 @@ export default async function (moviePath) {
 
     let data = res.results[0];
 
-    // Download assets for movie such as banners and posters and store them along side the movie files
-    let posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
-    let fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
-
-    fs.exists(posterPath, function (exists) {
-        if (!exists) {
-            queue.push({
-                task: 'download',
-                path: posterPath,
-                url: 'https://image.tmdb.org/t/p/original' + data.poster_path
-            });
-
-        }
-    });
-
-    fs.exists(fanartPath, function (exists) {
-        if (!exists) {
-            queue.push({
-                task: 'download',
-                path: fanartPath,
-                url: 'https://image.tmdb.org/t/p/original' + data.backdrop_path
-            });
-        }
-    });
 
     let [movie, MovieInserted] = await databases.movie
         .findOrCreate({
