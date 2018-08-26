@@ -9,6 +9,14 @@ import config from "../../../config.json";
 
 // TODO: Add config option to use the parent directory to identify movies
 
+async function identifyByName(name) {
+    // If the year is present at the end of the name, remove it for the search
+    // TODO: Using a regex mach, retrieve the year and use it in the search processes
+    name = name.replace(/ \([0-9][0-9][0-9][0-9]\)/g, '');
+
+    return await tmdb.searchMovie({ query: name });
+}
+
 export default async function (moviePath) {
 
     // Create file entity in the database
@@ -27,19 +35,22 @@ export default async function (moviePath) {
         console.log('File already in database:', moviePath);
     }
 
+    let res = await identifyByName(path.parse(moviePath).name);
 
-    let name = path.parse(moviePath).name;
 
-    // If the year is present at the end of the name, remove it for the search
-    // TODO: Using a regex mach, retrieve the year and use it in the search processes
-    name = name.replace(/ \([0-9][0-9][0-9][0-9]\)/g, '');
+    if (!res || res.total_results < 1) {
+        console.log('Could not identify', moviePath, 'by file name');
+        console.log('Attempting to identify', moviePath, 'by containing folder');
 
-    let res = await tmdb.searchMovie({ query: name });
 
-    // Return if no matching movie was found
-    if (res.total_results < 1) {
-        console.log('Could not identify', moviePath);
-        return false;
+        res = await identifyByName(path.basename(path.parse(moviePath).dir));
+
+
+        // Return if no matching movie was found
+        if (!res || res.total_results < 1) {
+            console.log('Could not identify', moviePath);
+            return false;
+        }
     }
 
     let data = res.results[0];

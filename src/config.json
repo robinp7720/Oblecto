@@ -1,6 +1,6 @@
 {
   "indexer": {
-    "runAtBoot": true
+    "runAtBoot": false
   },
   "queue": {
     "concurrency": 2
@@ -9,7 +9,7 @@
     "key": "4908EBCEE2556E3D"
   },
   "assets": {
-    "storeWithFile": true,
+    "storeWithFile": false,
     "episodeBannerLocation": "assets/episodeBanners/",
     "showPosterLocation": "assets/showPosters/"
   },
@@ -26,7 +26,7 @@
     "port": 8080
   },
   "tvshows": {
-    "doReIndex": true,
+    "doReIndex": false,
     "directories": [
       {
         "path": "/mnt/SMB/TV Shows/"

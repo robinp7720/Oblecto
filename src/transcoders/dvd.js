@@ -10,12 +10,12 @@ export default {
             })
             .on('progress', progress => {
                 console.log(
-                    input,
-                    'Percent complete: %s, ETA: %s',
+                    'Percent complete: %s, ETA: %s, File: %s',
                     progress.percentComplete,
-                    progress.eta
+                    progress.eta,
+                    input
                 )
             })
-            .on('complete', () => callback);
+            .on('end', callback);
     }
 }

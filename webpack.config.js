@@ -16,7 +16,7 @@ module.exports = {
     entry: ['babel-polyfill', './src/index.js'],
     target: 'node',
     output: {
-        path: path.join(__dirname, 'build'),
+        path: path.join(__dirname, 'dist'),
         filename: 'Oblecto.js'
     },
     externals: nodeModules,
