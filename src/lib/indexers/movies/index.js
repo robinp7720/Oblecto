@@ -11,9 +11,9 @@ export default {
         let files = await recursive(Directory);
 
         files.forEach(file => {
-            let extension = path.parse(file).ext;
+            let extension = path.parse(file).ext.toLowerCase();
 
-            if (['.mp4','.avi', '.iso'].indexOf(extension) !== -1) {
+            if (['.mp4','.avi', '.iso', '.m4v', '.mkv'].indexOf(extension) !== -1) {
                 queue.push({task: 'movie', path: file}, function (err) {
 
                 });
