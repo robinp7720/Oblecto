@@ -25,7 +25,7 @@ export default async function (moviePath) {
         defaults: {
             name: path.parse(moviePath).name,
             directory: path.parse(moviePath).dir,
-            extension: path.parse(moviePath).ext.replace('.', '')
+            extension: path.parse(moviePath).ext.replace('.', '').toLowerCase()
         }
     });
 
@@ -54,7 +54,6 @@ export default async function (moviePath) {
     }
 
     let data = res.results[0];
-
 
     let [movie, MovieInserted] = await databases.movie
         .findOrCreate({
