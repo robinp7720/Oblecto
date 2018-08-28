@@ -7,6 +7,9 @@ import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
 
 import config from '../../../config.json';
+import sequelize from "sequelize";
+
+const Op = sequelize.Op;
 
 export default (server) => {
 
@@ -25,7 +28,7 @@ export default (server) => {
             order: [
                 [req.params.sorting, req.params.order]
             ],
-            limit: 30
+            limit: 100
         });
 
         res.send(results);
@@ -40,17 +43,18 @@ export default (server) => {
             include: [databases.file]
         });
 
+        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + ".jpg";
 
-        if (!movie.files[0])
-            return next(new errors.NotFoundError('Movie does not exist'));
 
-        let moviePath = movie.files[0].path;
 
-        // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-        let posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
+        if (config.assets.storeWithFile) {
+            if (!movie.files[0])
+                return next(new errors.NotFoundError('Movie does not exist'));
 
-        if (!config.assets.storeWithFile) {
-            posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + ".jpg"
+            let moviePath = movie.files[0].path;
+
+            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+            posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
         }
 
         // Check if the thumbnail exists
@@ -72,16 +76,16 @@ export default (server) => {
             include: [databases.file]
         });
 
-        if (!movie.files[0])
-            return next(new errors.NotFoundError('Movie does not exist'));
+        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + ".jpg";
 
-        let moviePath = movie.files[0].path;
+        if (config.assets.storeWithFile) {
+            if (!movie.files[0])
+                return next(new errors.NotFoundError('Movie does not exist'));
 
-        // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-        let fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
+            let moviePath = movie.files[0].path;
 
-        if (!config.assets.storeWithFile) {
-            fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + ".jpg"
+            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+            fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
         }
 
         // Check if the thumbnail exists
@@ -119,7 +123,9 @@ export default (server) => {
                 {
                     model: databases.file,
                     where: {
-                        extension: 'mp4'
+                        [Op.not]: {
+                            extension: 'iso'
+                        }
                     }
                 }
             ]

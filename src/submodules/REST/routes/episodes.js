@@ -48,16 +48,16 @@ export default (server) => {
             include: [databases.file]
         });
 
-        if (episode.files[0] === undefined)
-            return next(new errors.NotFoundError('No banner found'));
+        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
 
-        let episodePath = episode.files[0].path;
+        if (config.assets.storeWithFile) {
+            if (episode.files[0] === undefined)
+                return next(new errors.NotFoundError('No banner found'));
 
-        // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-        let thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
+            let episodePath = episode.files[0].path;
 
-        if (!config.assets.storeWithFile) {
-            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
+            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
         }
 
         // Check if the thumbnail exists
