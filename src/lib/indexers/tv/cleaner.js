@@ -21,5 +21,18 @@ export default {
                 directory: ''
             }
         });
+    },
+
+    async removeEpisodeslessShows() {
+        let results = await databases.tvshow.findAll({
+            include: [databases.episode]
+        });
+
+        results.forEach((item) => {
+            if (item.episodes && item.episodes.length > 0)
+                return false;
+
+            item.destroy();
+        });
     }
 };

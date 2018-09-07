@@ -3,6 +3,9 @@ import MovieIndexer from '../../../../lib/indexers/movies/index';
 import TVShowArt from '../../../../lib/indexers/tv/art';
 import MovieArt from '../../../../lib/indexers/movies/art';
 
+import MovieCleaner from '../../../../lib/indexers/movies/cleaner'
+import TVCleaner from '../../../../lib/indexers/tv/cleaner'
+
 import authMiddleWare from '../../middleware/auth';
 
 export default (server) => {
@@ -38,6 +41,24 @@ export default (server) => {
         MovieArt.DownloadAll().catch((err) => {
             console.log(err);
         });
+
+        res.send([true]);
+    });
+
+    server.get('/settings/maintenance/clean/:type', authMiddleWare.requiresAuth, function (req, res) {
+
+        switch  (req.params.type) {
+            case "movies":
+                MovieCleaner.removeFileLessMovies();
+                break;
+            case "tvshows":
+                TVCleaner.removePathLessShows();
+                TVCleaner.removeEpisodeslessShows()
+                break;
+            case "episodes":
+                TVCleaner.removeFileLessEpisodes();
+                break;
+        }
 
         res.send([true]);
     });

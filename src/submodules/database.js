@@ -33,6 +33,7 @@ const movieFiles = sequelize.import('movieFiles', require(__dirname + '/../model
 
 
 episode.belongsTo(tvshow);
+tvshow.hasMany(episode);
 
 episode.belongsToMany(file, {through: episodeFiles});
 movie.belongsToMany(file, {through: movieFiles});
