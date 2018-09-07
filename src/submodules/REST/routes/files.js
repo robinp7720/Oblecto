@@ -1,5 +1,4 @@
 import sequelize from 'sequelize';
-import path from 'path';
 import fs from 'fs';
 
 import databases from '../../../submodules/database';
@@ -47,27 +46,21 @@ export default (server) => {
     server.get('/stream/:id', async function (req, res) {
         // search for attributes
         let fileInfo = await databases.file.findById(req.params.id);
-        
+
         let path = fileInfo.path;
         var stat = fs.statSync(path);
         var total = stat.size;
 
-        let mime = 'video/mp4';
+        let mime = 'video';
 
-        switch (fileInfo.container) {
-            case 'MPEG-4 Part 14':
-                mime = 'video/mp4';
-                break;
-            case 'Matroska':
-                mime = 'video/x-matroska';
-                break;
-            case 'Audio Video Interleave':
-                mime = 'video/avi';
-                break;
-            default:
-                mime = 'video';
-                break;
-        }
+        let mimes = {
+            'mp4': 'video/mp4',
+            'mkv': 'video/x-matroska',
+            'avi': 'video/avi',
+        };
+
+        if (mimes[fileInfo.extension])
+            mime = mimes[fileInfo.extension];
 
         if (req.headers.range) { // meaning client (browser) has moved the forward/back slider
             // which has sent this request back to this server logic ... cool
@@ -101,6 +94,7 @@ export default (server) => {
 
             res.writeHead(200, {
                 'Content-Length': total,
+                'Accept-Ranges': 'bytes',
                 'Content-Type': mime
             });
 
