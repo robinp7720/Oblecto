@@ -124,6 +124,18 @@ export default {
                 progress: data.progress,
                 episodeId: data.episodeId
             };
+
+            // Send progress back to all connected clients of the same user
+            async.each(this.users[socket.authentication.username].sockets, (socket) => {
+                socket.emit('client-episode-progress', {
+                    time: data.time,
+                    progress: data.progress,
+                    episodeId: data.episodeId
+                });
+            }, () => {
+
+            });
+
         }
 
         // If the item is a movie, store it in the movie temp storage of the user
@@ -139,6 +151,17 @@ export default {
                 progress: data.progress,
                 movieId: data.movieId
             };
+
+            // Send progress back to all connected clients of the same user
+            async.each(this.users[socket.authentication.username].sockets, (socket) => {
+                socket.emit('client-movie-progress', {
+                    time: data.time,
+                    progress: data.progress,
+                    movieId: data.movieId
+                });
+            }, () => {
+
+            });
         }
     },
 
