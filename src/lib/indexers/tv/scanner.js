@@ -36,17 +36,24 @@ async function MatchTVDB (File, EpisodeData, PathParsed) {
         TvdbSearch = await tvdb.getSeriesByName(ParentName);
     }
 
+    if (TvdbSearch.length === 0) {
+        console.log('No TVDB matches found');
+        return;
+    }
+
     let PossibleShows = [];
 
     // If the series year is defined in the title of the episode, search for all shows with that same year
     if (EpisodeData.series_year) {
         TvdbSearch.forEach(item => {
-            if (item.firstAired.substr(0, 4) === EpisodeData.series_year)
+            if (item.firstAired.substr(0, 4) == EpisodeData.series_year) {
                 PossibleShows.push(item);
+            }
         });
     } else {
         PossibleShows = TvdbSearch;
     }
+
 
     // If no appropriate show could be found and the series name was available in the file name, try using the directory name instead
     if (PossibleShows.length < 1 && EpisodeData.series) {
@@ -98,8 +105,10 @@ async function MatchTMDB (File, EpisodeData, PathParsed) {
     // If the series year is defined in the title of the episode, search for all shows with that same year
     if (EpisodeData.series_year) {
         TMDBSearch.forEach(item => {
-            if (item.firstAired.substr(0, 4) === EpisodeData.series_year)
+            let firstAired = item.firstAired || item['first_air_date'];
+            if (firstAired.substr(0, 4) == EpisodeData.series_year) {
                 PossibleShows.push(item);
+            }
         });
     } else {
         PossibleShows = TMDBSearch;
@@ -163,8 +172,13 @@ export default async function (EpisodePath, reIndex) {
         }
     }
 
+    console.log('Starting media matching');
+
     let ShowInfo = await MatchTVDB(File, EpisodeData, PathParsed);
     let TMDBInfo = await MatchTMDB(File, EpisodeData, PathParsed);
+
+    console.log('Media matching complete');
+    console.log(TMDBInfo);
 
     // Insert the TVShow info into the database
     let [ShowEntry] = await databases.tvshow
