@@ -22,3 +22,8 @@ On run, Oblecto will create its database if required and start indexing files as
 User accounts must currently be created manually in the database.
 
 All logo images courtesy of dee-y 
+
+## I've set this thing up. Now where's the place I actually watch my *legaly obtained* media?
+Since Oblecto itself is only an interface between your media and a client to watch it on, you'll need a beautifull frontend which can talk to the Oblecto bankend.
+
+The interface maintained by myself is available here: https://github.com/robinp7720/Oblecto-Web
