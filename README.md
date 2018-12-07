@@ -16,6 +16,8 @@ npm install
 npm start
 ```
 
+User management does currently not have an interface and as such users must be created manually within the users database. Password authentication currently has not been completaly implemented yet. Only the username field must be set.
+
 On run, Oblecto will create its database if required and start indexing files as defined in the config.json file.
 User accounts must currently be created manually in the database.
 
