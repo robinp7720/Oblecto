@@ -1,9 +1,9 @@
-{
+export default {
   "indexer": {
     "runAtBoot": false
   },
   "queue": {
-    "concurrency": 2
+    "concurrency": 1
   },
   "tvdb": {
     "key": "4908EBCEE2556E3D"
@@ -28,7 +28,7 @@
     "port": 8080
   },
   "tvshows": {
-    "doReIndex": false,
+    "doReIndex": true,
     "directories": [
       {
         "path": "/mnt/SMB/TV Shows/"
@@ -50,9 +50,12 @@
     "interval": 10
   },
   "transcoding": {
-    "everything": true,
+    "everything": false,
     "target": {
       "formats": ["mp4"]
     }
+  },
+  "web": {
+    "enabled": true
   }
 }

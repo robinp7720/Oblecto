@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import async from 'promise-async';
-import config from '../config.json';
+import config from '../config.js';
 import databases from './database';
 
 export default {

@@ -3,7 +3,7 @@ import tvdb from '../../../submodules/tvdb';
 import tmdb from '../../../submodules/tmdb';
 import queue from '../../../submodules/queue';
 
-import config from "../../../config.json";
+import config from "../../../config.js";
 
 import path from 'path';
 import fs from 'fs';
@@ -36,6 +36,7 @@ export default {
 
         return imageExists;
     },
+
 
     async DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath) {
         let data = await tvdb.getEpisodeById(episode.tvshow.tvdbid);

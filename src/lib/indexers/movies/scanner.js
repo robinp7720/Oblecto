@@ -4,7 +4,7 @@ import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
-import config from "../../../config.json";
+import config from "../../../config.js";
 
 
 // TODO: Add config option to use the parent directory to identify movies

@@ -6,7 +6,7 @@ import databases from '../../../submodules/database';
 import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
 
-import config from '../../../config.json';
+import config from '../../../config.js';
 import sequelize from "sequelize";
 
 const Op = sequelize.Op;

@@ -2,7 +2,7 @@ import databases from '../../../submodules/database';
 import tmdb from '../../../submodules/tmdb';
 import queue from '../../../submodules/queue';
 
-import config from "../../../config.json";
+import config from "../../../config.js";
 
 import path from 'path';
 import fs from 'fs';

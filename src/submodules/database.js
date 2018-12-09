@@ -1,4 +1,4 @@
-const config = require('../config.json');
+import config from '../config.js';
 const Sequelize = require('sequelize');
 const async = require('async');
 

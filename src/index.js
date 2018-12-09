@@ -8,7 +8,7 @@ import TVShowCleaner from './lib/indexers/tv/cleaner';
 import MovieCleaner from './lib/indexers/movies/cleaner';
 
 
-const config = require('./config.json');
+import config from './config';
 
 const socketio = require('socket.io');
 
@@ -46,5 +46,3 @@ io.on('connection', socket => UserManager.userConnected(socket));
 setInterval(() => {
     UserManager.saveAllUserProgress();
 }, 1000 * config.tracker.interval);
-
-

@@ -1,7 +1,7 @@
 import path from 'path';
 import recursive from 'recursive-readdir';
 import queue from '../../../submodules/queue';
-import config from '../../../config.json';
+import config from '../../../config.js';
 
 // TODO: Add config option to use the parent directory to identify movies
 // TODO: Seperate Scanning and identifying
