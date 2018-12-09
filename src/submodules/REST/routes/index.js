@@ -5,6 +5,7 @@ import movies from './movies';
 import tvshows from './tvshows';
 import settings from './settings';
 import users from './users';
+import web from './web';
 
 export default (server) => {
     auth(server);
@@ -14,4 +15,5 @@ export default (server) => {
     tvshows(server);
     settings(server);
     users(server);
+    web(server);
 };
