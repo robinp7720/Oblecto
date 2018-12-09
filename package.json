@@ -5,7 +5,8 @@
   "author": "Robin <robin@decker.cx>",
   "private": true,
   "scripts": {
-    "start": "cd Oblecto-Web; npm run build; cd ..; babel-node src",
+    "build-web": "cd Oblecto-Web; npm run build; cd ..;",
+    "start": "babel-node src",
     "debug": "nodemon src --exec 'babel-node --inspect=0.0.0.0:9229 '",
     "build": "babel src -d dist",
     "serve": "node dist/",
