@@ -13,8 +13,11 @@ import config from './config';
 const socketio = require('socket.io');
 
 // Load Oblecto submodules
-const zeroconf = require('./submodules/zeroconf');
-zeroconf.start(config.server.port);
+
+if (config.mdns.enable) {
+    const zeroconf = require('./submodules/zeroconf');
+    zeroconf.start(config.server.port);
+}
 
 // Start the rest api
 let server = restapi();
