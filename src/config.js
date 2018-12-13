@@ -3,7 +3,7 @@ export default {
         "runAtBoot": false
     },
     "mdns": {
-        "enable": false
+        "enable": true
     },
     "queue": {
         "concurrency": 1
