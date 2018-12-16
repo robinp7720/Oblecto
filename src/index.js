@@ -7,10 +7,21 @@ import FileCleaner from './lib/indexers/files/cleaner';
 import TVShowCleaner from './lib/indexers/tv/cleaner';
 import MovieCleaner from './lib/indexers/movies/cleaner';
 
-
 import config from './config';
 
 const socketio = require('socket.io');
+
+import mkdirp from 'mkdirp';
+
+// Create directories for image assets
+for (let i in config.assets) {
+    let path = config.assets[i];
+    if (typeof path !== "string") {
+        continue
+    }
+
+    mkdirp(config.assets[i])
+}
 
 // Load Oblecto submodules
 
