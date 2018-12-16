@@ -37,7 +37,6 @@ async function MatchTVDB (File, EpisodeData, PathParsed) {
     }
 
     if (TvdbSearch.length === 0) {
-        console.log('No TVDB matches found');
         return;
     }
 
@@ -172,13 +171,8 @@ export default async function (EpisodePath, reIndex) {
         }
     }
 
-    console.log('Starting media matching');
-
     let ShowInfo = await MatchTVDB(File, EpisodeData, PathParsed);
     let TMDBInfo = await MatchTMDB(File, EpisodeData, PathParsed);
-
-    console.log('Media matching complete');
-    console.log(TMDBInfo);
 
     // Insert the TVShow info into the database
     let [ShowEntry] = await databases.tvshow
