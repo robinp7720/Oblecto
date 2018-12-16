@@ -3,7 +3,7 @@ export default {
         "runAtBoot": false
     },
     "mdns": {
-        "enable": true
+        "enable": false
     },
     "queue": {
         "concurrency": 1
@@ -53,10 +53,7 @@ export default {
         "interval": 10
     },
     "transcoding": {
-        "everything": false,
-        "target": {
-            "formats": ["mp4"]
-        }
+        "iso": "mp4"
     },
     "web": {
         "enabled": true

@@ -2,7 +2,9 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Oblecto-Web" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/Oblecto-Web" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/lib/epinfer" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/web" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/wes" vcs="Git" />
   </component>
