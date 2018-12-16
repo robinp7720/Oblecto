@@ -5,6 +5,7 @@ import queue from '../../../submodules/queue';
 import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
 import config from "../../../config.js";
+import guessit from "guessit-wrapper"
 
 
 // TODO: Add config option to use the parent directory to identify movies
@@ -15,6 +16,18 @@ async function identifyByName(name) {
     name = name.replace(/ \([0-9][0-9][0-9][0-9]\)/g, '');
 
     return await tmdb.searchMovie({ query: name });
+}
+
+async function identifyByGuess (basename) {
+    var identification = await guessit.parseName(basename);
+
+    let query = {query: identification.title};
+
+    if (identification.year) {
+        query.year = identification.year;
+    }
+
+    return await tmdb.searchMovie(query);
 }
 
 export default async function (moviePath) {
@@ -35,23 +48,35 @@ export default async function (moviePath) {
         console.log('File already in database:', moviePath);
     }
 
-    let res = await identifyByName(path.parse(moviePath).name);
+
+
+    let res = await identifyByGuess(path.basename(moviePath));
 
 
     if (!res || res.total_results < 1) {
-        console.log('Could not identify', moviePath, 'by file name');
-        console.log('Attempting to identify', moviePath, 'by containing folder');
+        console.log('Could not identify', moviePath, 'using guessit');
+        console.log('Attempting to identify', moviePath, 'using only the file name');
 
 
         res = await identifyByName(path.basename(path.parse(moviePath).dir));
 
 
-        // Return if no matching movie was found
         if (!res || res.total_results < 1) {
-            console.log('Could not identify', moviePath);
-            return false;
+            console.log('Could not identify', moviePath, 'by file name');
+            console.log('Attempting to identify', moviePath, 'by containing folder');
+
+
+            res = await identifyByName(path.basename(path.parse(moviePath).dir));
+
+
+            // Return if no matching movie was found
+            if (!res || res.total_results < 1) {
+                console.log('Could not identify', moviePath);
+                return false;
+            }
         }
     }
+
 
     let data = res.results[0];
 
@@ -77,9 +102,27 @@ export default async function (moviePath) {
 
     movie.addFile(file);
 
-    if (config.transcoding.everything) {
-        queue.push({task: 'transcode', path: moviePath}, function (err) {
+    if (config.transcoding[file.extension] !== undefined && config.transcoding[file.extension] !== false) {
+        queue.push({task: 'transcode', path: moviePath}, async function (err) {
+            // Determine the file path of the transcoded file
+            let parsed = path.parse(moviePath);
+            let extension = parsed.ext.replace('.', '').toLowerCase();
+            let transcodedPath = moviePath.replace(parsed.ext, '.' + config.transcoding[extension]);
 
+            // Insert the new file and link it to the movie entity
+            let [file, FileInserted] = await databases.file.findOrCreate({
+                where: {path: transcodedPath},
+                defaults: {
+                    name: path.parse(transcodedPath).name,
+                    directory: path.parse(transcodedPath).dir,
+                    extension: path.parse(transcodedPath).ext.replace('.', '').toLowerCase()
+                }
+            });
+
+
+            movie.addFile(file).then(() => {
+                movie.save();
+            })
         });
     }
 
