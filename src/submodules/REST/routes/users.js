@@ -84,15 +84,16 @@ export default (server) => {
 
         if (!req.params.username)
             return next(new errors.BadRequestError('Username is missing'));
-        if (!req.params.password)
-            return next(new errors.BadRequestError('Password is missing'));
+
         if (!req.params.email)
             return next(new errors.BadRequestError('E-Mail is missing'));
         if (!req.params.name)
             return next(new errors.BadRequestError('Name is missing'));
 
+        let passwordHash;
 
-        let passwordHash = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
+        if (req.params.password)
+            passwordHash = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
 
         let [User] = await databases.user.findOrCreate({
             where: {
