@@ -16,10 +16,10 @@ export default (server) => {
         next();
     });
 
-    server.get('/user/:username', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let user = await databases.user.findOne({
             where: {
-                username: req.params.username
+                id: req.params.id
             },
             attributes: ['username', 'name', 'email', 'id']
         });
@@ -29,10 +29,10 @@ export default (server) => {
         next();
     });
 
-    server.del('/user/:username', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.del('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let user = await databases.user.findOne({
             where: {
-                username: req.params.username
+                id: req.params.id
             },
             attributes: ['username', 'name', 'email', 'id']
         });
@@ -46,8 +46,42 @@ export default (server) => {
         next();
     });
 
-    server.put('/user/:username', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
+        if (!req.params.username)
+            return next(new errors.BadRequestError('Username is missing'));
+        if (!req.params.password)
+            return next(new errors.BadRequestError('Password is missing'));
+        if (!req.params.email)
+            return next(new errors.BadRequestError('E-Mail is missing'));
+        if (!req.params.name)
+            return next(new errors.BadRequestError('Name is missing'));
+
+
+        let passwordHash = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
+
+        let [User] = await databases.user.findOrCreate({
+            where: {
+                id: req.params.id
+            },
+            defaults: {
+                name: req.params.name,
+                email: req.params.email,
+                username: req.params.username,
+                password: passwordHash
+            }
+        });
+
+        res.send(User);
+
+        next();
+
+    });
+
+    server.post('/user', authMiddleWare.requiresAuth, async function (req, res, next) {
+        // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
+        console.log(req.params.params);
+
         if (!req.params.username)
             return next(new errors.BadRequestError('Username is missing'));
         if (!req.params.password)
