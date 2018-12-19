@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import errors from 'restify-errors';
+import bcrypt from 'bcrypt';
 
 import databases from '../../../submodules/database';
 import config from '../../../config';
@@ -14,14 +15,21 @@ export default (server) => {
             where: {
                 username: req.params.username
             },
-            attributes: ['username', 'name', 'email', 'id']
+            attributes: ['username', 'name', 'email', 'password', 'id']
         });
         
         // Don't send a token if the user doesn't exist
         if (!user)
             return next(new errors.UnauthorizedError('Username is incorrect'));
 
-        // TODO: implement password checking
+        let allowLogin = true;
+
+        if (user.password)
+            allowLogin = await bcrypt.compare(req.params.password, user.password);
+
+        if (!allowLogin)
+            return next(new errors.UnauthorizedError('Password is incorrect'));
+
         let token = jwt.sign(user.toJSON(), config.authentication.secret);
         user['access_token'] = token;
         res.send(user);
