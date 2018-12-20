@@ -24,7 +24,6 @@ for (let i in config.assets) {
 }
 
 // Load Oblecto submodules
-
 if (config.mdns.enable) {
     const zeroconf = require('./submodules/zeroconf');
     zeroconf.start(config.server.port);
