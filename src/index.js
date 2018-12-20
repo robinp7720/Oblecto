@@ -9,8 +9,7 @@ import MovieCleaner from './lib/indexers/movies/cleaner';
 
 import config from './config';
 
-const socketio = require('socket.io');
-
+import socketio from 'socket.io'
 import mkdirp from 'mkdirp';
 
 // Create directories for image assets
