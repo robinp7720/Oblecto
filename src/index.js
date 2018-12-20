@@ -1,4 +1,5 @@
 import restapi from './submodules/REST';
+
 import UserManager from './submodules/users';
 import TVShowIndexer from './lib/indexers/tv';
 import MovieIndexer from './lib/indexers/movies';
@@ -24,7 +25,6 @@ for (let i in config.assets) {
 
 // Load Oblecto submodules
 if (config.mdns.enable) {
-    const zeroconf = require('./submodules/zeroconf');
     zeroconf.start(config.server.port);
 }
 

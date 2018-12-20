@@ -1,7 +1,6 @@
-// import the module
-var mdns = require('mdns');
+import mdns from 'mdns'
 
-module.exports = {
+export default {
     ad: undefined,
     start: function (port) {
         this.ad = mdns.createAdvertisement(mdns.tcp('oblecto'), port);
