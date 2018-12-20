@@ -10,17 +10,17 @@ import MovieCleaner from './lib/indexers/movies/cleaner';
 
 import config from './config';
 
-import socketio from 'socket.io'
+import socketio from 'socket.io';
 import mkdirp from 'mkdirp';
 
 // Create directories for image assets
 for (let i in config.assets) {
     let path = config.assets[i];
-    if (typeof path !== "string") {
-        continue
+    if (typeof path !== 'string') {
+        continue;
     }
 
-    mkdirp(config.assets[i])
+    mkdirp(config.assets[i]);
 }
 
 // Load Oblecto submodules

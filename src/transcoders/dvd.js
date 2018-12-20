@@ -1,4 +1,4 @@
-import hbjs from "handbrake-js";
+import hbjs from 'handbrake-js';
 
 export default {
     transcode: (input, output, callback) => {
@@ -14,8 +14,8 @@ export default {
                     progress.percentComplete,
                     progress.eta,
                     input
-                )
+                );
             })
             .on('end', callback);
     }
-}
+};

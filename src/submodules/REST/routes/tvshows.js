@@ -70,7 +70,7 @@ export default (server) => {
                 return res.send();
             }
 
-            let posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + ".jpg";
+            let posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
 
             if (config.assets.storeWithFile) {
                 let showPath = show.directory;

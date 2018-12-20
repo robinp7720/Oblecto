@@ -7,7 +7,7 @@ import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
 
 import config from '../../../config.js';
-import sequelize from "sequelize";
+import sequelize from 'sequelize';
 
 const Op = sequelize.Op;
 
@@ -43,7 +43,7 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + ".jpg";
+        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
 
 
 
@@ -76,7 +76,7 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + ".jpg";
+        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
 
         if (config.assets.storeWithFile) {
             if (!movie.files[0])

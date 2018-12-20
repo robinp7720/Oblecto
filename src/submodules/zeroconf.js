@@ -1,4 +1,4 @@
-import mdns from 'mdns'
+import mdns from 'mdns';
 
 export default {
     ad: undefined,

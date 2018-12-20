@@ -1,5 +1,5 @@
-import restify from 'restify'
-import fs from "fs"
+import restify from 'restify';
+import fs from 'fs';
 
 export default (server) => {
     server.get('/web/static/*', restify.plugins.serveStatic({

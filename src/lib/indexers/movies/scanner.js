@@ -4,8 +4,8 @@ import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
-import config from "../../../config.js";
-import guessit from "guessit-wrapper"
+import config from '../../../config.js';
+import guessit from 'guessit-wrapper';
 
 
 // TODO: Add config option to use the parent directory to identify movies
@@ -122,7 +122,7 @@ export default async function (moviePath) {
 
             movie.addFile(file).then(() => {
                 movie.save();
-            })
+            });
         });
     }
 

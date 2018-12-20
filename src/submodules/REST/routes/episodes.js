@@ -5,7 +5,7 @@ import errors from 'restify-errors';
 
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
-import config from "../../../config";
+import config from '../../../config';
 
 const Op = sequelize.Op;
 
@@ -48,7 +48,7 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
+        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
 
         if (config.assets.storeWithFile) {
             if (episode.files[0] === undefined)

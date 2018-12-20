@@ -3,7 +3,7 @@ import tvdb from '../../../submodules/tvdb';
 import tmdb from '../../../submodules/tmdb';
 import queue from '../../../submodules/queue';
 
-import config from "../../../config.js";
+import config from '../../../config.js';
 
 import path from 'path';
 import fs from 'fs';
@@ -51,7 +51,7 @@ export default {
 
                 fs.writeFile(thumbnailPath, body, function (error) {
                     if (error) {
-                        reject(error)
+                        reject(error);
                     }
 
                     console.log('Image downloaded for', episodePath);
@@ -79,7 +79,7 @@ export default {
 
                 fs.writeFile(thumbnailPath, body, function (error) {
                     if (error) {
-                        reject(error)
+                        reject(error);
                     }
 
                     console.log('Image downloaded for', episodePath);
@@ -103,7 +103,7 @@ export default {
         let thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
 
         if (!config.assets.storeWithFile) {
-            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + ".jpg"
+            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
         }
 
         if (this.imageExists(thumbnailPath))
@@ -114,7 +114,7 @@ export default {
             .catch(() => {
                 return this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
             }
-        )
+            );
 
 
     },
@@ -127,7 +127,7 @@ export default {
         let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
 
         if (!config.assets.storeWithFile) {
-            posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + ".jpg"
+            posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
         }
 
         if (this.imageExists(posterPath))

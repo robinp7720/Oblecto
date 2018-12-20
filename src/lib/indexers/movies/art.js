@@ -2,7 +2,7 @@ import databases from '../../../submodules/database';
 import tmdb from '../../../submodules/tmdb';
 import queue from '../../../submodules/queue';
 
-import config from "../../../config.js";
+import config from '../../../config.js';
 
 import path from 'path';
 import fs from 'fs';
@@ -51,7 +51,7 @@ export default {
 
                 fs.writeFile(imagePath, body, function (error) {
                     if (error) {
-                        reject(error)
+                        reject(error);
                     }
 
                     console.log('Image downloaded for', movie.movieName);
@@ -77,7 +77,7 @@ export default {
 
                 fs.writeFile(imagePath, body, function (error) {
                     if (error) {
-                        reject(error)
+                        reject(error);
                     }
 
                     console.log('Image downloaded for', movie.movieName);
@@ -101,7 +101,7 @@ export default {
         let imagePath = moviePath.replace(path.extname(moviePath), '-thumb.jpg');
 
         if (!config.assets.storeWithFile) {
-            imagePath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + ".jpg"
+            imagePath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
         }
 
         if (this.imageExists(imagePath))
@@ -126,7 +126,7 @@ export default {
         let imagePath = moviePath.replace(path.extname(moviePath), '-thumb.jpg');
 
         if (!config.assets.storeWithFile) {
-            imagePath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + ".jpg"
+            imagePath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
         }
 
         if (this.imageExists(imagePath))
