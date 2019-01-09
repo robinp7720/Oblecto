@@ -42,6 +42,9 @@ export default {
         'directories': [
             {
                 'path': '/mnt/SMB/Movies/'
+            },
+            {
+                'path': '/mnt/media/Movies/'
             }
         ]
     },
@@ -53,6 +56,7 @@ export default {
         'interval': 10
     },
     'transcoding': {
+        'doRealTime': true,
         'iso': 'mp4'
     },
     'web': {
