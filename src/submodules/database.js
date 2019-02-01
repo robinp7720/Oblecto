@@ -38,6 +38,9 @@ tvshow.hasMany(episode);
 episode.belongsToMany(file, {through: episodeFiles});
 movie.belongsToMany(file, {through: movieFiles});
 
+file.belongsToMany(episode, {through: episodeFiles});
+file.belongsToMany(movie, {through: movieFiles});
+
 trackEpisodes.belongsTo(user);
 trackEpisodes.belongsTo(episode);
 
