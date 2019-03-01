@@ -58,23 +58,20 @@ export default async function (moviePath) {
         console.log('Attempting to identify', moviePath, 'using only the file name');
 
 
+        res = await identifyByName(path.basename(path.parse(moviePath).name));
+    }
+
+    if (!res || res.total_results < 1) {
+        console.log('Could not identify', moviePath, 'by file name');
+        console.log('Attempting to identify', moviePath, 'by containing folder');
+
+
         res = await identifyByName(path.basename(path.parse(moviePath).dir));
+    }
 
-
-        if (!res || res.total_results < 1) {
-            console.log('Could not identify', moviePath, 'by file name');
-            console.log('Attempting to identify', moviePath, 'by containing folder');
-
-
-            res = await identifyByName(path.basename(path.parse(moviePath).dir));
-
-
-            // Return if no matching movie was found
-            if (!res || res.total_results < 1) {
-                console.log('Could not identify', moviePath);
-                return false;
-            }
-        }
+    if (!res || res.total_results < 1) {
+        console.log('Could not identify', moviePath);
+        return false;
     }
 
 
