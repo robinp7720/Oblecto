@@ -120,7 +120,7 @@ export default {
 
         let moviePath = movie.files[0].path;
 
-        console.log('Checking poster for', moviePath);
+        console.log('Checking poster for', movie.movieName);
 
         // Set the fanart to have the same name but with -thumb.jpg instead of the video file extension
         let imagePath = moviePath.replace(path.extname(moviePath), '-thumb.jpg');
