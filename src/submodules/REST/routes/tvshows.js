@@ -1,12 +1,15 @@
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
+import sequelize from 'sequelize';
 
 import tvdb from '../../../submodules/tvdb';
 import databases from '../../../submodules/database';
 import config from '../../../config';
 import TVShowIndexer from '../../../lib/indexers/tv/index';
 import authMiddleWare from '../middleware/auth';
+
+const Op = sequelize.Op;
 
 export default (server) => {
 
@@ -89,5 +92,17 @@ export default (server) => {
             });
         });
     });
+    server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
+        // search for attributes
+        let tvshows = await databases.tvshow.findAll({
+            where: {
+                seriesName: {
+                    [Op.like]: "%" + req.params.name + "%"
+                }
+            }
+        });
 
+        res.send(tvshows);
+
+    });
 };

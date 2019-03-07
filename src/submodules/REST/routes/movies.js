@@ -136,4 +136,20 @@ export default (server) => {
         res.redirect(`/stream/${file.id}`, next);
     });
 
+    // Endpoint for text based searching of the movie database
+    server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
+        // search for attributes
+        let movie = await databases.movie.findAll({
+            where: {
+                movieName: {
+                    [Op.like]: "%" + req.params.name + "%"
+                }
+            },
+            include: [databases.file]
+        });
+
+        res.send(movie);
+
+    });
+
 };

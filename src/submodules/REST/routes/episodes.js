@@ -154,4 +154,29 @@ export default (server) => {
         res.send(episode);
 
     });
+
+    server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
+        // search for attributes
+        let episode = await databases.episode.findAll({
+            where: {
+                episodeName: {
+                    [Op.like]: "%" + req.params.name + "%"
+                }
+            },
+            include: [
+                databases.file,
+                databases.tvshow,
+                {
+                    model: databases.trackEpisodes,
+                    required: false,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
+            ]
+        });
+
+        res.send(episode);
+
+    });
 };
