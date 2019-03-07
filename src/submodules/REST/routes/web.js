@@ -17,4 +17,8 @@ export default (server) => {
             res.end();
         });
     });
+
+    server.get('/', async (req, res, next) => {
+        res.redirect('/web', next);
+    })
 };
