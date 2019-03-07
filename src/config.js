@@ -2,6 +2,9 @@ export default {
     'indexer': {
         'runAtBoot': false
     },
+    'cleaner': {
+      'runAtBoot': true
+    },
     'mdns': {
         'enable': false
     },

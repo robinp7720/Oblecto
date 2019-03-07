@@ -39,12 +39,13 @@ if (config.indexer.runAtBoot) {
     MovieIndexer.indexAll();
 }
 
-// Clean up old library entries
-FileCleaner.removedDeletedFiled();
-FileCleaner.removeAssoclessFiles();
-TVShowCleaner.removePathLessShows();
-MovieCleaner.removeFileLessMovies();
-
+if (config.cleaner.runAtBoot) {
+    // Clean up old library entries
+    FileCleaner.removedDeletedFiled();
+    FileCleaner.removeAssoclessFiles();
+    TVShowCleaner.removePathLessShows();
+    MovieCleaner.removeFileLessMovies();
+}
 // Socket connection
 let io = socketio.listen(server.server, {
     log: false,
