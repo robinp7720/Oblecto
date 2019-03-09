@@ -1,4 +1,8 @@
 export default {
+    'ffmpeg': {
+        'pathFFmpeg': '/usr/bin/ffmpeg',
+        'pathFFprobe': '/usr/bin/ffprobe'
+    },
     'indexer': {
         'runAtBoot': false
     },
