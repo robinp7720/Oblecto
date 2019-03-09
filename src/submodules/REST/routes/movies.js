@@ -102,7 +102,16 @@ export default (server) => {
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let movie = await databases.movie.findById(req.params.id, {
-            include: [databases.file]
+            include: [
+                databases.file,
+                {
+                    model: databases.trackMovies,
+                    required: false,
+                    where: {
+                        userId: req.authorization.jwt.id
+                    }
+                }
+            ]
         });
 
         movie = movie.toJSON();
