@@ -152,4 +152,42 @@ export default (server) => {
 
     });
 
+    // Endpoint to get the episodes currently being watched
+    server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req, res) {
+        // search for attributes
+        let tracks = await databases.trackMovies.findAll({
+            include: [{
+                model: databases.movie,
+                required: true,
+                include: [
+                    {
+                        model: databases.trackMovies,
+                        required: false,
+                        where: {
+                            userId: req.authorization.jwt.id
+                        }
+                    }
+                ]
+            }],
+            where: {
+                userId: req.authorization.jwt.id,
+                progress: {
+                    [sequelize.Op.lt]: 0.9
+                },
+                updatedAt: {
+                    [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
+                }
+            },
+            order: [
+                ['updatedAt', 'DESC'],
+            ],
+        });
+
+        // We are only interested in the episode objects, so extract all the episode object from
+        // each track object and send the final mapped array to the client
+        res.send(tracks.map((track) => {
+            return track.movie;
+        }));
+    });
+
 };
