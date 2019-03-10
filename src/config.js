@@ -1,4 +1,6 @@
-export default {
+import os from 'os'
+
+let configDefault = {
     'ffmpeg': {
         'pathFFmpeg': '/usr/bin/ffmpeg',
         'pathFFprobe': '/usr/bin/ffprobe'
@@ -70,3 +72,21 @@ export default {
         'enabled': true
     }
 };
+
+function loadConfig(file) {
+    try {
+        return require(file)
+    } catch (ex) {
+        return {}
+    }
+}
+
+let config = {
+    ...configDefault,
+    ...loadConfig(__dirname + '/userconfig.json'),
+    ...loadConfig('/etc/oblecto/config.json'),
+    ...loadConfig(os.homedir() + "/.oblecto.json"),
+
+}
+
+export default config
