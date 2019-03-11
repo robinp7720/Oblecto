@@ -1,13 +1,11 @@
 import sequelize from 'sequelize';
 import fs from 'fs';
-let ffmpeg = require('fluent-ffmpeg');
+import ffmpeg from '../../../submodules/ffmpeg';
 
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
 import config from '../../../config';
 
-ffmpeg.setFfprobePath(config.ffmpeg.pathFFprobe);
-ffmpeg.setFfmpegPath(config.ffmpeg.pathFFmpeg);
 
 export default (server) => {
     // Endpoint to send video files to the client
