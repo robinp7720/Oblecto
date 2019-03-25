@@ -5,7 +5,7 @@ import queue from '../../../submodules/queue';
 import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
 import config from '../../../config.js';
-import guessit from 'guessit-wrapper';
+import guessit from '../../../submodules/guessit';
 
 
 // TODO: Add config option to use the parent directory to identify movies
@@ -19,7 +19,7 @@ async function identifyByName(name) {
 }
 
 async function identifyByGuess (basename) {
-    var identification = await guessit.parseName(basename);
+    var identification = await guessit.identify(basename);
 
     let query = {query: identification.title};
 
@@ -47,8 +47,6 @@ export default async function (moviePath) {
     } else {
         console.log('File already in database:', moviePath);
     }
-
-
 
     let res = await identifyByGuess(path.basename(moviePath));
 
