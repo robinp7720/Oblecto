@@ -6,7 +6,7 @@ import tmdb from '../../../submodules/tmdb';
 import UserManager from '../../../submodules/users';
 import config from '../../../config.js';
 import guessit from '../../../submodules/guessit';
-
+import ffprobe from '../../../submodules/ffprobe';
 
 // TODO: Add config option to use the parent directory to identify movies
 
@@ -32,13 +32,17 @@ async function identifyByGuess (basename) {
 
 export default async function (moviePath) {
 
+    let metadata = await ffprobe(moviePath);
+
     // Create file entity in the database
     let [file, FileInserted] = await databases.file.findOrCreate({
         where: {path: moviePath},
         defaults: {
             name: path.parse(moviePath).name,
             directory: path.parse(moviePath).dir,
-            extension: path.parse(moviePath).ext.replace('.', '').toLowerCase()
+            extension: path.parse(moviePath).ext.replace('.', '').toLowerCase(),
+
+            duration: metadata.format.duration
         }
     });
 

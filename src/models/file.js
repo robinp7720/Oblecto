@@ -7,5 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         extension: DataTypes.STRING,
         container: DataTypes.STRING,
 
+        duration: DataTypes.DOUBLE,
+
     });
 };
