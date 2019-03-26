@@ -42,19 +42,12 @@ let configDefault = {
     'tvshows': {
         'doReIndex': false,
         'directories': [
-            {
-                'path': '/mnt/SMB/TV Shows/'
-            }
+
         ]
     },
     'movies': {
         'directories': [
-            {
-                'path': '/mnt/SMB/Movies/'
-            },
-            {
-                'path': '/mnt/media/Movies/'
-            }
+
         ]
     },
     'authentication': {
