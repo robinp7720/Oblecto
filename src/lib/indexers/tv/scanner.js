@@ -146,13 +146,17 @@ export default async function (EpisodePath, reIndex) {
     // However, there is the option to not quit and continue indexing the file even if the file was already in the
     // database
 
+    let metadata = await ffprobe(EpisodePath);
+
     let [File, Created] = await databases.file.findOrCreate({
         where: {path: EpisodePath},
         defaults: {
             name: PathParsed.name,
             directory: PathParsed.dir,
             extension: EpisodeData.extension,
-            container: EpisodeData.container
+            container: EpisodeData.container,
+
+            duration: metadata.format.duration
         },
         //include: [databases.episode]
     });
