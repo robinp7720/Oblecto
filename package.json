@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -10,14 +10,15 @@
   },
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install; npm run build; cd ..;",
-    "build": "babel src -d dist",
+    "build": "./node_modules/@babel/cli/bin/babel.js src -d dist",
     "install": "npm run build && npm run build:web",
-    "start": "babel-node src",
+    "start": "./node_modules/@babel/node/bin/babel-node.js  src",
     "debug": "nodemon src --exec 'babel-node --inspect=0.0.0.0:9229 '",
     "pack": "webpack-cli",
     "compile": "nexe dist/Oblecto.js -t x86-8.0.0 -p /usr/bin/python2"
   },
   "dependencies": {
+    "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
     "@babel/polyfill": "^7.4.0",
@@ -47,13 +48,7 @@
     "which": "^1.3.1"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-core": "^6.26.3",
-    "babel-loader": "^8.0.4",
-    "babel-polyfill": "^6.26.0",
-    "babel-preset-env": "^1.7.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-preset-stage-0": "^6.24.1",
+    "@babel/node": "^7.2.2",
     "eslint": "^4.19.1",
     "jshint": "^2.9.7",
     "nexe": "^2.0.0-rc.34",
