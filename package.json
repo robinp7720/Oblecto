@@ -1,20 +1,25 @@
 {
   "name": "oblecto",
-  "version": "1.0.0",
-  "description": "A free and opensource media server",
-  "author": "Robin <robin@decker.cx>",
-  "private": true,
+  "version": "0.0.1",
+  "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
+  "author": "Robin <robin@mysunland.org>",
+  "repository": "robinp7720/Oblecto",
+  "private": false,
+  "bin": {
+    "oblecto": "./bin/oblecto.js"
+  },
   "scripts": {
-    "build-web": "cd Oblecto-Web; npm install; npm run build; cd ..;",
+    "build:web": "cd Oblecto-Web; npm install; npm run build; cd ..;",
+    "build": "babel src -d dist",
+    "install": "npm run build && npm run build:web",
     "start": "babel-node src",
     "debug": "nodemon src --exec 'babel-node --inspect=0.0.0.0:9229 '",
-    "build": "babel src -d dist",
-    "serve": "node dist/",
     "pack": "webpack-cli",
     "compile": "nexe dist/Oblecto.js -t x86-8.0.0 -p /usr/bin/python2"
   },
   "dependencies": {
     "@babel/core": "^7.2.2",
+    "@babel/polyfill": "^7.4.0",
     "@babel/preset-env": "^7.2.0",
     "async": "^2.6.1",
     "bcrypt": "^2.0.1",
