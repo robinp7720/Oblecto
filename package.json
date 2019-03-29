@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "0.0.2",
+  "version": "0.0.4",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -9,7 +9,7 @@
     "oblecto": "./bin/oblecto.js"
   },
   "scripts": {
-    "build:web": "cd Oblecto-Web; npm install; npm run build; cd ..;",
+    "build:web": "cd Oblecto-Web; npm install; npm install --only=dev; npm run build; cd ..;",
     "build": "./node_modules/@babel/cli/bin/babel.js src -d dist",
     "install": "npm run build && npm run build:web",
     "start": "./node_modules/@babel/node/bin/babel-node.js  src",
