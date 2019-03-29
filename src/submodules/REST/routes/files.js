@@ -74,7 +74,47 @@ export default (server) => {
         }
 
     }, async function (req, res, next) {
-        console.log(req.video)
+        // TODO: Determine whether or not to remux or transcode depending on video encoding
+        res.writeHead(200, {
+            'Content-Type': 'video/mp4'
+        });
+
+        ffmpeg(req.video.path)
+            .native()
+            .format('mp4')
+            .videoCodec('copy')
+            .audioCodec('libmp3lame')
+            .outputOptions([
+                '-movflags', 'empty_moov',
+            ])
+
+
+            // setup event handlers
+
+            // save to stream
+            .on("start", (cmd)=>{
+                console.log("--- ffmpeg start process ---")
+                console.log(`cmd: ${cmd}`)
+            })
+            .on("end",()=>{
+                console.log("--- end processing ---")
+            })
+            .on("error", (err)=>{
+                console.log("--- ffmpeg meets error ---")
+                console.log(err)
+            })
+            .pipe(res, {end:true});
+    });
+
+
+    server.get('/stream/:id/:seek',  async function (req, res, next) {
+        // TODO: Determine whether or not to remux or transcode depending on video encoding
+
+        let fileInfo = await databases.file.findById(req.params.id);
+
+        req.video = {};
+
+        req.video.path = fileInfo.path;
 
         res.writeHead(200, {
             'Content-Type': 'video/mp4'
@@ -83,13 +123,13 @@ export default (server) => {
         ffmpeg(req.video.path)
             .native()
             .format('mp4')
-            .audioBitrate('1024k')
-            .videoCodec('mpeg4')
-            .audioBitrate('128k')
-            .audioChannels(2)
+            .videoCodec('copy')
+            //.audioBitrate('128k')
+            //.videoBitrate(500)
+            .seekInput(req.params.seek)
             .audioCodec('libmp3lame')
             .outputOptions([
-                '-movflags', 'empty_moov',
+                '-movflags', `empty_moov`,
             ])
 
 
