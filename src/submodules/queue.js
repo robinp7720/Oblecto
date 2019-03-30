@@ -18,7 +18,7 @@ export default async.queue((task, callback) => {
         TvScanner(task.path, config.tvshows.doReIndex).then(callback).catch(callback);
         break;
     case 'movie':
-        MovieScanner(task.path).then(callback).catch((err) => {
+        MovieScanner(task.path, config.movies.doReIndex).then(callback).catch((err) => {
             console.log(err);
             callback();
         });

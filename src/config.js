@@ -46,6 +46,7 @@ let configDefault = {
         ]
     },
     'movies': {
+        'doReIndex': false,
         'directories': [
 
         ]

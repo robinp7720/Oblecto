@@ -30,7 +30,7 @@ async function identifyByGuess (basename) {
     return await tmdb.searchMovie(query);
 }
 
-export default async function (moviePath) {
+export default async function (moviePath, reIndex) {
 
     let metadata = await ffprobe(moviePath);
 
@@ -50,6 +50,12 @@ export default async function (moviePath) {
         console.log('File inserted:', moviePath);
     } else {
         console.log('File already in database:', moviePath);
+
+        // Don't both indexing the file if it's already in the file database.
+        // It was probably already indexed
+        if (!reIndex) {
+            return false;
+        }
     }
 
     let res = await identifyByGuess(path.basename(moviePath));
