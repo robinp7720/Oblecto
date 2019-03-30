@@ -149,4 +149,93 @@ export default (server) => {
             })
             .pipe(res, {end:true});
     });
+
+    server.get('/HLS/:id/segment/:segment',  async function (req, res, next) {
+        // TODO: Determine whether or not to remux or transcode depending on video encoding
+
+        let segmentLength = 10 // Segment length in seconds
+
+        let fileInfo = await databases.file.findById(req.params.id);
+
+        req.video = {};
+
+        req.video.path = fileInfo.path;
+
+        res.writeHead(200, {
+            'Content-Type': 'video/MP2T'
+        });
+
+        ffmpeg(req.video.path)
+            .format('hls')
+            .videoCodec('copy')
+            //.audioBitrate('128k')
+            //.videoBitrate(500)
+            .seekInput(req.params.segment * segmentLength)
+            //.duration(segmentLength)
+            .audioCodec('libmp3lame')
+            .outputOptions([
+                '-segment_time', segmentLength,
+                '-copyts'
+            ])
+
+
+            // setup event handlers
+
+            // save to stream
+            .on("start", (cmd)=>{
+                console.log("--- ffmpeg start process ---")
+                console.log(`cmd: ${cmd}`)
+            })
+            .on("end",()=>{
+                console.log("--- end processing ---")
+            })
+            .on("error", (err)=>{
+                console.log("--- ffmpeg meets error ---")
+                console.log(err)
+            })
+            .pipe(res, {end:true});
+    });
+
+    server.get('/HLS/:id/playlist',  async function (req, res, next) {
+        // TODO: Determine whether or not to remux or transcode depending on video encoding
+
+        res.writeHead(200, {
+            'Content-Type': 'application/x-mpegURL'
+        });
+
+        let segmentLength = 10; // Segment length in seconds
+
+        let fileInfo = await databases.file.findById(req.params.id);
+
+        req.video = {};
+
+        req.video.path = fileInfo.path;
+
+        let playlist = "";
+
+        playlist += "#EXTM3U\r\n";
+        playlist += "#EXT-X-PLAYLIST-TYPE:VOD\r\n";
+        playlist += "#EXT-X-TARGETDURATION:30\r\n";
+        playlist += "#EXT-X-VERSION:4\r\n";
+        playlist += "#EXT-X-MEDIA-SEQUENCE:0\r\n";
+
+        let numberOfSegments = Math.ceil(fileInfo.duration / segmentLength);
+
+        for (let segment = 0; segment <= numberOfSegments; segment++) {
+            if (segment === numberOfSegments) {
+                playlist += `#EXTINF:${fileInfo.duration % segmentLength}\r\n`;
+            } else {
+                playlist += `#EXTINF:${segmentLength},\r\n`;
+            }
+            playlist += `/HLS/${req.params.id}/segment/${segment}\r\n`;
+        }
+
+        playlist += "#EXT-X-ENDLIST\r\n";
+
+        res.write(playlist);
+        res.end();
+        
+        next()
+
+    });
 };
