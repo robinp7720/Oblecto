@@ -126,30 +126,29 @@ export default (server) => {
             if (!err)
                 return
 
-            fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
-                if (err) {
-                    return false;
+        fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
+            if (err) {
+                return false;
+            }
+
+            files.forEach(function (val, index) {
+                let sequenceId = val.replace('index', '')
+                    .replace('.vtt', '')
+                    .replace('.ts', '');
+
+                sequenceId = parseInt(sequenceId);
+
+
+                if (segmentId - sequenceId > 5) {
+                    fs.unlink(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${val}`, (err) => {
+                        if (err) {
+                            console.error(err);
+                        }
+                    });
                 }
-
-                files.forEach(function (val, index) {
-                    let sequenceId = val.replace('index', '')
-                        .replace('.vtt', '')
-                        .replace('.ts', '');
-
-                    sequenceId = parseInt(sequenceId);
+            })
 
 
-                    if (segmentId - sequenceId > 5) {
-                        fs.unlink(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${val}`, (err) => {
-                            if (err) {
-                                console.error(err);
-                            }
-                        });
-                    }
-                })
-
-
-            });
         });
 
     });
