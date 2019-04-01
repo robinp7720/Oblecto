@@ -6,6 +6,10 @@ import authMiddleWare from '../middleware/auth';
 import config from '../../../config';
 
 import HLSSession from '../../HLS/session';
+import os from "os";
+
+import DirectStreamer from '../../handlers/DirectStreamer';
+import errors from "restify-errors";
 
 let HLSSessions = {};
 
@@ -15,65 +19,12 @@ export default (server) => {
         // search for attributes
         let fileInfo = await databases.file.findById(req.params.id);
 
-        req.video = {};
-
-        req.video.path = fileInfo.path;
-        req.video.fileInfo = fileInfo;
-        req.video.size = fs.statSync(req.video.path).size;
-
-        let mime = 'video';
-
-        let mimes = {
-            'mp4': 'video/mp4',
-            'mkv': 'video/x-matroska',
-            'avi': 'video/avi',
-        };
-
-        if (mimes[fileInfo.extension])
-            req.video.mime = mimes[fileInfo.extension];
-
         // Transcode
         if (config.transcoding.doRealTime && fileInfo.extension !== 'mp4')
             return next();
 
-        if (req.headers.range) { // meaning client (browser) has moved the forward/back slider
-            // which has sent this request back to this server logic ... cool
-            var range = req.headers.range;
-            var parts = range.replace(/bytes=/, '').split('-');
-            var partialstart = parts[0];
-            var partialend = parts[1];
 
-            var start = parseInt(partialstart, 10);
-            var end = partialend ? parseInt(partialend, 10) : req.video.size  - 1;
-            var chunksize = (end - start) + 1;
-            console.log('RANGE: ' + start + ' - ' + end + ' = ' + chunksize);
-
-            var file = fs.createReadStream(req.video.path , {
-                start: start,
-                end: end
-            });
-
-            res.writeHead(206, {
-                'Content-Range': 'bytes ' + start + '-' + end + '/' + req.video.size,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': req.video.mime
-            });
-
-            file.pipe(res);
-
-        } else {
-
-            console.log('ALL: ' + req.video.size);
-
-            res.writeHead(200, {
-                'Content-Length': req.video.size,
-                'Accept-Ranges': 'bytes',
-                'Content-Type': req.video.mime
-            });
-
-            fs.createReadStream(req.video.path).pipe(res);
-        }
+        DirectStreamer.streamFile(fileInfo.path, req, res)
 
     }, async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
@@ -82,7 +33,7 @@ export default (server) => {
         });
 
         ffmpeg(req.video.path)
-            .native()
+            //.native()
             .format('mp4')
             .videoCodec('copy')
             .audioCodec('libmp3lame')
@@ -152,60 +103,75 @@ export default (server) => {
             .pipe(res, {end:true});
     });
 
-    server.get('/HLS/:id/segment/:start/:end/',  async function (req, res, next) {
+    server.get('/HLS/:session/segment/:id',  async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
 
-        let fileInfo = await databases.file.findById(req.params.id);
+        if (!HLSSessions[req.params.session]) {
+            return next(new errors.NotFoundError('Session does not exist'));
+        }
 
-        req.video = {};
+        let segmentId = parseInt(req.params.id);
 
-        req.video.path = fileInfo.path;
+        DirectStreamer.streamFile(
+            `${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + segmentId).substr(-3)}.ts`,
+            req, res
+        );
 
-        res.writeHead(200, {
-            'Content-Type': 'video/MP2T'
+        // While that file is being streamed, we need to make sure that the next segment will be available.
+        // Check if the next file in the sequence exists, and it it doesn't resume ffmpeg and delete the first few
+        // segments.
+
+        console.log(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + (segmentId + 3)).substr(-3)}.ts`);
+        fs.access(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + (segmentId + 3)).substr(-3)}.ts`, fs.constants.F_OK, (err) => {
+            if (!err)
+                return
+
+            fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
+                if (err) {
+                    return false;
+                }
+
+                files.forEach(function (val, index) {
+                    let sequenceId = val.replace('index', '')
+                        .replace('.vtt', '')
+                        .replace('.ts', '');
+
+                    sequenceId = parseInt(sequenceId);
+
+
+                    if (segmentId - sequenceId > 5) {
+                        fs.unlink(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${val}`, (err) => {
+                            if (err) {
+                                console.error(err);
+                            }
+                        });
+                    }
+                })
+
+
+            });
         });
 
-        ffmpeg(req.video.path)
-            .format('hls')
-            .videoCodec('copy')
-            //.audioBitrate('128k')
-            //.videoBitrate(500)
-            .seekInput(req.params.start)
-            .audioCodec('libmp3lame')
-            .inputOptions([
-
-            ])
-            .outputOptions([
-                '-to', req.params.end-req.params.start,
-                '-avoid_negative_ts 1'
-            ])
-
-
-            // setup event handlers
-
-            // save to stream
-            .on("start", (cmd)=>{
-                console.log("--- ffmpeg start process ---")
-                console.log(`cmd: ${cmd}`)
-            })
-            .on("end",()=>{
-                console.log("--- end processing ---")
-            })
-            .on("error", (err)=>{
-                console.log("--- ffmpeg meets error ---")
-                console.log(err)
-            })
-            .pipe(res, {end:true});
     });
 
-    server.get('/HLS/session/:session/',  async function (req, res, next) {
+    server.get('/HLS/:session/playlist',  async function (req, res, next) {
+        if (!HLSSessions[req.params.session]) {
+            return next(new errors.NotFoundError('Session does not exist'));
+        }
+
+
         res.writeHead(200, {
             'Content-Type': 'application/x-mpegURL'
         });
 
-        res.write(HLSSessions[req.params.session].playlist);
+        try {
+            fs.createReadStream(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/index.m3u8`).pipe(res);
+        } catch (e) {
+            console.log(e);
 
-        res.end();
+            return next(new errors.NotFoundError('Playlist file doesn\'t exist'));
+        }
+
     });
 
 
