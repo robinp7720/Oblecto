@@ -89,16 +89,16 @@ export default {
             include: [databases.file, databases.tvshow]
         });
 
-        let episodePath = episode.files[0].path;
 
-        console.log('Checking thumbnail for', episodePath);
+        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
 
-        // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-        let thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
+        if (config.assets.storeWithFile) {
+            let episodePath = episode.files[0].path;
 
-        if (!config.assets.storeWithFile) {
-            thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
+            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
         }
+
+        console.log('Checking thumbnail for', episode.tvshow.seriesName, `S${episode.airedSeason}E${episode.airedEpisodeNumber}:`, episode.episodeName);
 
         if (this.imageExists(thumbnailPath))
             return;
@@ -106,8 +106,8 @@ export default {
 
         return this.DownloadTMDBEpisodeBanner(episode, episodePath, thumbnailPath)
             .catch(() => {
-                return this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
-            }
+                    return this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
+                }
             );
 
 
