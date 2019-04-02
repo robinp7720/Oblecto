@@ -10,30 +10,24 @@ import request from 'request';
 
 export default {
     imageExists(imagePath) {
-        // Assume the image exists at first
-        let imageExists = true;
+        let stat;
 
         try {
-            let stat = fs.statSync(imagePath);
-
-            // Re-download thumbnail if it's to small in size
-            // This may mean that the thumbnail image is corrupt or wasn't downloaded properly the first time.
-            if (stat.size < 1000) {
-                // Delete the thumbnail
-                fs.unlinkSync(imagePath);
-
-                console.log('Image exists for', imagePath, 'but will be re-downloaded');
-                throw 'poster to small';
-            }
-
-            console.log('Image exists for', imagePath);
-        } catch (e) {
-            // If an error has occurred above, it's because either the file stating threw an error or because the poster
-            // image was to small.
-            imageExists = false;
+            stat = fs.statSync(imagePath);
+        } catch {
+            return false;
         }
 
-        return imageExists;
+        // Re-download thumbnail if it's to small in size
+        // This may mean that the thumbnail image is corrupt or wasn't downloaded properly the first time.
+        // TODO: Complete a proper integrity check on the image file
+        if (stat.size < 1000) {
+            fs.unlink(imagePath, () => {
+                console.log('Image exists for', imagePath, 'but will be re-downloaded');
+            });
+        }
+
+        return true;
     },
 
     async DownloadTMDBMovieFanart(movie, imagePath) {
