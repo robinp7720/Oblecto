@@ -32,7 +32,7 @@ export default {
     },
 
 
-    async DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath) {
+    async DownloadTVDBEpisodeBanner(episode, thumbnailPath) {
         let data = await tvdb.getEpisodeById(episode.tvshow.tvdbid);
 
         return new Promise(function (fulfill, reject) {
@@ -48,15 +48,13 @@ export default {
                         reject(error);
                     }
 
-                    console.log('Image downloaded for', episodePath);
-
                     fulfill();
                 });
             });
         });
     },
 
-    async DownloadTMDBEpisodeBanner(episode, episodePath, thumbnailPath) {
+    async DownloadTMDBEpisodeBanner(episode, thumbnailPath) {
         let data = await tmdb.tvEpisodeImages({
             id: episode.tvshow.tmdbid,
             episode_number: episode.airedEpisodeNumber,
@@ -75,8 +73,6 @@ export default {
                     if (error) {
                         reject(error);
                     }
-
-                    console.log('Image downloaded for', episodePath);
 
                     fulfill();
                 });
@@ -104,9 +100,9 @@ export default {
             return;
 
 
-        return this.DownloadTMDBEpisodeBanner(episode, episodePath, thumbnailPath)
+        return this.DownloadTMDBEpisodeBanner(episode, thumbnailPath)
             .catch(() => {
-                    return this.DownloadTVDBEpisodeBanner(episode, episodePath, thumbnailPath);
+                    return this.DownloadTVDBEpisodeBanner(episode, thumbnailPath);
                 }
             );
 
