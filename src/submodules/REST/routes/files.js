@@ -6,13 +6,17 @@ import authMiddleWare from '../middleware/auth';
 import config from '../../../config';
 
 import HLSSession from '../../HLS/session';
-import os from "os";
+import os from 'os';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
-import errors from "restify-errors";
+import errors from 'restify-errors';
 
 let HLSSessions = {};
 
+/**
+ *
+ * @param {Server} server
+ */
 export default (server) => {
     // Endpoint to send video files to the client
     server.get('/stream/:id', async function (req, res, next) {
@@ -20,11 +24,11 @@ export default (server) => {
         let fileInfo = await databases.file.findById(req.params.id);
 
         // Transcode
-        if (config.transcoding.doRealTime && fileInfo.extension !== 'mp4')
+        if (config.transcoding.doRealTime && fileInfo.extension !== 'mp4') {
             return next();
+        }
 
-
-        DirectStreamer.streamFile(fileInfo.path, req, res)
+        DirectStreamer.streamFile(fileInfo.path, req, res);
 
     }, async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
@@ -40,21 +44,16 @@ export default (server) => {
             .outputOptions([
                 '-movflags', 'empty_moov',
             ])
-
-
-            // setup event handlers
-
-            // save to stream
-            .on("start", (cmd)=>{
-                console.log("--- ffmpeg start process ---")
-                console.log(`cmd: ${cmd}`)
+            .on('start', (cmd)=>{
+                console.log('--- ffmpeg start process ---');
+                console.log(`cmd: ${cmd}`);
             })
-            .on("end",()=>{
-                console.log("--- end processing ---")
+            .on('end',()=>{
+                console.log('--- end processing ---');
             })
-            .on("error", (err)=>{
-                console.log("--- ffmpeg meets error ---")
-                console.log(err)
+            .on('error', (err)=>{
+                console.log('--- ffmpeg meets error ---');
+                console.log(err);
             })
             .pipe(res, {end:true});
     });
@@ -82,23 +81,18 @@ export default (server) => {
             .seekInput(req.params.seek)
             .audioCodec('libmp3lame')
             .outputOptions([
-                '-movflags', `empty_moov`,
+                '-movflags', 'empty_moov',
             ])
-
-
-            // setup event handlers
-
-            // save to stream
-            .on("start", (cmd)=>{
-                console.log("--- ffmpeg start process ---")
-                console.log(`cmd: ${cmd}`)
+            .on('start', (cmd)=>{
+                console.log('--- ffmpeg start process ---');
+                console.log(`cmd: ${cmd}`);
             })
-            .on("end",()=>{
-                console.log("--- end processing ---")
+            .on('end',()=>{
+                console.log('--- end processing ---');
             })
-            .on("error", (err)=>{
-                console.log("--- ffmpeg meets error ---")
-                console.log(err)
+            .on('error', (err)=>{
+                console.log('--- ffmpeg meets error ---');
+                console.log(err);
             })
             .pipe(res, {end:true});
     });
@@ -119,12 +113,7 @@ export default (server) => {
 
         // While that file is being streamed, we need to make sure that the next segment will be available.
         // Check if the next file in the sequence exists, and it it doesn't resume ffmpeg and delete the first few
-        // segments.
-
-        console.log(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + (segmentId + 3)).substr(-3)}.ts`);
-        fs.access(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + (segmentId + 3)).substr(-3)}.ts`, fs.constants.F_OK, (err) => {
-            if (!err)
-                return
+        // segments.b
 
         fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
             if (err) {
@@ -138,7 +127,6 @@ export default (server) => {
 
                 sequenceId = parseInt(sequenceId);
 
-
                 if (segmentId - sequenceId > 5) {
                     fs.unlink(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${val}`, (err) => {
                         if (err) {
@@ -146,11 +134,8 @@ export default (server) => {
                         }
                     });
                 }
-            })
-
-
+            });
         });
-
     });
 
     server.get('/HLS/:session/playlist',  async function (req, res, next) {
@@ -163,9 +148,7 @@ export default (server) => {
                 return next(new errors.NotFoundError('Playlist file doesn\'t exist'));
             }
 
-
             HLSSessions[req.params.session].resetTimeout();
-
 
             res.writeHead(200, {
                 'Content-Type': 'application/x-mpegURL'
