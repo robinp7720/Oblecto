@@ -8,14 +8,14 @@ import path from 'path'
 
 export default class {
     maxGenCount = 8;
+    timeOffset = 0;
+    lastTime;
 
     constructor(fileId) {
         this.sessionId = uuid.v4();
         this.fileId = fileId;
 
         this.paused = true;
-
-        this.init();
     }
 
     async init() {
@@ -23,14 +23,28 @@ export default class {
 
         mkdirp.sync(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}`);
 
-
-        this.start();
+        this.lastTime = new Date().getTime();
     }
 
-    start() {
+    set offset(time) {
+        if (this.remuxer) {
+            return false;
+        }
+
+        return this.timeOffset = time
+    }
+
+    resetTimeout() {
+        this.lastTime = new Date().getTime();
+    }
+
+    async start() {
+        await this.init();
+
         this.remuxer = ffmpeg(this.file.path)
             .videoCodec('copy')
             .audioCodec('copy')
+            .seekInput(this.timeOffset)
             .outputOptions([
                 '-hls_time', '10',
                 '-hls_list_size', '10',
@@ -58,7 +72,17 @@ export default class {
             })
             .save(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/index.m3u8`);
 
-        setInterval(() => {
+        this.segmentChecker =  setInterval(() => {
+            // First check if the session has timed out. If it has, we don't really need to both with the deletion of
+            // individual segments and just deleted the whole session.
+
+            if ( new Date().getTime() - this.lastTime > 120000) {
+                console.log('HLS Session', this.sessionId, 'has expired. Clearing now.');
+                clearInterval(this.segmentChecker);
+                this.clearSession();
+                return
+            }
+
             fs.readdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`, (err, files) => {
                 if (err) {
                     return false;
@@ -83,6 +107,29 @@ export default class {
         },1000)
     }
 
+    clearSession() {
+        this.remuxer.kill();
+
+        fs.readdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`, (err, files) => {
+            if (err) {
+                return false;
+            }
+
+            files.forEach((val, index) => {
+
+                fs.unlink(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/${val}`, (err) => {
+                    if (err) {
+                        console.error(err);
+                    }
+                });
+            })
+
+
+        });
+
+        delete this;
+    }
+
     pauseSegmenting () {
         if (this.remuxer) {
             this.remuxer.kill('SIGSTOP');
@@ -97,7 +144,7 @@ export default class {
 
     resumeSegmenting () {
         if (this.remuxer) {
-            this.remuxer.kill('SIGCONT')
+            this.remuxer.kill('SIGCONT');
 
             this.paused = false;
 
