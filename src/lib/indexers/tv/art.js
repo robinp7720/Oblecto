@@ -127,10 +127,10 @@ export default {
         if (this.imageExists(posterPath))
             return;
 
-        // Only download the poster if it doesn't exist
         let data = await tvdb.getSeriesPosters(show.tvdbid);
 
-        console.log('Downloading poster image for', show.seriesName, 'http://thetvdb.com/banners/' + data[0].fileName);
+        console.log('Downloading poster image for', show.seriesName);
+
         request.get({
             uri: 'http://thetvdb.com/banners/' + data[0].fileName,
             encoding: null
