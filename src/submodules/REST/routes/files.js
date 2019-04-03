@@ -158,24 +158,32 @@ export default (server) => {
             return next(new errors.NotFoundError('Session does not exist'));
         }
 
+        fs.access(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/index.m3u8`, fs.constants.F_OK, (err) => {
+            if (err) {
+                return next(new errors.NotFoundError('Playlist file doesn\'t exist'));
+            }
 
-        res.writeHead(200, {
-            'Content-Type': 'application/x-mpegURL'
-        });
 
-        try {
+            HLSSessions[req.params.session].resetTimeout();
+
+
+            res.writeHead(200, {
+                'Content-Type': 'application/x-mpegURL'
+            });
+
             fs.createReadStream(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/index.m3u8`).pipe(res);
-        } catch (e) {
-            console.log(e);
-
-            return next(new errors.NotFoundError('Playlist file doesn\'t exist'));
-        }
-
+        });
     });
 
 
     server.get('/HLS/create/:id/',  async function (req, res, next) {
         let session = new HLSSession(req.params.id);
+
+        if (req.query.offset) {
+            session.offset = req.query.offset;
+        }
+
+        await session.start();
 
         HLSSessions[session.sessionId] = session;
 
