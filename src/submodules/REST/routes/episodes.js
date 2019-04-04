@@ -44,7 +44,7 @@ export default (server) => {
     // Endpoint to get a banner image for an episode based on the local episode ID
     server.get('/episode/:id/banner', async function (req, res, next) {
         // Get episode data
-        let episode = await databases.episode.findById(req.params.id, {
+        let episode = await databases.episode.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -74,7 +74,7 @@ export default (server) => {
 
     // Endpoint to list all stored files for the specific episode
     server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req, res) {
-        let episode = databases.episode.findById(req.params.id, {
+        let episode = databases.episode.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -86,7 +86,7 @@ export default (server) => {
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/episode/:id/play', async function (req, res, next) {
         // search for attributes
-        let episode = await databases.episode.findById(req.params.id, {
+        let episode = await databases.episode.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -99,7 +99,7 @@ export default (server) => {
     // Endpoint to retrieve episode details based on the local episode ID
     server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let episode = await databases.episode.findById(req.params.id, {
+        let episode = await databases.episode.findByPk(req.params.id, {
             include: [
                 databases.file,
                 {
@@ -119,7 +119,7 @@ export default (server) => {
     // Endpoint to retrieve the episode next in series based on the local episode ID
     server.get('/episode/:id/next', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let results = await databases.episode.findById(req.params.id);
+        let results = await databases.episode.findByPk(req.params.id);
         let episode = await databases.episode.findOne({
             where: {
                 showid: results.showid,
@@ -160,7 +160,7 @@ export default (server) => {
         let episode = await databases.episode.findAll({
             where: {
                 episodeName: {
-                    [Op.like]: "%" + req.params.name + "%"
+                    [Op.like]: '%' + req.params.name + '%'
                 }
             },
             include: [

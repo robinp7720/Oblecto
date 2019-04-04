@@ -81,7 +81,7 @@ export default {
     },
 
     async DownloadEpisodeBanner(id) {
-        let episode = await databases.episode.findById(id, {
+        let episode = await databases.episode.findByPk(id, {
             include: [databases.file, databases.tvshow]
         });
 
@@ -110,7 +110,7 @@ export default {
     },
 
     async DownloadSeriesPoster(id) {
-        let show = await databases.tvshow.findById(id);
+        let show = await databases.tvshow.findByPk(id);
 
         let showPath = show.directory;
 

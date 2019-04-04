@@ -19,7 +19,7 @@ export default class {
     }
 
     async init() {
-        this.file = await databases.file.findById(this.fileId);
+        this.file = await databases.file.findByPk(this.fileId);
 
         mkdirp.sync(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}`);
 

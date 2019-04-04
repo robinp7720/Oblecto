@@ -83,7 +83,7 @@ export default {
     },
 
     async DownloadMovieFanart(id) {
-        let movie = await databases.movie.findById(id, {
+        let movie = await databases.movie.findByPk(id, {
             include: [databases.file]
         });
 
@@ -108,7 +108,7 @@ export default {
     },
 
     async DownloadMoviePoster(id) {
-        let movie = await databases.movie.findById(id, {
+        let movie = await databases.movie.findByPk(id, {
             include: [databases.file]
         });
 

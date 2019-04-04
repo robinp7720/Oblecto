@@ -182,7 +182,7 @@ export default {
                     }
                 });
 
-                item.updateAttributes({
+                item.update({
                     time: show.time,
                     progress: show.progress
                 });
@@ -208,7 +208,7 @@ export default {
                     }
                 });
 
-                item.updateAttributes({
+                item.update({
                     time: movie.time,
                     progress: movie.progress
                 });

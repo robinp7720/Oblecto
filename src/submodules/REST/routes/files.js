@@ -21,7 +21,7 @@ export default (server) => {
     // Endpoint to send video files to the client
     server.get('/stream/:id', async function (req, res, next) {
         // search for attributes
-        let fileInfo = await databases.file.findById(req.params.id);
+        let fileInfo = await databases.file.findByPk(req.params.id);
 
         // Transcode
         if (config.transcoding.doRealTime && fileInfo.extension !== 'mp4') {
@@ -62,7 +62,7 @@ export default (server) => {
     server.get('/stream/:id/:seek',  async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
 
-        let fileInfo = await databases.file.findById(req.params.id);
+        let fileInfo = await databases.file.findByPk(req.params.id);
 
         req.video = {};
 

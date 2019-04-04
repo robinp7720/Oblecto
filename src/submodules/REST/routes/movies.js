@@ -39,7 +39,7 @@ export default (server) => {
     // Endpoint to get a poster based on localId
     server.get('/movie/:id/poster', async function (req, res, next) {
         // Get episode data
-        let movie = await databases.movie.findById(req.params.id, {
+        let movie = await databases.movie.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -72,7 +72,7 @@ export default (server) => {
     // Endpoint to get a fanart based on localId
     server.get('/movie/:id/fanart', async function (req, res, next) {
         // Get episode data
-        let movie = await databases.movie.findById(req.params.id, {
+        let movie = await databases.movie.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -101,7 +101,7 @@ export default (server) => {
     // Endpoint to retrieve episode details based on the local movie ID
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let movie = await databases.movie.findById(req.params.id, {
+        let movie = await databases.movie.findByPk(req.params.id, {
             include: [
                 databases.file,
                 {
@@ -127,7 +127,7 @@ export default (server) => {
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/movie/:id/play', async function (req, res, next) {
         // search for attributes
-        let movie = await databases.movie.findById(req.params.id, {
+        let movie = await databases.movie.findByPk(req.params.id, {
             include: [
                 {
                     model: databases.file,

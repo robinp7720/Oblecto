@@ -26,7 +26,7 @@ export default (server) => {
 
     // Endpoint to request info based on the local series ID
     server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let show = await databases.tvshow.findById(req.params.id);
+        let show = await databases.tvshow.findByPk(req.params.id);
 
         show.genre = JSON.parse(show.genre);
         res.send(show);
@@ -34,7 +34,7 @@ export default (server) => {
 
     // Endpoint to request a re-index of a series based on the local ID
     server.get('/series/:id/index', authMiddleWare.requiresAuth, function (req, res, next) {
-        databases.tvshow.findById(req.params.id).then(show => {
+        databases.tvshow.findByPk(req.params.id).then(show => {
             TVShowIndexer.indexDirectory(show.directory);
 
             res.send([true]);
@@ -67,7 +67,7 @@ export default (server) => {
 
     // Endpoint to get the poster for a series
     server.get('/series/:id/poster', function (req, res, next) {
-        databases.tvshow.findById(req.params.id).then(show => {
+        databases.tvshow.findByPk(req.params.id).then(show => {
             if (!show) {
                 res.errorCode = 404;
                 return res.send();
