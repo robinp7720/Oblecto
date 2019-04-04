@@ -23,7 +23,7 @@ export default {
 
         results.forEach((item) => {
             if (item.movies.length === 0 && item.episodes.length === 0) {
-                item.destroy()
+                item.destroy();
             }
         });
 

@@ -97,7 +97,7 @@ export default (server) => {
         let tvshows = await databases.tvshow.findAll({
             where: {
                 seriesName: {
-                    [Op.like]: "%" + req.params.name + "%"
+                    [Op.like]: '%' + req.params.name + '%'
                 }
             }
         });

@@ -24,6 +24,14 @@ module.exports = {
         "semi": [
             "error",
             "always"
+        ],
+        "func-call-spacing": [
+            "error",
+            "never"
+        ],
+        'space-before-function-parentheses': [
+            "error",
+            "never"
         ]
     }
 };

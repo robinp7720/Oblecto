@@ -151,7 +151,7 @@ export default (server) => {
         let movie = await databases.movie.findAll({
             where: {
                 movieName: {
-                    [Op.like]: "%" + req.params.name + "%"
+                    [Op.like]: '%' + req.params.name + '%'
                 }
             },
             include: [databases.file]

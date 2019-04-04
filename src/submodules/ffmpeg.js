@@ -5,4 +5,4 @@ import config from '../config';
 ffmpeg.setFfprobePath(config.ffmpeg.pathFFprobe);
 ffmpeg.setFfmpegPath(config.ffmpeg.pathFFmpeg);
 
-export default ffmpeg
+export default ffmpeg;

@@ -1,5 +1,5 @@
 import mimeTypes from 'mime-types';
-import fs from "fs";
+import fs from 'fs';
 
 export default class {
     static streamFile(videoPath, req, res) {
