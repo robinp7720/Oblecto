@@ -5,6 +5,7 @@ import tmdb from '../../../submodules/tmdb';
 import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import UserManager from '../../../submodules/users';
+import ffprobe from "../../../submodules/ffprobe"
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
