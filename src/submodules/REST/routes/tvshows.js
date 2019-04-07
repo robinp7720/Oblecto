@@ -77,7 +77,7 @@ export default (server) => {
 
             if (config.assets.storeWithFile) {
                 let showPath = show.directory;
-                let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
+                posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
             }
 
             // Check if the poster image already exits
