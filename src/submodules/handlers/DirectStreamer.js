@@ -2,7 +2,7 @@ import mimeTypes from 'mime-types';
 import fs from 'fs';
 
 export default class {
-    static streamFile(videoPath, req, res) {
+    static streamFile(videoPath, req, res, next) {
 
         let videoSize = fs.statSync(videoPath).size;
         let videoMime =  mimeTypes.lookup(videoPath);
@@ -20,10 +20,15 @@ export default class {
 
             console.log('RANGE: ' + start + ' - ' + end + ' = ' + chunksize);
 
-            var file = fs.createReadStream(videoPath , {
-                start: start,
-                end: end
-            });
+            try {
+                var file = fs.createReadStream(videoPath, {
+                    start: start,
+                    end: end
+                });
+            } catch (e) {
+                console.log(e);
+                return next();
+            }
 
             res.writeHead(206, {
                 'Content-Range': 'bytes ' + start + '-' + end + '/' + videoSize,
@@ -44,7 +49,12 @@ export default class {
                 'Content-Type': videoMime
             });
 
-            return fs.createReadStream(videoPath).pipe(res);
+            try {
+                return fs.createReadStream(videoPath).pipe(res);
+            } catch (e) {
+                console.log(e);
+                return next();
+            }
         }
 
     }
