@@ -1,3 +1,5 @@
+[![npmjs](https://img.shields.io/npm/dw/oblecto.svg)](https://www.npmjs.com/package/oblecto)
+
 ![Oblecto logo](https://github.com/robinp7720/Oblecto/blob/master/images/logotype.png?raw=true)
 # Oblecto
 ## What is it?
