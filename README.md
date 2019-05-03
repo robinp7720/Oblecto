@@ -1,4 +1,5 @@
 [![npmjs](https://img.shields.io/npm/dw/oblecto.svg)](https://www.npmjs.com/package/oblecto)
+[![Join the chat at https://gitter.im/robinp7720/Oblecto](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/robinp7720/Oblecto?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ![Oblecto logo](https://github.com/robinp7720/Oblecto/blob/master/images/logotype.png?raw=true)
 # Oblecto
