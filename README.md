@@ -11,5 +11,7 @@ Oblecto can be installed using NPM or directly from GIT. We recommend you to ins
 
 Please follow the setup and installation guide here: https://github.com/robinp7720/Oblecto/wiki/Getting-Started
 
+If you have further questions or need help setting up Oblecto, please don't hesitate to ask in the gitter chat! Oblecto should be easy to install for everyone. If it doesn't achieve this, improvments must be made!
+
 ## I've set this thing up. Now where's the place I actually watch my media?
 Simply go to the oblecto front end at ```localhost:8080```. Oblecto will redirect you to the frontend. The frontend is maintained sepperatly at https://github.com/robinp7720/Oblecto-Web
