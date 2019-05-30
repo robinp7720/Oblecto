@@ -10,8 +10,31 @@ switch (args[0]) {
 case 'start':
     require('../dist/');
     break;
+
+case 'init':
+    var databases = require('../dist/submodules/database').default;
+    databases.sequelize
+        .authenticate()
+        .then(() => {
+            // Create databases if connection to the database could be established
+            return databases.sequelize.sync();
+        }).finally(function () {
+            console.log('Oblecto has been initialized');
+            databases.sequelize.close();
+        }).catch((err) => {
+            console.log('An error has occured while authenticating and/or during table creation:');
+            console.log(err);
+        });
+
+    break
+
 case 'adduser':
-    var databases = require('../dist/submodules/database');
+    if (args.length < 5) {
+        console.log('Invalid number of arguments')
+        return false
+    }
+
+    var databases = require('../dist/submodules/database').default;
     var bcrypt = require('bcrypt');
 
     bcrypt.hash(args[2], config.authentication.saltRounds).then(function (passwordHash) {
@@ -32,23 +55,39 @@ case 'adduser':
         }
     }).finally(function () {
         databases.sequelize.close();
+    }).catch(function (err) {
+        console.log(err);
     });
 
     break;
 case 'deluser':
+    if (args.length < 2) {
+        console.log('Invalid number of arguments')
+        return false
+    }
+
+    var databases = require('../dist/submodules/database').default;
+
+    databases.user.findOne({
+        where: {
+            username: args[1]
+        }
+    }).then(function (user) {
+        return user.destroy();
+    }).finally(function () {
+        console.log(`user ${args[1]} has been deleted`);
+        databases.sequelize.close();
+    });
+
     break;
-case 'index':
-    break;
-case 'downloadart':
-    break;
+
 default:
     console.log(`Oblecto version ${oblectoPackage.version}`);
     console.log();
     console.log('Usage:');
+    console.log('oblecto init')
     console.log('oblecto start');
     console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
     console.log('oblecto deluser USERNAME');
-    console.log('oblecto index [all|tvshows|movies]');
-    console.log('oblecto downloadart [all|tvshows|movies]');
 
 }
