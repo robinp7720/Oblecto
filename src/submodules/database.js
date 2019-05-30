@@ -7,6 +7,7 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
     host: config.mysql.host,
     dialect: 'mysql',
     logging: false,
+    operatorsAliases: false,
 
     pool: {
         max: 5,
@@ -59,18 +60,8 @@ let databases = {
     user,
     trackEpisodes,
     trackMovies,
-    file
+    file,
+    sequelize
 };
 
-sequelize
-    .authenticate()
-    .then(() => {
-        // Create databases if connection to the database could be establishe
-        sequelize.sync();
-    })
-    .catch((err) => {
-        console.log(err);
-    });
-
-
-module.exports = databases;
+export default databases;
