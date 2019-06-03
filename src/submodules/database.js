@@ -32,9 +32,18 @@ const file = sequelize.import('file', require(__dirname + '/../models/file.js'))
 const episodeFiles = sequelize.import('episodeFiles', require(__dirname + '/../models/episodeFiles.js'));
 const movieFiles = sequelize.import('movieFiles', require(__dirname + '/../models/movieFiles.js'));
 
+const movieSet = sequelize.import('movieSet', require(__dirname + '/../models/movieSet.js'));
+const tvshowSet = sequelize.import('tvshowSet', require(__dirname + '/../models/tvshowSet.js'));
+
 
 episode.belongsTo(tvshow);
 tvshow.hasMany(episode);
+
+movieSet.belongsToMany(movie, {through: 'movieSetAllocations'});
+movie.belongsToMany(movieSet, {through: 'movieSetAllocations'});
+
+tvshowSet.belongsToMany(tvshow, {through: 'tvshowSetAllocations'});
+tvshow.belongsToMany(tvshowSet, {through: 'tvshowSetAllocations'});
 
 episode.belongsToMany(file, {through: episodeFiles});
 movie.belongsToMany(file, {through: movieFiles});
@@ -61,6 +70,7 @@ let databases = {
     trackEpisodes,
     trackMovies,
     file,
+    movieSet,
     sequelize
 };
 

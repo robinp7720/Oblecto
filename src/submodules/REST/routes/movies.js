@@ -34,6 +34,28 @@ export default (server) => {
         res.send(results);
     });
 
+    server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req, res) {
+        let results = await databases.movieSet.findAll({
+            include: [
+                {
+                    model: databases.movie,
+                    include: [
+                        {
+                            model: databases.trackMovies,
+                            required: false,
+                            where: {
+                                userId: req.authorization.jwt.id
+                            }
+                        }
+                    ]
+                }
+            ],
+            limit: 100
+        });
+
+        res.send(results);
+    });
+
 
 
     // Endpoint to get a poster based on localId

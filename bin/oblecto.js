@@ -37,6 +37,8 @@ case 'adduser':
     var databases = require('../dist/submodules/database').default;
     var bcrypt = require('bcrypt');
 
+    console.log(args);
+
     bcrypt.hash(args[2], config.authentication.saltRounds).then(function (passwordHash) {
 
         return databases.user.findOrCreate({
