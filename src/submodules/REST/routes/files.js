@@ -23,6 +23,8 @@ export default (server) => {
         // search for attributes
         let fileInfo = await databases.file.findByPk(req.params.id);
 
+        req.video = fileInfo;
+
         // Transcode
         if (config.transcoding.doRealTime && fileInfo.extension !== 'mp4') {
             return next();
