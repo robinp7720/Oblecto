@@ -32,21 +32,27 @@ async function identifyByGuess (basename) {
 
 export default async function (moviePath, reIndex) {
     let metadata = {};
+    let duration = 0;
+
     try {
         metadata = await ffprobe(moviePath);
-    } catch {
-        console.log('Could not analyse ', moviePath, ' for duration')
+        duration = metadata.format.duration;
+    } catch (e) {
+        console.log('Could not analyse ', moviePath, ' for duration');
     }
+
+    let parsedPath = path.parse(moviePath);
+    parsedPath.ext = parsedPath.ext.replace('.', '').toLowerCase()
 
     // Create file entity in the database
     let [file, FileInserted] = await databases.file.findOrCreate({
         where: {path: moviePath},
         defaults: {
-            name: path.parse(moviePath).name,
-            directory: path.parse(moviePath).dir,
-            extension: path.parse(moviePath).ext.replace('.', '').toLowerCase(),
+            name: parsedPath.name,
+            directory: parsedPath.dir,
+            extension: parsedPath.ext,
 
-            duration: metadata.format.duration || 0
+            duration
         }
     });
 
@@ -70,7 +76,7 @@ export default async function (moviePath, reIndex) {
         console.log('Attempting to identify', moviePath, 'using only the file name');
 
 
-        res = await identifyByName(path.basename(path.parse(moviePath).name));
+        res = await identifyByName(path.basename(parsedPath.name));
     }
 
     if (!res || res.total_results < 1) {
@@ -78,7 +84,7 @@ export default async function (moviePath, reIndex) {
         console.log('Attempting to identify', moviePath, 'by containing folder');
 
 
-        res = await identifyByName(path.basename(path.parse(moviePath).dir));
+        res = await identifyByName(path.basename(parsedPath.dir));
     }
 
     if (!res || res.total_results < 1) {
