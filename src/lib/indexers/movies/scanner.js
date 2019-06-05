@@ -31,8 +31,12 @@ async function identifyByGuess (basename) {
 }
 
 export default async function (moviePath, reIndex) {
-
-    let metadata = await ffprobe(moviePath);
+    let metadata = {};
+    try {
+        metadata = await ffprobe(moviePath);
+    } catch {
+        console.log('Could not analyse ', moviePath, ' for duration')
+    }
 
     // Create file entity in the database
     let [file, FileInserted] = await databases.file.findOrCreate({
@@ -42,7 +46,7 @@ export default async function (moviePath, reIndex) {
             directory: path.parse(moviePath).dir,
             extension: path.parse(moviePath).ext.replace('.', '').toLowerCase(),
 
-            duration: metadata.format.duration
+            duration: metadata.format.duration || 0
         }
     });
 
