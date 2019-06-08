@@ -2,11 +2,11 @@ import async from 'async';
 import fs from 'fs';
 import request from 'request';
 
-import TvScanner from '../lib/indexers/series/SeriesIdentifer';
-import MovieScanner from '../lib/indexers/movies/MovieIdentifier';
+import SeriesIdentifier from '../lib/indexers/series/SeriesIdentifer';
+import MovieIdentifier from '../lib/indexers/movies/MovieIdentifier';
 
-import TVShowArt from '../lib/indexers/series/SeriesArtworkRetriever';
-import MovieArt from '../lib/indexers/movies/MovieArtworkRetriever';
+import SeriesArtworkRetriever from '../lib/indexers/series/SeriesArtworkRetriever';
+import MovieArtworkRetriever from '../lib/indexers/movies/MovieArtworkRetriever';
 import transcoder from '../transcoders/';
 
 import config from '../config.js';
@@ -15,34 +15,34 @@ import config from '../config.js';
 export default async.queue((task, callback) => {
     switch (task.task) {
     case 'episode':
-        TvScanner(task.path, config.tvshows.doReIndex).then(callback).catch(callback);
+        SeriesIdentifier(task.path, config.tvshows.doReIndex).then(callback).catch(callback);
         break;
     case 'movie':
-        MovieScanner(task.path, config.movies.doReIndex).then(callback).catch((err) => {
+        MovieIdentifier(task.path, config.movies.doReIndex).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
         break;
     case 'DownloadEpisodeBanner':
-        TVShowArt.DownloadEpisodeBanner(task.id).then(callback).catch((err) => {
+        SeriesArtworkRetriever.DownloadEpisodeBanner(task.id).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
         break;
     case 'DownloadSeriesPoster':
-        TVShowArt.DownloadSeriesPoster(task.id).then(callback).catch((err) => {
+        SeriesArtworkRetriever.DownloadSeriesPoster(task.id).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
         break;
     case 'DownloadMoviePoster':
-        MovieArt.DownloadMoviePoster(task.id).then(callback).catch((err) => {
+        MovieArtworkRetriever.DownloadMoviePoster(task.id).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
         break;
     case 'DownloadMovieFanart':
-        MovieArt.DownloadMovieFanart(task.id).then(callback).catch((err) => {
+        MovieArtworkRetriever.DownloadMovieFanart(task.id).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
