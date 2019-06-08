@@ -7,7 +7,7 @@ import config from '../../../config.js';
 // TODO: Seperate Scanning and identifying
 
 export default {
-    async indexDirectory(Directory) {
+    async CollectDirectory(Directory) {
         let files = await recursive(Directory);
 
         files.forEach(file => {
@@ -21,9 +21,9 @@ export default {
         });
     },
 
-    async indexAll() {
+    async CollectAll() {
         config.movies.directories.forEach(directory => {
-            this.indexDirectory(directory.path);
+            this.CollectDirectory(directory.path);
         });
     }
 };

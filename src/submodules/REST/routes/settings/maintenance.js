@@ -1,10 +1,11 @@
-import TVShowIndexer from '../../../../lib/indexers/tv/index';
-import MovieIndexer from '../../../../lib/indexers/movies/index';
-import TVShowArt from '../../../../lib/indexers/tv/art';
-import MovieArt from '../../../../lib/indexers/movies/art';
+import SeriesCollector from '../../../../lib/indexers/series/SeriesCollector';
+import MovieCollector from '../../../../lib/indexers/movies/MovieCollector';
 
-import MovieCleaner from '../../../../lib/indexers/movies/cleaner';
-import TVCleaner from '../../../../lib/indexers/tv/cleaner';
+import SeriesArtworkRetriever from '../../../../lib/indexers/series/SeriesArtworkRetriever';
+import MovieArtworkRetriever from '../../../../lib/indexers/movies/MovieArtworkRetriever';
+
+import MovieCleaner from '../../../../lib/indexers/movies/MovieCleaner';
+import SeriesCleaner from '../../../../lib/indexers/series/SeriesCleaner';
 
 import authMiddleWare from '../../middleware/auth';
 
@@ -13,14 +14,14 @@ export default (server) => {
     server.get('/settings/maintenance/index/:libraries', authMiddleWare.requiresAuth, function (req, res) {
         switch (req.params.libraries) {
         case 'tvshows':
-            TVShowIndexer.indexAll();
+            SeriesCollector.CollectAll();
             break;
         case 'movies':
-            MovieIndexer.indexAll();
+            MovieCollector.CollectAll();
             break;
         case 'all':
-            TVShowIndexer.indexAll();
-            MovieIndexer.indexAll();
+            SeriesCollector.CollectAll();
+            MovieCollector.CollectAll();
             break;
         }
 
@@ -29,7 +30,7 @@ export default (server) => {
 
     // API Endpoint to request a re-index of certain library types
     server.get('/settings/maintenance/tvshows/download/art', authMiddleWare.requiresAuth, function (req, res) {
-        TVShowArt.DownloadAll().catch((err) => {
+        SeriesArtworkRetriever.DownloadAll().catch((err) => {
             console.log(err);
         });
 
@@ -38,7 +39,7 @@ export default (server) => {
 
 
     server.get('/settings/maintenance/movies/download/art', authMiddleWare.requiresAuth, function (req, res) {
-        MovieArt.DownloadAll().catch((err) => {
+        MovieArtworkRetriever.DownloadAll().catch((err) => {
             console.log(err);
         });
 
@@ -52,11 +53,11 @@ export default (server) => {
             MovieCleaner.removeFileLessMovies();
             break;
         case 'tvshows':
-            TVCleaner.removePathLessShows();
-            TVCleaner.removeEpisodeslessShows();
+            SeriesCleaner.removePathLessShows();
+            SeriesCleaner.removeEpisodeslessShows();
             break;
         case 'episodes':
-            TVCleaner.removeFileLessEpisodes();
+            SeriesCleaner.removeFileLessEpisodes();
             break;
         }
 

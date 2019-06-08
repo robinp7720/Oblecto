@@ -6,7 +6,7 @@ import sequelize from 'sequelize';
 import tvdb from '../../../submodules/tvdb';
 import databases from '../../../submodules/database';
 import config from '../../../config';
-import TVShowIndexer from '../../../lib/indexers/tv/index';
+import SeriesCollector from '../../../lib/indexers/series/SeriesCollector';
 import authMiddleWare from '../middleware/auth';
 
 const Op = sequelize.Op;
@@ -35,7 +35,7 @@ export default (server) => {
     // Endpoint to request a re-index of a series based on the local ID
     server.get('/series/:id/index', authMiddleWare.requiresAuth, function (req, res, next) {
         databases.tvshow.findByPk(req.params.id).then(show => {
-            TVShowIndexer.indexDirectory(show.directory);
+            SeriesCollector.CollectDirectory(show.directory);
 
             res.send([true]);
         });

@@ -3,7 +3,7 @@ import queue from '../../../submodules/queue';
 import config from '../../../config';
 
 export default {
-    async indexDirectory(Directory) {
+    async CollectDirectory(Directory) {
         console.log('Indexing', Directory);
         let files = await recursive(Directory);
 
@@ -15,7 +15,7 @@ export default {
         });
     },
 
-    async indexAll() {
+    async CollectAll() {
         config.tvshows.directories.forEach(directory => {
             this.indexDirectory(directory.path);
         });

@@ -1,12 +1,12 @@
 import restapi from './submodules/REST';
 
 import UserManager from './submodules/users';
-import TVShowIndexer from './lib/indexers/tv';
-import MovieIndexer from './lib/indexers/movies';
+import SeriesCollector from './lib/indexers/series/SeriesCollector';
+import MovieCollector from './lib/indexers/movies/MovieCollector';
 
 import FileCleaner from './lib/indexers/files/cleaner';
-import TVShowCleaner from './lib/indexers/tv/cleaner';
-import MovieCleaner from './lib/indexers/movies/cleaner';
+import TVShowCleaner from './lib/indexers/series/SeriesCleaner';
+import MovieCleaner from './lib/indexers/movies/MovieCleaner';
 
 import config from './config';
 
@@ -33,10 +33,10 @@ let server = restapi();
 
 if (config.indexer.runAtBoot) {
     // Index TV Shows
-    TVShowIndexer.indexAll();
+    SeriesCollector.CollectAll();
 
     // Index movies
-    MovieIndexer.indexAll();
+    MovieCollector.CollectAll();
 }
 
 if (config.cleaner.runAtBoot) {

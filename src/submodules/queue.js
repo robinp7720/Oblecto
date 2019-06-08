@@ -2,11 +2,11 @@ import async from 'async';
 import fs from 'fs';
 import request from 'request';
 
-import TvScanner from '../lib/indexers/tv/scanner';
-import MovieScanner from '../lib/indexers/movies/scanner';
+import TvScanner from '../lib/indexers/series/SeriesIdentifer';
+import MovieScanner from '../lib/indexers/movies/MovieIdentifier';
 
-import TVShowArt from '../lib/indexers/tv/art';
-import MovieArt from '../lib/indexers/movies/art';
+import TVShowArt from '../lib/indexers/series/SeriesArtworkRetriever';
+import MovieArt from '../lib/indexers/movies/MovieArtworkRetriever';
 import transcoder from '../transcoders/';
 
 import config from '../config.js';
