@@ -8,6 +8,8 @@ import config from '../../../config.js';
 import guessit from '../../../submodules/guessit';
 import ffprobe from '../../../submodules/ffprobe';
 
+import MovieSetCollector from './MovieSetCollector';
+
 // TODO: Add config option to use the parent directory to identify movies
 
 async function identifyByName(name) {
@@ -106,6 +108,11 @@ export default async function (moviePath, reIndex) {
             }
         });
 
+    movie.addFile(file);
+
+    MovieSetCollector.GetSetsForMovie(movie);
+
+
     if (MovieInserted) {
         console.log(movie.movieName, 'added to database');
 
@@ -114,8 +121,6 @@ export default async function (moviePath, reIndex) {
     } else {
         console.log(movie.movieName, 'was already in the database');
     }
-
-    movie.addFile(file);
 
     if (config.transcoding[file.extension] !== undefined && config.transcoding[file.extension] !== false) {
         queue.push({task: 'transcode', path: moviePath}, async function (err) {
