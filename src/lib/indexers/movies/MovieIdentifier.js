@@ -78,8 +78,8 @@ export default async function (moviePath, reIndex) {
     ];
 
     let IdentificationTitles = [
-        path.basename(moviePath),
-        path.basename(parsedPath.name)
+        parsedPath.name,
+        path.basename(parsedPath.dir)
     ];
 
     for (const source of IdentificationSources) {
