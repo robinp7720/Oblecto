@@ -70,32 +70,41 @@ export default async function (moviePath, reIndex) {
         }
     }
 
-    let res = await identifyByGuess(path.basename(moviePath));
+    let results = []
 
+    let IdentificationSources = [
+        identifyByGuess,
+        identifyByName
+    ];
 
-    if (!res || res.total_results < 1) {
-        console.log('Could not identify', moviePath, 'using guessit');
-        console.log('Attempting to identify', moviePath, 'using only the file name');
+    let IdentificationTitles = [
+        path.basename(moviePath),
+        path.basename(parsedPath.name)
+    ];
 
-
-        res = await identifyByName(path.basename(parsedPath.name));
+    for (const source of IdentificationSources) {
+        for (const title of IdentificationTitles) {
+            results.push(await source(title));
+        }
     }
 
-    if (!res || res.total_results < 1) {
-        console.log('Could not identify', moviePath, 'by file name');
-        console.log('Attempting to identify', moviePath, 'by containing folder');
+    let FinalResult = results[0];
 
-
-        res = await identifyByName(path.basename(parsedPath.dir));
+    for (const result of results) {
+        if (result.total_results < FinalResult.total_results && result.total_results > 0) {
+            FinalResult = result;
+        }
     }
 
-    if (!res || res.total_results < 1) {
-        console.log('Could not identify', moviePath);
-        return false;
+    if (FinalResult.total_results === 0) {
+        console.log(moviePath, 'could not be identified');
+        return false
     }
 
 
-    let data = res.results[0];
+    let data = FinalResult.results[0];
+
+    console.log(data);
 
     let [movie, MovieInserted] = await databases.movie
         .findOrCreate({
