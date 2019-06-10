@@ -139,7 +139,7 @@ export default {
         let userInfo = this.users[username];
         let storage = userInfo.storage;
 
-        return await async.each(storage['tv'],
+        await async.each(storage['tv'],
             async show => {
                 let [item, created] = await databases.trackEpisodes.findOrCreate({
                     where: {
@@ -159,13 +159,18 @@ export default {
 
                 return created;
             });
+
+        // Since we have saved the progress, we no longer need to keep it in memory
+        this.users[username]['storage']['tv'] = {};
+
+        return true;
     },
 
     async saveUserMovieProgress (username) {
         let userInfo = this.users[username];
         let storage = userInfo.storage;
 
-        return await async.each(storage['movies'],
+        await async.each(storage['movies'],
             async movie => {
                 let [item, created] = await databases.trackMovies.findOrCreate({
                     where: {
@@ -185,6 +190,11 @@ export default {
 
                 return created;
             });
+
+        // Since we have saved the progress, we no longer need to keep it in memory
+        this.users[username]['storage']['movies'] = {};
+
+        return true;
     },
 
     // Save the temporary storage of a show into the MySQL database
