@@ -88,13 +88,10 @@ export default async function (moviePath, reIndex) {
 
     if (FinalResult.total_results === 0) {
         console.log(moviePath, 'could not be identified');
-        return false
+        return false;
     }
 
-
     let data = FinalResult.results[0];
-
-    console.log(data);
 
     let [movie, MovieInserted] = await databases.movie
         .findOrCreate({
