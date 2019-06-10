@@ -65,37 +65,7 @@ export default {
             sockets: {},
             id: authentication.id
         };
-
-        // Load the progress of the newly added user
-        this.loadProgress(authentication);
     },
-
-    async loadProgress (authentication) {
-        // Load progress for TV shows
-        let episodeTracks = await databases.trackEpisodes.findAll({where: {userId: authentication.id}});
-
-        episodeTracks.forEach(v => {
-            let item = v.toJSON();
-            this.users[authentication.username].storage['tv'][item.episodeId] = {
-                time: item.time,
-                progress: item.progress,
-                episodeId: item.episodeId
-            };
-        });
-
-        // Load progress for Movies
-        let movieTracks = await databases.trackMovies.findAll({where: {userId: authentication.id}});
-
-        movieTracks.forEach(v => {
-            let item = v.toJSON();
-            this.users[authentication.username].storage['movies'][item.movieId] = {
-                time: item.time,
-                progress: item.progress,
-                movieId: item.movieId
-            };
-        });
-    },
-
 
     // Save progress of a user to memory
     trackProgress (socket, data) {
