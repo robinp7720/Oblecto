@@ -230,24 +230,6 @@ export default {
         });
     },
 
-    // Method to check if a certain user has save progress in a show
-    hasSavedTVProgress (username, episodeId) {
-        return this.users[username]['storage']['tv'][episodeId] !== undefined;
-    },
-
-    getSavedTVProgress (username, episodeId) {
-        return this.users[username]['storage']['tv'][episodeId];
-    },
-
-    // Method to check if a certain user has save progress in a movie
-    hasSavedMovieProgress (username, movieId) {
-        return this.users[username]['storage']['movies'][movieId] !== undefined;
-    },
-
-    getSavedMovieProgress (username, movieId) {
-        return this.users[username]['storage']['movies'][movieId];
-    },
-
     // Function to send a message to all users
     sendToAll (channel, message) {
         async.each(this.users, (user) => {

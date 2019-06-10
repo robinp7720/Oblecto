@@ -136,11 +136,6 @@ export default (server) => {
             ]
         });
 
-        movie = movie.toJSON();
-
-        if (UserManager.hasSavedMovieProgress(req.authorization.jwt.username, movie.id))
-            movie.watchTime = UserManager.getSavedMovieProgress(req.authorization.jwt.username, movie.id).time;
-
         res.send(movie);
 
     });
