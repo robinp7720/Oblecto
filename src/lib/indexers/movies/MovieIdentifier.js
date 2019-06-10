@@ -10,23 +10,14 @@ import ffprobe from '../../../submodules/ffprobe';
 
 import MovieSetCollector from './MovieSetCollector';
 
-// TODO: Add config option to use the parent directory to identify movies
 
-async function identifyByName(name) {
-    // If the year is present at the end of the name, remove it for the search
-    // TODO: Using a regex mach, retrieve the year and use it in the search processes
-    name = name.replace(/ \([0-9][0-9][0-9][0-9]\)/g, '');
-
-    return await tmdb.searchMovie({ query: name });
-}
-
-async function identifyByGuess (basename) {
+async function identifyByTMDB (basename) {
     var identification = await guessit.identify(basename);
 
     let query = {query: identification.title};
 
     if (identification.year) {
-        query.year = identification.year;
+        query.primary_release_year = identification.year;
     }
 
     return await tmdb.searchMovie(query);
@@ -73,8 +64,7 @@ export default async function (moviePath, reIndex) {
     let results = []
 
     let IdentificationSources = [
-        identifyByGuess,
-        identifyByName
+        identifyByTMDB
     ];
 
     let IdentificationTitles = [
