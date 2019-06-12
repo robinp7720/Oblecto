@@ -17,7 +17,7 @@ export default {
 
     async CollectAll() {
         config.tvshows.directories.forEach(directory => {
-            this.indexDirectory(directory.path);
+            this.CollectDirectory(directory.path);
         });
     }
 };
