@@ -183,30 +183,22 @@ export default (server) => {
     // Endpoint to get the episodes currently being watched
     server.get('/episodes/watching', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let tracks = await databases.trackEpisodes.findAll({
-            include: [{
-                model: databases.episode,
-                required: true,
-                include: [
-                    databases.tvshow,
-                    {
-                        model: databases.trackEpisodes,
-                        required: false,
-                        where: {
-                            userId: req.authorization.jwt.id
+        let watching = await databases.episode.findAll({
+            include: [
+                databases.tvshow,
+                {
+                    model: databases.trackEpisodes,
+                    required: true,
+                    where: {
+                        userId: req.authorization.jwt.id,
+                        progress: {
+                            [sequelize.Op.lt]: 0.9
+                        },
+                        updatedAt: {
+                            [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
                         }
-                    }
-                ]
-            }],
-            where: {
-                userId: req.authorization.jwt.id,
-                progress: {
-                    [sequelize.Op.lt]: 0.9
-                },
-                updatedAt: {
-                    [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
-                }
-            },
+                    },
+                }],
             order: [
                 ['updatedAt', 'DESC'],
             ],
@@ -214,8 +206,66 @@ export default (server) => {
 
         // We are only interested in the episode objects, so extract all the episode object from
         // each track object and send the final mapped array to the client
-        res.send(tracks.map((track) => {
-            return track.episode;
-        }));
+        res.send(watching);
     });
+
+    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res) {
+        // search for attributes
+        let latestWatched = await databases.episode.findAll({
+            attributes: {
+                include: [
+                    [sequelize.fn('MAX', sequelize.col('absoluteNumber')), 'absoluteNumber'],
+                    [sequelize.fn('MAX', sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0'))), 'seasonepisode'],
+                    [sequelize.fn('MAX', sequelize.col('firstAired')), 'firstAired']
+                ]
+            },
+            include: [{
+                model: databases.trackEpisodes,
+                required: true,
+                where: {
+                    userId: req.authorization.jwt.id,
+                    progress: {
+                        [sequelize.Op.gt]: 0.9
+                    }
+                },
+            }],
+            group: [
+                'tvshowId'
+            ]
+        });
+
+        let nextUp = [];
+
+        for (let latest of latestWatched) {
+            latest = latest.toJSON();
+            let next = await databases.episode.findOne({
+                attributes: {
+                    include: [
+                        [sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']
+                    ]
+                },
+                include: [
+                    databases.tvshow,
+                    {
+                        model: databases.trackEpisodes,
+                    }],
+                where: sequelize.and(
+                    sequelize.where(sequelize.col('tvshowId'), '=', latest.tvshowId),
+                    sequelize.where(sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), '>', latest.seasonepisode),
+                ),
+                order: [
+                    sequelize.col('seasonepisode')
+                ]
+            });
+
+            if (next) {
+                nextUp.push(next);
+            }
+        }
+
+        res.send(nextUp);
+
+    });
+
+
 };
