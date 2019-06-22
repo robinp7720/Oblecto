@@ -59,7 +59,8 @@ let configDefault = {
         'interval': 10
     },
     'transcoding': {
-        'doRealTime': true,
+        'doRealTimeRemux': true,
+        'doRealTimeTranscode': false,
         'iso': 'mp4'
     },
     'web': {
