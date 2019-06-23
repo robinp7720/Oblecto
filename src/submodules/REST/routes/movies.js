@@ -186,7 +186,7 @@ export default (server) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let posterPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
+        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
 
         if (config.assets.storeWithFile) {
             if (!movie.files[0])
@@ -195,7 +195,7 @@ export default (server) => {
             let moviePath = movie.files[0].path;
 
             // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            posterPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
+            fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
         }
 
         if (req.files.length < 1) {
@@ -218,7 +218,7 @@ export default (server) => {
         }
 
         try {
-            fs.copyFile(uploadPath, posterPath, (err) => {
+            fs.copyFile(uploadPath, fanartPath, (err) => {
                 if (err) throw err;
 
                 res.send(['success']);
@@ -226,7 +226,7 @@ export default (server) => {
         } catch (e) {
             console.log(e);
 
-            return next(new errors.Internal('An error has occured during upload of poster'));
+            return next(new errors.Internal('An error has occured during upload of fanart'));
         }
 
         next();

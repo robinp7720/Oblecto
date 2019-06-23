@@ -98,12 +98,12 @@ export default (server) => {
             return next(new errors.MissingParameter('Image file is missing'));
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path
+        let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
             let image = await jimp.read(uploadPath);
 
-            let ratio = image.bitmap.width / image.bitmap.height
+            let ratio = image.bitmap.width / image.bitmap.height;
 
             if ( !(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
@@ -122,7 +122,7 @@ export default (server) => {
         } catch (e) {
             console.log(e);
 
-            return next(new errors.Internal('An error has occured during upload of poster'));
+            return next(new errors.Internal('An error has occured during upload of banner'));
         }
 
         next();
