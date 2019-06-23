@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -37,6 +37,7 @@
     "guessit-exec": "0.0.1",
     "guessit-wrapper": "^1.0.1",
     "handbrake-js": "^3.0.8",
+    "jimp": "^0.6.4",
     "jsonwebtoken": "^8.5.1",
     "mdns": "^2.4.0",
     "mkdirp": "^0.5.1",
