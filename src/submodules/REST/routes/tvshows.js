@@ -9,7 +9,7 @@ import config from '../../../config';
 import SeriesCollector from '../../../lib/indexers/series/SeriesCollector';
 import authMiddleWare from '../middleware/auth';
 import errors from "restify-errors";
-import jimp from "./movies";
+import jimp from jimp;
 
 const Op = sequelize.Op;
 
