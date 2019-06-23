@@ -2,6 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import errors from 'restify-errors';
 
+import jimp from 'jimp';
+
 import databases from '../../../submodules/database';
 import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
@@ -89,6 +91,61 @@ export default (server) => {
 
         });
 
+    });
+
+    server.put('/movie/:id/poster', async function (req, res, next) {
+        let movie = await databases.movie.findByPk(req.params.id, {
+            include: [databases.file]
+        });
+
+        if (!movie) {
+            return next(new errors.NotFoundError('Movie does not exist'));
+        }
+
+        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
+
+        if (config.assets.storeWithFile) {
+            if (!movie.files[0])
+                return next(new errors.NotFoundError('No file linked to movie'));
+
+            let moviePath = movie.files[0].path;
+
+            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+            posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
+        }
+
+        if (req.files.length < 1) {
+            return next(new errors.MissingParameter('Image file is missing'));
+        }
+
+        let uploadPath = req.files[Object.keys(req.files)[0]].path
+
+        try {
+            let image = await jimp.read(uploadPath);
+
+            let ratio = image.bitmap.height / image.bitmap.width
+
+            if ( !(1 <= ratio <= 2)) {
+                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+            }
+
+        } catch (e) {
+            return next(new errors.InvalidContent('File is not an image'));
+        }
+
+        try {
+            fs.copyFile(uploadPath, posterPath, (err) => {
+                if (err) throw err;
+
+                res.send(['success']);
+            });
+        } catch (e) {
+            console.log(e);
+
+            return next(new errors.Internal('An error has occured during upload of poster'));
+        }
+
+        next();
     });
 
     // Endpoint to get a fanart based on localId
