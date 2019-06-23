@@ -8,6 +8,8 @@ import databases from '../../../submodules/database';
 import config from '../../../config';
 import SeriesCollector from '../../../lib/indexers/series/SeriesCollector';
 import authMiddleWare from '../middleware/auth';
+import errors from "restify-errors";
+import jimp from "./movies";
 
 const Op = sequelize.Op;
 
@@ -92,6 +94,56 @@ export default (server) => {
             });
         });
     });
+
+    server.put('/series/:id/poster', async function (req, res, next) {
+        let show = await databases.tvshow.findByPk(req.params.id);
+
+        if (!show) {
+            return next(new errors.NotFoundError('Movie does not exist'));
+        }
+
+        let posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
+
+        if (config.assets.storeWithFile) {
+            let showPath = show.directory;
+            posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
+        }
+
+        if (req.files.length < 1) {
+            return next(new errors.MissingParameter('Image file is missing'));
+        }
+
+        let uploadPath = req.files[Object.keys(req.files)[0]].path
+
+        try {
+            let image = await jimp.read(uploadPath);
+
+            let ratio = image.bitmap.height / image.bitmap.width
+
+            if ( !(1 <= ratio <= 2)) {
+                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+            }
+
+        } catch (e) {
+            return next(new errors.InvalidContent('File is not an image'));
+        }
+
+        try {
+            fs.copyFile(uploadPath, posterPath, (err) => {
+                if (err) throw err;
+
+                res.send(['success']);
+            });
+        } catch (e) {
+            console.log(e);
+
+            return next(new errors.Internal('An error has occured during upload of poster'));
+        }
+
+        next();
+    });
+
+
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let tvshows = await databases.tvshow.findAll({
