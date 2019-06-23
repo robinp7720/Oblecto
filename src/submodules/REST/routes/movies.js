@@ -274,6 +274,33 @@ export default (server) => {
         res.redirect(`/stream/${file.id}`, next);
     });
 
+    server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let sets = await databases.movie.findByPk(req.params.id, {
+            attributes: [],
+            include: [
+                {
+                    model: databases.movieSet,
+                    include: [
+                        {
+                            model: databases.movie,
+                            include: [
+                                {
+                                    model: databases.trackMovies,
+                                    required: false,
+                                    where: {
+                                        userId: req.authorization.jwt.id
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        res.send(sets.movieSets);
+    });
+
     // Endpoint for text based searching of the movie database
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
