@@ -177,6 +177,61 @@ export default (server) => {
 
     });
 
+    server.put('/movie/:id/fanart', async function (req, res, next) {
+        let movie = await databases.movie.findByPk(req.params.id, {
+            include: [databases.file]
+        });
+
+        if (!movie) {
+            return next(new errors.NotFoundError('Movie does not exist'));
+        }
+
+        let posterPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
+
+        if (config.assets.storeWithFile) {
+            if (!movie.files[0])
+                return next(new errors.NotFoundError('No file linked to movie'));
+
+            let moviePath = movie.files[0].path;
+
+            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
+            posterPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
+        }
+
+        if (req.files.length < 1) {
+            return next(new errors.MissingParameter('Image file is missing'));
+        }
+
+        let uploadPath = req.files[Object.keys(req.files)[0]].path
+
+        try {
+            let image = await jimp.read(uploadPath);
+
+            let ratio = image.bitmap.width / image.bitmap.height
+
+            if ( !(1 <= ratio <= 2)) {
+                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+            }
+
+        } catch (e) {
+            return next(new errors.InvalidContent('File is not an image'));
+        }
+
+        try {
+            fs.copyFile(uploadPath, posterPath, (err) => {
+                if (err) throw err;
+
+                res.send(['success']);
+            });
+        } catch (e) {
+            console.log(e);
+
+            return next(new errors.Internal('An error has occured during upload of poster'));
+        }
+
+        next();
+    });
+
     // Endpoint to retrieve episode details based on the local movie ID
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
