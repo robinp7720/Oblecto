@@ -21,8 +21,8 @@ export default () => {
     server.pre(cors.preflight);
     server.use(cors.actual);
     server.use(restify.plugins.authorizationParser());
-    server.use(restify.plugins.queryParser({ mapParams: false }));
-    server.use(restify.plugins.bodyParser({mapParams: true}));
+    server.use(restify.plugins.queryParser({ mapParams: true }));
+    server.use(restify.plugins.bodyParser({ mapParams: true }));
 
     // Added user authentication information to the request if the user is authenticated
     server.use(function (req, res, next) {
