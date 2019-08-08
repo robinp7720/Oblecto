@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('movies', {
-        tmdbid: { type: DataTypes.INTEGER, unique: true },
+        tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
 
         movieName: DataTypes.STRING,
 
