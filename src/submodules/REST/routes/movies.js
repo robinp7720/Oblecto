@@ -301,6 +301,18 @@ export default (server) => {
         res.send(sets.movieSets);
     });
 
+    // Add movie to set with id
+    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
+        try {
+            let [movie] = await databases.movie.findByPk(req.params.setId);
+            let [set] = await databases.movieSet.findByPk(req.params.setId);
+
+            set.addMovie(movie);
+        } catch (e) {
+            return next(new errors.NotFoundError('Movie or set could not be found'));
+        }
+    });
+
     // Endpoint for text based searching of the movie database
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
