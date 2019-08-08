@@ -265,7 +265,12 @@ export default (server) => {
         res.send(watching);
     });
 
-    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res) {
+    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res, next) {
+        // Next episodes currently doesn't work on sqlite as the LPAD function doesn't exist
+        // Todo: Fix next episodes endpoint to support sqlite
+        if (config.database.dialect === 'sqlite')
+            return next(new errors.NotImplementedError('Next episode is not supported when using sqlite (yet)'));
+
         // search for attributes
         let latestWatched = await databases.episode.findAll({
             attributes: {

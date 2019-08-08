@@ -30,7 +30,8 @@ let configDefault = {
     'themoviedb': {
         'key': 'b06b4917705eeed4e4b273d4c90fe158'
     },
-    'mysql': {
+    'database': {
+        'dialect': 'sqlite',
         'host': 'localhost',
         'username': 'root',
         'password': 'root',

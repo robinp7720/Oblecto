@@ -1,11 +1,9 @@
+import Sequelize from 'sequelize';
 import config from '../config.js';
-const Sequelize = require('sequelize');
-const async = require('async');
 
+let options = {
+    dialect: config.database.dialect || 'sqlite',
 
-const sequelize = new Sequelize(config.mysql.database, config.mysql.username, config.mysql.password, {
-    host: config.mysql.host,
-    dialect: 'mysql',
     logging: false,
     operatorsAliases: false,
 
@@ -14,8 +12,18 @@ const sequelize = new Sequelize(config.mysql.database, config.mysql.username, co
         min: 0,
         acquire: 30000,
         idle: 10000
-    },
-});
+    }
+};
+
+if (options.dialect !== 'sqlite') {
+    options.host = config.database.host || 'localhost';
+}
+
+if (options.dialect === 'sqlite') {
+    options.storage = config.database.storage || '/etc/oblecto/database.sqlite';
+}
+
+const sequelize = new Sequelize(config.database.database, config.database.username, config.database.password, options);
 
 // Import models for sequelize
 const tvshow = sequelize.import('tvshow', require(__dirname + '/../models/tvshow'));
