@@ -7,14 +7,14 @@ import config from '../../../config.js';
 // TODO: Seperate Scanning and identifying
 
 export default {
-    async CollectDirectory(Directory) {
+    async CollectDirectory(Directory, doReIndex) {
         let files = await recursive(Directory);
 
         files.forEach(file => {
             let extension = path.parse(file).ext.toLowerCase();
 
             if (['.mp4','.avi', '.iso', '.m4v', '.mkv', '.mk3d'].indexOf(extension) !== -1) {
-                queue.push({task: 'movie', path: file}, function (err) {
+                queue.push({task: 'movie', path: file, doReIndex}, function (err) {
 
                 });
             }

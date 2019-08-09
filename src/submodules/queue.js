@@ -15,10 +15,10 @@ import config from '../config.js';
 export default async.queue((task, callback) => {
     switch (task.task) {
     case 'episode':
-        SeriesIdentifier(task.path, config.tvshows.doReIndex).then(callback).catch(callback);
+        SeriesIdentifier(task.path, task.doReIndex || config.tvshows.doReIndex).then(callback).catch(callback);
         break;
     case 'movie':
-        MovieIdentifier(task.path, config.movies.doReIndex).then(callback).catch((err) => {
+        MovieIdentifier(task.path, task.doReIndex || config.movies.doReIndex).then(callback).catch((err) => {
             console.log(err);
             callback();
         });

@@ -3,13 +3,13 @@ import queue from '../../../submodules/queue';
 import config from '../../../config';
 
 export default {
-    async CollectDirectory(Directory) {
+    async CollectDirectory(Directory, doReIndex) {
         console.log('Indexing', Directory);
         let files = await recursive(Directory);
 
         files.forEach(file => {
             console.log('Pushing file', file, 'to queue');
-            queue.push({task: 'episode', path: file}, function (err) {
+            queue.push({task: 'episode', path: file, doReIndex}, function (err) {
 
             });
         });
