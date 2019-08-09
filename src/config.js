@@ -2,8 +2,7 @@ import os from 'os'
 
 let configDefault = {
     'ffmpeg': {
-        'pathFFmpeg': '/usr/bin/ffmpeg',
-        'pathFFprobe': '/usr/bin/ffprobe'
+
     },
     'indexer': {
         'runAtBoot': false
