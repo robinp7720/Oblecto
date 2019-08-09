@@ -75,6 +75,13 @@ function loadFile(file) {
     try {
         return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (ex) {
+        if (ex.code === "ENOENT") {
+            console.log(`No config file at ${file}, continuing to next file`)
+
+            return {}
+        }
+        console.log(`There is an error with the config file located at ${file}:`)
+        console.log(ex.message)
         return {}
     }
 }
