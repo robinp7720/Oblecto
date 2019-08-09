@@ -1,4 +1,5 @@
 import os from 'os'
+import fs from 'fs'
 
 let configDefault = {
     'ffmpeg': {
@@ -68,9 +69,9 @@ let configDefault = {
     }
 };
 
-function loadConfig(file) {
+function loadFile(file) {
     try {
-        return require(file)
+        return JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch (ex) {
         return {}
     }
@@ -78,10 +79,9 @@ function loadConfig(file) {
 
 let config = {
     ...configDefault,
-    ...loadConfig(__dirname + '/userconfig.json'),
-    ...loadConfig('/etc/oblecto/config.json'),
-    ...loadConfig(os.homedir() + "/.oblecto.json"),
-
+    ...loadFile(__dirname + '/userconfig.json'),
+    ...loadFile('/etc/oblecto/config.json'),
+    ...loadFile(os.homedir() + "/.oblecto.json"),
 }
 
 export default config
