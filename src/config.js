@@ -42,12 +42,14 @@ let configDefault = {
     },
     'tvshows': {
         'doReIndex': false,
+        'indexBroken': false,
         'directories': [
 
         ]
     },
     'movies': {
         'doReIndex': false,
+        'indexBroken': false,
         'directories': [
 
         ]

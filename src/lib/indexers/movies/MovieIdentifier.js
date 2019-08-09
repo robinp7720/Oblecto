@@ -37,6 +37,10 @@ export default async function (moviePath, reIndex) {
         duration = metadata.format.duration;
     } catch (e) {
         console.log('Could not analyse ', moviePath, ' for duration. Maybe the file is corrupt?');
+
+        if (!config.movies.indexBroken) {
+            return false;
+        }
     }
 
     let parsedPath = path.parse(moviePath);
@@ -88,6 +92,7 @@ export default async function (moviePath, reIndex) {
     }
 
     let FinalResult = results[0];
+
 
     for (const result of results) {
         if (result.total_results < FinalResult.total_results && result.total_results > 0) {

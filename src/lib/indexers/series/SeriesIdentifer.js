@@ -6,6 +6,7 @@ import databases from '../../../submodules/database';
 import queue from '../../../submodules/queue';
 import UserManager from '../../../submodules/users';
 import ffprobe from "../../../submodules/ffprobe"
+import config from "../../../config";
 
 let ShowInfoCache = {};
 let EpisodeCache  = {};
@@ -147,7 +148,19 @@ export default async function (EpisodePath, reIndex) {
     // However, there is the option to not quit and continue indexing the file even if the file was already in the
     // database
 
-    let metadata = await ffprobe(EpisodePath);
+    let metadata = {};
+    let duration = 0;
+
+    try {
+        metadata = await ffprobe(EpisodePath);
+        duration = metadata.format.duration;
+    } catch (e) {
+        console.log('Could not analyse ', EpisodePath, ' for duration. Maybe the file is corrupt?');
+
+        if (!config.movies.indexBroken) {
+            return false;
+        }
+    }
 
     let [File, Created] = await databases.file.findOrCreate({
         where: {path: EpisodePath},
@@ -157,7 +170,7 @@ export default async function (EpisodePath, reIndex) {
             extension: EpisodeData.extension,
             container: EpisodeData.container,
 
-            duration: metadata.format.duration
+            duration: duration
         },
         //include: [databases.episode]
     });
