@@ -14,6 +14,11 @@ import MovieSetCollector from './MovieSetCollector';
 async function identifyByTMDB (basename) {
     var identification = await guessit.identify(basename);
 
+    if (!identification.title) {
+        console.log("A movie title could not be extracted from", basename);
+        return false;
+    }
+
     let query = {query: identification.title};
 
     if (identification.year) {
@@ -31,7 +36,7 @@ export default async function (moviePath, reIndex) {
         metadata = await ffprobe(moviePath);
         duration = metadata.format.duration;
     } catch (e) {
-        console.log('Could not analyse ', moviePath, ' for duration');
+        console.log('Could not analyse ', moviePath, ' for duration. Maybe the file is corrupt?');
     }
 
     let parsedPath = path.parse(moviePath);
@@ -74,7 +79,11 @@ export default async function (moviePath, reIndex) {
 
     for (const source of IdentificationSources) {
         for (const title of IdentificationTitles) {
-            results.push(await source(title));
+            let ident = await source(title);
+
+            if (ident) {
+                results.push(ident);
+            }
         }
     }
 
