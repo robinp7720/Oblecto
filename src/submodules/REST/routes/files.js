@@ -114,7 +114,7 @@ export default (server) => {
     });
 
 
-    server.get('/HLS/create/:id/',  async function (req, res, next) {
+    server.get('/HLS/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let session = new HLSSession(req.params.id);
 
         if (req.query.offset) {
