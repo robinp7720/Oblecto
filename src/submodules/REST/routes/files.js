@@ -129,7 +129,7 @@ export default (server) => {
         return next();
     }, async function (req, res, next) {
         // search for attributes
-        let fileInfo = await databases.file.findByPk(req.params.id);
+        let fileInfo = StreamSessions[req.params.sessionId].fileInfo
 
         req.video = fileInfo;
 
