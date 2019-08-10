@@ -3,9 +3,10 @@ import fs from 'fs';
 import ffmpeg from '../../../submodules/ffmpeg';
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
+import uuid from 'node-uuid';
 import config from '../../../config';
 
-import HLSSessionHandler from '../../handlers/HLSSessionHandler';
+import HLSSession from '../../handlers/HLSSessionHandler';
 import os from 'os';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
@@ -13,45 +14,13 @@ import FFMPEGStreamer from '../../handlers/FFMPEGStreamer';
 import errors from 'restify-errors';
 
 let HLSSessions = {};
+let StreamSessions = {};
 
 /**
  *
  * @param {Server} server
  */
 export default (server) => {
-    // Endpoint to send video files to the client
-    server.get('/stream/:id', async function (req, res, next) {
-        // search for attributes
-        let fileInfo = await databases.file.findByPk(req.params.id);
-
-        req.video = fileInfo;
-
-        // Transcode
-        if (
-            (
-                config.transcoding.doRealTimeRemux ||
-                config.transcoding.doRealTimeTranscode
-            ) &&
-            fileInfo.extension !== 'mp4') {
-            return next();
-        }
-
-        DirectStreamer.streamFile(fileInfo.path, req, res);
-
-    }, async function (req, res, next) {
-        // TODO: Determine whether or not to remux or transcode depending on video encoding
-
-        FFMPEGStreamer.streamFile(req.video.path, req.params.offset || 0, req, res);
-    });
-
-
-    server.get('/stream/:id/:seek',  async function (req, res, next) {
-        // TODO: Determine whether or not to remux or transcode depending on video encoding
-        let fileInfo = await databases.file.findByPk(req.params.id);
-
-        FFMPEGStreamer.streamFile(fileInfo.path, req.params.seek || req.params.offset || 0, req, res);
-    });
-
     server.get('/HLS/:session/segment/:id',  async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
 
@@ -114,8 +83,8 @@ export default (server) => {
     });
 
 
-    server.get('/HLS/create/:id/',  async function (req, res, next) {
-        let session = new HLSSessionHandler(req.params.id);
+    server.get('/HLS/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let session = new HLSSession(req.params.id);
 
         if (req.query.offset) {
             session.offset = req.query.offset;
@@ -125,7 +94,60 @@ export default (server) => {
 
         HLSSessions[session.sessionId] = session;
 
-        res.send(session.sessionId)
+        res.send(session.sessionId);
 
+    });
+
+    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let fileInfo;
+
+        try {
+            fileInfo = await databases.file.findByPk(req.params.id);
+        } catch (ex) {
+            return next(new errors.NotFoundError('File does not exist'));
+        }
+
+        let sessionId = uuid.v4();
+
+        StreamSessions[sessionId] = {
+            file: req.params.id,
+            fileInfo
+        };
+
+        setTimeout(() => {
+            delete StreamSessions[sessionId];
+        }, 10000);
+
+        res.send({sessionId});
+    });
+
+    server.get('/session/stream/:sessionId', async function (req, res, next) {
+        if (!StreamSessions[req.params.sessionId]) {
+            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
+        }
+
+        return next();
+    }, async function (req, res, next) {
+        // search for attributes
+        let fileInfo = StreamSessions[req.params.sessionId].fileInfo
+
+        req.video = fileInfo;
+
+        // Transcode
+        if (
+            (
+                config.transcoding.doRealTimeRemux ||
+                config.transcoding.doRealTimeTranscode
+            ) &&
+            fileInfo.extension !== 'mp4') {
+            return next();
+        }
+
+        DirectStreamer.streamFile(fileInfo.path, req, res);
+
+    }, async function (req, res, next) {
+        // TODO: Determine whether or not to remux or transcode depending on video encoding
+
+        FFMPEGStreamer.streamFile(req.video.path, req.params.offset || 0, req, res);
     });
 };
