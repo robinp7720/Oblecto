@@ -71,26 +71,41 @@ let configDefault = {
     }
 };
 
-function loadFile(file) {
-    try {
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
-    } catch (ex) {
-        if (ex.code === "ENOENT") {
-            console.log(`No config file at ${file}, continuing to next file`)
+let config = {}
 
-            return {}
+const ConfigManager = {
+    loadFile: function loadFile (file) {
+        try {
+            return JSON.parse(fs.readFileSync(file, 'utf8'));
+        } catch (ex) {
+            if (ex.code === 'ENOENT') {
+                console.log(`No config file at ${file}, continuing to next file`);
+
+                return {};
+            }
+            console.log(`There is an error with the config file located at ${file}:`);
+            console.log(ex.message);
+            return {};
         }
-        console.log(`There is an error with the config file located at ${file}:`)
-        console.log(ex.message)
-        return {}
+    },
+    loadConfigFiles: function loadConfigs () {
+        config = {
+            ...configDefault,
+            ...this.loadFile('/etc/oblecto/config.json'),
+            ...this.loadFile(os.homedir() + "/.oblecto.json"),
+            ...this.loadFile(__dirname + '/userconfig.json'),
+        }
+    },
+    saveConfig: function saveConfig () {
+        fs.writeFile(__dirname + '/userconfig.json', JSON.stringify(config, null, 4), (stat, err) => {
+            console.log(stat, err);
+        });
     }
-}
+};
 
-let config = {
-    ...configDefault,
-    ...loadFile(__dirname + '/userconfig.json'),
-    ...loadFile('/etc/oblecto/config.json'),
-    ...loadFile(os.homedir() + "/.oblecto.json"),
-}
+ConfigManager.loadConfigFiles()
 
 export default config
+
+export { ConfigManager }
+

@@ -1,3 +1,7 @@
+import { ConfigManager } from './config';
+
+import config from './config';
+
 import restapi from './submodules/REST';
 
 import UserManager from './submodules/users';
