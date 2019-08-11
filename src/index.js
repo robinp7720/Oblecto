@@ -1,5 +1,3 @@
-import { ConfigManager } from './config';
-
 import config from './config';
 
 import restapi from './submodules/REST';
@@ -11,8 +9,6 @@ import MovieCollector from './lib/indexers/movies/MovieCollector';
 import FileCleaner from './lib/indexers/files/cleaner';
 import TVShowCleaner from './lib/indexers/series/SeriesCleaner';
 import MovieCleaner from './lib/indexers/movies/MovieCleaner';
-
-import config from './config';
 
 import socketio from 'socket.io';
 import mkdirp from 'mkdirp';
