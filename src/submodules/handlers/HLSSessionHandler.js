@@ -73,7 +73,7 @@ export default class {
             .save(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/index.m3u8`);
 
         this.segmentChecker =  setInterval(() => {
-            // First check if the session has timed out. If it has, we don't really need to both with the deletion of
+            // First check if the session has timed out. If it has, we don't really need to bother with the generation of
             // individual segments and just deleted the whole session.
 
             if ( new Date().getTime() - this.lastTime > 120000) {

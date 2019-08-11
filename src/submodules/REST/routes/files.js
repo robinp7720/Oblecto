@@ -5,7 +5,7 @@ import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
 import config from '../../../config';
 
-import HLSSession from '../../HLS/session';
+import HLSSessionHandler from '../../handlers/HLSSessionHandler';
 import os from 'os';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
@@ -115,7 +115,7 @@ export default (server) => {
 
 
     server.get('/HLS/create/:id/',  async function (req, res, next) {
-        let session = new HLSSession(req.params.id);
+        let session = new HLSSessionHandler(req.params.id);
 
         if (req.query.offset) {
             session.offset = req.query.offset;
