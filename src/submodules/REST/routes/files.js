@@ -114,7 +114,7 @@ export default (server) => {
             fileInfo
         };
 
-        setTimeout(() => {
+        StreamSessions[sessionId].timeout = setTimeout(() => {
             delete StreamSessions[sessionId];
         }, 10000);
 
@@ -143,10 +143,20 @@ export default (server) => {
             return next();
         }
 
+        clearTimeout(StreamSessions[req.params.sessionId].timeout);
+
+        StreamSessions[req.params.sessionId].timeout = setTimeout(() => {
+            delete StreamSessions[req.params.sessionId];
+        }, fileInfo.duration * 1000);
+
         DirectStreamer.streamFile(fileInfo.path, req, res);
 
     }, async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
+
+        if (StreamSessions[req.params.sessionId]) {
+            delete StreamSessions[req.params.sessionId];
+        }
 
         FFMPEGStreamer.streamFile(req.video.path, req.params.offset || 0, req, res);
     });
