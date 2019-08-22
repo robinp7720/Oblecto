@@ -2,6 +2,9 @@
 require('@babel/polyfill');
 
 var config = require(__dirname + '/../dist/config.js').default;
+
+var mkdirp = require('mkdirp');
+
 var oblectoPackage = require(__dirname + '/../package.json');
 
 var args = process.argv.slice(2);
@@ -12,6 +15,17 @@ case 'start':
     break;
 
 case 'init':
+    // Create directories for image assets
+    for (let i in config.assets) {
+        let path = config.assets[i];
+        if (typeof path !== 'string') {
+            continue;
+        }
+
+        console.log(`Creating directory ${config.assets[i]}`)
+        mkdirp(config.assets[i]);
+    }
+
     var databases = require('../dist/submodules/database').default;
     databases.sequelize
         .authenticate()
