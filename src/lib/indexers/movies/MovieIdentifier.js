@@ -15,7 +15,7 @@ async function identifyByTMDB (basename) {
     var identification = await guessit.identify(basename);
 
     if (!identification.title) {
-        console.log("A movie title could not be extracted from", basename);
+        console.log('A movie title could not be extracted from', basename);
         return false;
     }
 
@@ -44,7 +44,7 @@ export default async function (moviePath, reIndex) {
     }
 
     let parsedPath = path.parse(moviePath);
-    parsedPath.ext = parsedPath.ext.replace('.', '').toLowerCase()
+    parsedPath.ext = parsedPath.ext.replace('.', '').toLowerCase();
 
     // Create file entity in the database
     let [file, FileInserted] = await databases.file.findOrCreate({
@@ -70,7 +70,7 @@ export default async function (moviePath, reIndex) {
         }
     }
 
-    let results = []
+    let results = [];
 
     let IdentificationSources = [
         identifyByTMDB
