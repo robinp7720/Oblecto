@@ -158,6 +158,7 @@ export default (server) => {
         let episode = await databases.episode.findByPk(req.params.id, {
             include: [
                 databases.file,
+                databases.tvshow,
                 {
                     model: databases.trackEpisodes,
                     required: false,
