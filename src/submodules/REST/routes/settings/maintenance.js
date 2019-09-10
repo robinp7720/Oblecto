@@ -7,6 +7,8 @@ import MovieArtworkRetriever from '../../../../lib/indexers/movies/MovieArtworkR
 import MovieCleaner from '../../../../lib/indexers/movies/MovieCleaner';
 import SeriesCleaner from '../../../../lib/indexers/series/SeriesCleaner';
 
+import FileCleaner from '../../../../lib/indexers/files/cleaner';
+
 import authMiddleWare from '../../middleware/auth';
 
 export default (server) => {
@@ -49,6 +51,9 @@ export default (server) => {
     server.get('/settings/maintenance/clean/:type', authMiddleWare.requiresAuth, function (req, res) {
 
         switch  (req.params.type) {
+        case 'files':
+            FileCleaner.removedDeletedFiled();
+            break;
         case 'movies':
             MovieCleaner.removeFileLessMovies();
             break;
