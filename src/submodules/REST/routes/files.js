@@ -158,6 +158,6 @@ export default (server) => {
             delete StreamSessions[req.params.sessionId];
         }
 
-        FFMPEGStreamer.streamFile(req.video.path, req.params.offset || 0, req, res);
+        FFMPEGStreamer.streamFile(req.video, req.params.offset || 0, req, res);
     });
 };
