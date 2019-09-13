@@ -53,6 +53,7 @@ export default (server) => {
         switch  (req.params.type) {
         case 'files':
             FileCleaner.removedDeletedFiled();
+            FileCleaner.removeAssoclessFiles();
             break;
         case 'movies':
             MovieCleaner.removeFileLessMovies();
