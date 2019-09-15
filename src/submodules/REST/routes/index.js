@@ -6,8 +6,10 @@ import tvshows from './tvshows';
 import settings from './settings';
 import users from './users';
 import web from './web';
+import sets from './sets';
 
 import config from '../../../config';
+
 
 export default (server) => {
     if (config.web.enabled) {
@@ -21,4 +23,5 @@ export default (server) => {
     tvshows(server);
     settings(server);
     users(server);
+    sets(server);
 };

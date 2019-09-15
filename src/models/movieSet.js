@@ -3,5 +3,6 @@ module.exports = (sequelize, DataTypes) => {
         setName: DataTypes.STRING,
         overview: DataTypes.TEXT,
         tmdbid: {type: DataTypes.INTEGER, allowNull: true, unique: true},
+        public: {type: DataTypes.BOOLEAN, defaultValue: true},
     });
 };
