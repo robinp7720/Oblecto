@@ -135,15 +135,10 @@ export default {
      * @return {boolean}
      */
     async DownloadAllMoviesFanart() {
-        let Episodes = databases.movie.findAll();
+        let movies = databases.movie.findAll();
 
-        Episodes.each((movie) => {
-            queue.push({
-                task: 'DownloadMovieFanart',
-                id: movie.id
-            }, function (err) {
-
-            });
+        movies.each((movie) => {
+            this.QueueMovieFanart(movie);
         });
 
         return true;
@@ -153,18 +148,31 @@ export default {
      * @return {boolean}
      */
     async DownloadAllMoviePosters() {
-        let Shows = databases.movie.findAll();
+        let movies = databases.movie.findAll();
 
-        Shows.each((movie) => {
-            queue.push({
-                task: 'DownloadMoviePoster',
-                id: movie.id
-            }, function (err) {
-
-            });
+        movies.each((movie) => {
+            this.QueueMoviePoster(movie);
         });
 
         return true;
+    },
+
+    async QueueMovieFanart(movie) {
+        queue.push({
+            task: 'DownloadMovieFanart',
+            id: movie.id
+        }, function (err) {
+
+        });
+    },
+
+    async QueueMoviePoster(movie) {
+        queue.push({
+            task: 'DownloadMoviePoster',
+            id: movie.id
+        }, function (err) {
+
+        });
     },
 
     async DownloadAll() {

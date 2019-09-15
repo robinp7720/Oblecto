@@ -9,6 +9,7 @@ import guessit from '../../../submodules/guessit';
 import ffprobe from '../../../submodules/ffprobe';
 
 import MovieSetCollector from './MovieSetCollector';
+import MovieArtworkRetriever from "./MovieArtworkRetriever";
 
 
 async function identifyByTMDB (basename) {
@@ -28,13 +29,33 @@ async function identifyByTMDB (basename) {
     return await tmdb.searchMovie(query);
 }
 
-export default async function (moviePath, reIndex) {
+async function getDuration(moviePath) {
     let metadata = {};
-    let duration = 0;
 
     try {
         metadata = await ffprobe(moviePath);
-        duration = metadata.format.duration;
+    } catch (e) {
+        throw e;
+    }
+
+    let duration = metadata.format.duration;
+
+    let streams = metadata.streams;
+
+    for (const stream of streams) {
+        if (stream.duration > duration) {
+            duration = stream.duration;
+        }
+    }
+
+    return duration;
+}
+
+export default async function (moviePath, reIndex) {
+    let duration = 0;
+
+    try {
+        duration = await getDuration(moviePath);
     } catch (e) {
         console.log('Could not analyse ', moviePath, ' for duration. Maybe the file is corrupt?');
 
@@ -119,6 +140,9 @@ export default async function (moviePath, reIndex) {
         });
 
     movie.addFile(file);
+
+    await MovieArtworkRetriever.QueueMoviePoster(movie);
+    await MovieArtworkRetriever.QueueMovieFanart(movie);
 
     MovieSetCollector.GetSetsForMovie(movie);
 
