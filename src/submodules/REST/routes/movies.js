@@ -304,7 +304,7 @@ export default (server) => {
     // Add movie to set with id
     server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
         try {
-            let [movie] = await databases.movie.findByPk(req.params.setId);
+            let [movie] = await databases.movie.findByPk(req.params.id);
             let [set] = await databases.movieSet.findByPk(req.params.setId);
 
             set.addMovie(movie);
