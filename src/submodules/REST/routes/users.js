@@ -49,8 +49,11 @@ export default (server) => {
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-
         let user = await databases.user.findByPk(req.params.id);
+
+        if (!user) {
+            return next(new errors.BadRequestError('User with id does not exist'));
+        }
 
         if (req.params.username) {
             user.update({
@@ -82,7 +85,6 @@ export default (server) => {
 
     server.post('/user', authMiddleWare.requiresAuth, async function (req, res, next) {
         // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
-        console.log(req.params.params);
 
         if (!req.params.username)
             return next(new errors.BadRequestError('Username is missing'));
