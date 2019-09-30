@@ -46,33 +46,35 @@ export default (server) => {
         next();
     });
 
+
+    // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
-        if (!req.params.username)
-            return next(new errors.BadRequestError('Username is missing'));
-        if (!req.params.password)
-            return next(new errors.BadRequestError('Password is missing'));
-        if (!req.params.email)
-            return next(new errors.BadRequestError('E-Mail is missing'));
-        if (!req.params.name)
-            return next(new errors.BadRequestError('Name is missing'));
 
+        let user = await databases.user.findByPk(req.params.id);
 
-        let passwordHash = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
-
-        let [User] = await databases.user.findOrCreate({
-            where: {
-                id: req.params.id
-            },
-            defaults: {
-                name: req.params.name,
-                email: req.params.email,
+        if (req.params.username) {
+            user.update({
                 username: req.params.username,
-                password: passwordHash
-            }
-        });
+            });
+        }
 
-        res.send(User);
+        if (req.params.password) {
+            user.update({
+                password: await bcrypt.hash(req.params.password, config.authentication.saltRounds)
+            });
+        }
+
+        if (req.params.email) {
+            user.update({
+                email: req.params.email
+            });
+        }
+
+        if (req.params.name) {
+            user.update({
+                name: req.params.name
+            });
+        }
 
         next();
 
