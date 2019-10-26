@@ -2,38 +2,75 @@ import guessit from '../../../../submodules/guessit';
 import tvdb from '../../../../submodules/tvdb';
 
 export default class TvdbSeriesIdentifier {
-    constructor () {
+    constructor() {
         this.tvShowCache = {};
     }
 
-    async TvShowInfo (id) {
-        if (this.tvShowCache[id]) {
-            return this.tvShowCache[id];
-        }
+    async tvShowInfo(id) {
 
-        return this.tvShowCache[id] = tvdb.getSeriesById(id);
+        return tvdb.getSeriesById(id);
     }
 
-    async Identify (path){
+    async identify(path) {
         const guessitIdentification = await guessit.identify(path);
+
+        let cacheId = guessitIdentification.title;
+        if (guessitIdentification.year) {
+            cacheId += guessitIdentification.year;
+        }
+
+        if (this.tvShowCache[cacheId]) {
+            return this.tvShowCache[cacheId];
+        }
 
         let tvdbSearch = await tvdb.getSeriesByName(guessitIdentification.title);
 
         for (let i in tvdbSearch) {
+            if (!tvdbSearch.hasOwnProperty(i))
+                continue;
+
             let series = tvdbSearch[i];
 
             if (
-                !(
+                (
                     guessitIdentification.year &&
-                    series.firstAired &&
-                    guessitIdentification.year == series.firstAired.substr(0,4)
+                guessitIdentification.year.toString() === series.firstAired.substr(0, 4)
+                ) || !(
+                    guessitIdentification.year
                 )
             ) {
-                continue;
+
+                let currentShowInfo = await this.tvShowInfo(series.id);
+
+                return this.tvShowCache[cacheId] = {
+                    tvdbId: currentShowInfo.id,
+                    tvdbSeriedId: currentShowInfo.seriedId,
+                    imdbId: currentShowInfo.imdbId,
+                    zap2itId: currentShowInfo.zap2itId,
+
+                    seriesName: currentShowInfo.seriesName,
+                    status: currentShowInfo.status,
+                    firstAired: currentShowInfo.firstAired,
+                    networks: [currentShowInfo.network],
+                    runtime: currentShowInfo.runtime,
+                    genre: currentShowInfo.genre,
+                    overview: currentShowInfo.overview,
+
+                    airsDayOfWeek: currentShowInfo.airsDayOfWeek,
+                    airsTime: currentShowInfo.airsTime,
+
+                    ageRating: currentShowInfo.rating,
+
+                    alias: currentShowInfo.aliases,
+
+                    tvdb: {
+                        siteRating: currentShowInfo.siteRating,
+                        siteRatingCount: currentShowInfo.siteRatingCount
+                    }
+                };
             }
-
-            return await this.TvShowInfo(series.id);
-
         }
+
+        return false;
     }
 }

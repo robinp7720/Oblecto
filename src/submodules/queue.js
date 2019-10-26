@@ -2,7 +2,7 @@ import async from 'async';
 import fs from 'fs';
 import request from 'request';
 
-import SeriesIdentifier from '../lib/indexers/series/SeriesIdentifer';
+import SeriesIndexer from '../lib/indexers/series/SeriesIndexer';
 import MovieIdentifier from '../lib/indexers/movies/MovieIdentifier';
 
 import SeriesArtworkRetriever from '../lib/indexers/series/SeriesArtworkRetriever';
@@ -15,7 +15,7 @@ import config from '../config.js';
 export default async.queue((task, callback) => {
     switch (task.task) {
     case 'episode':
-        SeriesIdentifier(task.path, task.doReIndex || config.tvshows.doReIndex).then(callback).catch(callback);
+        SeriesIndexer(task.path, task.doReIndex || config.tvshows.doReIndex).then(callback).catch(callback);
         break;
     case 'movie':
         MovieIdentifier(task.path, task.doReIndex || config.movies.doReIndex).then(callback).catch((err) => {
