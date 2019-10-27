@@ -7,15 +7,21 @@ export default class TmdbSeriesIdentifier {
     }
 
     async tvShowInfo(id) {
-        if (this.tvShowCache[id]) {
-            return this.tvShowCache[id];
-        }
-
-        return this.tvShowCache[id] = await tmdb.tvInfo(id);
+        return await tmdb.tvInfo(id);
     }
 
     async identify(path) {
         const guessitIdentification = await guessit.identify(path);
+
+        let cacheId = guessitIdentification.title;
+        if (guessitIdentification.year) {
+            cacheId += guessitIdentification.year;
+        }
+
+        if (this.tvShowCache[cacheId]) {
+            return this.tvShowCache[cacheId];
+        }
+
 
         let tmdbSearch = (await tmdb.searchTv({query: guessitIdentification.title})).results;
 
@@ -36,7 +42,7 @@ export default class TmdbSeriesIdentifier {
 
             let currentShowInfo = await this.tvShowInfo(series.id);
 
-            return {
+            return this.tvShowCache[cacheId] = {
                 tmdbId: currentShowInfo.id,
                 tvdbId: null,
                 tvdbSeriedId: null,
