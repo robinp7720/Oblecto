@@ -16,12 +16,6 @@ export default async function (episodePath, reIndex) {
 
     let parsedPath = path.parse(episodePath);
 
-    if (epinferEpisodeData.filetype !== 'video' ||
-        epinferEpisodeData.subtype  !== 'episode') {
-        console.log(episodePath, ' is not an episode');
-        return false;
-    }
-
     // First insert the file into the database so we know if the file was already indexed before
     // We can assume that if the file was already in the database it was already indexed by this indexer.
     // However, there is the option to not quit and continue indexing the file even if the file was already in the

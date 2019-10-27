@@ -54,6 +54,9 @@ let configDefault = {
 
         ]
     },
+    'fileExtensions': {
+      'video': ['.mp4','.avi', '.iso', '.m4v', '.mkv', '.mk3d']
+    },
     'authentication': {
         'secret': 'secret',
         'saltRounds': 10
