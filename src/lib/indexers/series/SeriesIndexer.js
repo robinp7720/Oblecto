@@ -63,8 +63,17 @@ export default async function (episodePath, reIndex) {
         }
     }
 
-    let seriesIdentification = await seriesIdentifier.identifySeries(episodePath);
-    let episodeIdentification = await seriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
+    let seriesIdentification;
+    let episodeIdentification;
+
+    try {
+        seriesIdentification = await seriesIdentifier.identifySeries(episodePath);
+        episodeIdentification = await seriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
+    } catch (e) {
+        console.log(e);
+
+        return false;
+    }
 
     if (!episodeIdentification) {
         console.log('File could not be matched:', episodePath);

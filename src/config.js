@@ -42,6 +42,7 @@ let configDefault = {
     },
     'tvshows': {
         'doReIndex': false,
+        'ignoreSeriesMismatch': false,
         'indexBroken': false,
         'directories': [
 

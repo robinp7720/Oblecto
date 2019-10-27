@@ -2,6 +2,7 @@ import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
 import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
 import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
+import config from '../../../config';
 
 export default class SeriesIdentifier {
     constructor() {
@@ -32,6 +33,10 @@ export default class SeriesIdentifier {
                     seriesIdentification[v] = currentIdentification[v];
                 }
             });
+
+            if (seriesIdentification.seriesName !== currentIdentification.seriesName && !config.tvshows.ignoreSeriesMismatch) {
+                throw new Error('A name mismatch has occurred between series identifiers');
+            }
         }
 
         return seriesIdentification;
