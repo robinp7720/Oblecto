@@ -6,6 +6,16 @@ export default class TvdbEpisodeIdentifier {
         this.episodeCache = {};
     }
 
+    async getEpisodes(tvdbId) {
+        // TODO; We should probably move caching directly into the library
+        if (this.episodeCache[tvdbId]) {
+            return this.episodeCache[tvdbId];
+        }
+
+        this.episodeCache[tvdbId] = await tvdb.getEpisodesBySeriesId(tvdbId);
+        return this.episodeCache[tvdbId];
+    }
+
     async identify(path, series) {
         const guessitIdentification = await guessit.identify(path);
 
@@ -14,7 +24,7 @@ export default class TvdbEpisodeIdentifier {
         if (!guessitIdentification.season)
             guessitIdentification.season = 1;
 
-        let tvdbEpisodes = await tvdb.getEpisodesBySeriesId(series.tvdbId);
+        let tvdbEpisodes = this.getEpisodes(series.tvdbId);
 
         for (let i in tvdbEpisodes) {
             let episode = tvdbEpisodes[i];
