@@ -81,6 +81,16 @@ export default async function (episodePath, reIndex) {
         return false;
     }
 
+    // Make sure the important attributes are included in the data
+    if (!episodeIdentification.episodeName ||
+        !episodeIdentification.airedEpisodeNumber ||
+        !episodeIdentification.airedSeasonNumber) {
+        console.log('Episode was matched but important information was missing:', episodePath);
+
+        return false;
+    }
+
+
     // TVDB has a few problems so we need to make sure to set default values for their values in case they
     // deliver garbage results
 
