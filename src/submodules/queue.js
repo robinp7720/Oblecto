@@ -3,7 +3,7 @@ import fs from 'fs';
 import request from 'request';
 
 import SeriesIndexer from '../lib/indexers/series/SeriesIndexer';
-import MovieIdentifier from '../lib/indexers/movies/MovieIdentifier';
+import MovieIndexer from '../lib/indexers/movies/MovieIndexer';
 
 import SeriesArtworkRetriever from '../lib/indexers/series/SeriesArtworkRetriever';
 import MovieArtworkRetriever from '../lib/indexers/movies/MovieArtworkRetriever';
@@ -18,7 +18,7 @@ export default async.queue((task, callback) => {
         SeriesIndexer(task.path, task.doReIndex || config.tvshows.doReIndex).then(callback).catch(callback);
         break;
     case 'movie':
-        MovieIdentifier(task.path, task.doReIndex || config.movies.doReIndex).then(callback).catch((err) => {
+        MovieIndexer(task.path, task.doReIndex || config.movies.doReIndex).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
