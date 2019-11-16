@@ -7,7 +7,6 @@ export default class TvdbSeriesIdentifier {
     }
 
     async tvShowInfo(id) {
-
         return tvdb.getSeriesById(id);
     }
 
@@ -34,15 +33,22 @@ export default class TvdbSeriesIdentifier {
             if (
                 (
                     guessitIdentification.year &&
-                guessitIdentification.year.toString() === series.firstAired.substr(0, 4)
+                    series.firstAired &&
+                    guessitIdentification.year.toString() === series.firstAired.substr(0, 4)
                 ) || !(
                     guessitIdentification.year
                 )
             ) {
+                let currentShowInfo;
 
-                let currentShowInfo = await this.tvShowInfo(series.id);
+                try {
+                    currentShowInfo = await this.tvShowInfo(series.id);
+                } catch (e) {
+                    console.log('An error has occured with the TVDB identifier. We found an id but it seams it doesn\'t exist.');
+                    continue;
+                }
 
-                return this.tvShowCache[cacheId] = {
+                this.tvShowCache[cacheId] = {
                     tvdbId: currentShowInfo.id,
                     tvdbSeriedId: currentShowInfo.seriedId,
                     imdbId: currentShowInfo.imdbId,
@@ -68,6 +74,8 @@ export default class TvdbSeriesIdentifier {
                         siteRatingCount: currentShowInfo.siteRatingCount
                     }
                 };
+
+                return this.tvShowCache[cacheId];
             }
         }
 

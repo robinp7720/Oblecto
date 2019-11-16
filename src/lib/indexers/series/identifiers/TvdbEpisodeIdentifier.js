@@ -6,6 +6,12 @@ export default class TvdbEpisodeIdentifier {
         this.episodeCache = {};
     }
 
+    /**
+     *
+     * @param path
+     * @param series
+     * @returns {Promise<{}|{overview: string, tvdbId: number, imdbId: string, absoluteNumber: number, tvdb: {airedSeasonId: number}, firstAired: string, dvdEpisodeNumber: number, title: string, airedSeasonNumber: number, airedEpisodeNumber: number, dvdSeasonNumber: number}>}
+     */
     async getEpisodes(tvdbId) {
         // TODO; We should probably move caching directly into the library
         if (this.episodeCache[tvdbId]) {
@@ -17,6 +23,9 @@ export default class TvdbEpisodeIdentifier {
     }
 
     async identify(path, series) {
+        if (!series.tvdbId)
+            return {};
+
         const guessitIdentification = await guessit.identify(path);
 
 
