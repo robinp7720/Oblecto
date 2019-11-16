@@ -7,6 +7,9 @@ export default class TmdbEpisodeIdentifier {
     }
 
     async identify(path, series) {
+        if (!series.tmdbId)
+            return {};
+
         const guessitIdentification = await guessit.identify(path);
 
         try {
@@ -28,7 +31,7 @@ export default class TmdbEpisodeIdentifier {
 
             };
         } catch (e) {
-            return false;
+            return {};
         }
     }
 }
