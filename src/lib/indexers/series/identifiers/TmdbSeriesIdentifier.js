@@ -6,10 +6,37 @@ export default class TmdbSeriesIdentifier {
         this.tvShowCache = {};
     }
 
+    /**
+     *
+     * @param id: number
+     * @returns {Promise<any>}
+     */
     async tvShowInfo(id) {
         return await tmdb.tvInfo(id);
     }
 
+    /**
+     *
+     * @param path: string
+     * @returns {Promise<{
+     *  airsDayOfWeek: null,
+     *  tvdbSeriedId: number,
+     *  overview: string,
+     *  tmdb: {popularity: number},
+     *  tvdbId: null,
+     *  imdbId: null,
+     *  seriesName: string,
+     *  firstAired: string,
+     *  runtime: number,
+     *  ageRating: null,
+     *  networks: array,
+     *  tmdbId: number,
+     *  zap2itId: null,
+     *  airsTime: null,
+     *  genre: array,
+     *  status: string
+     * } | *>}
+     */
     async identify(path) {
         const guessitIdentification = await guessit.identify(path);
 
