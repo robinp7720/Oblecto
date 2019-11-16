@@ -288,6 +288,9 @@ export default (server) => {
                     userId: req.authorization.jwt.id,
                     progress: {
                         [sequelize.Op.gt]: 0.9
+                    },
+                    updatedAt: {
+                        [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
                     }
                 },
             }],
