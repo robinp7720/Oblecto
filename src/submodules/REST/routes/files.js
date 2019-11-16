@@ -37,7 +37,7 @@ export default (server) => {
 
         // While that file is being streamed, we need to make sure that the next segment will be available.
         // Check if the next file in the sequence exists, and it it doesn't resume ffmpeg and delete the first few
-        // segments.b
+        // segments.
 
         fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
             if (err) {
@@ -111,7 +111,8 @@ export default (server) => {
 
         StreamSessions[sessionId] = {
             file: req.params.id,
-            fileInfo
+            fileInfo: fileInfo.toJSON(),
+            disableRemux: req.params.noremux || false
         };
 
         StreamSessions[sessionId].timeout = setTimeout(() => {
@@ -139,7 +140,9 @@ export default (server) => {
                 config.transcoding.doRealTimeRemux ||
                 config.transcoding.doRealTimeTranscode
             ) &&
-            fileInfo.extension !== 'mp4') {
+            fileInfo.extension !== 'mp4' &&
+            !StreamSessions[req.params.sessionId].disableRemux
+        ) {
             return next();
         }
 
