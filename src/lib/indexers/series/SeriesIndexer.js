@@ -81,8 +81,22 @@ export default async function (episodePath, reIndex) {
         return false;
     }
 
+    // TVDB has a few problems so we need to make sure to set default values for their values in case they
+    // deliver garbage results
+
+    /* TODO: Move site specific attributes to seperate database to prevent issues when a metadata collection site
+    *   returns garbage results */
+
+    let siteRating = null;
+    let siteRatingCount = null;
+
+    if (seriesIdentification.tvdb) {
+        siteRating = seriesIdentification.tvdb.siteRating;
+        siteRatingCount = seriesIdentification.tvdb.siteRatingCount;
+    }
+
     // Insert the TVShow info into the database
-    let [ShowEntry] = await databases.tvshow
+    let [ShowEntry, showInserted] = await databases.tvshow
         .findOrCreate({
             where: {
                 tvdbid: seriesIdentification.tvdbId,
@@ -105,8 +119,8 @@ export default async function (episodePath, reIndex) {
                 rating: seriesIdentification.ageRating,
                 popularity: seriesIdentification.tmdb.popularity,
 
-                siteRating: seriesIdentification.tvdb.siteRating,
-                siteRatingCount: seriesIdentification.tvdb.siteRatingCount,
+                siteRating: siteRating,
+                siteRatingCount: siteRatingCount,
 
                 directory: parsedPath.dir
             }
@@ -126,7 +140,6 @@ export default async function (episodePath, reIndex) {
             absoluteNumber: episodeIdentification.absoluteNumber,
             airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
             airedSeason: episodeIdentification.airedSeasonNumber,
-            airedSeasonID: episodeIdentification.tvdb.airedSeasonId,
             dvdEpisodeNumber: episodeIdentification.dvdEpisodeNumber,
             dvdSeason: episodeIdentification.dvdSeasonNumber,
 
