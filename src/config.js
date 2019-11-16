@@ -42,6 +42,7 @@ let configDefault = {
     },
     'tvshows': {
         'doReIndex': false,
+        'ignoreSeriesMismatch': false,
         'indexBroken': false,
         'directories': [
 
@@ -53,6 +54,9 @@ let configDefault = {
         'directories': [
 
         ]
+    },
+    'fileExtensions': {
+      'video': ['.mp4','.avi', '.iso', '.m4v', '.mkv', '.mk3d']
     },
     'authentication': {
         'secret': 'secret',
