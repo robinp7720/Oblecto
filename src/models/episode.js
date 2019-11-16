@@ -8,7 +8,6 @@ module.exports = (sequelize, DataTypes) => {
         absoluteNumber: DataTypes.INTEGER,
         airedEpisodeNumber: DataTypes.INTEGER,
         airedSeason: DataTypes.INTEGER,
-        airedSeasonID: DataTypes.INTEGER,
         dvdEpisodeNumber: DataTypes.DOUBLE,
         dvdSeason: DataTypes.INTEGER,
 
