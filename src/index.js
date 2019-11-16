@@ -14,7 +14,10 @@ import socketio from 'socket.io';
 
 // Load Oblecto submodules
 if (config.mdns.enable) {
-    zeroconf.start(config.server.port);
+    (async () => {
+       let zeroconf = (await import('./submodules/zeroconf.js')).default;
+        zeroconf.start(config.server.port);
+    });
 }
 
 // Start the rest api
@@ -35,6 +38,7 @@ if (config.cleaner.runAtBoot) {
     TVShowCleaner.removePathLessShows();
     MovieCleaner.removeFileLessMovies();
 }
+
 // Socket connection
 let io = socketio.listen(server.server, {
     log: false,
