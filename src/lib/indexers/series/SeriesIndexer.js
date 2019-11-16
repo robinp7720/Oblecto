@@ -160,12 +160,10 @@ export default async function (episodePath, reIndex) {
 
     if (EpisodeInserted) {
         // Inform all connected clients that a new episode has been imported
-        UserManager.sendToAll('indexer', {event: 'added', type: 'episode'});
+        queue.unshift({task: 'DownloadEpisodeBanner', id: Episode.id}, function () {
+            UserManager.sendToAll('indexer', {event: 'added', type: 'episode'});
+        });
     }
-
-    queue.push({task: 'DownloadEpisodeBanner', id: Episode.id}, function () {
-
-    });
 
     // Link the file to the episode
     Episode.addFile(File);
