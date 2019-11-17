@@ -1,84 +1,22 @@
 import databases from '../../../submodules/database';
-import tvdb from '../../../submodules/tvdb';
-import tmdb from '../../../submodules/tmdb';
+
 import queue from '../../../submodules/queue';
 
 import config from '../../../config.js';
 
 import path from 'path';
-import fs from 'fs';
-import request from 'request';
+
+import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever';
+import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever';
+
+import imageManager from '../../imageManager';
+
 
 export default {
-    imageExists(imagePath) {
-        let stat;
-
-        try {
-            stat = fs.statSync(imagePath);
-        } catch {
-            return false;
-        }
-
-        // Re-download thumbnail if it's to small in size
-        // This may mean that the thumbnail image is corrupt or wasn't downloaded properly the first time.
-        // TODO: Complete a proper integrity check on the image file
-        if (stat.size < 1000) {
-            fs.unlink(imagePath, () => {
-                console.log('Image exists for', imagePath, 'but will be re-downloaded');
-            });
-        }
-
-        return true;
-    },
-
-
-    async DownloadTVDBEpisodeBanner(episode, thumbnailPath) {
-        let data = await tvdb.getEpisodeById(episode.tvshow.tvdbid);
-
-        return new Promise(function (fulfill, reject) {
-            request.get({
-                uri: 'https://thetvdb.com/banners/_cache/' + data.filename,
-                encoding: null
-            }, function (err, response, body) {
-                if (err)
-                    reject(err);
-
-                fs.writeFile(thumbnailPath, body, function (error) {
-                    if (error) {
-                        reject(error);
-                    }
-
-                    fulfill();
-                });
-            });
-        });
-    },
-
-    async DownloadTMDBEpisodeBanner(episode, thumbnailPath) {
-        let data = await tmdb.tvEpisodeImages({
-            id: episode.tvshow.tmdbid,
-            episode_number: episode.airedEpisodeNumber,
-            season_number: episode.airedSeason
-        });
-
-        return new Promise(function (fulfill, reject) {
-            request.get({
-                uri: 'https://image.tmdb.org/t/p/original' + data.stills[0]['file_path'],
-                encoding: null
-            }, function (err, response, body) {
-                if (err)
-                    reject(err);
-
-                fs.writeFile(thumbnailPath, body, function (error) {
-                    if (error) {
-                        reject(error);
-                    }
-
-                    fulfill();
-                });
-            });
-        });
-    },
+    artworkRetrievers: [
+        TvdbSeriesArtworkRetriever,
+        TmdbSeriesArtworkRetriever
+    ],
 
     async DownloadEpisodeBanner(id) {
         let episode = await databases.episode.findByPk(id, {
@@ -96,52 +34,66 @@ export default {
 
         console.log('Checking thumbnail for', episode.tvshow.seriesName, `S${episode.airedSeason}E${episode.airedEpisodeNumber}:`, episode.episodeName);
 
-        if (this.imageExists(thumbnailPath))
+        if (await imageManager.imageExists(thumbnailPath))
             return;
 
+        // Loop through all the artwork retrievers until an image has been found and downloaded
 
-        return this.DownloadTMDBEpisodeBanner(episode, thumbnailPath)
-            .catch(() => {
-                    return this.DownloadTVDBEpisodeBanner(episode, thumbnailPath);
-                }
-            );
+        for (let i in this.artworkRetrievers) {
+            if (!this.artworkRetrievers.hasOwnProperty(i))
+                continue;
 
+            let artworkRetriever = this.artworkRetrievers[i];
 
+            try {
+                await artworkRetriever.retrieveEpisodeBanner(episode, thumbnailPath);
+                return;
+            } catch (e) {
+
+            }
+        }
     },
 
-    async DownloadSeriesPoster(id) {
-        let show = await databases.tvshow.findByPk(id);
-
-        let showPath = show.directory;
-
-        let posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
-
-        if (!config.assets.storeWithFile) {
-            posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
+    getPosterPath(series) {
+        if (config.assets.storeWithFile) {
+            return path.join(series.directory, series.seriesName + '-poster.jpg');
         }
 
-        if (this.imageExists(posterPath))
+        return path.normalize(config.assets.showPosterLocation) + '/' + series.id + '.jpg';
+    },
+
+    async downloadSeriesPoster(id) {
+        let series = await databases.tvshow.findByPk(id);
+
+        let posterPath = this.getPosterPath(series);
+
+        if (await imageManager.imageExists(posterPath)) {
             return;
+        }
 
-        let data = await tvdb.getSeriesPosters(show.tvdbid);
+        console.log('Downloading poster image for', series.seriesName);
 
-        console.log('Downloading poster image for', show.seriesName);
+        for (let i in this.artworkRetrievers) {
+            if (!this.artworkRetrievers.hasOwnProperty(i))
+                continue;
 
-        request.get({
-            uri: 'http://thetvdb.com/banners/' + data[0].fileName,
-            encoding: null
-        }, function (err, response, body) {
-            fs.writeFile(posterPath, body, function (error) {
-                if (!error)
-                    console.log('Poster downloaded for', show.seriesName);
-            });
-        });
+            let artworkRetriever = this.artworkRetrievers[i];
+
+            try {
+                await artworkRetriever.retrieveSeriesPoster(series, posterPath);
+                return;
+            } catch (e) {
+
+            }
+        }
+
+        console.log('Could not find a poster for', series.seriesName);
     },
 
     /**
      * @return {boolean}
      */
-    async DownloadAllEpisodeBanners() {
+    async downloadAllEpisodeBanners() {
         let Episodes = databases.episode.findAll();
 
         Episodes.each((Episode) => {
@@ -159,7 +111,7 @@ export default {
     /**
      * @return {boolean}
      */
-    async DownloadAllSeriesPosters() {
+    async downloadAllSeriesPosters() {
         let Shows = databases.tvshow.findAll();
 
         Shows.each((Show) => {
@@ -175,7 +127,7 @@ export default {
     },
 
     async DownloadAll() {
-        await this.DownloadAllEpisodeBanners();
-        await this.DownloadAllSeriesPosters();
+        await this.downloadAllEpisodeBanners();
+        await this.downloadAllSeriesPosters();
     }
 };
