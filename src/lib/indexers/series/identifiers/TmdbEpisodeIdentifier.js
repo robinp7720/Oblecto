@@ -22,7 +22,7 @@ export default class TmdbEpisodeIdentifier {
             return {
                 tmdbId: episode.id,
 
-                title: episode.name,
+                episodeName: episode.name,
                 airedEpisodeNumber: episode.episode_number,
                 airedSeasonNumber: episode.season_number,
 

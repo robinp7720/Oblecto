@@ -47,7 +47,7 @@ export default class TvdbEpisodeIdentifier {
                     tvdbId: episode.id,
                     imdbId: episode.imdbId,
 
-                    title: episode.episodeName,
+                    episodeName: episode.episodeName,
 
                     airedEpisodeNumber: episode.airedEpisodeNumber,
                     airedSeasonNumber: episode.airedSeason,

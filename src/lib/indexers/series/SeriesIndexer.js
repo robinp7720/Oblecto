@@ -145,7 +145,7 @@ export default async function (episodePath, reIndex) {
             showid: seriesIdentification.tvdbId,
             tvshowId: ShowEntry.id,
 
-            episodeName: episodeIdentification.title,
+            episodeName: episodeIdentification.episodeName,
 
             absoluteNumber: episodeIdentification.absoluteNumber,
             airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
