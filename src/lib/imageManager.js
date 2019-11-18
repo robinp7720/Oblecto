@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-export default class imageManager {
+export default class ImageManager {
     static async imageExists(imagePath) {
         let stat;
 

@@ -1,8 +1,8 @@
-import imageManager from '../../../imageManager';
+import ImageManager from '../../../imageManager';
 import request from 'request-promise-native';
 import tvdb from '../../../../submodules/tvdb';
 
-export default class TvdbSeriesArtworkRetriever extends imageManager {
+export default class TvdbSeriesArtworkRetriever extends ImageManager {
     static async retrieveEpisodeBanner (episode, path) {
         if (await this.imageExists(path)) {
             return;

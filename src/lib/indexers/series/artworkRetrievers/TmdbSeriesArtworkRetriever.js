@@ -1,8 +1,8 @@
-import imageManager from '../../../imageManager';
+import ImageManager from '../../../imageManager';
 import request from 'request-promise-native';
 import tmdb from '../../../../submodules/tmdb';
 
-export default class TmdbSeriesArtworkRetriever extends imageManager {
+export default class TmdbSeriesArtworkRetriever extends ImageManager {
     static async retrieveEpisodeBanner(episode, path) {
         if (await this.imageExists(path)) {
             return;

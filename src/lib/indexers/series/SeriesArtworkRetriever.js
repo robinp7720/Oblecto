@@ -9,7 +9,7 @@ import path from 'path';
 import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever';
 import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever';
 
-import imageManager from '../../imageManager';
+import ImageManager from '../../imageManager';
 
 
 export default {
@@ -34,7 +34,7 @@ export default {
 
         console.log('Checking thumbnail for', episode.tvshow.seriesName, `S${episode.airedSeason}E${episode.airedEpisodeNumber}:`, episode.episodeName);
 
-        if (await imageManager.imageExists(thumbnailPath))
+        if (await ImageManager.imageExists(thumbnailPath))
             return;
 
         // Loop through all the artwork retrievers until an image has been found and downloaded
@@ -67,7 +67,7 @@ export default {
 
         let posterPath = this.getPosterPath(series);
 
-        if (await imageManager.imageExists(posterPath)) {
+        if (await ImageManager.imageExists(posterPath)) {
             return;
         }
 
