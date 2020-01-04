@@ -1,4 +1,4 @@
-import ImageManager from '../../../imageManager';
+import ImageManager from '../../../ImageManager';
 import request from 'request-promise-native';
 import tvdb from '../../../../submodules/tvdb';
 

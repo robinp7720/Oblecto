@@ -7,7 +7,6 @@ import UserManager from '../../../submodules/users';
 import queue from '../../../submodules/queue';
 import SeriesIdentifier from './SeriesIdentifer';
 
-let seriesIdentifier = new SeriesIdentifier();
 
 export default async function (episodePath, reIndex) {
 
@@ -67,8 +66,8 @@ export default async function (episodePath, reIndex) {
     let episodeIdentification;
 
     try {
-        seriesIdentification = await seriesIdentifier.identifySeries(episodePath);
-        episodeIdentification = await seriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
+        seriesIdentification = await SeriesIdentifier.identifySeries(episodePath);
+        episodeIdentification = await SeriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
     } catch (e) {
         console.log(e);
 

@@ -1,11 +1,9 @@
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 
-export default class MovieIdentifier {
-    constructor () {
-        this.movieIdentifiers = [
-            new TmdbMovieIdentifier()
-        ];
-    }
+export default {
+    movieIdentifiers: [
+        new TmdbMovieIdentifier()
+    ],
 
     async identifyMovie (moviePath) {
         let movieIdentification = {};
@@ -27,4 +25,4 @@ export default class MovieIdentifier {
 
         return movieIdentification;
     }
-}
+};

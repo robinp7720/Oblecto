@@ -48,6 +48,7 @@
     "promise-async": "^0.2.0",
     "recursive-readdir": "^2.2.2",
     "request": "^2.88.0",
+    "request-promise-native": "^1.0.8",
     "restify": "^7.7.0",
     "restify-cors-middleware": "^1.1.1",
     "restify-errors": "^6.1.1",

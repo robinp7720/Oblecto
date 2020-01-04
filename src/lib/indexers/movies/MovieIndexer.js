@@ -9,9 +9,6 @@ import MovieSetCollector from './MovieSetCollector';
 import MovieArtworkRetriever from './MovieArtworkRetriever';
 import MovieIdentifier from './MovieIdentifier';
 
-let movieIdentifier = new MovieIdentifier();
-
-
 async function getDuration(moviePath) {
     let metadata = {};
 
@@ -74,7 +71,7 @@ export default async function (moviePath, reIndex) {
         }
     }
 
-    let data = await movieIdentifier.identifyMovie(moviePath);
+    let data = await MovieIdentifier.identifyMovie(moviePath);
 
     let [movie, MovieInserted] = await databases.movie
         .findOrCreate({

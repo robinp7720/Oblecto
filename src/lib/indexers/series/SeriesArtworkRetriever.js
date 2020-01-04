@@ -9,7 +9,7 @@ import path from 'path';
 import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever';
 import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever';
 
-import ImageManager from '../../imageManager';
+import ImageManager from '../../ImageManager';
 
 
 export default {

@@ -4,18 +4,16 @@ import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 import config from '../../../config';
 
-export default class SeriesIdentifier {
-    constructor() {
-        this.seriesIdentifiers = [
-            new TvdbSeriesIdentifier(),
-            new TmdbSeriesIdentifier()
-        ];
+export default {
+    seriesIdentifiers: [
+        new TvdbSeriesIdentifier(),
+        new TmdbSeriesIdentifier()
+    ],
 
-        this.episodeIdentifiers = [
-            new TvdbEpisodeIdentifier(),
-            new TmdbEpisodeIdentifier()
-        ];
-    }
+    episodeIdentifiers: [
+        new TvdbEpisodeIdentifier(),
+        new TmdbEpisodeIdentifier()
+    ],
 
     async identifySeries (episodePath) {
         let seriesIdentification = {};
@@ -40,7 +38,7 @@ export default class SeriesIdentifier {
         }
 
         return seriesIdentification;
-    }
+    },
 
     async identifyEpisode (episodePath, series) {
         let episodeIdentification = {};
@@ -67,4 +65,4 @@ export default class SeriesIdentifier {
         return episodeIdentification;
     }
 
-}
+};

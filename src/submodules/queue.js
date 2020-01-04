@@ -30,7 +30,7 @@ export default async.queue((task, callback) => {
         });
         break;
     case 'DownloadSeriesPoster':
-        SeriesArtworkRetriever.DownloadSeriesPoster(task.id).then(callback).catch((err) => {
+        SeriesArtworkRetriever.downloadSeriesPoster(task.id).then(callback).catch((err) => {
             console.log(err);
             callback();
         });
