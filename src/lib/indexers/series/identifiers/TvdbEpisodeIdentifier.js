@@ -24,16 +24,15 @@ export default class TvdbEpisodeIdentifier {
 
     async identify(path, series) {
         if (!series.tvdbId)
-            return {};
+            throw new Error('No TVDB available');
 
         const guessitIdentification = await guessit.identify(path);
-
 
         // Some single  season shows don't have a season in the title, therefor whe should set it to 1 by default
         if (!guessitIdentification.season)
             guessitIdentification.season = 1;
 
-        let tvdbEpisodes = this.getEpisodes(series.tvdbId);
+        let tvdbEpisodes = await this.getEpisodes(series.tvdbId);
 
         for (let i in tvdbEpisodes) {
             let episode = tvdbEpisodes[i];
