@@ -27,7 +27,7 @@ export default class TmdbEpisodeIdentifier {
                 airedSeasonNumber: episode.season_number,
 
                 overview: episode.overview,
-                firstAired: episode.airDate
+                firstAired: episode.air_date
 
             };
         } catch (e) {
