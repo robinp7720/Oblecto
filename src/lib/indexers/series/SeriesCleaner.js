@@ -1,17 +1,34 @@
 import databases from '../../../submodules/database';
 
-export default { 
+export default {
     async removeFileLessEpisodes() {
-        let results = await databases.episode.findAll({
-            include: [databases.file]
-        });
+        console.log('Removing episodes with no linked files');
 
-        results.forEach((item) => {
+        let results;
+
+        try {
+            results = await databases.episode.findAll({
+                include: [databases.file]
+            });
+        } catch (e) {
+            console.log(e);
+        }
+
+        for (let i in results) {
+            let item = results[i];
+
             if (item.files && item.files.length > 0)
-                return false;
+                continue;
 
-            item.destroy();
-        });
+            console.log(`Removing ${item.episodeName}`);
+
+            try {
+                await item.destroy();
+            } catch (e) {
+                console.log(e);
+            }
+
+        }
 
     },
 
@@ -24,6 +41,8 @@ export default {
     },
 
     async removeEpisodeslessShows() {
+        console.log('Removing Shows without episodes');
+
         let results = await databases.tvshow.findAll({
             include: [databases.episode]
         });

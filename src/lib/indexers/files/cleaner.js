@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'mz/fs';
 import databases from '../../../submodules/database';
 
 export default {
@@ -6,15 +6,13 @@ export default {
         console.log('Scanning for deleted files');
         let results = await databases.file.findAll();
 
-        results.forEach((item) => {
-            fs.stat(item.path, (err, stat) => {
-                if (!err)
-                    return false;
-
+        for (let i in results) {
+            let item = results[i];
+            if (!await fs.exists(item.path)) {
                 console.log('Deleting', item.path, 'because the file doesn\'t exist anymore');
-                item.destroy();
-            });
-        });
+                await item.destroy();
+            }
+        }
 
     },
     async removeAssoclessFiles () {
