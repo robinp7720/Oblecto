@@ -64,5 +64,7 @@ export default class TvdbEpisodeIdentifier {
                 };
             }
         }
+
+        throw new Error('Could not identify episode');
     }
 }

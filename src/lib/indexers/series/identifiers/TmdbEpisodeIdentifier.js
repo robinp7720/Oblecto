@@ -12,26 +12,23 @@ export default class TmdbEpisodeIdentifier {
 
         const guessitIdentification = await guessit.identify(path);
 
-        try {
-            let episode = await tmdb.tvEpisodeInfo({
-                id: series.tmdbId,
-                season_number: guessitIdentification.season,
-                episode_number: guessitIdentification.episode
-            });
+        let episode = await tmdb.tvEpisodeInfo({
+            id: series.tmdbId,
+            season_number: guessitIdentification.season,
+            episode_number: guessitIdentification.episode
+        });
 
-            return {
-                tmdbId: episode.id,
+        return {
+            tmdbId: episode.id,
 
-                episodeName: episode.name,
-                airedEpisodeNumber: episode.episode_number,
-                airedSeasonNumber: episode.season_number,
+            episodeName: episode.name,
+            airedEpisodeNumber: episode.episode_number,
+            airedSeasonNumber: episode.season_number,
 
-                overview: episode.overview,
-                firstAired: episode.air_date
+            overview: episode.overview,
+            firstAired: episode.air_date
 
-            };
-        } catch (e) {
-            return {};
-        }
+        };
+
     }
 }

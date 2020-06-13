@@ -24,7 +24,13 @@ export default {
 
             let seriesIdentifier = this.seriesIdentifiers[i];
 
-            let currentIdentification = await seriesIdentifier.identify(episodePath);
+            let currentIdentification;
+
+            try {
+                currentIdentification = await seriesIdentifier.identify(episodePath);
+            } catch (e) {
+                continue;
+            }
 
             Object.keys(currentIdentification).forEach((v, i) => {
                 if (!seriesIdentification[v]) {
@@ -35,6 +41,10 @@ export default {
             if (seriesIdentification.seriesName !== currentIdentification.seriesName && !config.tvshows.ignoreSeriesMismatch) {
                 throw new Error('A name mismatch has occurred between series identifiers');
             }
+        }
+
+        if (seriesIdentification === {}) {
+            throw new Error('Series could not be identified');
         }
 
         return seriesIdentification;
@@ -49,8 +59,14 @@ export default {
 
             let episodeIdentifier = this.episodeIdentifiers[i];
 
-            let currentIdentification = await episodeIdentifier.identify(episodePath, series);
+            let currentIdentification;
 
+            try {
+                currentIdentification = await episodeIdentifier.identify(episodePath, series);
+            } catch (e) {
+                console.log(`Identification using ${episodeIdentifier.constructor.name} has failed`);
+                continue;
+            }
             if (!currentIdentification) {
                 continue;
             }
@@ -60,6 +76,10 @@ export default {
                     episodeIdentification[v] = currentIdentification[v];
                 }
             });
+        }
+
+        if (this.episodeIdentifiers === {}) {
+            throw new Error('Episode could not be identified');
         }
 
         return episodeIdentification;

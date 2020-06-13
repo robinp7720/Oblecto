@@ -14,6 +14,7 @@ export default class TvdbSeriesIdentifier {
         const guessitIdentification = await guessit.identify(path);
 
         let cacheId = guessitIdentification.title;
+
         if (guessitIdentification.year) {
             cacheId += guessitIdentification.year;
         }
@@ -79,6 +80,6 @@ export default class TvdbSeriesIdentifier {
             }
         }
 
-        return false;
+        throw new Error('Could not identify');
     }
 }

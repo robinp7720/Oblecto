@@ -20,33 +20,16 @@ export default async function (episodePath, reIndex) {
     // However, there is the option to not quit and continue indexing the file even if the file was already in the
     // database
 
-    let metadata = {};
-    let duration = 0;
-
-    try {
-        metadata = await ffprobe(episodePath);
-        duration = metadata.format.duration;
-    } catch (e) {
-        console.log('Could not analyse ', episodePath, ' for duration. Maybe the file is corrupt?');
-
-        if (!config.movies.indexBroken) {
-            return false;
-        }
-    }
-
     let [File, Created] = await databases.file.findOrCreate({
         where: {path: episodePath},
         defaults: {
             name: parsedPath.name,
             directory: parsedPath.dir,
             extension: epinferEpisodeData.extension,
-            container: epinferEpisodeData.container,
-
-            duration: duration
+            container: epinferEpisodeData.container
         },
         //include: [databases.episode]
     });
-
 
     if (Created) {
         console.log('File inserted:', episodePath);
@@ -62,12 +45,49 @@ export default async function (episodePath, reIndex) {
         }
     }
 
+    let metadata = {};
+
+    try {
+        metadata = await ffprobe(episodePath);
+    } catch (e) {
+        console.log('Could not analyse ', episodePath, ' for duration. Maybe the file is corrupt?');
+
+        if (!config.movies.indexBroken) {
+            return false;
+        }
+    }
+
+    let duration = metadata.format.duration;
+
+    if (!(duration > 0) && !config.movies.indexBroken) {
+        return false;
+    }
+
+    try {
+        File.update({
+            duration
+        });
+    } catch (e) {
+        console.log('Error setting file duration', e);
+    }
+
+
     let seriesIdentification;
     let episodeIdentification;
 
+    console.log(`Starting identification for ${episodePath}`);
+
     try {
         seriesIdentification = await SeriesIdentifier.identifySeries(episodePath);
+
+        if (!seriesIdentification) return false;
+
+        console.log(`Series identified: ${seriesIdentification.seriesName}`);
         episodeIdentification = await SeriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
+
+        if (!episodeIdentification) return false;
+
+        console.log(`Episode identified: ${episodeIdentification.episodeName}`);
     } catch (e) {
         console.log(e);
 
@@ -84,6 +104,8 @@ export default async function (episodePath, reIndex) {
     if (!episodeIdentification.episodeName ||
         !episodeIdentification.airedEpisodeNumber ||
         !episodeIdentification.airedSeasonNumber) {
+
+        console.log(episodeIdentification);
         console.log('Episode was matched but important information was missing:', episodePath);
 
         return false;
@@ -138,17 +160,17 @@ export default async function (episodePath, reIndex) {
     // Insert the episode into the database
     let [Episode, EpisodeInserted] = await databases.episode.findOrCreate({
         where: {
-            tvdbid: episodeIdentification.tvdbId
+            tvshowId: ShowEntry.id,
+            airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
+            airedSeason: episodeIdentification.airedSeasonNumber,
         },
         defaults: {
             showid: seriesIdentification.tvdbId,
-            tvshowId: ShowEntry.id,
+            tvdbid: episodeIdentification.tvdbId,
 
             episodeName: episodeIdentification.episodeName,
 
             absoluteNumber: episodeIdentification.absoluteNumber,
-            airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
-            airedSeason: episodeIdentification.airedSeasonNumber,
             dvdEpisodeNumber: episodeIdentification.dvdEpisodeNumber,
             dvdSeason: episodeIdentification.dvdSeasonNumber,
 

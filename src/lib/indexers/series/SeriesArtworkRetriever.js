@@ -49,9 +49,11 @@ export default {
                 await artworkRetriever.retrieveEpisodeBanner(episode, thumbnailPath);
                 return;
             } catch (e) {
-
+                console.log(`Artwork retriever ${artworkRetriever.constructor.name} has failed. Continuing`);
             }
         }
+
+        throw new Error('No banner could be found');
     },
 
     getPosterPath(series) {
@@ -83,11 +85,11 @@ export default {
                 await artworkRetriever.retrieveSeriesPoster(series, posterPath);
                 return;
             } catch (e) {
-
+                console.log(`Artwork retriever ${artworkRetriever.constructor.name} has failed. Continuing`);
             }
         }
 
-        console.log('Could not find a poster for', series.seriesName);
+        throw new Error('No poster could be found');
     },
 
     /**

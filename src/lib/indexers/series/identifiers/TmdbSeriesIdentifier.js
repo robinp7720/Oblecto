@@ -41,6 +41,7 @@ export default class TmdbSeriesIdentifier {
         const guessitIdentification = await guessit.identify(path);
 
         let cacheId = guessitIdentification.title;
+
         if (guessitIdentification.year) {
             cacheId += guessitIdentification.year;
         }
@@ -49,8 +50,11 @@ export default class TmdbSeriesIdentifier {
             return this.tvShowCache[cacheId];
         }
 
-
         let tmdbSearch = (await tmdb.searchTv({query: guessitIdentification.title})).results;
+
+        if (tmdbSearch.length < 1) {
+            throw new Error('No TV Show could be matched');
+        }
 
         for (let i in tmdbSearch) {
             if (!tmdbSearch.hasOwnProperty(i))
@@ -93,5 +97,7 @@ export default class TmdbSeriesIdentifier {
                 }
             };
         }
+
+        throw new Error('Could not identify');
     }
 }
