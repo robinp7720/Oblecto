@@ -7,6 +7,9 @@ module.exports = (sequelize, DataTypes) => {
         extension: DataTypes.STRING,
         container: DataTypes.STRING,
 
+        videoCodec: DataTypes.STRING,
+        audioCodec: DataTypes.STRING,
+
         duration: DataTypes.DOUBLE,
 
     });
