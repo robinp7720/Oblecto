@@ -32,6 +32,10 @@ export default class TmdbMovieIdentifier {
 
         let identifiedMovie = res.results[0];
 
+        if (!identifiedMovie) {
+            throw new Error('Could not identify movie');
+        }
+
         identifiedMovie.genres = identifiedMovie.genre_ids.map((id) => {
             for (let i in this.genres) {
                 if (this.genres[i].id == id) {
