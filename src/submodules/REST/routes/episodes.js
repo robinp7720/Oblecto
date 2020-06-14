@@ -19,7 +19,7 @@ export default (server) => {
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
             return next(new errors.BadRequestError('Sorting order is invalid'));
 
-        if (!(req.params.sorting in databases.episode.attributes))
+        if (!(req.params.sorting in databases.episode.rawAttributes))
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
         let results = await databases.episode.findAll({
