@@ -1,76 +1,33 @@
 import epinfer from 'epinfer';
-import path from 'path';
+import Path from 'path';
 import ffprobe from '../../../submodules/ffprobe';
 import config from '../../../config';
 import databases from '../../../submodules/database';
 import UserManager from '../../../submodules/users';
 import queue from '../../../submodules/queue';
 import SeriesIdentifier from './SeriesIdentifer';
+import FileIndexer from '../files/FileIndexer';
+import FileExistsError from '../../errors/FileExistsError';
+import VideoAnalysisError from '../../errors/VideoAnalysisError';
 
 
 export default async function (episodePath, reIndex) {
+    let file;
 
-    let result = epinfer.process(episodePath);
-    let epinferEpisodeData = result.getData();
-
-    let parsedPath = path.parse(episodePath);
-
-    // First insert the file into the database so we know if the file was already indexed before
-    // We can assume that if the file was already in the database it was already indexed by this indexer.
-    // However, there is the option to not quit and continue indexing the file even if the file was already in the
-    // database
-
-    let [File, Created] = await databases.file.findOrCreate({
-        where: {path: episodePath},
-        defaults: {
-            name: parsedPath.name,
-            directory: parsedPath.dir,
-            extension: epinferEpisodeData.extension,
-            container: epinferEpisodeData.container
-        },
-        //include: [databases.episode]
-    });
-
-    if (Created) {
-        console.log('File inserted:', episodePath);
-    } else {
-        console.log('File already in database:', episodePath);
-
-        // If reIndexing is disabled, quit now and don't attempt to classify file again
-        // Quiting may result in problems if the file was inserted but there was an error with the classifier on
-        // the first run.
-
-        if (!reIndex) {
+    try {
+        file = await FileIndexer.indexVideoFile(episodePath);
+    } catch (e) {
+        if (e instanceof FileExistsError) {
+            if (!reIndex) return false;
+        } else if (e instanceof VideoAnalysisError) {
+            console.log(`Error analysing ${episodePath}`);
             return false;
+        } else {
+            throw e;
         }
     }
 
-    let metadata = {};
-
-    try {
-        metadata = await ffprobe(episodePath);
-    } catch (e) {
-        console.log('Could not analyse ', episodePath, ' for duration. Maybe the file is corrupt?');
-
-        if (!config.movies.indexBroken) {
-            return false;
-        }
-    }
-
-    let duration = metadata.format.duration;
-
-    if (!(duration > 0) && !config.movies.indexBroken) {
-        return false;
-    }
-
-    try {
-        File.update({
-            duration
-        });
-    } catch (e) {
-        console.log('Error setting file duration', e);
-    }
-
+    let parsedPath = Path.parse(episodePath);
 
     let seriesIdentification;
     let episodeIdentification;
@@ -82,15 +39,10 @@ export default async function (episodePath, reIndex) {
 
         if (!seriesIdentification) return false;
 
-        console.log(`Series identified: ${seriesIdentification.seriesName}`);
         episodeIdentification = await SeriesIdentifier.identifyEpisode(episodePath, seriesIdentification);
 
         if (!episodeIdentification) return false;
-
-        console.log(`Episode identified: ${episodeIdentification.episodeName}`);
     } catch (e) {
-        console.log(e);
-
         return false;
     }
 
@@ -127,7 +79,7 @@ export default async function (episodePath, reIndex) {
     }
 
     // Insert the TVShow info into the database
-    let [ShowEntry, showInserted] = await databases.tvshow
+    let [showEntry, showInserted] = await databases.tvshow
         .findOrCreate({
             where: {
                 tvdbid: seriesIdentification.tvdbId,
@@ -158,9 +110,9 @@ export default async function (episodePath, reIndex) {
         });
 
     // Insert the episode into the database
-    let [Episode, EpisodeInserted] = await databases.episode.findOrCreate({
+    let [episode, episodeInserted] = await databases.episode.findOrCreate({
         where: {
-            tvshowId: ShowEntry.id,
+            tvshowId: showEntry.id,
             airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
             airedSeason: episodeIdentification.airedSeasonNumber,
         },
@@ -179,15 +131,15 @@ export default async function (episodePath, reIndex) {
         }
     });
 
-    if (EpisodeInserted) {
+    if (episodeInserted) {
         // Inform all connected clients that a new episode has been imported
-        queue.unshift({task: 'DownloadEpisodeBanner', id: Episode.id}, function () {
+        queue.unshift({task: 'DownloadEpisodeBanner', id: episode.id}, function () {
             UserManager.sendToAll('indexer', {event: 'added', type: 'episode'});
         });
     }
 
     // Link the file to the episode
-    Episode.addFile(File);
+    episode.addFile(file);
 
     return true;
 }

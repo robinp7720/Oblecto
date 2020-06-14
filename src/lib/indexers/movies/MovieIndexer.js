@@ -8,66 +8,23 @@ import ffprobe from '../../../submodules/ffprobe';
 import MovieSetCollector from './MovieSetCollector';
 import MovieArtworkRetriever from './MovieArtworkRetriever';
 import MovieIdentifier from './MovieIdentifier';
-
-async function getDuration(moviePath) {
-    let metadata = {};
-
-    try {
-        metadata = await ffprobe(moviePath);
-    } catch (e) {
-        throw e;
-    }
-
-    let duration = metadata.format.duration;
-
-    let streams = metadata.streams;
-
-    for (const stream of streams) {
-        if (stream.duration > duration) {
-            duration = stream.duration;
-        }
-    }
-
-    return duration;
-}
+import FileIndexer from '../files/FileIndexer';
+import FileExistsError from '../../errors/FileExistsError';
+import VideoAnalysisError from '../../errors/VideoAnalysisError';
 
 export default async function (moviePath, reIndex) {
-    let duration = 0;
+    let file;
 
     try {
-        duration = await getDuration(moviePath);
+        file = await FileIndexer.indexVideoFile(moviePath);
     } catch (e) {
-        console.log('Could not analyse ', moviePath, ' for duration. Maybe the file is corrupt?');
-
-        if (!config.movies.indexBroken) {
+        if (e instanceof FileExistsError) {
+            if (!reIndex) return false;
+        } else if (e instanceof VideoAnalysisError) {
+            console.log(`Error analysing ${moviePath}`);
             return false;
-        }
-    }
-
-    let parsedPath = path.parse(moviePath);
-    parsedPath.ext = parsedPath.ext.replace('.', '').toLowerCase();
-
-    // Create file entity in the database
-    let [file, FileInserted] = await databases.file.findOrCreate({
-        where: {path: moviePath},
-        defaults: {
-            name: parsedPath.name,
-            directory: parsedPath.dir,
-            extension: parsedPath.ext,
-
-            duration
-        }
-    });
-
-    if (FileInserted) {
-        console.log('File inserted:', moviePath);
-    } else {
-        console.log('File already in database:', moviePath);
-
-        // Don't both indexing the file if it's already in the file database.
-        // It was probably already indexed
-        if (!reIndex) {
-            return false;
+        } else {
+            throw e;
         }
     }
 
@@ -104,20 +61,20 @@ export default async function (moviePath, reIndex) {
     if (config.transcoding[file.extension] !== undefined && config.transcoding[file.extension] !== false) {
         queue.push({task: 'transcode', path: moviePath}, async function (err) {
             // Determine the file path of the transcoded file
-            let parsed = path.parse(moviePath);
-            let extension = parsed.ext.replace('.', '').toLowerCase();
-            let transcodedPath = moviePath.replace(parsed.ext, '.' + config.transcoding[extension]);
+            let file;
 
-            // Insert the new file and link it to the movie entity
-            let [file, FileInserted] = await databases.file.findOrCreate({
-                where: {path: transcodedPath},
-                defaults: {
-                    name: path.parse(transcodedPath).name,
-                    directory: path.parse(transcodedPath).dir,
-                    extension: path.parse(transcodedPath).ext.replace('.', '').toLowerCase()
+            try {
+                file = await FileIndexer.indexVideoFile(moviePath);
+            } catch (e) {
+                if (e instanceof FileExistsError) {
+                    if (!reIndex) return false;
+                } else if (e instanceof VideoAnalysisError) {
+                    console.log(`Error analysing ${moviePath}`);
+                    return false;
+                } else {
+                    throw e;
                 }
-            });
-
+            }
 
             movie.addFile(file).then(() => {
                 movie.save();
