@@ -1,5 +1,3 @@
-import mimeTypes from 'mime-types';
-import fs from 'fs';
 import ffmpeg from '../../ffmpeg';
 import ffprobe from '../../ffprobe';
 

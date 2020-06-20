@@ -1,8 +1,12 @@
 import DvdStreamer from './FFMPEGHandlers/DvdStreamer';
 import RemuxStreamer from "./FFMPEGHandlers/RemuxStreamer";
 import TranscodeStreamer from './FFMPEGHandlers/TranscodeStreamer';
+import config from '../../config';
 
 function requireTranscode(video) {
+    if (config.transcoding.transcodeEverything) return true;
+    if (!config.transcoding.doRealTimeTranscode) return false;
+
     if (video.extension === 'avi') {
         return true;
     }
@@ -16,11 +20,6 @@ function requireTranscode(video) {
 
 export default class {
     static async streamFile (video, offset, req, res) {
-
-        res.writeHead(200, {
-            'Content-Type': 'video/mp4'
-        });
-
         if (video.extension === 'iso') {
             await DvdStreamer.DvdSteamer(video, offset, req, res);
             return;

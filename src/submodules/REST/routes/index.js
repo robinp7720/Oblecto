@@ -11,17 +11,17 @@ import sets from './sets';
 import config from '../../../config';
 
 
-export default (server) => {
+export default (server, oblecto) => {
     if (config.web.enabled) {
-        web(server);
+        web(server, oblecto);
     }
 
-    auth(server);
-    episodes(server);
-    files(server);
-    movies(server);
-    tvshows(server);
-    settings(server);
-    users(server);
-    sets(server);
+    auth(server, oblecto);
+    episodes(server, oblecto);
+    files(server, oblecto);
+    movies(server, oblecto);
+    tvshows(server, oblecto);
+    settings(server, oblecto);
+    users(server, oblecto);
+    sets(server, oblecto);
 };

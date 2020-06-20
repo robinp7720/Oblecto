@@ -22,10 +22,10 @@ let configDefault = {
     },
     'assets': {
         'storeWithFile': false,
-        'episodeBannerLocation': 'assets/episodeBanners/',
-        'showPosterLocation': 'assets/showPosters/',
-        'moviePosterLocation': 'assets/moviePosters/',
-        'movieFanartLocation': 'assets/movieFanart/'
+        'episodeBannerLocation': '/etc/oblecto/assets/episodeBanners/',
+        'showPosterLocation': '/etc/oblecto/assets/showPosters/',
+        'moviePosterLocation': '/etc/oblecto/assets/moviePosters/',
+        'movieFanartLocation': '/etc/oblecto/assets/movieFanart/'
     },
     'themoviedb': {
         'key': 'b06b4917705eeed4e4b273d4c90fe158'
@@ -42,7 +42,7 @@ let configDefault = {
     },
     'tvshows': {
         'doReIndex': false,
-        'ignoreSeriesMismatch': false,
+        'ignoreSeriesMismatch': true,
         'indexBroken': false,
         'directories': [
 
@@ -67,7 +67,8 @@ let configDefault = {
     },
     'transcoding': {
         'doRealTimeRemux': true,
-        'doRealTimeTranscode': false,
+        'doRealTimeTranscode': true,
+        'transcodeEverything': false,
         'iso': 'mp4'
     },
     'web': {
@@ -75,7 +76,7 @@ let configDefault = {
     }
 };
 
-let config = {}
+let config = {};
 
 const ConfigManager = {
     loadFile: function loadFile (file) {
@@ -109,7 +110,7 @@ const ConfigManager = {
     }
 };
 
-ConfigManager.loadConfigFiles()
+ConfigManager.loadConfigFiles();
 
 export default config
 

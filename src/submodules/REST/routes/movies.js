@@ -5,15 +5,12 @@ import errors from 'restify-errors';
 import jimp from 'jimp';
 
 import databases from '../../../submodules/database';
-import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
-
-import config from '../../../config.js';
 import sequelize from 'sequelize';
 
 const Op = sequelize.Op;
 
-export default (server) => {
+export default (server, oblecto) => {
 
     // Endpoint to get a list of episodes from all series
     server.get('/movies/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res) {
@@ -67,11 +64,11 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
+        let posterPath = path.normalize(oblecto.config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
 
 
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             if (!movie.files[0])
                 return next(new errors.NotFoundError('Movie does not exist'));
 
@@ -102,9 +99,9 @@ export default (server) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let posterPath = path.normalize(config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
+        let posterPath = path.normalize(oblecto.config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             if (!movie.files[0])
                 return next(new errors.NotFoundError('No file linked to movie'));
 
@@ -118,12 +115,12 @@ export default (server) => {
             return next(new errors.MissingParameter('Image file is missing'));
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path
+        let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
             let image = await jimp.read(uploadPath);
 
-            let ratio = image.bitmap.height / image.bitmap.width
+            let ratio = image.bitmap.height / image.bitmap.width;
 
             if ( !(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
@@ -155,9 +152,9 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
+        let fanartPath = path.normalize(oblecto.config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             if (!movie.files[0])
                 return next(new errors.NotFoundError('Movie does not exist'));
 
@@ -186,9 +183,9 @@ export default (server) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let fanartPath = path.normalize(config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
+        let fanartPath = path.normalize(oblecto.config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             if (!movie.files[0])
                 return next(new errors.NotFoundError('No file linked to movie'));
 

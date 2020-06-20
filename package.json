@@ -6,7 +6,7 @@
   "repository": "robinp7720/Oblecto",
   "private": false,
   "bin": {
-    "oblecto": "./bin/oblecto.js"
+    "oblecto": "./dist/bin/oblecto.js"
   },
   "files": [
     "dist/",
@@ -18,19 +18,19 @@
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms; npm run build; cd ..;",
     "build": "./node_modules/@babel/cli/bin/babel.js src -d dist",
     "prepare": "npm run build && npm run build:web",
-    "start": "./node_modules/@babel/node/bin/babel-node.js  src",
-    "debug": "nodemon src --exec 'babel-node src'"
+    "start": "./node_modules/@babel/node/bin/babel-node.js src",
+    "debug": "./node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0",
+    "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'"
   },
   "dependencies": {
-    "@babel/cli": "^7.10.1",
-    "@babel/core": "^7.10.2",
-    "@babel/node": "^7.10.1",
-    "@babel/plugin-proposal-class-properties": "^7.10.1",
-    "@babel/plugin-proposal-object-rest-spread": "^7.10.1",
+    "@babel/cli": "^7.10.3",
+    "@babel/core": "^7.10.3",
+    "@babel/node": "^7.10.3",
     "@babel/polyfill": "^7.10.1",
-    "@babel/preset-env": "^7.10.2",
-    "async": "^2.6.3",
-    "bcrypt": "^2.0.1",
+    "@babel/preset-env": "^7.10.3",
+    "async": "^3.2.0",
+    "axios": "^0.19.2",
+    "bcrypt": "^5.0.0",
     "epinfer": "^1.1.4",
     "fluent-ffmpeg": "^2.1.2",
     "guessit-exec": "0.0.1",
@@ -40,13 +40,11 @@
     "jsonwebtoken": "^8.5.1",
     "mdns": "^2.4.0",
     "mkdirp": "^0.5.5",
-    "moviedb": "^0.2.10",
     "moviedb-promise": "^1.5.0",
     "mysql2": "^1.7.0",
     "mz": "^2.7.0",
-    "node-tvdb": "^3.2.0",
+    "node-tvdb": "^4.1.0",
     "node-uuid": "^1.4.8",
-    "promise-async": "^0.2.0",
     "recursive-readdir": "^2.2.2",
     "request": "^2.88.2",
     "request-promise-native": "^1.0.8",

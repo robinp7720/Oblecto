@@ -6,15 +6,7 @@ export default class TmdbMovieIdentifier {
 
     }
 
-    async getGenres() {
-        this.genres = (await tmdb.genreMovieList()).genres;
-    }
-
     async identify(path) {
-        if(!this.genres) {
-            await this.getGenres();
-        }
-
         let identification = await guessit.identify(path);
 
         if (!identification.title) {
@@ -36,21 +28,10 @@ export default class TmdbMovieIdentifier {
             throw new Error('Could not identify movie');
         }
 
-        identifiedMovie.genres = identifiedMovie.genre_ids.map((id) => {
-            for (let i in this.genres) {
-                if (this.genres[i].id == id) {
-                    return this.genres[i].name;
-                }
-            }
-        });
-
         return {
-            tmdbId: identifiedMovie.id,
-            title: identifiedMovie.title,
-            genre: identifiedMovie.genres,
+            tmdbid: identifiedMovie.id,
+            movieName: identifiedMovie.title,
             overview: identifiedMovie.overview,
-            releaseDate: identifiedMovie.release_date,
-            tmdb: identifiedMovie
         };
     }
 

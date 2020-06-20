@@ -1,32 +1,51 @@
 import recursive from 'recursive-readdir';
-import queue from '../../../submodules/queue';
-import config from '../../../config';
 import path from 'path';
 
-export default {
-    async CollectDirectory(Directory, doReIndex) {
-        console.log('Indexing', Directory);
-        let files = await recursive(Directory);
+export default class SeriesCollector {
+    /**
+     *
+     * @param {Oblecto} oblecto
+     */
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
+    /**
+     *
+     * @param {String} directory - Which directory to add to the index queue
+     * @param {Boolean} doReIndex
+     * @returns {Promise<void>}
+     */
+    async collectDirectory(directory, doReIndex) {
+        let files = await recursive(directory);
 
         files.forEach(file => {
-            this.CollectFile(file, doReIndex);
+            this.collectFile(file, doReIndex);
         });
-    },
+    }
 
-    async CollectFile(file, doReIndex) {
+    /**
+     *
+     * @param {String} file - File path to add to the index queue
+     * @param {Boolean} doReIndex
+     * @returns {Promise<void>}
+     */
+    async collectFile(file, doReIndex) {
         console.log('Pushing file', file, 'to queue');
         let extension = path.parse(file).ext.toLowerCase();
 
-        if (config.fileExtensions.video.indexOf(extension) !== -1) {
-            queue.push({task: 'episode', path: file, doReIndex}, function (err) {
-
-            });
+        if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
+            this.oblecto.queue.queueJob('indexEpisode',{path: file, doReIndex});
         }
-    },
+    }
 
-    async CollectAll() {
-        config.tvshows.directories.forEach(directory => {
-            this.CollectDirectory(directory.path);
+    /**
+     *
+     * @returns {Promise<void>}
+     */
+    async collectAll() {
+        this.oblecto.config.tvshows.directories.forEach(directory => {
+            this.collectDirectory(directory.path);
         });
     }
-};
+}

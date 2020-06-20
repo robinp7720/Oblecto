@@ -1,17 +1,16 @@
-import sequelize from 'sequelize';
 import fs from 'fs';
-import ffmpeg from '../../../submodules/ffmpeg';
+import uuid from 'node-uuid';
+import errors from 'restify-errors';
+import os from 'os';
+
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
-import uuid from 'node-uuid';
-import config from '../../../config';
 
 import HLSSession from '../../handlers/HLSSessionHandler';
-import os from 'os';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
 import FFMPEGStreamer from '../../handlers/FFMPEGStreamer';
-import errors from 'restify-errors';
+import FederationStreamer from '../../handlers/FederationStreamer';
 
 let HLSSessions = {};
 let StreamSessions = {};
@@ -19,9 +18,10 @@ let StreamSessions = {};
 /**
  *
  * @param {Server} server
+ * @param {Oblecto} oblecto
  */
-export default (server) => {
-    server.get('/HLS/:session/segment/:id',  async function (req, res, next) {
+export default (server, oblecto) => {
+    server.get('/HLS/:session/segment/:id', async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
 
         if (!HLSSessions[req.params.session]) {
@@ -62,7 +62,7 @@ export default (server) => {
         });
     });
 
-    server.get('/HLS/:session/playlist',  async function (req, res, next) {
+    server.get('/HLS/:session/playlist', async function (req, res, next) {
         if (!HLSSessions[req.params.session]) {
             return next(new errors.NotFoundError('Session does not exist'));
         }
@@ -109,17 +109,28 @@ export default (server) => {
 
         let sessionId = uuid.v4();
 
+        let seeking = 'client';
+
+        if ((oblecto.config.transcoding.doRealTimeRemux || oblecto.config.transcoding.doRealTimeTranscode) && fileInfo.extension !== 'mp4' && !req.params.noremux) {
+            seeking = 'server';
+        }
+
+        if (fileInfo.host !== 'local') {
+            seeking = 'server';
+        }
+
         StreamSessions[sessionId] = {
             file: req.params.id,
             fileInfo: fileInfo.toJSON(),
+            seeking,
             disableRemux: req.params.noremux || false
         };
 
         StreamSessions[sessionId].timeout = setTimeout(() => {
             delete StreamSessions[sessionId];
-        }, 10000);
+        }, 1000000);
 
-        res.send({sessionId});
+        res.send({sessionId, seeking});
     });
 
     server.get('/session/stream/:sessionId', async function (req, res, next) {
@@ -130,19 +141,16 @@ export default (server) => {
         return next();
     }, async function (req, res, next) {
         // search for attributes
-        let fileInfo = StreamSessions[req.params.sessionId].fileInfo
+        let fileInfo = StreamSessions[req.params.sessionId].fileInfo;
 
         req.video = fileInfo;
 
+        if (req.video.host !== 'local') {
+            return FederationStreamer.streamFile(req.video, req.params.offset || 0, req, res);
+        }
+
         // Transcode
-        if (
-            (
-                config.transcoding.doRealTimeRemux ||
-                config.transcoding.doRealTimeTranscode
-            ) &&
-            fileInfo.extension !== 'mp4' &&
-            !StreamSessions[req.params.sessionId].disableRemux
-        ) {
+        if (StreamSessions[req.params.sessionId].seeking === 'server') {
             return next();
         }
 
@@ -160,6 +168,10 @@ export default (server) => {
         if (StreamSessions[req.params.sessionId]) {
             delete StreamSessions[req.params.sessionId];
         }
+
+        res.writeHead(200, {
+            'Content-Type': 'video/mp4'
+        });
 
         FFMPEGStreamer.streamFile(req.video, req.params.offset || 0, req, res);
     });

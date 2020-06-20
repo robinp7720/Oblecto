@@ -1,17 +1,10 @@
-import path from 'path';
-import fs from 'fs';
 import errors from 'restify-errors';
 
-import jimp from 'jimp';
 
 import databases from '../../../submodules/database';
-import UserManager from '../../users';
 import authMiddleWare from '../middleware/auth';
 
-import config from '../../../config.js';
 import sequelize from 'sequelize';
-
-const Op = sequelize.Op;
 
 export default (server) => {
 

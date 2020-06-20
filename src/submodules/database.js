@@ -48,6 +48,7 @@ episode.belongsTo(tvshow);
 tvshow.hasMany(episode);
 
 movieSet.belongsToMany(movie, {through: 'movieSetAllocations'});
+movieSet.belongsToMany(user, {through: 'movieSetUsers'});
 movie.belongsToMany(movieSet, {through: 'movieSetAllocations'});
 
 tvshowSet.belongsToMany(tvshow, {through: 'tvshowSetAllocations'});
@@ -81,5 +82,7 @@ let databases = {
     movieSet,
     sequelize
 };
+
+//sequelize.sync({ force: true });
 
 export default databases;

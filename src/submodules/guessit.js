@@ -2,7 +2,7 @@ import web from 'guessit-wrapper';
 import binary from 'guessit-exec';
 import which from 'which';
 
-let use_binary = false;
+let use_binary = true;
 
 which('guessit', function (err, resolvedPath) {
     if (err) {

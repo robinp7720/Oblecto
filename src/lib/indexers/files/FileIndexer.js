@@ -10,7 +10,7 @@ export default class FileIndexer {
         let primaryStream = {duration: 0};
 
         for (const stream of streams) {
-            if (stream.duration >= primaryStream.duration) {
+            if (stream.duration || 1 >= primaryStream.duration) {
                 if (stream['codec_type'] !=='video')
                     continue;
 
@@ -26,7 +26,7 @@ export default class FileIndexer {
         let primaryStream = {duration: 0};
 
         for (const stream of streams) {
-            if (stream.duration >= primaryStream.duration) {
+            if (stream.duration || 1 >= primaryStream.duration) {
                 if (stream['codec_type'] !=='audio')
                     continue;
 
@@ -44,15 +44,12 @@ export default class FileIndexer {
         let [file, fileInserted] = await databases.file.findOrCreate({
             where: {path: videoPath},
             defaults: {
+                host: 'local',
                 name: parsedPath.name,
                 directory: parsedPath.dir,
                 extension: parsedPath.ext,
             }
         });
-
-        if (!fileInserted) {
-            throw new FileExistsError();
-        }
 
         let metadata = {};
 
@@ -67,14 +64,25 @@ export default class FileIndexer {
 
         let duration = metadata.format.duration;
 
-        console.log(metadata);
+        if (isNaN(duration)) {
+            throw new VideoAnalysisError();
+        }
+
+        if (!primaryVideoStream['codec_name']) {
+            console.log(metadata);
+        }
 
         await file.update({
             duration,
+            host: 'local',
             container: metadata.format['format_name'],
             videoCodec: primaryVideoStream['codec_name'],
             audioCodec: primaryAudioStream['codec_name']
         });
+
+        if (!fileInserted) {
+            throw new FileExistsError();
+        }
 
         return file;
     }

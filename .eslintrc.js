@@ -1,8 +1,4 @@
 module.exports = {
-    "env": {
-        "browser": true,
-        "es6": true
-    },
     "extends": "eslint:recommended",
     "parserOptions": {
         "sourceType": "module",
@@ -26,10 +22,6 @@ module.exports = {
             "always"
         ],
         "func-call-spacing": [
-            "error",
-            "never"
-        ],
-        'space-before-function-parentheses': [
             "error",
             "never"
         ]

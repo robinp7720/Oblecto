@@ -35,21 +35,17 @@ export default {
         console.log('Checking thumbnail for', episode.tvshow.seriesName, `S${episode.airedSeason}E${episode.airedEpisodeNumber}:`, episode.episodeName);
 
         if (await ImageManager.imageExists(thumbnailPath))
-            return;
+            throw new Error('Thumbnail exists');
 
         // Loop through all the artwork retrievers until an image has been found and downloaded
 
-        for (let i in this.artworkRetrievers) {
-            if (!this.artworkRetrievers.hasOwnProperty(i))
-                continue;
-
-            let artworkRetriever = this.artworkRetrievers[i];
-
+        for (let artworkRetriever of this.artworkRetrievers) {
             try {
+                console.log(`Getting artwork from ${artworkRetriever.name}`);
                 await artworkRetriever.retrieveEpisodeBanner(episode, thumbnailPath);
-                return;
+                return true;
             } catch (e) {
-                console.log(`Artwork retriever ${artworkRetriever.constructor.name} has failed. Continuing`);
+                console.log(`Artwork retriever ${artworkRetriever.name} has failed. Continuing`);
             }
         }
 
@@ -75,12 +71,7 @@ export default {
 
         console.log('Downloading poster image for', series.seriesName);
 
-        for (let i in this.artworkRetrievers) {
-            if (!this.artworkRetrievers.hasOwnProperty(i))
-                continue;
-
-            let artworkRetriever = this.artworkRetrievers[i];
-
+        for (let artworkRetriever of this.artworkRetrievers) {
             try {
                 await artworkRetriever.retrieveSeriesPoster(series, posterPath);
                 return;

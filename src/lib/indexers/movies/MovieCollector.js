@@ -1,29 +1,51 @@
-import path from 'path';
 import recursive from 'recursive-readdir';
-import queue from '../../../submodules/queue';
-import config from '../../../config.js';
+import path from 'path';
 
-// TODO: Add config option to use the parent directory to identify movies
-// TODO: Seperate Scanning and identifying
+export default class MovieCollector {
+    /**
+     *
+     * @param {Oblecto} oblecto
+     */
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
 
-export default {
-    async CollectDirectory(Directory, doReIndex) {
-        let files = await recursive(Directory);
+    /**
+     *
+     * @param {String} directory - Which directory to add to the index queue
+     * @param {Boolean} doReIndex
+     * @returns {Promise<void>}
+     */
+    async collectDirectory(directory, doReIndex) {
+        let files = await recursive(directory);
 
         files.forEach(file => {
-            let extension = path.parse(file).ext.toLowerCase();
-
-            if (config.fileExtensions.video.indexOf(extension) !== -1) {
-                queue.push({task: 'movie', path: file, doReIndex}, function (err) {
-
-                });
-            }
-        });
-    },
-
-    async CollectAll() {
-        config.movies.directories.forEach(directory => {
-            this.CollectDirectory(directory.path);
+            this.collectFile(file, doReIndex);
         });
     }
-};
+
+    /**
+     *
+     * @param {String} file - File path to add to the index queue
+     * @param {Boolean} doReIndex
+     * @returns {Promise<void>}
+     */
+    async collectFile(file, doReIndex) {
+        console.log('Pushing file', file, 'to queue');
+        let extension = path.parse(file).ext.toLowerCase();
+
+        if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
+            this.oblecto.queue.queueJob('indexMovie',{path: file, doReIndex});
+        }
+    }
+
+    /**
+     *
+     * @returns {Promise<void>}
+     */
+    async collectAll() {
+        this.oblecto.config.movies.directories.forEach(directory => {
+            this.collectDirectory(directory.path);
+        });
+    }
+}

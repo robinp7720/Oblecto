@@ -1,21 +1,21 @@
-import FederationController from './FederationController';
-import crypto from "crypto";
-
 export default class FederationServerConnection {
     constructor(socket) {
         this.socket = socket;
         this.socket.on('data', chunk => this.dataHandler(chunk, this));
-        this.dataRead = "";
+        this.socket.on('close', () => this.closeHandler(this));
+        this.socket.on('error', error => this.errorHandler(error, this));
+        this.dataRead = '';
     }
 
     dataHandler(chunk, _this) {
         _this.dataRead += chunk.toString();
-        console.log(_this.dataRead);
         let split = _this.dataRead.split('\n');
 
         if (split.length < 2) return;
 
         for (let item of split) {
+            if (item === '') continue;
+
             _this.dataRead = _this.dataRead.replace(item + '\n', '');
             _this.headerHandler(item, _this);
         }
@@ -23,6 +23,8 @@ export default class FederationServerConnection {
 
     headerHandler(data, _this) {
         let split = data.split(':');
+
+        console.log(split);
 
         switch (split[0]) {
         case 'CLIENTID':
@@ -32,27 +34,18 @@ export default class FederationServerConnection {
     }
 
     clientIdHandler(clientId, _this) {
-        console.log(`Initiating encryption for client ${clientId}`);
-
         _this.clientId = clientId;
-        _this.socket.removeAllListeners('data');
+    }
 
-        const publicKey = FederationController.getPublicKey(_this.clientId);
-        const privateKey = FederationController.getPrivateKey();
+    closeHandler(_this) {
+        console.log('Connection has closed');
+    }
 
-        const iv = crypto.randomBytes(16);
+    errorHandler(error, _this) {
+        console.log('An error has occured', error);
+    }
 
-        _this.cipher = crypto.createCipheriv('aes-192-cbc', publicKey, iv);
-        _this.decipher = crypto.createDecipheriv('aes-192-cbc', privateKey, iv);
-
-        _this.decipher.on('data', chunk => _this.dataHandler(chunk, _this));
-
-        console.log('Redirecting to decipher stream..');
-        //_this.cipher.pipe(_this.socket);
-
-        _this.socket.write(iv);
-        _this.socket.pipe(_this.decipher);
-
-        _this.cipher.write(`SERVERID:${FederationController.federationServerId}`);
+    write(header, content, _this) {
+        _this.socket.write(`${header}:${content}\n`);
     }
 }

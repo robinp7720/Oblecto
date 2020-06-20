@@ -1,10 +1,7 @@
-import mimeTypes from 'mime-types';
-import fs from 'fs';
 import ffmpeg from '../../ffmpeg';
-import ffprobe from '../../ffprobe';
 
 export default class {
-    static async RemuxSteamer (video, offset, req, res) {
+    static async RemuxSteamer(video, offset, req, res) {
 
         ffmpeg(video.path)
         //.native()
@@ -19,18 +16,18 @@ export default class {
                 '-movflags', 'empty_moov',
                 '-copyts'
             ])
-            .on('start', (cmd)=>{
+            .on('start', (cmd) => {
                 console.log('--- ffmpeg start process ---');
                 console.log(`cmd: ${cmd}`);
             })
-            .on('end',()=>{
+            .on('end', () => {
                 console.log('--- end processing ---');
             })
-            .on('error', (err)=>{
+            .on('error', (err) => {
                 console.log('--- ffmpeg meets error ---');
                 console.log(err);
             })
-            .pipe(res, { end:true });
+            .pipe(res, {end: true});
 
     }
 }

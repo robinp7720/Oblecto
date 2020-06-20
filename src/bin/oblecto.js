@@ -1,17 +1,16 @@
 #!/usr/bin/env node
-require('@babel/polyfill');
+import mkdirp from 'mkdirp';
+import bcrypt from 'bcrypt';
+import databases from '../submodules/database';
 
-var config = require(__dirname + '/../dist/config.js').default;
-
-var mkdirp = require('mkdirp');
-
-var oblectoPackage = require(__dirname + '/../package.json');
+import config from '../config';
+import core from '../core';
 
 var args = process.argv.slice(2);
 
 switch (args[0]) {
 case 'start':
-    require('../dist/');
+    core.start();
     break;
 
 case 'init':
@@ -22,11 +21,10 @@ case 'init':
             continue;
         }
 
-        console.log(`Creating directory ${config.assets[i]}`)
+        console.log(`Creating directory ${config.assets[i]}`);
         mkdirp(config.assets[i]);
     }
 
-    var databases = require('../dist/submodules/database').default;
     databases.sequelize
         .authenticate()
         .then(() => {
@@ -36,22 +34,17 @@ case 'init':
             console.log('Oblecto has been initialized');
             databases.sequelize.close();
         }).catch((err) => {
-            console.log('An error has occured while authenticating and/or during table creation:');
+            console.log('An error has occurred while authenticating and/or during table creation:');
             console.log(err);
         });
 
-    break
+    break;
 
 case 'adduser':
     if (args.length < 5) {
-        console.log('Invalid number of arguments')
-        return false
+        console.log('Invalid number of arguments');
+        break;
     }
-
-    var databases = require('../dist/submodules/database').default;
-    var bcrypt = require('bcrypt');
-
-    console.log(args);
 
     bcrypt.hash(args[2], config.authentication.saltRounds).then(function (passwordHash) {
 
@@ -78,11 +71,9 @@ case 'adduser':
     break;
 case 'deluser':
     if (args.length < 2) {
-        console.log('Invalid number of arguments')
-        return false
+        console.log('Invalid number of arguments');
+        break;
     }
-
-    var databases = require('../dist/submodules/database').default;
 
     databases.user.findOne({
         where: {
@@ -98,10 +89,10 @@ case 'deluser':
     break;
 
 default:
-    console.log(`Oblecto version ${oblectoPackage.version}`);
+    console.log('Oblecto CLI');
     console.log();
     console.log('Usage:');
-    console.log('oblecto init')
+    console.log('oblecto init');
     console.log('oblecto start');
     console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
     console.log('oblecto deluser USERNAME');

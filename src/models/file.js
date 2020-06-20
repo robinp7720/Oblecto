@@ -1,5 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('file', {
+        host: DataTypes.STRING,
         path: DataTypes.STRING,
 
         name: DataTypes.STRING,
