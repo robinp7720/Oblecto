@@ -64,19 +64,7 @@ export default (server, oblecto) => {
             include: [databases.file]
         });
 
-        let posterPath = path.normalize(oblecto.config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
-
-
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!movie.files[0])
-                return next(new errors.NotFoundError('Movie does not exist'));
-
-            let moviePath = movie.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
-        }
+        let posterPath = oblecto.artworkUtils.moviePosterPath(movie, 'large');
 
         // Check if the thumbnail exists
         fs.exists(posterPath, function (exists) {
@@ -152,17 +140,7 @@ export default (server, oblecto) => {
             include: [databases.file]
         });
 
-        let fanartPath = path.normalize(oblecto.config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!movie.files[0])
-                return next(new errors.NotFoundError('Movie does not exist'));
-
-            let moviePath = movie.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
-        }
+        let fanartPath = oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
         // Check if the thumbnail exists
         fs.exists(fanartPath, function (exists) {

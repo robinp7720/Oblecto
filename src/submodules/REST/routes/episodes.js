@@ -49,17 +49,7 @@ export default (server, oblecto) => {
             include: [databases.file]
         });
 
-        let thumbnailPath = path.normalize(oblecto.config.assets.episodeBannerLocation) + episode.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (episode.files[0] === undefined)
-                return next(new errors.NotFoundError('No banner found'));
-
-            let episodePath = episode.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
-        }
+        let thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
 
         // Check if the thumbnail exists
         fs.stat(thumbnailPath, function (err) {

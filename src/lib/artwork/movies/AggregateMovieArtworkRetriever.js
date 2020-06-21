@@ -9,21 +9,39 @@ export default class AggregateMovieArtworkRetriever {
 
     async retrieveFanart(movie) {
         for (let retriever of this.retrievers) {
+            let url;
+
             try {
-                return await retriever.retrieveFanart(movie);
+                url = await retriever.retrieveFanart(movie);
             } catch(e) {
+                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
                 continue;
             }
+
+            if (!url) continue;
+
+            return url;
         }
+
+        throw new Error();
     }
 
     async retrievePoster(movie) {
         for (let retriever of this.retrievers) {
+            let url;
+
             try {
-                return await retriever.retrievePoster(movie);
+                url = await retriever.retrievePoster(movie);
             } catch(e) {
+                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
                 continue;
             }
+
+            if (!url) continue;
+
+            return url;
         }
+
+        throw new Error();
     }
 }

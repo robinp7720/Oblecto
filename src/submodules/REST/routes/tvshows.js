@@ -70,16 +70,10 @@ export default (server, oblecto) => {
     server.get('/series/:id/poster', function (req, res, next) {
         databases.tvshow.findByPk(req.params.id).then(show => {
             if (!show) {
-                res.errorCode = 404;
-                return res.send();
+                return next(new errors.NotFoundError('No poster found'));
             }
 
-            let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
-
-            if (oblecto.config.assets.storeWithFile) {
-                let showPath = show.directory;
-                posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
-            }
+            let posterPath = oblecto.artworkUtils.seriesPosterPath(show, 'medium');
 
             // Check if the poster image already exits
             fs.exists(posterPath, function (exists) {
@@ -87,8 +81,7 @@ export default (server, oblecto) => {
                     // If the image exits, simply pipe it to the client
                     fs.createReadStream(posterPath).pipe(res);
                 } else {
-                    res.errorCode = 404;
-                    res.send();
+                    return next(new errors.NotFoundError('No poster found'));
                 }
             });
         });
