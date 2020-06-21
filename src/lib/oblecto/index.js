@@ -23,9 +23,12 @@ import MovieArtworkDownloader from '../artwork/movies/MovieArtworkDownloader';
 import ImageScaler from '../artwork/ArtworkScaler';
 
 import SeriesUpdater from '../updaters/series/SeriesUpdater';
+import MovieUpdater from '../updaters/movies/MovieUpdater';
+
 import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
 import FederationController from '../federation/server/FederationController';
 import FederationClientController from '../federation/client/FederationClientController';
+import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector';
 
 export default class Oblecto {
     constructor(config) {
@@ -50,18 +53,20 @@ export default class Oblecto {
         this.artworkUtils = new ArtworkUtils(this);
 
         this.seriesUpdater = new SeriesUpdater(this);
-        // this.movieUpdater = new MovieUpdater(this);
+        this.movieUpdater = new MovieUpdater(this);
 
         this.seriesUpdateCollector = new SeriesUpdateCollector(this);
+        this.movieUpdateCollector = new MovieUpdateCollector(this);
 
         this.fedartionController = new FederationController(this);
         this.federationClientController = new FederationClientController(this);
 
-        //this.federationClientController.addSyncMaster('oblecto', 9131);
-        //this.federationClientController.requestFullSync();
+        this.federationClientController.addSyncMaster('oblecto');
 
         //this.seriesUpdateCollector.collectAllSeries();
-        this.seriesUpdateCollector.collectAllEpisodes();
+        //this.seriesUpdateCollector.collectAllEpisodes();
+
+        this.movieUpdateCollector.collectAllMovies();
 
         this.setupQueue();
     }
@@ -84,7 +89,7 @@ export default class Oblecto {
         });
 
         this.queue.addJob('updateMovie', async (job) => {
-            //await this.movieIndexer.indexFile(job.path);
+            await this.movieUpdater.updateMovie(job);
         });
 
         this.queue.addJob('downloadEpisodeBanner', async (job) => {

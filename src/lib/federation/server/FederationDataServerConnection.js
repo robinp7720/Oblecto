@@ -10,6 +10,8 @@ export default class FederationDataServerConnection extends FederationServerConn
     async headerHandler(data) {
         super.headerHandler(data);
 
+        if (!this.authenticated) return;
+
         let split = data.split(':');
 
         switch (split[0]) {
