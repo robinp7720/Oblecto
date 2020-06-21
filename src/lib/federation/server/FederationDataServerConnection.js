@@ -7,14 +7,14 @@ export default class FederationDataServerConnection extends FederationServerConn
         this.fullSyncPermitted = true;
     }
 
-    async headerHandler(data, _this) {
-        super.headerHandler(data, _this);
+    async headerHandler(data) {
+        super.headerHandler(data);
 
         let split = data.split(':');
 
         switch (split[0]) {
         case 'SYNC':
-            _this.syncHandler(split[1], _this);
+            this.syncHandler(split[1]);
             break;
         case 'OFFSET':
             break;
@@ -23,21 +23,25 @@ export default class FederationDataServerConnection extends FederationServerConn
         }
     }
 
-    syncHandler(data, _this) {
+    syncHandler(data) {
         if (data === 'FULL') {
-            if (!_this.fullSyncPermitted) return false;
-            return _this.startFullSync(_this);
+            if (!this.fullSyncPermitted) return false;
+            return this.startFullSync();
         }
     }
 
-    async startFullSync(_this) {
+    async startFullSync() {
         console.log('Starting full sync with client');
-        await _this.syncFiles(_this);
+        await this.syncFiles();
     }
 
-    async syncFiles(_this) {
+    async syncFiles() {
         let results = await databases.file.findAll({
-            include: [databases.movie, databases.episode]
+            include: [databases.movie,
+                {
+                    model: databases.episode,
+                    include: [databases.tvshow]
+                }]
         });
 
         for (let result of results) {
@@ -47,13 +51,25 @@ export default class FederationDataServerConnection extends FederationServerConn
 
             if (file.episodes[0]) {
                 fileInfo.type = 'episode';
-                fileInfo.tvdbid = file.episodes[0].tvdbid;
-                fileInfo.tmdbid = file.episodes[0].tmdbid;
+
+                fileInfo.episode = file.episodes[0].airedEpisodeNumber;
+                fileInfo.season = file.episodes[0].airedSeason;
+
+                if (file.episodes[0].tvdbid)
+                    fileInfo.tvdbid = file.episodes[0].tvdbid;
+
+                if (file.episodes[0].tmdbid)
+                    fileInfo.tmdbid = file.episodes[0].tmdbid;
+
+                if (file.episodes[0].tvshow.tvdbid)
+                    fileInfo.seriesTvdbid = file.episodes[0].tvshow.tvdbid;
+                if (file.episodes[0].tvshow.tmdbid)
+                    fileInfo.seriesTmdbid = file.episodes[0].tvshow.tmdbid;
             }
 
             if (file.movies[0]) {
                 fileInfo.type = 'movie';
-                fileInfo.tmdbid = file.episodes[0].tmdbid;
+                fileInfo.tmdbid = file.movies[0].tmdbid;
             }
 
             let syncInfo = {
@@ -62,7 +78,7 @@ export default class FederationDataServerConnection extends FederationServerConn
                 fileInfo
             };
 
-            _this.write('FILE', Buffer.from(JSON.stringify(syncInfo)).toString('base64'), _this);
+            this.write('FILE', Buffer.from(JSON.stringify(syncInfo)).toString('base64'));
         }
 
     }

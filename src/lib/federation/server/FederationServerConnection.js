@@ -1,23 +1,23 @@
 export default class FederationServerConnection {
     constructor(socket) {
         this.socket = socket;
-        this.socket.on('data', chunk => this.dataHandler(chunk, this));
-        this.socket.on('close', () => this.closeHandler(this));
-        this.socket.on('error', error => this.errorHandler(error, this));
+        this.socket.on('data', chunk => this.dataHandler(chunk));
+        this.socket.on('close', () => this.closeHandler());
+        this.socket.on('error', error => this.errorHandler(error));
         this.dataRead = '';
     }
 
-    dataHandler(chunk, _this) {
-        _this.dataRead += chunk.toString();
-        let split = _this.dataRead.split('\n');
+    dataHandler(chunk) {
+        this.dataRead += chunk.toString();
+        let split = this.dataRead.split('\n');
 
         if (split.length < 2) return;
 
         for (let item of split) {
             if (item === '') continue;
 
-            _this.dataRead = _this.dataRead.replace(item + '\n', '');
-            _this.headerHandler(item, _this);
+            this.dataRead = this.dataRead.replace(item + '\n', '');
+            this.headerHandler(item,);
         }
     }
 
@@ -28,24 +28,24 @@ export default class FederationServerConnection {
 
         switch (split[0]) {
         case 'CLIENTID':
-            _this.clientIdHandler(split[1], _this);
+            _this.clientIdHandler(split[1]);
             break;
         }
     }
 
-    clientIdHandler(clientId, _this) {
-        _this.clientId = clientId;
+    clientIdHandler(clientId) {
+        this.clientId = clientId;
     }
 
-    closeHandler(_this) {
+    closeHandler() {
         console.log('Connection has closed');
     }
 
-    errorHandler(error, _this) {
+    errorHandler(error) {
         console.log('An error has occured', error);
     }
 
-    write(header, content, _this) {
-        _this.socket.write(`${header}:${content}\n`);
+    write(header, content) {
+        this.socket.write(`${header}:${content}\n`);
     }
 }

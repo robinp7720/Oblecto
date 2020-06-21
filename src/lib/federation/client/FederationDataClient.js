@@ -34,14 +34,14 @@ export default class FederationDataClient extends FederationClient {
         });
     }
 
-    headerHandler(data, _this) {
-        super.headerHandler(data, _this);
+    headerHandler(data) {
+        super.headerHandler(data);
 
         let split = data.split(':');
 
         switch (split[0]) {
         case 'FILE':
-            _this.fileHandler(split[1], _this);
+            _this.fileHandler(split[1]);
             break;
         }
     }
@@ -50,80 +50,39 @@ export default class FederationDataClient extends FederationClient {
         this.write('SYNC', 'FULL');
     }
 
-    async fileHandler(data, _this) {
+    async fileHandler(data) {
         let input = Buffer.from(data, 'base64').toString();
+        console.log(input);
         let file = JSON.parse(input);
 
         _this.indexQueue.push(file);
 
     }
 
-    async episodeHandler(data, _this) {
+    async episodeHandler(data) {
         let [episode, episodeInserted] = await databases.episode.findOrCreate({
             where: {
-                tvdbid: data.tvdbid,
-                tmdbid: data.tmdbid
+                tvdbid: data.tvdbid || null,
+                tmdbid: data.tmdbid || null
+            },
+            defaults: {
+                airedEpisodeNumber: data.episode,
+                airedSeason: data.season
             }
         });
 
         if (!episodeInserted) return episode;
 
-        let episodeData = await tvdb.getEpisodeById(data.tvdbid);
-
-
-        let series = await _this.seriesHandler(episodeData.seriesId, _this);
-
-        await episode.update({
-            airedEpisodeNumber: episodeData.airedEpisodeNumber,
-            airedSeason: episodeData.airedSeason,
-
-            episodeName: episodeData.episodeName,
-
-            absoluteNumber: episodeData.absoluteNumber,
-            dvdEpisodeNumber: episodeData.dvdEpisodeNumber,
-            dvdSeason: episodeData.dvdSeason,
-
-            firstAired: episodeData.firstAired,
-            overview: episodeData.overview
-
+        let [series, seriesInserted] = await databases.tvshow.findOrCreate({
+            where: {
+                tvdbid: data.seriesTvdbid || null,
+                tmdbid: data.seriesTmdbid || null
+            }
         });
+
 
         series.addEpisode(episode);
 
         return episode;
-    }
-
-    async seriesHandler(tvdbid, _this) {
-        let showInfo = await tvdb.getSeriesById(tvdbid);
-
-        if (showInfo.seriesId === '') showInfo.seriesId = null;
-
-        let [showEntry, showInserted] = await databases.tvshow
-            .findOrCreate({
-                where: {
-                    tvdbid: showInfo.id,
-                }, defaults: {
-                    seriesId: showInfo.seriesId,
-                    imdbid: showInfo.imdbId,
-                    zap2itId: showInfo.zap2itId,
-
-                    seriesName: showInfo.seriesName,
-                    alias: JSON.stringify(showInfo.alias),
-                    genre: JSON.stringify(showInfo.genre),
-                    status: showInfo.status,
-                    firstAired: showInfo.firstAired,
-                    network: JSON.stringify(showInfo.networks),
-                    runtime: showInfo.runtime,
-                    overview: showInfo.overview,
-                    airsDayOfWeek: showInfo.airsDayOfWeek,
-                    airsTime: showInfo.airsTime,
-                    rating: showInfo.rating,
-
-                    siteRating: showInfo.siteRating,
-                    siteRatingCount: showInfo.siteRatingCount,
-                }
-            });
-
-        return showEntry;
     }
 }

@@ -2,6 +2,7 @@ import DvdStreamer from './FFMPEGHandlers/DvdStreamer';
 import RemuxStreamer from "./FFMPEGHandlers/RemuxStreamer";
 import TranscodeStreamer from './FFMPEGHandlers/TranscodeStreamer';
 import config from '../../config';
+import FederationStreamer from './FederationStreamer';
 
 function requireTranscode(video) {
     if (config.transcoding.transcodeEverything) return true;
@@ -20,6 +21,11 @@ function requireTranscode(video) {
 
 export default class {
     static async streamFile (video, offset, req, res) {
+        if (video.host !== 'local') {
+            return FederationStreamer.streamFile(video, offset || 0, req, res);
+        }
+
+
         if (video.extension === 'iso') {
             await DvdStreamer.DvdSteamer(video, offset, req, res);
             return;

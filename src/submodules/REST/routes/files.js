@@ -145,10 +145,6 @@ export default (server, oblecto) => {
 
         req.video = fileInfo;
 
-        if (req.video.host !== 'local') {
-            return FederationStreamer.streamFile(req.video, req.params.offset || 0, req, res);
-        }
-
         // Transcode
         if (StreamSessions[req.params.sessionId].seeking === 'server') {
             return next();

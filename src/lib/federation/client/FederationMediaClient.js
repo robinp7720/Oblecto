@@ -8,25 +8,26 @@ export default class FederationMediaClient extends FederationClient {
         this.streamDestination = null;
     }
 
-    headerHandler(data, _this) {
-        super.headerHandler(data, _this);
+    headerHandler(data) {
+        super.headerHandler(data);
 
         let split = data.split(':');
 
         switch (split[0]) {
-        case 'START':
-            _this.startStreamHandler(split[1], _this);
+        case 'READY':
+            this.readyHandler(split[1]);
             break;
         }
+
     }
 
-    setStreamFile(fileId) {
+    async startStreamFile(fileId) {
         this.fileId = fileId;
 
         this.socket.write(`FILEID:${fileId}\n`);
     }
 
-    setStreamDestination(dest) {
+    async setStreamDestination(dest) {
         this.streamDestination = dest;
 
         dest.on('close', () => {
@@ -34,27 +35,29 @@ export default class FederationMediaClient extends FederationClient {
         });
     }
 
-    startStream() {
+    async readyHandler(data) {
+        if (data !== this.fileId) {
+            console.log('Server did not respect file id. Destroying connection');
+
+            this.socket.destroy();
+        }
+
+        console.log('server is ready');
+
+        this.socket.pipe(this.streamDestination);
+
+        this.startStream();
+    }
+
+    async startStream() {
         if (!this.streamDestination) throw new Error('No destination');
+
+        console.log('sending start signal');
 
         this.socket.write('START:START\n');
     }
 
-    setStreamOffset(offset) {
+    async setStreamOffset(offset) {
         this.socket.write(`OFFSET:${offset}\n`);
-    }
-
-    startStreamHandler(fileId, _this) {
-        if (fileId !== this.fileId) {
-            console.log('Server did not respect file id. Destroying connection');
-
-            _this.socket.destroy();
-        }
-
-        if (!this.streamDestination) return _this.socket.destroy();
-
-        this.socket.removeAllListeners('data');
-        this.socket.pipe(this.streamDestination);
-
     }
 }

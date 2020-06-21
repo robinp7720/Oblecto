@@ -24,10 +24,14 @@ import ImageScaler from '../artwork/ArtworkScaler';
 
 import SeriesUpdater from '../updaters/series/SeriesUpdater';
 import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
+import FederationController from '../federation/server/FederationController';
+import FederationClientController from '../federation/client/FederationClientController';
 
 export default class Oblecto {
     constructor(config) {
         this.config = config;
+
+        this.queue = new Queue(this.config.queue.concurrency);
 
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);
@@ -50,7 +54,14 @@ export default class Oblecto {
 
         this.seriesUpdateCollector = new SeriesUpdateCollector(this);
 
-        this.queue = new Queue(this.config.queue.concurrency);
+        this.fedartionController = new FederationController(this);
+        this.federationClientController = new FederationClientController(this);
+
+        //this.federationClientController.addSyncMaster('oblecto', 9131);
+        //this.federationClientController.requestFullSync();
+
+        //this.seriesUpdateCollector.collectAllSeries();
+        this.seriesUpdateCollector.collectAllEpisodes();
 
         this.setupQueue();
     }
