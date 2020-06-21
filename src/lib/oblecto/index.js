@@ -1,5 +1,5 @@
 import axios from 'axios';
-import fs from 'fs';
+import {promises as fs} from 'fs';
 import util from 'util';
 
 import Queue from '../queue';
@@ -11,10 +11,19 @@ import MovieCollector from '../indexers/movies/MovieCollector';
 
 import OblectoAPI from '../../submodules/REST';
 import RealtimeController from '../realtime/RealtimeController';
-import AggregateMovieArtworkRetriever from '../artwork/movies/AggregateMovieArtworkRetriever';
-import AggregateSeriesArtworkRetriever from '../artwork/series/AggregateSeriesArtworkRetriever';
-import TmdbMovieArtworkRetriever from '../artwork/movies/artworkRetrievers/TmdbMovieArtworkRetriever';
-import TmdbSeriesArtworkRetriever from '../artwork/series/artworkRetrievers/TmdbSeriesArtworkRetriever';
+
+import ArtworkUtils from '../artwork/ArtworkUtils';
+import MovieArtworkCollector from '../artwork/movies/MovieArtworkCollector';
+import SeriesArtworkCollector from '../artwork/series/SeriesArtworkCollector';
+import Downloader from '../downloader';
+
+import SeriesArtworkDownloader from '../artwork/series/SeriesArtworkDownloader';
+import MovieArtworkDownloader from '../artwork/movies/MovieArtworkDownloader';
+
+import ImageScaler from '../artwork/ArtworkScaler';
+
+import SeriesUpdater from '../updaters/series/SeriesUpdater';
+import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
 
 export default class Oblecto {
     constructor(config) {
@@ -29,11 +38,17 @@ export default class Oblecto {
         this.seriesCollector = new SeriesCollector(this);
         this.movieCollector = new MovieCollector(this);
 
-        this.movieArtworkRetriever = new AggregateMovieArtworkRetriever();
-        this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever();
+        this.seriesArtworkDownloader = new SeriesArtworkDownloader(this);
+        this.movieArtworkDownloader = new MovieArtworkDownloader(this);
 
-        this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever());
-        this.seriesArtworkRetriever.loadRetriever(new TmdbSeriesArtworkRetriever());
+        this.movieArtworkCollector = new MovieArtworkCollector(this);
+        this.seriesArtworkCollector = new SeriesArtworkCollector(this);
+        this.artworkUtils = new ArtworkUtils(this);
+
+        this.seriesUpdater = new SeriesUpdater(this);
+        // this.movieUpdater = new MovieUpdater(this);
+
+        this.seriesUpdateCollector = new SeriesUpdateCollector(this);
 
         this.queue = new Queue(this.config.queue.concurrency);
 
@@ -50,11 +65,11 @@ export default class Oblecto {
         });
 
         this.queue.addJob('updateEpisode', async (job) => {
-            //await this.movieIndexer.indexFile(job.path);
+            await this.seriesUpdater.updateEpisode(job);
         });
 
         this.queue.addJob('updateSeries', async (job) => {
-            //await this.movieIndexer.indexFile(job.path);
+            await this.seriesUpdater.updateSeries(job);
         });
 
         this.queue.addJob('updateMovie', async (job) => {
@@ -62,60 +77,30 @@ export default class Oblecto {
         });
 
         this.queue.addJob('downloadEpisodeBanner', async (job) => {
-            let url = await this.seriesArtworkRetriever.retrieveEpisodeBanner(job);
-
-            if (!url) return;
-
-            this.queue.pushJob('downloadFile', {
-                url,
-                dest: `${this.config.assets.episodeBannerLocation}/${job.id}.jpg`
-            });
+            await this.seriesArtworkDownloader.downloadEpisodeBanner(job);
         });
 
         this.queue.addJob('downloadSeriesPoster', async (job) => {
-            let url = await this.seriesArtworkRetriever.retrieveSeriesPoster(job);
-
-            if (!url) return;
-
-            this.queue.pushJob('downloadFile', {
-                url,
-                dest: `${this.config.assets.showPosterLocation}/${job.id}.jpg`
-            });
+            await this.seriesArtworkDownloader.downloadSeriesPoster(job);
         });
 
         this.queue.addJob('downloadMoviePoster', async (job) => {
-            let url = await this.movieArtworkRetriever.retrievePoster(job);
-
-            if (!url) return;
-
-            this.queue.pushJob('downloadFile', {
-                url,
-                dest: `${this.config.assets.moviePosterLocation}/${job.id}.jpg`
-            });
+            await this.movieArtworkDownloader.downloadMoviePoster(job);
         });
 
         this.queue.addJob('downloadMovieFanart', async (job) => {
-            let url = await this.movieArtworkRetriever.retrieveFanart(job);
+            await this.movieArtworkDownloader.downloadMovieFanart(job);
+        });
 
-            if (!url) return;
-
-            this.queue.pushJob('downloadFile', {
-                url,
-                dest: `${this.config.assets.movieFanartLocation}/${job.id}.jpg`
+        this.queue.addJob('rescaleImage', async (job) => {
+            await ImageScaler.rescaleImage(job.from, job.to, {
+                width: job.width,
+                height: job.height
             });
         });
 
         this.queue.addJob('downloadFile', async (job) => {
-            console.log('Downloading', job.url, job.dest);
-            axios({
-                method: 'get',
-                url: job.url,
-                responseType: 'stream'
-            }).then(response => {
-                response.data.pipe(fs.createWriteStream(job.dest));
-            }).catch(err => {
-                fs.unlink(job.dest);
-            });
+            await Downloader.download(job.url, job.dest, job.overwrite);
         });
     }
 }
