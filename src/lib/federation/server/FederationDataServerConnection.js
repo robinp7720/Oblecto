@@ -81,7 +81,16 @@ export default class FederationDataServerConnection extends FederationServerConn
             };
 
             this.write('FILE', Buffer.from(JSON.stringify(syncInfo)).toString('base64'));
+
+            // TODO: Negotiate a syncing speed
+            sleep(100);
         }
 
     }
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
