@@ -106,6 +106,9 @@ export default class FederationDataClient extends FederationClient {
         await this.oblecto.seriesUpdateCollector.collectSeries(series);
         await this.oblecto.seriesUpdateCollector.collectEpisode(episode);
 
+        await this.oblecto.seriesArtworkCollector.collectArtworkSeriesPoster(series);
+        await this.oblecto.seriesArtworkCollector.collectArtworkEpisodeBanner(episode);
+
         return episode;
     }
 
@@ -116,7 +119,9 @@ export default class FederationDataClient extends FederationClient {
             }
         });
 
-        this.oblecto.movieUpdateCollector.collectMovie(movie);
+        await this.oblecto.movieUpdateCollector.collectMovie(movie);
+        await this.oblecto.movieArtworkCollector.collectArtworkMovieFanart(movie);
+        await this.oblecto.movieArtworkCollector.collectArtworkMoviePoster(movie);
 
         return movie;
     }
