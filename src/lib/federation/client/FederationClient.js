@@ -1,11 +1,18 @@
 import tls from 'tls';
-import fs from 'fs';
+import {promises as fs} from 'fs';
+import NodeRSA from 'node-rsa';
+import EventEmitter from 'events';
+import {readFileSync} from 'fs';
 
 export default class FederationClient{
-    constructor (host, port) {
-        this.host = host;
-        this.port = port || 9132;
+    constructor(oblecto, server) {
+        this.oblecto = oblecto;
+        this.host = oblecto.config.federation.servers[server].address;
+        this.port = 9131;
         this.isSecure = false;
+        this.authenticated = false;
+
+        this.eventEmitter = new EventEmitter();
 
         this.dataRead = '';
     }
@@ -15,17 +22,25 @@ export default class FederationClient{
             host: this.host,
             port: this.port ,
 
-            ca: [fs.readFileSync('/etc/oblecto/keys/public-cert.pem')]
+            ca: [readFileSync('/etc/oblecto/keys/public-cert.pem')]
         });
 
         this.socket.on('data', chunk => this.dataHandler(chunk));
         this.socket.on('secureConnect', () => this.secureConnectHandler());
-        this.socket.on('error', () => this.errorHandler());
+        this.socket.on('error', (error) => this.errorHandler(error));
         this.socket.on('close', () => this.closeHandler());
 
         if (this.isSecure) return;
 
         await this.waitForSecure();
+        // We need to authenticate the client now
+
+        this.socket.write(`IAM:${this.oblecto.config.federation.uuid}\n`);
+
+        await this.waitForAuth();
+
+        console.log('We are ready!');
+
     }
 
     write(header, content) {
@@ -49,21 +64,45 @@ export default class FederationClient{
     headerHandler(data) {
         let split = data.split(':');
 
+        //console.log(split);
+
         switch (split[0]) {
-        case 'SERVERID':
-            this.clientIdHandler(split[1]);
+        case 'CHALLENGE':
+            this.challengeHandler(split[1]);
+            break;
+        case 'AUTH':
+            this.authAcceptHandler(split[1]);
             break;
         }
+    }
+
+    async challengeHandler(data) {
+        const pemKey = await fs.readFile(this.oblecto.config.federation.key);
+        const key = NodeRSA(pemKey);
+
+        const decrypted = key.decrypt(data, 'ascii');
+
+        this.write('CHALLENGE', decrypted);
+    }
+
+    async authAcceptHandler(data) {
+        if (data === 'ACCEPTED') {
+            this.authenticated = true;
+            this.eventEmitter.emit('auth');
+            return;
+        }
+
+        delete this;
     }
 
     secureConnectHandler() {
         this.isSecure = true;
 
-        console.log('Secure Connection initated');
+        console.log('Secure Connection initiated');
     }
 
     errorHandler (error) {
-        console.log(error);
+        console.log('error', error);
     }
 
     closeHandler (_this) {
@@ -73,6 +112,12 @@ export default class FederationClient{
     waitForSecure() {
         return new Promise((resolve, reject) => {
             this.socket.once('secureConnect', resolve);
+        });
+    }
+
+    waitForAuth() {
+        return new Promise((resolve, reject) => {
+            this.eventEmitter.once('auth', resolve);
         });
     }
 }

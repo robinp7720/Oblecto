@@ -2,8 +2,8 @@ import FederationServerConnection from './FederationServerConnection';
 import databases from '../../../submodules/database';
 
 export default class FederationDataServerConnection extends FederationServerConnection {
-    constructor(socket) {
-        super(socket);
+    constructor(oblecto, socket) {
+        super(oblecto, socket);
         this.fullSyncPermitted = true;
     }
 

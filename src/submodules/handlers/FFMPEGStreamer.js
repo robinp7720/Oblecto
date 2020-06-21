@@ -20,23 +20,23 @@ function requireTranscode(video) {
 }
 
 export default class {
-    static async streamFile (video, offset, req, res) {
+    static async streamFile (oblecto, video, offset, req, res) {
         if (video.host !== 'local') {
-            return FederationStreamer.streamFile(video, offset || 0, req, res);
+            return FederationStreamer.streamFile(oblecto, video, offset || 0, req, res);
         }
 
 
         if (video.extension === 'iso') {
-            await DvdStreamer.DvdSteamer(video, offset, req, res);
+            await DvdStreamer.DvdSteamer(oblecto, video, offset, req, res);
             return;
         }
 
         if (requireTranscode(video)) {
-            await TranscodeStreamer.TranscodeStreamer(video, offset, req, res);
+            await TranscodeStreamer.TranscodeStreamer(oblecto, video, offset, req, res);
             return;
         }
 
-        await RemuxStreamer.RemuxSteamer(video, offset, req, res);
+        await RemuxStreamer.RemuxSteamer(oblecto, video, offset, req, res);
 
     }
 }

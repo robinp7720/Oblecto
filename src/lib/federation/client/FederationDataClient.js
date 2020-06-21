@@ -4,8 +4,10 @@ import tvdb from '../../../submodules/tvdb';
 import async from 'async';
 
 export default class FederationDataClient extends FederationClient {
-    constructor(host, port) {
-        super(host, port || 9131);
+    constructor(oblecto, server) {
+        super(oblecto, server);
+
+        this.port = oblecto.config.federation.servers[server].dataPort;
 
         this.indexQueue = async.queue(async (file, callback) => {
             let [fileEntity, fileInserted] = await databases.file.findOrCreate({

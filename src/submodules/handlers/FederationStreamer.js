@@ -1,9 +1,8 @@
 import FederationMediaClient from '../../lib/federation/client/FederationMediaClient';
 
 export default class FederationStreamer {
-    static async streamFile(video, offset, req, res) {
-
-        let federationClient = new FederationMediaClient(video.host);
+    static async streamFile(oblecto, video, offset, req, res) {
+        let federationClient = new FederationMediaClient(oblecto, video.host);
 
         await federationClient.connect();
 

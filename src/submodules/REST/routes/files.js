@@ -156,7 +156,7 @@ export default (server, oblecto) => {
             delete StreamSessions[req.params.sessionId];
         }, fileInfo.duration * 1000);
 
-        DirectStreamer.streamFile(fileInfo.path, req, res);
+        DirectStreamer.streamFile(oblecto, fileInfo.path, req, res);
 
     }, async function (req, res, next) {
         // TODO: Determine whether or not to remux or transcode depending on video encoding
@@ -169,6 +169,6 @@ export default (server, oblecto) => {
             'Content-Type': 'video/mp4'
         });
 
-        FFMPEGStreamer.streamFile(req.video, req.params.offset || 0, req, res);
+        FFMPEGStreamer.streamFile(oblecto, req.video, req.params.offset || 0, req, res);
     });
 };

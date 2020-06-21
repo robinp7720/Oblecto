@@ -7,8 +7,8 @@ export default class FederationClientController{
         this.syncClients = [];
     }
 
-    async addSyncMaster (host, port) {
-        let client = new FederationDataClient(host, port);
+    async addSyncMaster (server) {
+        let client = new FederationDataClient(this.oblecto, server);
         await client.connect();
 
         this.syncClients.push(client);

@@ -90,6 +90,23 @@ let configDefault = {
     },
     'web': {
         'enabled': true
+    },
+    'federation': {
+        'key': '/etc/oblecto/id_rsa',
+        'dataPort': 9131,
+        'mediaPort': 9132,
+        'servers' : {
+            'oblecto': {
+                'address': 'oblecto',
+                'dataPort': 9131,
+                'mediaPort': 9132
+            }
+        },
+        'clients': {
+            'tria': {
+                'key': '/etc/oblecto/keys/tria.pub'
+            }
+        }
     }
 };
 

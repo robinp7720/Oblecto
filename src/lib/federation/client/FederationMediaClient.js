@@ -1,8 +1,10 @@
 import FederationClient from './FederationClient';
 
 export default class FederationMediaClient extends FederationClient {
-    constructor(host, port) {
-        super(host, port);
+    constructor(oblecto, server) {
+        super(oblecto, server);
+
+        this.port = oblecto.config.federation.servers[server].mediaPort;
 
         this.fileId = null;
         this.streamDestination = null;

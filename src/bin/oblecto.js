@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 import mkdirp from 'mkdirp';
 import bcrypt from 'bcrypt';
+import uuid from 'node-uuid';
 import databases from '../submodules/database';
+import {promises as fs} from 'fs';
+import NodeRSA from 'node-rsa';
 
 import config from '../config';
 import core from '../core';
@@ -14,49 +17,61 @@ case 'start':
     break;
 
 case 'init':
-    // Create directories for image assets
-    for (let size in config.artwork.fanart) {
+    (async () => {
+
+        // Create directories for image assets
+        for (let size in config.artwork.fanart) {
+            console.log(`Creating directory ${config.assets.movieFanartLocation}/${size}/`);
+            mkdirp(`${config.assets.movieFanartLocation}/${size}`);
+        }
+
+        for (let size in config.artwork.poster) {
+            console.log(`Creating directory ${config.assets.moviePosterLocation}/${size}/`);
+            mkdirp(`${config.assets.moviePosterLocation}/${size}`);
+            console.log(`Creating directory ${config.assets.showPosterLocation}/${size}/`);
+            mkdirp(`${config.assets.showPosterLocation}/${size}`);
+        }
+
+        for (let size in config.artwork.banner) {
+            console.log(`Creating directory ${config.assets.episodeBannerLocation}/${size}/`);
+            mkdirp(`${config.assets.episodeBannerLocation}/${size}`);
+        }
+
+        let size = 'original';
+
         console.log(`Creating directory ${config.assets.movieFanartLocation}/${size}/`);
         mkdirp(`${config.assets.movieFanartLocation}/${size}`);
-    }
-
-    for (let size in config.artwork.poster) {
         console.log(`Creating directory ${config.assets.moviePosterLocation}/${size}/`);
         mkdirp(`${config.assets.moviePosterLocation}/${size}`);
         console.log(`Creating directory ${config.assets.showPosterLocation}/${size}/`);
         mkdirp(`${config.assets.showPosterLocation}/${size}`);
-    }
-
-    for (let size in config.artwork.banner) {
         console.log(`Creating directory ${config.assets.episodeBannerLocation}/${size}/`);
         mkdirp(`${config.assets.episodeBannerLocation}/${size}`);
-    }
 
-    let size = 'original';
+        console.log('Creating config file');
 
-    console.log(`Creating directory ${config.assets.movieFanartLocation}/${size}/`);
-    mkdirp(`${config.assets.movieFanartLocation}/${size}`);
-    console.log(`Creating directory ${config.assets.moviePosterLocation}/${size}/`);
-    mkdirp(`${config.assets.moviePosterLocation}/${size}`);
-    console.log(`Creating directory ${config.assets.showPosterLocation}/${size}/`);
-    mkdirp(`${config.assets.showPosterLocation}/${size}`);
-    console.log(`Creating directory ${config.assets.episodeBannerLocation}/${size}/`);
-    mkdirp(`${config.assets.episodeBannerLocation}/${size}`);
+        config.federation.uuid = uuid.v4();
+        await fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4));
 
-    databases.sequelize
-        .authenticate()
-        .then(() => {
-            // Create databases if connection to the database could be established
-            return databases.sequelize.sync();
-        }).finally(function () {
-            console.log('Oblecto has been initialized');
-            databases.sequelize.close();
-        }).catch((err) => {
-            console.log('An error has occurred while authenticating and/or during table creation:');
-            console.log(err);
-        });
+        console.log('Generating federation keys');
+        const key = new NodeRSA({b: 2048});
+
+        await fs.writeFile('/etc/oblecto/id_rsa', key.exportKey('pkcs1-private-pem'));
+        await fs.writeFile('/etc/oblecto/id_rsa.pub', key.exportKey('pkcs1-public-pem'));
+
+    })();
 
     break;
+case 'database':
+    (async () => {
+        await databases.sequelize.authenticate()
+            .then(() => {
+                // Create databases if connection to the database could be established
+                return databases.sequelize.sync();
+            });
+
+        await databases.sequelize.close();
+    })();
 
 case 'adduser':
     if (args.length < 5) {

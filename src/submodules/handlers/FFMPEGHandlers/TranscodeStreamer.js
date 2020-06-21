@@ -1,7 +1,7 @@
 import ffmpeg from '../../ffmpeg';
 
 export default class {
-    static async TranscodeStreamer(video, offset, req, res) {
+    static async TranscodeStreamer(oblecto, video, offset, req, res) {
 
         ffmpeg(video.path)
         //.native()

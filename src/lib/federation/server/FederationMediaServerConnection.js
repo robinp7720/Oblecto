@@ -3,8 +3,8 @@ import databases from '../../../submodules/database';
 import FFMPEGStreamer from '../../../submodules/handlers/FFMPEGStreamer';
 
 export default class FederationMediaServerConnection extends FederationServerConnection {
-    constructor(socket) {
-        super(socket);
+    constructor(oblecto, socket) {
+        super(oblecto, socket);
         this.clientId = null;
         this.fileId = null;
         this.fileInfo = null;
@@ -49,7 +49,7 @@ export default class FederationMediaServerConnection extends FederationServerCon
     startStream() {
         if (!this.fileInfo) return;
 
-        FFMPEGStreamer.streamFile(this.fileInfo, this.offset, null, this.socket);
+        FFMPEGStreamer.streamFile(this.oblecto, this.fileInfo, this.offset, null, this.socket);
         //fs.createReadStream(_this.fileInfo.path).pipe(_this.socket);
     }
 }
