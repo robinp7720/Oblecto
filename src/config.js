@@ -55,6 +55,23 @@ let configDefault = {
 
         ]
     },
+    'artwork': {
+        'fanart': {
+            'small': 100,
+            'medium': 500,
+            'large': 1000
+        },
+        'poster': {
+            'small': 100,
+            'medium': 500,
+            'large': 1000
+        },
+        'banner': {
+            'small': 100,
+            'medium': 500,
+            'large': 1000
+        }
+    },
     'fileExtensions': {
       'video': ['.mp4','.avi', '.iso', '.m4v', '.mkv', '.mk3d']
     },

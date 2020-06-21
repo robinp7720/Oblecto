@@ -5,7 +5,7 @@ let options = {
     dialect: config.database.dialect || 'sqlite',
 
     logging: false,
-    operatorsAliases: false,
+    //operatorsAliases: false,
 
     pool: {
         max: 5,

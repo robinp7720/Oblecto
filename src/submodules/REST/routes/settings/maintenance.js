@@ -26,13 +26,13 @@ export default (server, oblecto) => {
 
     // API Endpoint to request a re-index of certain library types
     server.get('/settings/maintenance/tvshows/download/art', authMiddleWare.requiresAuth, function (req, res) {
-
+        oblecto.seriesArtworkCollector.collectAll();
         res.send([true]);
     });
 
 
     server.get('/settings/maintenance/movies/download/art', authMiddleWare.requiresAuth, function (req, res) {
-
+        oblecto.movieArtworkCollector.collectAll();
 
         res.send([true]);
     });
