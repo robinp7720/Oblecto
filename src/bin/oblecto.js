@@ -15,15 +15,33 @@ case 'start':
 
 case 'init':
     // Create directories for image assets
-    for (let i in config.assets) {
-        let path = config.assets[i];
-        if (typeof path !== 'string') {
-            continue;
-        }
-
-        console.log(`Creating directory ${config.assets[i]}`);
-        mkdirp(config.assets[i]);
+    for (let size in config.artwork.fanart) {
+        console.log(`Creating directory ${config.assets.movieFanartLocation}/${size}/`);
+        mkdirp(`${config.assets.movieFanartLocation}/${size}`);
     }
+
+    for (let size in config.artwork.poster) {
+        console.log(`Creating directory ${config.assets.moviePosterLocation}/${size}/`);
+        mkdirp(`${config.assets.moviePosterLocation}/${size}`);
+        console.log(`Creating directory ${config.assets.showPosterLocation}/${size}/`);
+        mkdirp(`${config.assets.showPosterLocation}/${size}`);
+    }
+
+    for (let size in config.artwork.banner) {
+        console.log(`Creating directory ${config.assets.episodeBannerLocation}/${size}/`);
+        mkdirp(`${config.assets.episodeBannerLocation}/${size}`);
+    }
+
+    let size = 'original';
+
+    console.log(`Creating directory ${config.assets.movieFanartLocation}/${size}/`);
+    mkdirp(`${config.assets.movieFanartLocation}/${size}`);
+    console.log(`Creating directory ${config.assets.moviePosterLocation}/${size}/`);
+    mkdirp(`${config.assets.moviePosterLocation}/${size}`);
+    console.log(`Creating directory ${config.assets.showPosterLocation}/${size}/`);
+    mkdirp(`${config.assets.showPosterLocation}/${size}`);
+    console.log(`Creating directory ${config.assets.episodeBannerLocation}/${size}/`);
+    mkdirp(`${config.assets.episodeBannerLocation}/${size}`);
 
     databases.sequelize
         .authenticate()

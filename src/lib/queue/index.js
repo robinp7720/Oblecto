@@ -13,7 +13,10 @@ export default class Queue {
                     callback();
                 })
                 .catch((err) => {
-                    console.log(err.name);
+                    if (!err)
+                        return callback();
+
+                    console.log(err);
 
                     callback();
                 });
