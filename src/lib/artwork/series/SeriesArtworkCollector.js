@@ -23,10 +23,9 @@ export default class SeriesArtworkCollector {
             stat = await fs.stat(this.oblecto.artworkUtils.episodeBannerPath(episode));
         } catch (e) {}
 
-        if (!stat) return;
+        if (stat) return;
 
         this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
-
     }
 
     /**
@@ -41,7 +40,7 @@ export default class SeriesArtworkCollector {
             stat = await fs.stat(this.oblecto.artworkUtils.seriesPosterPath(series));
         } catch (e) {}
 
-        if (!stat) return;
+        if (stat) return;
 
         this.oblecto.queue.queueJob('downloadSeriesPoster', series);
     }

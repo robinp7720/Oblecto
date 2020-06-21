@@ -16,7 +16,13 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkMovieFanart(movie) {
-        let stat = await fs.stat(this.oblecto.artworkUtils.movieFanartPath(movie));
+        let stat;
+
+        try {
+            stat = await fs.stat(this.oblecto.artworkUtils.movieFanartPath(movie));
+        } catch (e) {}
+
+        if (stat) return;
 
         this.oblecto.queue.queueJob('downloadMovieFanart', movie);
     }
@@ -27,9 +33,13 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkMoviePoster(movie) {
-        let stat = await fs.stat(this.oblecto.artworkUtils.moviePosterPath(movie));
+        let stat;
 
-        console.log(stat);
+        try {
+            stat = await fs.stat(this.oblecto.artworkUtils.moviePosterPath(movie));
+        } catch (e) {}
+
+        if (stat) return;
 
         this.oblecto.queue.queueJob('downloadMoviePoster', movie);
     }
