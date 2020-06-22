@@ -98,6 +98,7 @@ let configDefault = {
         'servers' : {
             'oblecto': {
                 'address': 'oblecto',
+                'ca': '/etc/oblecto/keys/oblecto.pem',
                 'dataPort': 9131,
                 'mediaPort': 9132
             }
