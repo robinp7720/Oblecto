@@ -136,7 +136,7 @@ const ConfigManager = {
         }
     },
     saveConfig: function saveConfig () {
-        fs.writeFile(__dirname + '/userconfig.json', JSON.stringify(config, null, 4), (stat, err) => {
+        fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4), (stat, err) => {
             if (err) {
                 console.log('An error has occurred while writing the config file: ', err)
             }
