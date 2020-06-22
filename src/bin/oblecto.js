@@ -126,6 +126,7 @@ default:
     console.log();
     console.log('Usage:');
     console.log('oblecto init');
+    console.log('oblecto database');
     console.log('oblecto start');
     console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
     console.log('oblecto deluser USERNAME');
