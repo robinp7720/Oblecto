@@ -35,7 +35,7 @@ export default class FederationDataClient extends FederationClient {
         let input = Buffer.from(data, 'base64').toString();
 
         let file = JSON.parse(input);
-        file.host = this.host;
+        file.host = this.serverName;
 
         switch (file.fileInfo.type) {
             case 'episode':
