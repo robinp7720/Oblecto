@@ -29,6 +29,8 @@ import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
 import FederationController from '../federation/server/FederationController';
 import FederationClientController from '../federation/client/FederationClientController';
 import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector';
+import FederationEpisodeIndexer from '../federationindexer/FederationEpisodeIndexer';
+import FederationMovieIndexer from '../federationindexer/FederationMovieIndexer';
 
 export default class Oblecto {
     constructor(config) {
@@ -61,12 +63,10 @@ export default class Oblecto {
         this.fedartionController = new FederationController(this);
         this.federationClientController = new FederationClientController(this);
 
+        this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
+        this.federationMovieIndexer = new FederationMovieIndexer(this);
+
         this.federationClientController.addSyncMaster('oblecto');
-
-        //this.seriesUpdateCollector.collectAllSeries();
-        //this.seriesUpdateCollector.collectAllEpisodes();
-
-        this.movieUpdateCollector.collectAllMovies();
 
         this.setupQueue();
     }
@@ -90,6 +90,14 @@ export default class Oblecto {
 
         this.queue.addJob('updateMovie', async (job) => {
             await this.movieUpdater.updateMovie(job);
+        });
+
+        this.queue.addJob('federationIndexEpisode', async (job) => {
+            await this.federationEpisodeIndexer.indexEpisode(job);
+        });
+
+        this.queue.addJob('federationIndexMovie', async (job) => {
+            await this.federationMovieIndexer.indexMovie(job);
         });
 
         this.queue.addJob('downloadEpisodeBanner', async (job) => {

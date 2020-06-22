@@ -5,8 +5,14 @@ import EventEmitter from 'events';
 import {readFileSync} from 'fs';
 
 export default class FederationClient{
+    /**
+     *
+     * @param {Oblecto} oblecto
+     * @param {string} server
+     */
     constructor(oblecto, server) {
         this.oblecto = oblecto;
+        this.serverName = server;
         this.host = oblecto.config.federation.servers[server].address;
         this.port = 9131;
         this.isSecure = false;
@@ -22,7 +28,7 @@ export default class FederationClient{
             host: this.host,
             port: this.port ,
 
-            ca: [readFileSync('/etc/oblecto/keys/public-cert.pem')]
+            ca: [readFileSync(this.oblecto.config.federation.servers[this.serverName].ca)]
         });
 
         this.socket.on('data', chunk => this.dataHandler(chunk));
@@ -67,12 +73,12 @@ export default class FederationClient{
         //console.log(split);
 
         switch (split[0]) {
-        case 'CHALLENGE':
-            this.challengeHandler(split[1]);
-            break;
-        case 'AUTH':
-            this.authAcceptHandler(split[1]);
-            break;
+            case 'CHALLENGE':
+                this.challengeHandler(split[1]);
+                break;
+            case 'AUTH':
+                this.authAcceptHandler(split[1]);
+                break;
         }
     }
 
@@ -91,6 +97,8 @@ export default class FederationClient{
             this.eventEmitter.emit('auth');
             return;
         }
+
+        console.log('An error has occured during authentication');
 
         delete this;
     }

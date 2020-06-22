@@ -38,18 +38,18 @@ export default class FederationServerConnection {
         console.log(split);
 
         switch (split[0]) {
-        case 'IAM':
-            this.clientIdHandler(split[1]);
-            break;
-        case 'CHALLENGE':
-            this.authHandler(split[1]);
-            break;
-        default:
-            if (!this.authenticated) {
-                console.log('client is not authorized!');
-                this.socket.destroy();
-            }
-            break;
+            case 'IAM':
+                this.clientIdHandler(split[1]);
+                break;
+            case 'CHALLENGE':
+                this.authHandler(split[1]);
+                break;
+            default:
+                if (!this.authenticated) {
+                    console.log('client is not authorized!');
+                    this.socket.destroy();
+                }
+                break;
         }
     }
 
@@ -93,6 +93,8 @@ export default class FederationServerConnection {
     }
 
     write(header, content) {
+        if (!this.socket) return;
+
         this.socket.write(`${header}:${content}\n`);
     }
 }

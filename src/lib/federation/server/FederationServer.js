@@ -6,9 +6,8 @@ export default class FederationServer {
         this.oblecto = oblecto;
 
         let options = {
-            key: fs.readFileSync('/etc/oblecto/keys/private-key.pem'),
+            key: fs.readFileSync(this.oblecto.config.federation.key),
             cert: fs.readFileSync('/etc/oblecto/keys/public-cert.pem'),
-
             ca: [fs.readFileSync('/etc/oblecto/keys/csr.pem')],
         };
 

@@ -15,13 +15,13 @@ export default class FederationDataServerConnection extends FederationServerConn
         let split = data.split(':');
 
         switch (split[0]) {
-        case 'SYNC':
-            this.syncHandler(split[1]);
-            break;
-        case 'OFFSET':
-            break;
-        case 'START':
-            break;
+            case 'SYNC':
+                this.syncHandler(split[1]);
+                break;
+            case 'OFFSET':
+                break;
+            case 'START':
+                break;
         }
     }
 
@@ -47,6 +47,8 @@ export default class FederationDataServerConnection extends FederationServerConn
         });
 
         for (let result of results) {
+            if (!this.socket.destroyed) return;
+
             let file = result.toJSON();
 
             let fileInfo = {};
@@ -83,7 +85,7 @@ export default class FederationDataServerConnection extends FederationServerConn
             this.write('FILE', Buffer.from(JSON.stringify(syncInfo)).toString('base64'));
 
             // TODO: Negotiate a syncing speed
-            sleep(100);
+            await sleep(100);
         }
 
     }
