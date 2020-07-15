@@ -1,7 +1,6 @@
 import restify from 'restify';
 import routes from './routes';
 import corsMiddleware from 'restify-cors-middleware';
-import config from '../../config';
 import authMiddleware from './middleware/auth';
 
 export default class OblectoAPI {
