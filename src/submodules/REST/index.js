@@ -37,6 +37,5 @@ export default class OblectoAPI {
         this.server.listen(this.oblecto.config.server.port,  () => {
             console.log('%s listening at %s', this.server.name, this.server.url);
         });
-
     }
 }
