@@ -128,7 +128,7 @@ export default (server, oblecto) => {
 
         StreamSessions[sessionId].timeout = setTimeout(() => {
             delete StreamSessions[sessionId];
-        }, 1000000);
+        }, 10000);
 
         res.send({sessionId, seeking});
     });
