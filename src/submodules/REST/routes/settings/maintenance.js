@@ -53,19 +53,20 @@ export default (server, oblecto) => {
 
 
     server.get('/settings/maintenance/clean/:type', authMiddleWare.requiresAuth, function (req, res) {
-
         switch  (req.params.type) {
             case 'files':
-
+                oblecto.fileCleaner.removeAssoclessFiles();
+                oblecto.fileCleaner.removedDeletedFiled();
                 break;
             case 'movies':
-
+                oblecto.movieCleaner.removeFileLessMovies();
                 break;
             case 'series':
-
+                oblecto.seriesCleaner.removeEpisodeslessShows();
+                oblecto.seriesCleaner.removePathLessShows();
                 break;
             case 'episodes':
-
+                oblecto.seriesCleaner.removeFileLessEpisodes();
                 break;
         }
 

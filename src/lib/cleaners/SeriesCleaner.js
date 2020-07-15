@@ -1,6 +1,10 @@
-import databases from '../../../submodules/database';
+import databases from '../../submodules/database';
 
-export default {
+export default class SeriesCleaner {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async removeFileLessEpisodes() {
         console.log('Removing episodes with no linked files');
 
@@ -30,7 +34,7 @@ export default {
 
         }
 
-    },
+    }
 
     async removePathLessShows() {
         let results = await databases.tvshow.destroy({
@@ -38,7 +42,7 @@ export default {
                 directory: ''
             }
         });
-    },
+    }
 
     async removeEpisodeslessShows() {
         console.log('Removing Shows without episodes');

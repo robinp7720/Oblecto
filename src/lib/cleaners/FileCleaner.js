@@ -1,20 +1,25 @@
 import {promises as fs} from 'fs';
-import databases from '../../../submodules/database';
+import databases from '../../submodules/database';
 
-export default {
+export default class FileCleaner{
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async removedDeletedFiled () {
         console.log('Scanning for deleted files');
         let results = await databases.file.findAll();
 
-        for (let i in results) {
-            let item = results[i];
-            if (!await fs.exists(item.path)) {
-                console.log('Deleting', item.path, 'because the file doesn\'t exist anymore');
-                await item.destroy();
-            }
+        for (let item of results) {
+            if (await fs.exists(item.path)) continue;
+
+            console.log('Deleting', item.path, 'because the file doesn\'t exist anymore');
+            await item.destroy();
+
         }
 
-    },
+    }
+
     async removeAssoclessFiles () {
         console.log('Scanning for files without associated media entities');
 
@@ -28,6 +33,5 @@ export default {
                 item.destroy();
             }
         });
-
-    },
-};
+    }
+}

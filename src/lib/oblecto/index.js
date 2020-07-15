@@ -14,22 +14,25 @@ import RealtimeController from '../realtime/RealtimeController';
 import ArtworkUtils from '../artwork/ArtworkUtils';
 import MovieArtworkCollector from '../artwork/movies/MovieArtworkCollector';
 import SeriesArtworkCollector from '../artwork/series/SeriesArtworkCollector';
-import Downloader from '../downloader';
 
 import SeriesArtworkDownloader from '../artwork/series/SeriesArtworkDownloader';
 import MovieArtworkDownloader from '../artwork/movies/MovieArtworkDownloader';
-
-import ImageScaler from '../artwork/ArtworkScaler';
 
 import SeriesUpdater from '../updaters/series/SeriesUpdater';
 import MovieUpdater from '../updaters/movies/MovieUpdater';
 
 import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
+import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector';
+
 import FederationController from '../federation/server/FederationController';
 import FederationClientController from '../federation/client/FederationClientController';
-import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector';
+
 import FederationEpisodeIndexer from '../federationindexer/FederationEpisodeIndexer';
 import FederationMovieIndexer from '../federationindexer/FederationMovieIndexer';
+
+import MovieCleaner from '../cleaners/MovieCleaner';
+import SeriesCleaner from '../cleaners/SeriesCleaner';
+import FileCleaner from '../cleaners/FileCleaner';
 
 export default class Oblecto {
     constructor(config) {
@@ -62,6 +65,10 @@ export default class Oblecto {
 
         this.seriesUpdateCollector = new SeriesUpdateCollector(this);
         this.movieUpdateCollector = new MovieUpdateCollector(this);
+
+        this.fileCleaner = new FileCleaner(this);
+        this.movieCleaner = new MovieCleaner(this);
+        this.seriesCleaner = new SeriesCleaner(this);
 
         if (config.federation.enabled) {
             this.fedartionController = new FederationController(this);

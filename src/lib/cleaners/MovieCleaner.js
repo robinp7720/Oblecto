@@ -1,6 +1,11 @@
-import databases from '../../../submodules/database';
+import databases from '../../submodules/database';
 
-export default {
+
+export default class MovieCleaner {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async removeFileLessMovies() {
         console.log('Removing movies with no linked files');
 
@@ -14,9 +19,7 @@ export default {
             console.log(e);
         }
 
-        for (let i in results) {
-            let item = results[i];
-
+        for (let item of results) {
             if (item.files && item.files.length > 0)
                 continue;
 
@@ -25,10 +28,10 @@ export default {
             try {
                 await item.destroy();
             } catch (e) {
-                console.log(e);
+                console.log('An error occured while destroying file entry:', e);
             }
 
         }
 
     }
-};
+}
