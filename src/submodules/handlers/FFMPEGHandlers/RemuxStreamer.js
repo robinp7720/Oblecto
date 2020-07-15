@@ -3,7 +3,7 @@ import ffmpeg from '../../ffmpeg';
 export default class {
     static async RemuxSteamer(oblecto, video, offset, req, res) {
 
-        ffmpeg(video.path)
+        let process = ffmpeg(video.path)
         //.native()
             .format('mp4')
             .videoCodec('copy')
@@ -22,12 +22,15 @@ export default class {
             })
             .on('end', () => {
                 console.log('--- end processing ---');
-            })
-            .on('error', (err) => {
-                console.log('--- ffmpeg meets error ---');
-                console.log(err);
-            })
-            .pipe(res, {end: true});
+            });
+
+        process.on('error', (err) => {
+            console.log('--- ffmpeg meets error ---');
+            console.log(err);
+            process.kill();
+        });
+
+        process.pipe(res, {end: true});
 
     }
 }
