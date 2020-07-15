@@ -7,6 +7,8 @@ let use_binary = true;
 which('guessit', function (err, resolvedPath) {
     if (err) {
         console.log('Guessit is not installed, Using web based identifier');
+        console.log('This may reduce indexing and identification speed considerably.');
+        console.log('Consider installing guessit for your distributions package repos');
 
         return;
     }
