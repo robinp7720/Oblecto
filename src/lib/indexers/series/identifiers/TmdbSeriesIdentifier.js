@@ -1,14 +1,15 @@
 import guessit from '../../../../submodules/guessit';
-import tmdb from '../../../../submodules/tmdb';
 import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TmdbSeriesIdentifier {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.tvShowCache = {};
     }
 
     async tvShowInfo(id) {
-        return await tmdb.tvInfo(id);
+        return await this.oblecto.tvInfo(id);
     }
 
     retrieveSeries(tmdbSearch, guessitIdentification) {
@@ -35,7 +36,7 @@ export default class TmdbSeriesIdentifier {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await tmdb.searchTv({query: guessitIdentification.title})).results;
+        let tmdbSearch = (await this.oblecto.tmdb.searchTv({query: guessitIdentification.title})).results;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError();

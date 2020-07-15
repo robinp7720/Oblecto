@@ -1,4 +1,4 @@
-import fs from 'mz/fs';
+import {promises as fs} from 'fs';
 import databases from '../../../submodules/database';
 
 export default {

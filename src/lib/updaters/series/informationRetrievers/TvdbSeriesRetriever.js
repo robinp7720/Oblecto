@@ -1,13 +1,14 @@
 import guessit from '../../../../submodules/guessit';
-import tvdb from '../../../../submodules/tvdb';
 
 export default class TvdbSeriesRetriever {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.tvShowCache = {};
     }
 
     async tvShowInfo(id) {
-        return tvdb.getSeriesById(id);
+        return this.oblecto.tvdb.getSeriesById(id);
     }
 
     async identify(path) {
@@ -23,7 +24,7 @@ export default class TvdbSeriesRetriever {
             return this.tvShowCache[cacheId];
         }
 
-        let tvdbSearch = await tvdb.getSeriesByName(guessitIdentification.title);
+        let tvdbSearch = await this.oblecto.tvdb.getSeriesByName(guessitIdentification.title);
 
         for (let i in tvdbSearch) {
             if (!tvdbSearch.hasOwnProperty(i))

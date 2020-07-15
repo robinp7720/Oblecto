@@ -1,8 +1,10 @@
-import tmdb from '../../../../submodules/tmdb';
-
 export default class TmdbMovieRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveMovieInformation(movie) {
-        let movieInfo = await tmdb.movieInfo({ id: movie.tmdbid });
+        let movieInfo = await this.oblecto.movieInfo({ id: movie.tmdbid });
 
         let data = {
             movieName: movieInfo.title,

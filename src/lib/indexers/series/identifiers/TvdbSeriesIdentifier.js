@@ -1,9 +1,10 @@
 import guessit from '../../../../submodules/guessit';
-import tvdb from '../../../../submodules/tvdb';
 import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TvdbSeriesIdentifier {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.tvShowCache = {};
     }
 
@@ -35,7 +36,7 @@ export default class TvdbSeriesIdentifier {
             return this.tvShowCache[cacheId];
         }
 
-        let tvdbSearch = await tvdb.getSeriesByName(guessitIdentification.title);
+        let tvdbSearch = await this.oblecto.tvdb.getSeriesByName(guessitIdentification.title);
 
         let series = tvdbSearch[0];
 

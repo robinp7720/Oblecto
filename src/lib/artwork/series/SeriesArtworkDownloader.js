@@ -9,10 +9,12 @@ export default class SeriesArtworkDownloader {
         this.oblecto = oblecto;
 
         this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever();
-        this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever());
-        this.seriesArtworkRetriever.loadRetriever(new TmdbSeriesArtworkRetriever());
+        this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever(this.oblecto));
+        this.seriesArtworkRetriever.loadRetriever(new TmdbSeriesArtworkRetriever(this.oblecto));
 
-        this.artworkUtils = new ArtworkUtils(this.oblecto);
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('downloadEpisodeBanner', this.downloadEpisodeBanner);
+        this.oblecto.queue.addJob('downloadSeriesPoster', this.downloadSeriesPoster);
     }
 
     async downloadEpisodeBanner(episode) {
@@ -20,13 +22,13 @@ export default class SeriesArtworkDownloader {
 
         await Download.download(
             url,
-            this.artworkUtils.episodeBannerPath(episode)
+            this.oblecto.artworkUtils.episodeBannerPath(episode)
         );
 
         for (let size of Object.keys(this.oblecto.config.artwork.banner)) {
             this.oblecto.queue.pushJob('rescaleImage', {
-                from: this.artworkUtils.episodeBannerPath(episode),
-                to: this.artworkUtils.episodeBannerPath(episode, size),
+                from: this.oblecto.artworkUtils.episodeBannerPath(episode),
+                to: this.oblecto.artworkUtils.episodeBannerPath(episode, size),
                 width: this.oblecto.config.artwork.banner[size]
             });
         }
@@ -37,13 +39,13 @@ export default class SeriesArtworkDownloader {
 
         await Download.download(
             url,
-            this.artworkUtils.seriesPosterPath(series)
+            this.oblecto.artworkUtils.seriesPosterPath(series)
         );
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {
-                from: this.artworkUtils.seriesPosterPath(series),
-                to: this.artworkUtils.seriesPosterPath(series, size),
+                from: this.oblecto.artworkUtils.seriesPosterPath(series),
+                to: this.oblecto.artworkUtils.seriesPosterPath(series, size),
                 width: this.oblecto.config.artwork.poster[size]
             });
         }

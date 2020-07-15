@@ -1,9 +1,10 @@
 import guessit from '../../../../submodules/guessit';
-import tmdb from '../../../../submodules/tmdb';
 import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TmdbEpisodeIdentifier {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.episodeCache = {};
     }
 
@@ -12,7 +13,7 @@ export default class TmdbEpisodeIdentifier {
 
         const guessitIdentification = await guessit.identify(path);
 
-        let episode = await tmdb.tvEpisodeInfo({
+        let episode = await this.oblecto.tmdb.tvEpisodeInfo({
             id: series.tmdbid,
             season_number: guessitIdentification.season,
             episode_number: guessitIdentification.episode

@@ -1,10 +1,12 @@
-import tmdb from '../../../../submodules/tmdb';
-
 export default class TmdbSeriesArtworkRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveEpisodeBanner(episode) {
         let series = await episode.getTvshow();
 
-        let data = await tmdb.tvEpisodeImages({
+        let data = await this.oblecto.tmdb.tvEpisodeImages({
             id: series.tmdbid,
             episode_number: episode.airedEpisodeNumber,
             season_number: episode.airedSeason
@@ -14,7 +16,7 @@ export default class TmdbSeriesArtworkRetriever {
     }
 
     async retrieveSeriesPoster (series) {
-        let data = await tmdb.tvImages({
+        let data = await this.oblecto.tmdb.tvImages({
             id: series.tmdbid
         });
 

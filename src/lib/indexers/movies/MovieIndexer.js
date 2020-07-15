@@ -15,9 +15,12 @@ export default class MovieIndexer {
         this.movieIdentifer = new AggregateMovieIdentifier();
 
         this.movieIdentifer.loadIdentifier(new TmdbMovieIdentifier());
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    async indexFile(moviePath) {
+    async indexFile(moviePath, doReIndex) {
         let file = await FileIndexer.indexVideoFile(moviePath);
 
         let movieIdentification = await this.movieIdentifer.identify(moviePath);
@@ -34,6 +37,7 @@ export default class MovieIndexer {
         movie.addFile(file);
 
         if (movieCreated) {
+            this.oblecto.queue.queueJob('updateMovie', movie);
             this.oblecto.queue.queueJob('downloadMovieFanart', movie);
             this.oblecto.queue.pushJob('downloadMoviePoster', movie);
         }

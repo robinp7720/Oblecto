@@ -1,5 +1,5 @@
 import databases from '../../../submodules/database';
-import {promises as fs} from "fs";
+import {promises as fs} from 'fs';
 
 export default class MovieArtworkCollector {
     /**

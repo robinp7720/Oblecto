@@ -1,10 +1,12 @@
-import tvdb from '../../../../submodules/tvdb';
-
 export default class TvdbSeriesArtworkRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveEpisodeBanner (episode) {
         if (!episode.tvdbid) throw new Error();
 
-        let data = await tvdb.getEpisodeById(episode.tvdbid);
+        let data = await this.oblecto.tvdb.getEpisodeById(episode.tvdbid);
 
         return `https://thetvdb.com/banners/_cache/${data.filename}`;
     }
@@ -12,7 +14,7 @@ export default class TvdbSeriesArtworkRetriever {
     async retrieveSeriesPoster (series) {
         if (!series.tvdbid) throw new Error();
 
-        let data = await tvdb.getSeriesPosters(series.tvdbid);
+        let data = await this.oblecto.tvdb.getSeriesPosters(series.tvdbid);
 
         return `http://thetvdb.com/banners/${data[0].fileName}`;
     }

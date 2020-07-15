@@ -1,6 +1,5 @@
-import axios from 'axios';
-import {promises as fs} from 'fs';
-import util from 'util';
+import TVDB from 'node-tvdb';
+import moviedb from 'moviedb-promise';
 
 import Queue from '../queue';
 import SeriesIndexer from '../indexers/series/SeriesIndexer';
@@ -36,6 +35,9 @@ export default class Oblecto {
     constructor(config) {
         this.config = config;
 
+        this.tvdb = new TVDB(this.config.tvdb.key);
+        this.tmdb = new moviedb(this.config.themoviedb.key);
+
         this.queue = new Queue(this.config.queue.concurrency);
 
         this.oblectoAPI = new OblectoAPI(this);
@@ -53,6 +55,7 @@ export default class Oblecto {
         this.movieArtworkCollector = new MovieArtworkCollector(this);
         this.seriesArtworkCollector = new SeriesArtworkCollector(this);
         this.artworkUtils = new ArtworkUtils(this);
+        this.imageScaler = new ImageScaler(this);
 
         this.seriesUpdater = new SeriesUpdater(this);
         this.movieUpdater = new MovieUpdater(this);
@@ -60,69 +63,19 @@ export default class Oblecto {
         this.seriesUpdateCollector = new SeriesUpdateCollector(this);
         this.movieUpdateCollector = new MovieUpdateCollector(this);
 
-        this.fedartionController = new FederationController(this);
-        this.federationClientController = new FederationClientController(this);
+        if (config.federation.enabled) {
+            this.fedartionController = new FederationController(this);
+            this.federationClientController = new FederationClientController(this);
 
-        this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
-        this.federationMovieIndexer = new FederationMovieIndexer(this);
+            this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
+            this.federationMovieIndexer = new FederationMovieIndexer(this);
+        }
 
-        this.federationClientController.addSyncMaster('oblecto');
 
         this.setupQueue();
     }
 
     setupQueue () {
-        this.queue.addJob('indexEpisode', async (job) => {
-            await this.seriesIndexer.indexFile(job.path);
-        });
-
-        this.queue.addJob('indexMovie', async (job) => {
-            await this.movieIndexer.indexFile(job.path);
-        });
-
-        this.queue.addJob('updateEpisode', async (job) => {
-            await this.seriesUpdater.updateEpisode(job);
-        });
-
-        this.queue.addJob('updateSeries', async (job) => {
-            await this.seriesUpdater.updateSeries(job);
-        });
-
-        this.queue.addJob('updateMovie', async (job) => {
-            await this.movieUpdater.updateMovie(job);
-        });
-
-        this.queue.addJob('federationIndexEpisode', async (job) => {
-            await this.federationEpisodeIndexer.indexEpisode(job);
-        });
-
-        this.queue.addJob('federationIndexMovie', async (job) => {
-            await this.federationMovieIndexer.indexMovie(job);
-        });
-
-        this.queue.addJob('downloadEpisodeBanner', async (job) => {
-            await this.seriesArtworkDownloader.downloadEpisodeBanner(job);
-        });
-
-        this.queue.addJob('downloadSeriesPoster', async (job) => {
-            await this.seriesArtworkDownloader.downloadSeriesPoster(job);
-        });
-
-        this.queue.addJob('downloadMoviePoster', async (job) => {
-            await this.movieArtworkDownloader.downloadMoviePoster(job);
-        });
-
-        this.queue.addJob('downloadMovieFanart', async (job) => {
-            await this.movieArtworkDownloader.downloadMovieFanart(job);
-        });
-
-        this.queue.addJob('rescaleImage', async (job) => {
-            await ImageScaler.rescaleImage(job.from, job.to, {
-                width: job.width,
-                height: job.height
-            });
-        });
-
         this.queue.addJob('downloadFile', async (job) => {
             await Downloader.download(job.url, job.dest, job.overwrite);
         });

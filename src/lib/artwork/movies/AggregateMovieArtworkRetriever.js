@@ -1,5 +1,7 @@
 export default class AggregateMovieArtworkRetriever {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.retrievers = [];
     }
 

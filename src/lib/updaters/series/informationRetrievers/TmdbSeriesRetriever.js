@@ -1,8 +1,10 @@
-import tmdb from '../../../../submodules/tmdb';
-
 export default class TmdbSeriesRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveSeriesInformation(series) {
-        let seriesInfo = await tmdb.tvInfo({ id: series.tmdbid });
+        let seriesInfo = await this.oblecto.tmdb.tvInfo({ id: series.tmdbid });
 
         let data = {
             seriesName: seriesInfo.name,
@@ -24,7 +26,7 @@ export default class TmdbSeriesRetriever {
         let externalIds = {};
 
         if (!(series.tvdbid && series.imdbid)) {
-            externalIds = await tmdb.tvExternalIds({id: series.tmdbid});
+            externalIds = await this.oblecto.tmdb.tvExternalIds({id: series.tmdbid});
         }
 
         if (!series.tvdbid) {

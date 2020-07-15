@@ -10,7 +10,14 @@ export default class MovieArtworkDownloader {
         this.movieArtworkRetriever = new AggregateMovieArtworkRetriever();
         this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever());
 
-        this.artworkUtils = new ArtworkUtils(this.oblecto);
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('downloadMoviePoster', async (job) => {
+            await this.downloadMoviePoster(job);
+        });
+
+        this.oblecto.queue.addJob('downloadMovieFanart', async (job) => {
+            await this.downloadMovieFanart(job);
+        });
     }
 
     async downloadMoviePoster(movie) {
@@ -23,8 +30,8 @@ export default class MovieArtworkDownloader {
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {
-                from: this.artworkUtils.moviePosterPath(movie),
-                to: this.artworkUtils.moviePosterPath(movie, size),
+                from: this.oblecto.artworkUtils.moviePosterPath(movie),
+                to: this.oblecto.artworkUtils.moviePosterPath(movie, size),
                 width: this.oblecto.config.artwork.poster[size]
             });
         }
@@ -35,13 +42,13 @@ export default class MovieArtworkDownloader {
 
         await Download.download(
             url,
-            this.artworkUtils.movieFanartPath(movie)
+            this.oblecto.artworkUtils.movieFanartPath(movie)
         );
 
         for (let size of Object.keys(this.oblecto.config.artwork.fanart)) {
             this.oblecto.queue.pushJob('rescaleImage', {
-                from: this.artworkUtils.movieFanartPath(movie),
-                to: this.artworkUtils.movieFanartPath(movie, size),
+                from: this.oblecto.artworkUtils.movieFanartPath(movie),
+                to: this.oblecto.artworkUtils.movieFanartPath(movie, size),
                 width: this.oblecto.config.artwork.fanart[size]
             });
         }

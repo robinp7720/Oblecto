@@ -1,8 +1,10 @@
-import tmdb from '../../../../submodules/tmdb';
-
 export default class TmdbMovieArtworkRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveFanart(movie) {
-        let data = await tmdb.movieImages({
+        let data = await this.oblecto.tmdb.movieImages({
             id: movie.tmdbid
         });
 
@@ -10,7 +12,7 @@ export default class TmdbMovieArtworkRetriever {
     }
 
     async retrievePoster(movie) {
-        let data = await tmdb.movieImages({
+        let data = await this.oblecto.tmdb.movieImages({
             id: movie.tmdbid
         });
 

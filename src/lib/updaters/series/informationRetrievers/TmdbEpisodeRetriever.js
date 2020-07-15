@@ -1,10 +1,12 @@
-import tmdb from '../../../../submodules/tmdb';
-
 export default class TmdbEpisodeRetriever {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     async retrieveEpisodeInformation(episode) {
         let series = await episode.getTvshow();
 
-        let episodeInfo = await tmdb.tvEpisodeInfo({
+        let episodeInfo = await this.oblecto.tmdb.tvEpisodeInfo({
             id: series.tmdbid,
             season_number: episode.airedSeason,
             episode_number: episode.airedEpisodeNumber
@@ -21,7 +23,7 @@ export default class TmdbEpisodeRetriever {
         let externalIds = {};
 
         if (!(episode.tvdbid && episode.imdbid)) {
-            externalIds = await tmdb.tvEpisodeExternalIds({
+            externalIds = await this.oblecto.tmdb.tvEpisodeExternalIds({
                 id: series.tmdbid,
                 season_number: episode.airedSeason,
                 episode_number: episode.airedEpisodeNumber

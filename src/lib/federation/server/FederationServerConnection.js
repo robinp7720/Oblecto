@@ -53,10 +53,6 @@ export default class FederationServerConnection {
         }
     }
 
-    waitForAuthentication() {
-
-    }
-
     async clientIdHandler(clientId) {
         this.cluidId = clientId;
 
@@ -93,8 +89,6 @@ export default class FederationServerConnection {
     }
 
     write(header, content) {
-        if (!this.socket) return;
-
         this.socket.write(`${header}:${content}\n`);
     }
 }

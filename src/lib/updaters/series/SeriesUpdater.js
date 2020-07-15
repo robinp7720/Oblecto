@@ -9,10 +9,19 @@ export default class SeriesUpdater {
         this.oblecto = oblecto;
 
         this.aggregateSeriesUpdateRetriever = new AggregateSeriesUpdateRetriever();
-        this.aggregateSeriesUpdateRetriever.loadRetriever(new TmdbSeriesRetriever());
+        this.aggregateSeriesUpdateRetriever.loadRetriever(new TmdbSeriesRetriever(this.oblecto));
 
         this.aggregateEpisodeUpdaterRetriever = new AggregateEpisodeUpdateRetriever();
-        this.aggregateEpisodeUpdaterRetriever.loadRetriever(new TmdbEpisodeRetriever());
+        this.aggregateEpisodeUpdaterRetriever.loadRetriever(new TmdbEpisodeRetriever(this.oblecto));
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('updateEpisode', async (job) => {
+            await this.updateEpisode(job);
+        });
+
+        this.oblecto.queue.addJob('updateSeries', async (job) => {
+            await this.updateSeries(job);
+        });
     }
 
     async updateSeries(series) {

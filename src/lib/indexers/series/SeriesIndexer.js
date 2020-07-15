@@ -17,17 +17,22 @@ export default class SeriesIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.seriesIdentifier = new AggregateSeriesIdentifier();
-        this.episodeIdentifer = new AggregateEpisodeIdentifier();
+        this.seriesIdentifier = new AggregateSeriesIdentifier(this.oblecto);
+        this.episodeIdentifer = new AggregateEpisodeIdentifier(this.oblecto);
 
         //this.seriesIdentifier.loadIdentifier(new TvdbSeriesIdentifier());
-        this.seriesIdentifier.loadIdentifier(new TmdbSeriesIdentifier());
+        this.seriesIdentifier.loadIdentifier(new TmdbSeriesIdentifier(this.oblecto));
 
         //this.episodeIdentifer.loadIdentifier(new TvdbEpisodeIdentifier());
-        this.episodeIdentifer.loadIdentifier(new TmdbEpisodeIdentifier());
+        this.episodeIdentifer.loadIdentifier(new TmdbEpisodeIdentifier(this.oblecto));
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    async indexFile(episodePath) {
+    async indexFile(episodePath, doReIndex) {
+        console.log('Indexing ' + episodePath);
+
         let file = await FileIndexer.indexVideoFile(episodePath);
 
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
@@ -57,10 +62,16 @@ export default class SeriesIndexer {
 
         episode.addFile(file);
 
-        if (episodeCreated)
+        if (episodeCreated) {
+            this.oblecto.queue.pushJob('updateEpisode', episode);
             this.oblecto.queue.pushJob('downloadEpisodeBanner', episode);
-        if (seriesCreated)
+        }
+
+        if (seriesCreated) {
+            this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.pushJob('downloadSeriesPoster', series);
+        }
+
 
         return `${episodePath} indexed`;
     }

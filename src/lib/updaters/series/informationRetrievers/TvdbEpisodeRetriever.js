@@ -1,9 +1,10 @@
 import guessit from '../../../../submodules/guessit';
-import tvdb from '../../../../submodules/tvdb';
 import VideoIdentificationError from '../../../errors/VideoIdentificationError';
 
 export default class TvdbEpisodeRetriever {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.episodeCache = {};
     }
 
@@ -21,7 +22,7 @@ export default class TvdbEpisodeRetriever {
 
         if (this.episodeCache.length > 100) this.episodeCache = {};
 
-        this.episodeCache[tvdbId] = await tvdb.getEpisodesBySeriesId(tvdbId);
+        this.episodeCache[tvdbId] = await this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId);
 
         return this.episodeCache[tvdbId];
     }

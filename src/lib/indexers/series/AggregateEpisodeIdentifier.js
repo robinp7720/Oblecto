@@ -1,7 +1,9 @@
 import IdentificationError from '../../errors/IdentificationError';
 
 export default class AggregateEpisodeIdentifier {
-    constructor() {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.identifiers = [];
     }
 

@@ -3,12 +3,17 @@ import databases from '../../submodules/database';
 export default class FederationMovieIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('federationIndexMovie', async (job) => {
+            await this.indexMovie(job);
+        });
     }
 
     async indexMovie(file) {
         let [fileEntity, fileInserted] = await databases.file.findOrCreate({
             where: {
-                host: this.host,
+                host: file.host,
                 path: file.id
             },
             defaults: {
@@ -25,10 +30,13 @@ export default class FederationMovieIndexer {
             }
         });
 
+        await movie.addFile(fileEntity);
+
+        if (!movieInserted) return;
+
         await this.oblecto.movieUpdateCollector.collectMovie(movie);
         await this.oblecto.movieArtworkCollector.collectArtworkMovieFanart(movie);
         await this.oblecto.movieArtworkCollector.collectArtworkMoviePoster(movie);
 
-        await movie.addFile(fileEntity);
     }
 }

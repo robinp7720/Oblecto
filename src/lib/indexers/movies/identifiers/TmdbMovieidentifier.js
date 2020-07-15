@@ -1,17 +1,16 @@
 import guessit from '../../../../submodules/guessit';
-import tmdb from '../../../../submodules/tmdb';
+import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TmdbMovieIdentifier {
-    constructor() {
-
+    constructor(oblecto) {
+        this.oblecto = oblecto;
     }
 
     async identify(path) {
         let identification = await guessit.identify(path);
 
         if (!identification.title) {
-            console.log('A movie title could not be extracted from', path);
-            return false;
+            throw new IdentificationError('Title extraction was unsuccessful');
         }
 
         let query = {query: identification.title};
@@ -20,12 +19,12 @@ export default class TmdbMovieIdentifier {
             query.primary_release_year = identification.year;
         }
 
-        let res = await tmdb.searchMovie(query);
+        let res = await this.oblecto.tmdb.searchMovie(query);
 
         let identifiedMovie = res.results[0];
 
         if (!identifiedMovie) {
-            throw new Error('Could not identify movie');
+            throw new IdentificationError();
         }
 
         return {

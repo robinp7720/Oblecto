@@ -1,7 +1,4 @@
 import FederationClient from './FederationClient';
-import databases from '../../../submodules/database';
-import tvdb from '../../../submodules/tvdb';
-import async from 'async';
 
 export default class FederationDataClient extends FederationClient {
     /**

@@ -3,6 +3,11 @@ import databases from '../../submodules/database';
 export default class FederationEpisodeIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('federationIndexEpisode', async (job) => {
+            await this.indexEpisode(job);
+        });
     }
 
     async indexEpisode(file) {
@@ -38,14 +43,15 @@ export default class FederationEpisodeIndexer {
             }
         });
 
-        if (!episodeInserted) return episode;
+        await episode.addFile(fileEntity);
 
-        await this.oblecto.seriesUpdateCollector.collectSeries(series);
+        if (!episodeInserted) return;
         await this.oblecto.seriesUpdateCollector.collectEpisode(episode);
-
-        await this.oblecto.seriesArtworkCollector.collectArtworkSeriesPoster(series);
         await this.oblecto.seriesArtworkCollector.collectArtworkEpisodeBanner(episode);
 
-        await episode.addFile(fileEntity);
+        if (!seriesInserted) return;
+        await this.oblecto.seriesUpdateCollector.collectSeries(series);
+        await this.oblecto.seriesArtworkCollector.collectArtworkSeriesPoster(series);
+
     }
 }
