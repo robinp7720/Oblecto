@@ -5,9 +5,11 @@ export default class FederationClientController{
         this.oblecto = oblecto;
 
         this.syncServers = [];
+    }
 
+    async addAllSyncMasters () {
         for (let server in this.oblecto.config.federation.servers) {
-            this.addSyncMaster(server);
+            await this.addSyncMaster(server);
         }
     }
 
