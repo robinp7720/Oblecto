@@ -29,6 +29,14 @@ let axiosTimeout = function (options) {
 };
 
 export default class Downloader {
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
+        this.oblecto.queue.addJob('downloadFile', async (job) => {
+            await Downloader.download(job.url, job.dest, job.overwrite);
+        });
+    }
+
     static async download(url, dest, overwrite) {
         let writeMode = 'wx';
 

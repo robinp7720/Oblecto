@@ -2,6 +2,9 @@ import TVDB from 'node-tvdb';
 import moviedb from 'moviedb-promise';
 
 import Queue from '../queue';
+import ImageScaler from '../artwork/ArtworkScaler';
+import Downloader from '../downloader';
+
 import SeriesIndexer from '../indexers/series/SeriesIndexer';
 import MovieIndexer from '../indexers/movies/MovieIndexer';
 
@@ -46,6 +49,8 @@ export default class Oblecto {
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);
 
+        this.downloader = new Downloader(this);
+
         this.seriesIndexer = new SeriesIndexer(this);
         this.movieIndexer = new MovieIndexer(this);
 
@@ -76,15 +81,8 @@ export default class Oblecto {
 
             this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
             this.federationMovieIndexer = new FederationMovieIndexer(this);
+
+            this.federationClientController.addAllSyncMasters();
         }
-
-
-        this.setupQueue();
-    }
-
-    setupQueue () {
-        this.queue.addJob('downloadFile', async (job) => {
-            await Downloader.download(job.url, job.dest, job.overwrite);
-        });
     }
 }
