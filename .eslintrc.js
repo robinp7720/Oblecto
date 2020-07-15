@@ -1,29 +1,33 @@
 module.exports = {
-    "extends": "eslint:recommended",
-    "parserOptions": {
-        "sourceType": "module",
-        "ecmaVersion": 8,
+    'env': {
+        'node': true,
     },
-    "rules": {
-        "indent": [
-            "error",
-            4
+    'extends': 'eslint:recommended',
+    'parserOptions': {
+        'sourceType': 'module',
+        'ecmaVersion': 8,
+    },
+    'rules': {
+        'indent': [
+            'error',
+            4,
+            { 'SwitchCase': 1 }
         ],
-        "linebreak-style": [
-            "error",
-            "unix"
+        'linebreak-style': [
+            'error',
+            'unix'
         ],
-        "quotes": [
-            "error",
-            "single"
+        'quotes': [
+            'error',
+            'single'
         ],
-        "semi": [
-            "error",
-            "always"
+        'semi': [
+            'error',
+            'always'
         ],
-        "func-call-spacing": [
-            "error",
-            "never"
+        'func-call-spacing': [
+            'error',
+            'never'
         ]
     }
 };
