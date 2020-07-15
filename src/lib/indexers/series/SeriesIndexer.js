@@ -6,6 +6,7 @@ import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 import FileIndexer from '../files/FileIndexer';
 
+import Op from 'sequelize';
 
 import databases from '../../../submodules/database';
 
@@ -38,12 +39,14 @@ export default class SeriesIndexer {
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
         let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
 
+        let idQuery = [];
+
+        if (seriesIdentification.tvdbid) idQuery.push({tvdbid: seriesIdentification.tvdbid});
+        if (seriesIdentification.tmdbid) idQuery.push({tmdbid: seriesIdentification.tmdbid});
+
         let [series, seriesCreated] = await databases.tvshow.findOrCreate(
             {
-                where: {
-                    tvdbid: seriesIdentification.tvdbid || null,
-                    tmdbid: seriesIdentification.tmdbid || null
-                },
+                where: idQuery,
                 defaults: seriesIdentification
             });
 
