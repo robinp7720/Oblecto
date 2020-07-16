@@ -1,7 +1,7 @@
 import maintenance from './maintenance';
 import sources from './sources';
 
-export default (server) => {
-    maintenance(server);
-    sources(server);
+export default (server, oblecto) => {
+    maintenance(server, oblecto);
+    sources(server, oblecto);
 };

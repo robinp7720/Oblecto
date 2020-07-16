@@ -1,21 +1,20 @@
 import uuid from 'node-uuid';
-import databases from "../database";
-import ffmpeg from "../ffmpeg";
+import databases from '../database';
+import ffmpeg from '../ffmpeg';
 import mkdirp from 'mkdirp';
 import os from 'os';
 import fs from 'fs';
-import path from 'path'
 
 export default class {
-    maxGenCount = 8;
-    timeOffset = 0;
-    lastTime;
-
     constructor(fileId) {
         this.sessionId = uuid.v4();
         this.fileId = fileId;
 
         this.paused = true;
+
+        this.maxGenCount = 8;
+        this.timeOffset = 0;
+        this.lastTime;
     }
 
     async init() {
@@ -31,7 +30,7 @@ export default class {
             return false;
         }
 
-        return this.timeOffset = time
+        return this.timeOffset = time;
     }
 
     resetTimeout() {
@@ -57,17 +56,17 @@ export default class {
             // setup event handlers
 
             // save to stream
-            .on("start", (cmd) => {
-                console.log("--- ffmpeg start process ---");
+            .on('start', (cmd) => {
+                console.log('--- ffmpeg start process ---');
                 console.log(`cmd: ${cmd}`);
 
                 this.paused = false;
             })
-            .on("end",() => {
-                console.log("--- end processing ---");
+            .on('end',() => {
+                console.log('--- end processing ---');
             })
-            .on("error", (err) => {
-                console.log("--- ffmpeg meets error ---");
+            .on('error', (err) => {
+                console.log('--- ffmpeg meets error ---');
                 console.log(err);
             })
             .save(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/index.m3u8`);
@@ -80,7 +79,7 @@ export default class {
                 console.log('HLS Session', this.sessionId, 'has expired. Clearing now.');
                 clearInterval(this.segmentChecker);
                 this.clearSession();
-                return
+                return;
             }
 
             fs.readdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`, (err, files) => {
@@ -99,12 +98,12 @@ export default class {
                 const segments = files.filter(s => s.includes('.ts'));
 
                 if (segments.length > this.maxGenCount) {
-                    this.pauseSegmenting()
+                    this.pauseSegmenting();
                 } else {
-                    this.resumeSegmenting()
+                    this.resumeSegmenting();
                 }
             });
-        },1000)
+        },1000);
     }
 
     clearSession() {
@@ -122,7 +121,7 @@ export default class {
                         console.error(err);
                     }
                 });
-            })
+            });
 
 
         });
@@ -136,10 +135,10 @@ export default class {
 
             this.paused = true;
 
-            return true
+            return true;
         }
 
-        return false
+        return false;
     }
 
     resumeSegmenting () {

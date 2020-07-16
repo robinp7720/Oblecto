@@ -2,7 +2,7 @@ import mimeTypes from 'mime-types';
 import fs from 'fs';
 
 export default class {
-    static streamFile(videoPath, req, res, next) {
+    static streamFile(oblecto, videoPath, req, res, next) {
 
         let videoSize = fs.statSync(videoPath).size;
         let videoMime =  mimeTypes.lookup(videoPath);

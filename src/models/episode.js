@@ -1,7 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('episodes', {
         tvdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
-        showid: { type: DataTypes.INTEGER, allowNull: true },
+        tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
+        imdbid: { type: DataTypes.STRING, allowNull: true, unique: true },
 
         episodeName: DataTypes.STRING,
 

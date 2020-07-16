@@ -6,7 +6,7 @@ import config from '../../../config';
 import authMiddleWare from '../middleware/auth';
 
 
-export default (server) => {
+export default (server, oblecto) => {
     server.get('/users', async function (req, res, next) {
         let users = await databases.user.findAll({
             attributes: ['username', 'name', 'email', 'id']
@@ -48,7 +48,7 @@ export default (server) => {
 
 
     // Endpoint to update the entries of a certain user
-    server.put('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res, next) {
         let user = await databases.user.findByPk(req.params.id);
 
         if (!user) {
@@ -97,7 +97,7 @@ export default (server) => {
         let passwordHash;
 
         if (req.params.password)
-            passwordHash = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
+            passwordHash = await bcrypt.hash(req.params.password, oblecto.config.authentication.saltRounds);
 
         let [User] = await databases.user.findOrCreate({
             where: {

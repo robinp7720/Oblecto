@@ -1,25 +1,16 @@
 import guessit from '../../../../submodules/guessit';
-import tmdb from '../../../../submodules/tmdb';
+import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TmdbMovieIdentifier {
-    constructor() {
-
-    }
-
-    async getGenres() {
-        this.genres = (await tmdb.genreMovieList()).genres;
+    constructor(oblecto) {
+        this.oblecto = oblecto;
     }
 
     async identify(path) {
-        if(!this.genres) {
-            await this.getGenres();
-        }
-
         let identification = await guessit.identify(path);
 
         if (!identification.title) {
-            console.log('A movie title could not be extracted from', path);
-            return false;
+            throw new IdentificationError('Title extraction was unsuccessful');
         }
 
         let query = {query: identification.title};
@@ -28,29 +19,18 @@ export default class TmdbMovieIdentifier {
             query.primary_release_year = identification.year;
         }
 
-        let res = await tmdb.searchMovie(query);
+        let res = await this.oblecto.tmdb.searchMovie(query);
 
         let identifiedMovie = res.results[0];
 
         if (!identifiedMovie) {
-            throw new Error('Could not identify movie');
+            throw new IdentificationError();
         }
 
-        identifiedMovie.genres = identifiedMovie.genre_ids.map((id) => {
-            for (let i in this.genres) {
-                if (this.genres[i].id == id) {
-                    return this.genres[i].name;
-                }
-            }
-        });
-
         return {
-            tmdbId: identifiedMovie.id,
-            title: identifiedMovie.title,
-            genre: identifiedMovie.genres,
+            tmdbid: identifiedMovie.id,
+            movieName: identifiedMovie.title,
             overview: identifiedMovie.overview,
-            releaseDate: identifiedMovie.release_date,
-            tmdb: identifiedMovie
         };
     }
 

@@ -1,13 +1,12 @@
 import authMiddleWare from '../../middleware/auth';
-import errors from "restify-errors";
+import errors from 'restify-errors';
 
 import { ConfigManager } from '../../../../config';
 
-import config from "../../../../config";
 
 
 
-export default (server) => {
+export default (server, oblecto) => {
     // API Endpoint to request a re-index of certain library types
     server.get('/sources/:type', authMiddleWare.requiresAuth, function (req, res, next) {
 
@@ -15,7 +14,7 @@ export default (server) => {
             return next(new errors.BadRequestError('Source type does not exist'));
         }
 
-        res.send(config[req.params.type].directories || {});
+        res.send(oblecto.config[req.params.type].directories || {});
     });
 
     server.put('/sources/:type', authMiddleWare.requiresAuth, function (req, res, next) {
@@ -28,11 +27,11 @@ export default (server) => {
             return next(new errors.BadRequestError('No path specified'));
         }
 
-        config[req.params.type].directories.push({
+        oblecto.config[req.params.type].directories.push({
             path: req.params.path
         });
 
-        res.send("success");
+        res.send('success');
 
         ConfigManager.saveConfig();
     });
@@ -47,13 +46,13 @@ export default (server) => {
             return next(new errors.BadRequestError('No path specified'));
         }
 
-        config[req.params.type].directories.forEach((v, i) => {
+        oblecto.config[req.params.type].directories.forEach((v, i) => {
             if (v.path === req.params.path) {
-                delete config[req.params.type].directories.splice(i, 1);
+                delete oblecto.config[req.params.type].directories.splice(i, 1);
             }
         });
 
-        res.send("success");
+        res.send('success');
 
         ConfigManager.saveConfig();
     });

@@ -1,86 +1,47 @@
-import path from 'path';
-import databases from '../../../submodules/database';
-import queue from '../../../submodules/queue';
-import UserManager from '../../../submodules/users';
-import config from '../../../config.js';
-import ffprobe from '../../../submodules/ffprobe';
-
-import MovieSetCollector from './MovieSetCollector';
-import MovieArtworkRetriever from './MovieArtworkRetriever';
-import MovieIdentifier from './MovieIdentifier';
+import AggregateMovieIdentifier from './AggregateMovieIdentifier';
 import FileIndexer from '../files/FileIndexer';
-import FileExistsError from '../../errors/FileExistsError';
-import VideoAnalysisError from '../../errors/VideoAnalysisError';
+import databases from '../../../submodules/database';
+import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 
-export default async function (moviePath, reIndex) {
-    let file;
 
-    try {
-        file = await FileIndexer.indexVideoFile(moviePath);
-    } catch (e) {
-        if (e instanceof FileExistsError) {
-            if (!reIndex) return false;
-        } else if (e instanceof VideoAnalysisError) {
-            console.log(`Error analysing ${moviePath}`);
-            return false;
-        } else {
-            throw e;
-        }
+export default class MovieIndexer {
+    /**
+     *
+     * @param {Oblecto} oblecto
+     */
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
+        this.movieIdentifer = new AggregateMovieIdentifier();
+
+        this.movieIdentifer.loadIdentifier(new TmdbMovieIdentifier());
+
+        // Register task availability to Oblecto queue
+        this.oblecto.queue.addJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    let data = await MovieIdentifier.identifyMovie(moviePath);
+    async indexFile(moviePath, doReIndex) {
+        let file = await FileIndexer.indexVideoFile(moviePath);
 
-    let [movie, MovieInserted] = await databases.movie
-        .findOrCreate({
-            where: {tmdbid: data.tmdbId}, defaults: {
-                movieName: data.title,
-                popularity: data.tmdb.popularity,
-                releaseDate: data.releaseDate,
-                overview: data.overview,
-                file: moviePath
-            }
-        });
+        let movieIdentification = await this.movieIdentifer.identify(moviePath);
 
-    movie.addFile(file);
-
-    await MovieArtworkRetriever.QueueMoviePoster(movie);
-    await MovieArtworkRetriever.QueueMovieFanart(movie);
-
-    MovieSetCollector.GetSetsForMovie(movie);
-
-
-    if (MovieInserted) {
-        console.log(movie.movieName, 'added to database');
-
-        // Inform all connected clients that a new movie has been imported
-        UserManager.sendToAll('indexer', {event: 'added', type: 'movie'});
-    } else {
-        console.log(movie.movieName, 'was already in the database');
-    }
-
-    if (config.transcoding[file.extension] !== undefined && config.transcoding[file.extension] !== false) {
-        queue.push({task: 'transcode', path: moviePath}, async function (err) {
-            // Determine the file path of the transcoded file
-            let file;
-
-            try {
-                file = await FileIndexer.indexVideoFile(moviePath);
-            } catch (e) {
-                if (e instanceof FileExistsError) {
-                    if (!reIndex) return false;
-                } else if (e instanceof VideoAnalysisError) {
-                    console.log(`Error analysing ${moviePath}`);
-                    return false;
-                } else {
-                    throw e;
-                }
-            }
-
-            movie.addFile(file).then(() => {
-                movie.save();
+        let [movie, movieCreated] = await databases.movie.findOrCreate(
+            {
+                where: {
+                    tmdbid: movieIdentification.tmdbid
+                },
+                defaults: movieIdentification
             });
-        });
-    }
 
-    return true;
+
+        movie.addFile(file);
+
+        if (movieCreated) {
+            this.oblecto.queue.queueJob('updateMovie', movie);
+            this.oblecto.queue.queueJob('downloadMovieFanart', movie);
+            this.oblecto.queue.pushJob('downloadMoviePoster', movie);
+        }
+
+        return `${moviePath} indexed`;
+    }
 }

@@ -2,15 +2,15 @@ import sequelize from 'sequelize';
 import path from 'path';
 import fs from 'fs';
 import errors from 'restify-errors';
+import jimp from 'jimp';
+
 
 import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
-import config from '../../../config';
-import jimp from 'jimp';
 
 const Op = sequelize.Op;
 
-export default (server) => {
+export default (server, oblecto) => {
     // Endpoint to get a list of episodes from all series
     server.get('/episodes/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
 
@@ -49,17 +49,7 @@ export default (server) => {
             include: [databases.file]
         });
 
-        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
-
-        if (config.assets.storeWithFile) {
-            if (episode.files[0] === undefined)
-                return next(new errors.NotFoundError('No banner found'));
-
-            let episodePath = episode.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
-        }
+        let thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
 
         // Check if the thumbnail exists
         fs.stat(thumbnailPath, function (err) {
@@ -82,9 +72,9 @@ export default (server) => {
             return next(new errors.NotFoundError('Episode does not exist'));
         }
 
-        let thumbnailPath = path.normalize(config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
+        let thumbnailPath = path.normalize(oblecto.config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             if (!episode.files[0])
                 return next(new errors.NotFoundError('No file linked to episode'));
 
@@ -179,7 +169,7 @@ export default (server) => {
         let results = await databases.episode.findByPk(req.params.id);
         let episode = await databases.episode.findOne({
             where: {
-                showid: results.showid,
+                tvshowId: results.tvshowId,
                 [Op.or]: [{
                     [Op.and]: [{
                         airedEpisodeNumber: {
@@ -269,7 +259,7 @@ export default (server) => {
     server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res, next) {
         // Next episodes currently doesn't work on sqlite as the LPAD function doesn't exist
         // Todo: Fix next episodes endpoint to support sqlite
-        if (config.database.dialect === 'sqlite')
+        if (oblecto.config.database.dialect === 'sqlite')
             return next(new errors.NotImplementedError('Next episode is not supported when using sqlite (yet)'));
 
         // search for attributes

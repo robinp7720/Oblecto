@@ -1,10 +1,8 @@
-import mimeTypes from 'mime-types';
-import fs from 'fs';
 import ffmpeg from '../../ffmpeg';
 import ffprobe from '../../ffprobe';
 
 export default class {
-    static async DvdSteamer (video, offset, req, res) {
+    static async DvdSteamer (oblecto, video, offset, req, res) {
 
         let probe = await ffprobe(video.path);
         let streams = probe.streams;

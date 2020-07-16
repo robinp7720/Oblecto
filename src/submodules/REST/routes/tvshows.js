@@ -1,11 +1,8 @@
 import path from 'path';
-import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import sequelize from 'sequelize';
 
-import tvdb from '../../../submodules/tvdb';
 import databases from '../../../submodules/database';
-import config from '../../../config';
 import SeriesCollector from '../../../lib/indexers/series/SeriesCollector';
 import authMiddleWare from '../middleware/auth';
 import errors from "restify-errors";
@@ -13,7 +10,7 @@ import jimp from 'jimp';
 
 const Op = sequelize.Op;
 
-export default (server) => {
+export default (server, oblecto) => {
 
     server.get('/shows/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
         let tvShows = await databases.tvshow.findAll({
@@ -30,7 +27,9 @@ export default (server) => {
     server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req, res, next) {
         let show = await databases.tvshow.findByPk(req.params.id);
 
-        show.genre = JSON.parse(show.genre);
+        if (show.genre)
+            show.genre = JSON.parse(show.genre);
+
         res.send(show);
     });
 
@@ -71,16 +70,10 @@ export default (server) => {
     server.get('/series/:id/poster', function (req, res, next) {
         databases.tvshow.findByPk(req.params.id).then(show => {
             if (!show) {
-                res.errorCode = 404;
-                return res.send();
+                return next(new errors.NotFoundError('No poster found'));
             }
 
-            let posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
-
-            if (config.assets.storeWithFile) {
-                let showPath = show.directory;
-                posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
-            }
+            let posterPath = oblecto.artworkUtils.seriesPosterPath(show, 'medium');
 
             // Check if the poster image already exits
             fs.exists(posterPath, function (exists) {
@@ -88,8 +81,7 @@ export default (server) => {
                     // If the image exits, simply pipe it to the client
                     fs.createReadStream(posterPath).pipe(res);
                 } else {
-                    res.errorCode = 404;
-                    res.send();
+                    return next(new errors.NotFoundError('No poster found'));
                 }
             });
         });
@@ -102,9 +94,9 @@ export default (server) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let posterPath = path.normalize(config.assets.showPosterLocation) + '/' + show.id + '.jpg';
+        let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
 
-        if (config.assets.storeWithFile) {
+        if (oblecto.config.assets.storeWithFile) {
             let showPath = show.directory;
             posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
         }
