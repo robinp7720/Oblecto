@@ -23,7 +23,7 @@ export default async (args) => {
 
     // Create directories for image assets
     for (let size in config.artwork.fanart) {
-        createDirectory(`${config.assets.movieFanartLocation} /${size}`);
+        createDirectory(`${config.assets.movieFanartLocation}/${size}`);
     }
 
     for (let size in config.artwork.poster) {
@@ -37,7 +37,7 @@ export default async (args) => {
 
     let size = 'original';
 
-    createDirectory(`${config.assets.movieFanartLocation} /${size}`);
+    createDirectory(`${config.assets.movieFanartLocation}/${size}`);
     createDirectory(`${config.assets.moviePosterLocation}/${size}`);
     createDirectory(`${config.assets.showPosterLocation}/${size}`);
     createDirectory(`${config.assets.episodeBannerLocation}/${size}`);
