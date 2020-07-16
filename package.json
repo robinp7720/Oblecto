@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "0.1.15",
+  "version": "0.2.2",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -10,7 +10,7 @@
   },
   "files": [
     "dist/",
-    "bin/",
+    "res/",
     "Oblecto-Web/dist/",
     "images/"
   ],
