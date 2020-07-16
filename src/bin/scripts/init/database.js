@@ -1,4 +1,4 @@
-import databases from '../../submodules/database';
+import databases from '../../../submodules/database';
 
 export default async (args) => {
     await databases.sequelize.authenticate()
