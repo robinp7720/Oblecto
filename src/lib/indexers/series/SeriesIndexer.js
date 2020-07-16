@@ -39,22 +39,31 @@ export default class SeriesIndexer {
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
         let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
 
-        let idQuery = [];
+        let seriesQuery = {};
+        let episodeQuery = {};
 
-        if (seriesIdentification.tvdbid) idQuery.push({tvdbid: seriesIdentification.tvdbid});
-        if (seriesIdentification.tmdbid) idQuery.push({tmdbid: seriesIdentification.tmdbid});
+        if (seriesIdentification.tvdbid) seriesQuery['tvdbid'] = seriesIdentification.tvdbid;
+        if (seriesIdentification.tmdbid) seriesQuery['tmdbid'] = seriesIdentification.tmdbid;
+
+        delete seriesIdentification.tvdbid;
+        delete seriesIdentification.tmdbid;
+
+        if (episodeIdentification.tvdbid) episodeQuery['tvdbid'] = episodeIdentification.tvdbid;
+        if (episodeIdentification.tmdbid) episodeQuery['tmdbid'] = episodeIdentification.tmdbid;
+
+        delete episodeIdentification.tvdbid;
+        delete episodeIdentification.tmdbid;
 
         let [series, seriesCreated] = await databases.tvshow.findOrCreate(
             {
-                where: idQuery,
+                where: seriesQuery,
                 defaults: seriesIdentification
             });
 
         let [episode, episodeCreated] = await databases.episode.findOrCreate(
             {
                 where: {
-                    tvdbid: episodeIdentification.tvdbid || null,
-                    tmdbid: episodeIdentification.tmdbid || null,
+                    ...episodeQuery,
                     airedSeason: episodeIdentification.airedSeason || 1,
                     airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
 
