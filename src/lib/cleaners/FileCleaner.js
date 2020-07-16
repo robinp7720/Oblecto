@@ -11,7 +11,7 @@ export default class FileCleaner{
         let results = await databases.file.findAll();
 
         for (let item of results) {
-            if (await fs.exists(item.path)) continue;
+            if (await fs.stat(item.path)) continue;
 
             console.log('Deleting', item.path, 'because the file doesn\'t exist anymore');
             await item.destroy();

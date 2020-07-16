@@ -2,6 +2,9 @@ import databases from '../../submodules/database';
 
 
 export default class MovieCleaner {
+    /**
+     * @param {Oblecto} oblecto
+     */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
@@ -9,15 +12,9 @@ export default class MovieCleaner {
     async removeFileLessMovies() {
         console.log('Removing movies with no linked files');
 
-        let results;
-
-        try {
-            results = await databases.movie.findAll({
-                include: [databases.file]
-            });
-        } catch (e) {
-            console.log(e);
-        }
+        let results = await databases.movie.findAll({
+            include: [databases.file]
+        });
 
         for (let item of results) {
             if (item.files && item.files.length > 0)
@@ -25,13 +22,7 @@ export default class MovieCleaner {
 
             console.log(`Removing ${item.movieName}`);
 
-            try {
-                await item.destroy();
-            } catch (e) {
-                console.log('An error occured while destroying file entry:', e);
-            }
-
+            await item.destroy();
         }
-
     }
 }

@@ -1,6 +1,9 @@
 import databases from '../../submodules/database';
 
 export default class SeriesCleaner {
+    /**
+     * @param {Oblecto} oblecto
+     */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
@@ -8,36 +11,22 @@ export default class SeriesCleaner {
     async removeFileLessEpisodes() {
         console.log('Removing episodes with no linked files');
 
-        let results;
+        let results = await databases.episode.findAll({
+            include: [databases.file]
+        });
 
-        try {
-            results = await databases.episode.findAll({
-                include: [databases.file]
-            });
-        } catch (e) {
-            console.log(e);
-        }
-
-        for (let i in results) {
-            let item = results[i];
-
+        for (let item of results) {
             if (item.files && item.files.length > 0)
                 continue;
 
             console.log(`Removing ${item.episodeName}`);
 
-            try {
-                await item.destroy();
-            } catch (e) {
-                console.log(e);
-            }
-
+            await item.destroy();
         }
-
     }
 
     async removePathLessShows() {
-        let results = await databases.tvshow.destroy({
+        await databases.tvshow.destroy({
             where: {
                 directory: ''
             }
@@ -51,11 +40,11 @@ export default class SeriesCleaner {
             include: [databases.episode]
         });
 
-        results.forEach((item) => {
+        for (let item of results) {
             if (item.episodes && item.episodes.length > 0)
-                return false;
+                continue;
 
-            item.destroy();
-        });
+            await item.destroy();
+        }
     }
-};
+}
