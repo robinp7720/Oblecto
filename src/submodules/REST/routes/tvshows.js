@@ -3,24 +3,41 @@ import fs from 'fs';
 import sequelize from 'sequelize';
 
 import databases from '../../../submodules/database';
-import SeriesCollector from '../../../lib/indexers/series/SeriesCollector';
 import authMiddleWare from '../middleware/auth';
-import errors from "restify-errors";
+import errors from 'restify-errors';
 import jimp from 'jimp';
 
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
 
-    server.get('/shows/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let tvShows = await databases.tvshow.findAll({
+    server.get('/series/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let limit = 20;
+        let page = 0;
+
+        let AllowedOrders = ['desc', 'asc'];
+
+        if (AllowedOrders.indexOf(req.query.order.toLowerCase()) === -1)
+            return next(new errors.BadRequestError('Sorting order is invalid'));
+
+        if (!(req.params.sorting in databases.tvshow.rawAttributes))
+            return next(new errors.BadRequestError('Sorting method is invalid'));
+
+        if (req.query.count)
+            limit = req.query.count;
+
+        if (req.params.page && Number.isInteger(req.params.page))
+            page = req.query.page;
+
+        let results = await databases.tvshow.findAll({
             order: [
-                [req.params.sorting, req.params.order]
+                [req.params.sorting, req.query.order]
             ],
-            limit: 30
+            limit,
+            offset: limit * page
         });
 
-        res.send(tvShows);
+        res.send(results);
     });
 
     // Endpoint to request info based on the local series ID
@@ -33,14 +50,6 @@ export default (server, oblecto) => {
         res.send(show);
     });
 
-    // Endpoint to request a re-index of a series based on the local ID
-    server.get('/series/:id/index', authMiddleWare.requiresAuth, function (req, res, next) {
-        databases.tvshow.findByPk(req.params.id).then(show => {
-            SeriesCollector.CollectDirectory(show.directory);
-
-            res.send([true]);
-        });
-    });
 
     // Endpoint to get all episodes within a series
     server.get('/series/:id/episodes', authMiddleWare.requiresAuth, function (req, res, next) {

@@ -11,29 +11,65 @@ import sequelize from 'sequelize';
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
+    server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let limit = 20;
+        let page = 0;
 
-    // Endpoint to get a list of episodes from all series
-    server.get('/movies/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res) {
+        let AllowedOrders = ['desc', 'asc'];
+
+        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
+            return next(new errors.BadRequestError('Sorting order is invalid'));
+
+        if (!(req.params.sorting in databases.movie.rawAttributes))
+            return next(new errors.BadRequestError('Sorting method is invalid'));
+
+        if (req.params.count && Number.isInteger(req.params.count))
+            limit = req.params.count;
+
+        if (req.params.page && Number.isInteger(req.params.page))
+            page = req.params.page;
+
         let results = await databases.movie.findAll({
             include: [
                 {
                     model: databases.trackMovies,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ],
             order: [
                 [req.params.sorting, req.params.order]
             ],
-            limit: 100
+            limit,
+            offset: limit * page
         });
 
         res.send(results);
     });
 
     server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req, res) {
+        let results = await databases.movieSet.findAll({});
+
+        res.send(results);
+    });
+
+    server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let limit = 20;
+        let page = 0;
+
+        let AllowedOrders = ['desc', 'asc'];
+
+        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
+            return next(new errors.BadRequestError('Sorting order is invalid'));
+
+        if (req.params.count && Number.isInteger(req.params.count))
+            limit = req.params.count;
+
+        if (req.params.page && Number.isInteger(req.params.page))
+            page = req.params.page;
+
         let results = await databases.movieSet.findAll({
             include: [
                 {
@@ -43,13 +79,17 @@ export default (server, oblecto) => {
                             model: databases.trackMovies,
                             required: false,
                             where: {
-                                userId: req.authorization.jwt.id
+                                userId: req.authorization.user.id
                             }
                         }
                     ]
-                }
+                },
             ],
-            limit: 100
+            where: {
+                id: req.params.id
+            },
+            limit,
+            offset: limit * page
         });
 
         res.send(results);
@@ -217,14 +257,13 @@ export default (server, oblecto) => {
                     model: databases.trackMovies,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ]
         });
 
         res.send(movie);
-
     });
 
     // Endpoint to send episode video file to the client
@@ -234,12 +273,7 @@ export default (server, oblecto) => {
         let movie = await databases.movie.findByPk(req.params.id, {
             include: [
                 {
-                    model: databases.file,
-                    where: {
-                        [Op.not]: {
-                            extension: 'iso'
-                        }
-                    }
+                    model: databases.file
                 }
             ]
         });
@@ -263,7 +297,7 @@ export default (server, oblecto) => {
                                     model: databases.trackMovies,
                                     required: false,
                                     where: {
-                                        userId: req.authorization.jwt.id
+                                        userId: req.authorization.user.id
                                     }
                                 }
                             ]
@@ -316,13 +350,13 @@ export default (server, oblecto) => {
                         model: databases.trackMovies,
                         required: false,
                         where: {
-                            userId: req.authorization.jwt.id
+                            userId: req.authorization.user.id
                         }
                     }
                 ]
             }],
             where: {
-                userId: req.authorization.jwt.id,
+                userId: req.authorization.user.id,
                 progress: {
                     [sequelize.Op.lt]: 0.9
                 },

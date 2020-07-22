@@ -159,8 +159,6 @@ export default (server, oblecto) => {
         DirectStreamer.streamFile(oblecto, fileInfo.path, req, res);
 
     }, async function (req, res, next) {
-        // TODO: Determine whether or not to remux or transcode depending on video encoding
-
         if (StreamSessions[req.params.sessionId]) {
             delete StreamSessions[req.params.sessionId];
         }

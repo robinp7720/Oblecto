@@ -8,6 +8,9 @@ export default (server, oblecto) => {
     server.post('/auth/login', async function (req, res, next) {
         if (!req.params.username)
             return next(new errors.BadRequestError('Username is missing'));
+        if (!req.params.password && !oblecto.config.authentication.allowPasswordlessLogin)
+
+            return next(new errors.BadRequestError('Password is missing'));
 
         let user = await databases.user.findOne({
             where: {
@@ -20,7 +23,7 @@ export default (server, oblecto) => {
         if (!user)
             return next(new errors.UnauthorizedError('Username is incorrect'));
 
-        let allowLogin = true;
+        let allowLogin = oblecto.config.authentication.allowPasswordlessLogin;
 
         if (user.password)
             allowLogin = await bcrypt.compare(req.params.password, user.password);
@@ -28,21 +31,15 @@ export default (server, oblecto) => {
         if (!allowLogin)
             return next(new errors.UnauthorizedError('Password is incorrect'));
 
-        let token = jwt.sign(user.toJSON(), oblecto.config.authentication.secret);
-        user['access_token'] = token;
-        res.send(user);
-    });
+        let tokenPayload = {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            email: user.email
+        };
 
-    server.get('/auth/isAuthenticated', function (req, res, next) {
-        if (req.authorization === undefined)
-            return res.send([false]);
+        let accessToken = jwt.sign(tokenPayload, oblecto.config.authentication.secret);
 
-        jwt.verify(req.authorization.credentials, oblecto.config.authentication.secret, function (err) {
-            if (err)
-                res.send([false]);
-            else
-                res.send([true]);
-            next();
-        });
+        res.send({accessToken});
     });
 };

@@ -12,7 +12,9 @@ const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     // Endpoint to get a list of episodes from all series
-    server.get('/episodes/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let limit = 20;
+        let page = 0;
 
         let AllowedOrders = ['desc', 'asc'];
 
@@ -22,6 +24,12 @@ export default (server, oblecto) => {
         if (!(req.params.sorting in databases.episode.rawAttributes))
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
+        if (req.params.count && Number.isInteger(req.params.count))
+            limit = req.params.count;
+
+        if (req.params.page && Number.isInteger(req.params.page))
+            page = req.params.page;
+
         let results = await databases.episode.findAll({
             include: [
                 databases.tvshow,
@@ -29,14 +37,15 @@ export default (server, oblecto) => {
                     model: databases.trackEpisodes,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ],
             order: [
                 [req.params.sorting, req.params.order]
             ],
-            limit: 30
+            limit,
+            offset: limit * page
         });
 
         res.send(results);
@@ -120,7 +129,7 @@ export default (server, oblecto) => {
 
     // Endpoint to list all stored files for the specific episode
     server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req, res) {
-        let episode = databases.episode.findByPk(req.params.id, {
+        let episode = await databases.episode.findByPk(req.params.id, {
             include: [databases.file]
         });
 
@@ -153,7 +162,7 @@ export default (server, oblecto) => {
                     model: databases.trackEpisodes,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ]
@@ -217,7 +226,7 @@ export default (server, oblecto) => {
                     model: databases.trackEpisodes,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ]
@@ -275,7 +284,7 @@ export default (server, oblecto) => {
                 model: databases.trackEpisodes,
                 required: true,
                 where: {
-                    userId: req.authorization.jwt.id,
+                    userId: req.authorization.user.id,
                     progress: {
                         [sequelize.Op.gt]: 0.9
                     },

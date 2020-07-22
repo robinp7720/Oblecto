@@ -26,7 +26,15 @@ export default class RealtimeClient {
     }
 
     authenticationHandler(data) {
-        this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
+        try {
+            this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
+        } catch (e) {
+            console.log('An unauthorized user attempted connection to realtime server');
+            console.log('Disconnecting client...');
+
+            this.socket.disconnect();
+        }
+
     }
 
     playingHandler(data) {
