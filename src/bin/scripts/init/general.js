@@ -1,6 +1,6 @@
 import mkdirp from 'mkdirp';
-import uuid from 'node-uuid';
-import {promises as fs} from "fs";
+import {v4 as uuidv4} from 'uuid';
+import {promises as fs} from 'fs';
 import NodeRSA from 'node-rsa';
 
 let createDirectory = function (dir) {
@@ -42,9 +42,10 @@ export default async (args) => {
     createDirectory(`${config.assets.showPosterLocation}/${size}`);
     createDirectory(`${config.assets.episodeBannerLocation}/${size}`);
 
+    config.authentication.secret = uuidv4();
 
     console.log('Generating federation UUID');
-    config.federation.uuid = uuid.v4();
+    config.federation.uuid = uuidv4();
 
     console.log('Creating config file');
     try {
