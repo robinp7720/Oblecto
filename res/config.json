@@ -79,7 +79,8 @@
   },
   "authentication": {
     "secret": "secret",
-    "saltRounds": 10
+    "saltRounds": 10,
+    "allowPasswordlessLogin": true
   },
   "tracker": {
     "interval": 10
