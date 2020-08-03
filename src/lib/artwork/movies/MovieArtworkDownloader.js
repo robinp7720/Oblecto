@@ -8,7 +8,7 @@ export default class MovieArtworkDownloader {
         this.oblecto = oblecto;
 
         this.movieArtworkRetriever = new AggregateMovieArtworkRetriever();
-        this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever());
+        this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('downloadMoviePoster', async (job) => {
