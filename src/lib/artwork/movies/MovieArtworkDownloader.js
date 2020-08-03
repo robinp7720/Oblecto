@@ -25,7 +25,7 @@ export default class MovieArtworkDownloader {
 
         await Download.download(
             url,
-            this.artworkUtils.moviePosterPath(movie)
+            this.oblecto.artworkUtils.moviePosterPath(movie)
         );
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
