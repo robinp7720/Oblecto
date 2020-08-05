@@ -21,7 +21,7 @@ export default class MovieIndexer {
     }
 
     async indexFile(moviePath, doReIndex) {
-        let file = await FileIndexer.indexVideoFile(moviePath);
+        let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
         let movieIdentification = await this.movieIdentifer.identify(moviePath);
 
