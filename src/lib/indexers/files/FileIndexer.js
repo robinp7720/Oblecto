@@ -5,6 +5,14 @@ import VideoAnalysisError from '../../errors/VideoAnalysisError';
 import ffprobe from '../../../submodules/ffprobe';
 
 export default class FileIndexer {
+
+    /**
+     * @param {Oblecto} oblecto
+     */
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+    }
+
     static async getPrimaryVideoStream(metadata) {
         let streams = metadata.streams;
         let primaryStream = {duration: 0};
@@ -37,9 +45,8 @@ export default class FileIndexer {
         return primaryStream;
     }
 
-    static async indexVideoFile(videoPath) {
+    async indexVideoFile(videoPath) {
         let parsedPath = Path.parse(videoPath);
-        let extension = parsedPath.ext.replace('.', '').toLocaleLowerCase();
 
         let [file, fileInserted] = await databases.file.findOrCreate({
             where: {path: videoPath},
@@ -59,8 +66,8 @@ export default class FileIndexer {
             throw new VideoAnalysisError();
         }
 
-        let primaryVideoStream = await this.getPrimaryVideoStream(metadata);
-        let primaryAudioStream = await this.getPrimaryAudioStream(metadata);
+        let primaryVideoStream = await FileIndexer.getPrimaryVideoStream(metadata);
+        let primaryAudioStream = await FileIndexer.getPrimaryAudioStream(metadata);
 
         let duration = metadata.format.duration;
 
@@ -83,6 +90,8 @@ export default class FileIndexer {
         if (!fileInserted) {
             throw new FileExistsError();
         }
+
+        await this.oblecto.fileUpdateCollector.collectFile(file);
 
         return file;
     }

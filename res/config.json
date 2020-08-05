@@ -50,6 +50,9 @@
     "directories": [
     ]
   },
+  "files": {
+    "doHash": true
+  },
   "artwork": {
     "fanart": {
       "small": 100,

@@ -5,6 +5,10 @@ import TmdbEpisodeRetriever from './informationRetrievers/TmdbEpisodeRetriever';
 import AggregateEpisodeUpdateRetriever from './AggregateEpisodeUpdateRetriever';
 
 export default class SeriesUpdater {
+
+    /**
+     * @param {Oblecto} oblecto
+     */
     constructor(oblecto) {
         this.oblecto = oblecto;
 

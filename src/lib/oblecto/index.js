@@ -21,9 +21,11 @@ import SeriesArtworkCollector from '../artwork/series/SeriesArtworkCollector';
 import SeriesArtworkDownloader from '../artwork/series/SeriesArtworkDownloader';
 import MovieArtworkDownloader from '../artwork/movies/MovieArtworkDownloader';
 
+import FileUpdater from '../updaters/files/FileUpdater';
 import SeriesUpdater from '../updaters/series/SeriesUpdater';
 import MovieUpdater from '../updaters/movies/MovieUpdater';
 
+import FileUpdateCollector from '../updaters/files/FileUpdateCollector';
 import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector';
 import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector';
 
@@ -36,6 +38,7 @@ import FederationMovieIndexer from '../federationindexer/FederationMovieIndexer'
 import MovieCleaner from '../cleaners/MovieCleaner';
 import SeriesCleaner from '../cleaners/SeriesCleaner';
 import FileCleaner from '../cleaners/FileCleaner';
+import FileIndexer from '../indexers/files/FileIndexer';
 
 export default class Oblecto {
     constructor(config) {
@@ -51,6 +54,7 @@ export default class Oblecto {
 
         this.downloader = new Downloader(this);
 
+        this.fileIndexer = new FileIndexer(this);
         this.seriesIndexer = new SeriesIndexer(this);
         this.movieIndexer = new MovieIndexer(this);
 
@@ -65,9 +69,11 @@ export default class Oblecto {
         this.artworkUtils = new ArtworkUtils(this);
         this.imageScaler = new ImageScaler(this);
 
+        this.fileUpdater = new FileUpdater(this);
         this.seriesUpdater = new SeriesUpdater(this);
         this.movieUpdater = new MovieUpdater(this);
 
+        this.fileUpdateCollector = new FileUpdateCollector(this);
         this.seriesUpdateCollector = new SeriesUpdateCollector(this);
         this.movieUpdateCollector = new MovieUpdateCollector(this);
 

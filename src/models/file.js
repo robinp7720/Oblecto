@@ -13,5 +13,7 @@ module.exports = (sequelize, DataTypes) => {
 
         duration: DataTypes.DOUBLE,
 
+        hash: DataTypes.STRING
+
     });
 };

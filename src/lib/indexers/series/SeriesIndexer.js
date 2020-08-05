@@ -34,7 +34,7 @@ export default class SeriesIndexer {
     async indexFile(episodePath, doReIndex) {
         console.log('Indexing ' + episodePath);
 
-        let file = await FileIndexer.indexVideoFile(episodePath);
+        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
         let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
@@ -72,7 +72,7 @@ export default class SeriesIndexer {
                 defaults: episodeIdentification,
             });
 
-        episode.addFile(file);
+        await episode.addFile(file);
 
         if (episodeCreated) {
             this.oblecto.queue.pushJob('updateEpisode', episode);
