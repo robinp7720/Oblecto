@@ -15,7 +15,7 @@ export default class TmdbEpisodeIdentifier {
 
         let episode = await this.oblecto.tmdb.tvEpisodeInfo({
             id: series.tmdbid,
-            season_number: guessitIdentification.season,
+            season_number: guessitIdentification.season || 1,
             episode_number: guessitIdentification.episode
         });
 
