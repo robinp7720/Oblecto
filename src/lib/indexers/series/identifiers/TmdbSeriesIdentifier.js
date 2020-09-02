@@ -1,15 +1,12 @@
 import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
+import SeriesIdentifer from '../SeriesIdentifer';
 
-export default class TmdbSeriesIdentifier {
+export default class TmdbSeriesIdentifier extends SeriesIdentifer {
     constructor(oblecto) {
-        this.oblecto = oblecto;
+        super(oblecto);
 
         this.tvShowCache = {};
-    }
-
-    async tvShowInfo(id) {
-        return await this.oblecto.tvInfo(id);
     }
 
     retrieveSeries(tmdbSearch, guessitIdentification) {

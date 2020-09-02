@@ -11,39 +11,25 @@ export default class AggregateMovieArtworkRetriever {
 
     async retrieveFanart(movie) {
         for (let retriever of this.retrievers) {
-            let url;
-
             try {
-                url = await retriever.retrieveFanart(movie);
+                return await retriever.retrieveFanart(movie);
             } catch(e) {
                 console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
-                continue;
             }
-
-            if (!url) continue;
-
-            return url;
         }
 
-        throw new Error();
+        throw new Error('Could not find a Fanart image');
     }
 
     async retrievePoster(movie) {
         for (let retriever of this.retrievers) {
-            let url;
-
             try {
-                url = await retriever.retrievePoster(movie);
+                return await retriever.retrievePoster(movie);
             } catch(e) {
                 console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
-                continue;
             }
-
-            if (!url) continue;
-
-            return url;
         }
 
-        throw new Error();
+        throw new Error('Could not find a Poster image');
     }
 }

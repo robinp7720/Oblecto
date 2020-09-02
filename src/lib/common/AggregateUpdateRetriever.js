@@ -1,4 +1,4 @@
-export default class AggregateEpisodeUpdateRetriever {
+export default class AggregateUpdateRetriever {
     constructor() {
         this.retrievers = [];
     }
@@ -7,20 +7,17 @@ export default class AggregateEpisodeUpdateRetriever {
         this.retrievers.push(retriever);
     }
 
-    async retrieveEpisodeInformation(episode) {
+    async retrieveInformation(...args) {
         let information = {};
 
         for (let retriever of this.retrievers) {
-            let currentInformation;
-
             try {
-                currentInformation = await retriever.retrieveEpisodeInformation(episode);
+                let currentInformation = await retriever.retrieveInformation(...args);
+
+                information = {...information, ...currentInformation};
             } catch (e) {
                 console.log(e);
-                continue;
             }
-
-            information = {...information, ...currentInformation};
         }
 
         if (Object.keys(information).length === 0) throw new Error();

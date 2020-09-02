@@ -1,24 +1,29 @@
-import IdentificationError from '../../errors/IdentificationError';
+import IdentificationError from '../errors/IdentificationError';
 
-export default class AggregateEpisodeIdentifier {
-    constructor(oblecto) {
-        this.oblecto = oblecto;
-
+export default class AggregateIdentifier {
+    /**
+     * Wrapper class to combine multiple identifiers and return information as a combined json output
+     */
+    constructor() {
         this.identifiers = [];
     }
 
+    /**
+     *
+     * @param {} identifier
+     */
     loadIdentifier(identifier) {
         this.identifiers.push(identifier);
     }
 
-    async identify (episodePath, series) {
+    async identify (...args) {
         let identification = {};
 
         for (let identifier of this.identifiers) {
             let currentIdentification;
 
             try {
-                currentIdentification = await identifier.identify(episodePath, series);
+                currentIdentification = await identifier.identify(...args);
             } catch (e) {
                 continue;
             }
@@ -30,5 +35,4 @@ export default class AggregateEpisodeIdentifier {
 
         return identification;
     }
-
 };

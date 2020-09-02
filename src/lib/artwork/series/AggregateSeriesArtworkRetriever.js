@@ -11,18 +11,11 @@ export default class AggregateSeriesArtworkRetriever {
 
     async retrieveEpisodeBanner(episode) {
         for (let retriever of this.retrievers) {
-            let url;
-
             try {
-                url = await retriever.retrieveEpisodeBanner(episode);
+                return await retriever.retrieveEpisodeBanner(episode);
             } catch(e) {
                 console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
-                continue;
             }
-
-            if (!url) continue;
-
-            return url;
         }
 
         throw new Error();
@@ -30,18 +23,11 @@ export default class AggregateSeriesArtworkRetriever {
 
     async retrieveSeriesPoster(series) {
         for (let retriever of this.retrievers) {
-            let url;
-
             try {
-                url = await retriever.retrieveSeriesPoster(series);
+                return await retriever.retrieveSeriesPoster(series);
             } catch(e) {
                 console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
-                continue;
             }
-
-            if (!url) continue;
-
-            return url;
         }
 
         throw new Error();
