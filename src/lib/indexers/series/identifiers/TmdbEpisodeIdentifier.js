@@ -1,13 +1,8 @@
 import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
+import EpisodeIdentifier from '../EpisodeIdentifier';
 
-export default class TmdbEpisodeIdentifier {
-    constructor(oblecto) {
-        this.oblecto = oblecto;
-
-        this.episodeCache = {};
-    }
-
+export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
     async identify(path, series) {
         if (!series.tmdbid) throw new IdentificationError();
 

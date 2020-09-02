@@ -1,11 +1,8 @@
+import MovieIdentifier from '../MovieIdentifier';
 import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
 
-export default class TmdbMovieIdentifier {
-    constructor(oblecto) {
-        this.oblecto = oblecto;
-    }
-
+export default class TmdbMovieIdentifier extends MovieIdentifier{
     async identify(path) {
         let identification = await guessit.identify(path);
 

@@ -1,8 +1,7 @@
-import AggregateMovieIdentifier from './AggregateMovieIdentifier';
+import AggregateIdentifier from '../../common/AggregateIdentifier';
 import FileIndexer from '../files/FileIndexer';
 import databases from '../../../submodules/database';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
-
 
 export default class MovieIndexer {
     /**
@@ -12,7 +11,7 @@ export default class MovieIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.movieIdentifer = new AggregateMovieIdentifier();
+        this.movieIdentifer = new AggregateIdentifier();
 
         this.movieIdentifer.loadIdentifier(new TmdbMovieIdentifier(this.oblecto));
 
@@ -20,7 +19,7 @@ export default class MovieIndexer {
         this.oblecto.queue.addJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    async indexFile(moviePath, doReIndex) {
+    async indexFile(moviePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
         let movieIdentification = await this.movieIdentifer.identify(moviePath);

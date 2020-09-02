@@ -3,7 +3,7 @@ export default class TmdbSeriesRetriever {
         this.oblecto = oblecto;
     }
 
-    async retrieveSeriesInformation(series) {
+    async retrieveInformation(series) {
         let seriesInfo = await this.oblecto.tmdb.tvInfo({ id: series.tmdbid });
 
         let data = {

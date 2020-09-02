@@ -1,14 +1,12 @@
-import AggregateMovieUpdateRetriever from './AggregateMovieUpdateRetriever';
+import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
 import TmdbMovieRetriever from './informationRetrievers/TmdbMovieRetriever';
-
 
 export default class MovieUpdater {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.aggregateMovieUpdateRetriever = new AggregateMovieUpdateRetriever();
-        this.aggregateMovieUpdateRetriever.loadRetriever(new TmdbMovieRetriever());
-
+        this.aggregateMovieUpdateRetriever = new AggregateUpdateRetriever();
+        this.aggregateMovieUpdateRetriever.loadRetriever(new TmdbMovieRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('updateMovie', async (job) => {
@@ -17,7 +15,7 @@ export default class MovieUpdater {
     }
 
     async updateMovie(movie) {
-        let data = await this.aggregateMovieUpdateRetriever.retrieveMovieInformation(movie);
+        let data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie);
         await movie.update(data);
     }
 }

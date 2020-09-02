@@ -1,12 +1,7 @@
-import AggregateSeriesIdentifier from './AggregateSeriesIdentifier';
-import AggregateEpisodeIdentifier from './AggregateEpisodeIdentifier';
-import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
-import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
-import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
-import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
-import FileIndexer from '../files/FileIndexer';
+import AggregateIdentifier from '../../common/AggregateIdentifier';
 
-import Op from 'sequelize';
+import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
+import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 
 import databases from '../../../submodules/database';
 
@@ -18,8 +13,8 @@ export default class SeriesIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.seriesIdentifier = new AggregateSeriesIdentifier(this.oblecto);
-        this.episodeIdentifer = new AggregateEpisodeIdentifier(this.oblecto);
+        this.seriesIdentifier = new AggregateIdentifier();
+        this.episodeIdentifer = new AggregateIdentifier();
 
         //this.seriesIdentifier.loadIdentifier(new TvdbSeriesIdentifier());
         this.seriesIdentifier.loadIdentifier(new TmdbSeriesIdentifier(this.oblecto));
@@ -31,7 +26,7 @@ export default class SeriesIndexer {
         this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    async indexFile(episodePath, doReIndex) {
+    async indexFile(episodePath) {
         console.log('Indexing ' + episodePath);
 
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
