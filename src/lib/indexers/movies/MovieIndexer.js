@@ -1,5 +1,4 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier';
-import FileIndexer from '../files/FileIndexer';
 import databases from '../../../submodules/database';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 
@@ -40,7 +39,5 @@ export default class MovieIndexer {
             this.oblecto.queue.queueJob('downloadMovieFanart', movie);
             this.oblecto.queue.pushJob('downloadMoviePoster', movie);
         }
-
-        return `${moviePath} indexed`;
     }
 }
