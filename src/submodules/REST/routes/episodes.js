@@ -246,7 +246,7 @@ export default (server, oblecto) => {
                     model: databases.trackEpisodes,
                     required: true,
                     where: {
-                        userId: req.authorization.jwt.id,
+                        userId: req.authorization.user.id,
                         progress: {
                             [sequelize.Op.lt]: 0.9
                         },
