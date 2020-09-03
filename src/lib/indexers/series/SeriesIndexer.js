@@ -23,7 +23,7 @@ export default class SeriesIndexer {
         this.episodeIdentifer.loadIdentifier(new TmdbEpisodeIdentifier(this.oblecto));
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path, job.doReIndex));
+        this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path));
     }
 
     async indexFile(episodePath) {
@@ -78,9 +78,6 @@ export default class SeriesIndexer {
             this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.pushJob('downloadSeriesPoster', series);
         }
-
-
-        return `${episodePath} indexed`;
     }
 
 }
