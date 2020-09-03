@@ -10,7 +10,7 @@ export default class AggregateIdentifier {
 
     /**
      *
-     * @param {} identifier
+     * @param {MediaIdentifier} identifier
      */
     loadIdentifier(identifier) {
         this.identifiers.push(identifier);
