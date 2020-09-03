@@ -48,7 +48,7 @@ export default class RealtimeClient {
     }
 
     async saveEpisodeTrack(id) {
-        if (this.user == null) return;
+        if (this.user === null) return;
 
         let [item, created] = await databases.trackEpisodes.findOrCreate({
             where: {
