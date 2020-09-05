@@ -61,7 +61,7 @@ export default (server, oblecto) => {
                     model: databases.trackEpisodes,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ],
