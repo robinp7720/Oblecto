@@ -25,10 +25,10 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
         if (req.params.count && Number.isInteger(req.params.count))
-            limit = req.params.count;
+            limit = parseInt(req.params.count);
 
         if (req.params.page && Number.isInteger(req.params.page))
-            page = req.params.page;
+            page = parseInt(req.params.page);
 
         let results = await databases.episode.findAll({
             include: [
@@ -81,17 +81,7 @@ export default (server, oblecto) => {
             return next(new errors.NotFoundError('Episode does not exist'));
         }
 
-        let thumbnailPath = path.normalize(oblecto.config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!episode.files[0])
-                return next(new errors.NotFoundError('No file linked to episode'));
-
-            let episodePath = episode.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
-        }
+        let thumbnailPath = this.oblecto.artworkUtils.episodeBannerPath(episode);
 
         if (req.files.length < 1) {
             return next(new errors.MissingParameter('Image file is missing'));
@@ -115,6 +105,14 @@ export default (server, oblecto) => {
         try {
             fs.copyFile(uploadPath, thumbnailPath, (err) => {
                 if (err) throw err;
+
+                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
+                    this.oblecto.queue.pushJob('rescaleImage', {
+                        from: this.oblecto.artworkUtils.episodeBannerPath(episode),
+                        to: this.oblecto.artworkUtils.episodeBannerPath(episode, size),
+                        width: this.oblecto.config.artwork.poster[size]
+                    });
+                }
 
                 res.send(['success']);
             });

@@ -24,10 +24,10 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
         if (req.params.count && Number.isInteger(req.params.count))
-            limit = req.params.count;
+            limit = parseInt(req.params.count);
 
         if (req.params.page && Number.isInteger(req.params.page))
-            page = req.params.page;
+            page = parseInt(req.params.page);
 
         let results = await databases.movie.findAll({
             include: [
@@ -127,17 +127,7 @@ export default (server, oblecto) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let posterPath = path.normalize(oblecto.config.assets.moviePosterLocation) + '/' + movie.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!movie.files[0])
-                return next(new errors.NotFoundError('No file linked to movie'));
-
-            let moviePath = movie.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            posterPath = moviePath.replace(path.extname(moviePath), '-poster.jpg');
-        }
+        let posterPath = this.oblecto.artworkUtils.moviePosterPath(movie);
 
         if (req.files.length < 1) {
             return next(new errors.MissingParameter('Image file is missing'));
@@ -161,6 +151,14 @@ export default (server, oblecto) => {
         try {
             fs.copyFile(uploadPath, posterPath, (err) => {
                 if (err) throw err;
+
+                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
+                    this.oblecto.queue.pushJob('rescaleImage', {
+                        from: this.oblecto.artworkUtils.moviePosterPath(movie),
+                        to: this.oblecto.artworkUtils.moviePosterPath(movie, size),
+                        width: this.oblecto.config.artwork.poster[size]
+                    });
+                }
 
                 res.send(['success']);
             });
@@ -189,7 +187,6 @@ export default (server, oblecto) => {
                 fs.createReadStream(fanartPath).pipe(res);
             }
         });
-
     });
 
     server.put('/movie/:id/fanart', async function (req, res, next) {
@@ -201,28 +198,18 @@ export default (server, oblecto) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let fanartPath = path.normalize(oblecto.config.assets.movieFanartLocation) + '/' + movie.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!movie.files[0])
-                return next(new errors.NotFoundError('No file linked to movie'));
-
-            let moviePath = movie.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            fanartPath = moviePath.replace(path.extname(moviePath), '-fanart.jpg');
-        }
+        let fanartPath = oblecto.artworkUtils.movieFanartPath(movie);
 
         if (req.files.length < 1) {
             return next(new errors.MissingParameter('Image file is missing'));
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path
+        let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
             let image = await jimp.read(uploadPath);
 
-            let ratio = image.bitmap.width / image.bitmap.height
+            let ratio = image.bitmap.width / image.bitmap.height;
 
             if ( !(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
@@ -235,6 +222,14 @@ export default (server, oblecto) => {
         try {
             fs.copyFile(uploadPath, fanartPath, (err) => {
                 if (err) throw err;
+
+                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
+                    this.oblecto.queue.pushJob('rescaleImage', {
+                        from: this.oblecto.artworkUtils.movieFanartPath(movie),
+                        to: this.oblecto.artworkUtils.movieFanartPath(movie, size),
+                        width: this.oblecto.config.artwork.poster[size]
+                    });
+                }
 
                 res.send(['success']);
             });

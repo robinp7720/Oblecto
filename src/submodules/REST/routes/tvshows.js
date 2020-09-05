@@ -24,10 +24,10 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
         if (req.query.count)
-            limit = req.query.count;
+            limit = parseInt(req.query.count);
 
         if (req.params.page && Number.isInteger(req.params.page))
-            page = req.query.page;
+            page = parseInt(req.query.page);
 
         let results = await databases.tvshow.findAll({
             order: [
