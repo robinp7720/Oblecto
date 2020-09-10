@@ -310,6 +310,9 @@ export default (server, oblecto) => {
                     databases.tvshow,
                     {
                         model: databases.trackEpisodes,
+                        where: {
+                            userId: req.authorization.user.id
+                        },
                     }],
                 where: sequelize.and(
                     sequelize.where(sequelize.col('tvshowId'), '=', latest.tvshowId),
