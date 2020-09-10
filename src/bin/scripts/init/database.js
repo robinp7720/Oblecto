@@ -1,11 +1,13 @@
-import databases from '../../../submodules/database';
+import {initDatabes} from '../../../submodules/database';
 
 export default async (args) => {
-    await databases.sequelize.authenticate()
+    const sequelize = initDatabes();
+
+    await sequelize.authenticate()
         .then(() => {
             // Create databases if connection to the database could be established
-            return databases.sequelize.sync();
+            return sequelize.sync();
         });
 
-    await databases.sequelize.close();
+    await sequelize.close();
 };

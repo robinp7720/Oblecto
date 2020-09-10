@@ -11,7 +11,7 @@ export default class FileUpdateCollector {
 
     /**
      *
-     * @param file - File entity to update
+     * @param {File} file - File entity to update
      * @returns {Promise<void>}
      */
     async collectFile(file) {

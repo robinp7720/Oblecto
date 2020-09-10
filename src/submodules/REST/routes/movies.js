@@ -1,12 +1,14 @@
-import path from 'path';
 import fs from 'fs';
 import errors from 'restify-errors';
-
+import sequelize from 'sequelize';
 import jimp from 'jimp';
 
-import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
-import sequelize from 'sequelize';
+
+import {TrackMovie} from '../../../models/trackMovie';
+import {File} from '../../../models/file';
+import {Movie} from '../../../models/movie';
+import {MovieSet} from '../../../models/movieSet';
 
 const Op = sequelize.Op;
 
@@ -20,7 +22,7 @@ export default (server, oblecto) => {
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
             return next(new errors.BadRequestError('Sorting order is invalid'));
 
-        if (!(req.params.sorting in databases.movie.rawAttributes))
+        if (!(req.params.sorting in Movie.rawAttributes))
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
         if (req.params.count && Number.isInteger(req.params.count))
@@ -29,10 +31,10 @@ export default (server, oblecto) => {
         if (req.params.page && Number.isInteger(req.params.page))
             page = parseInt(req.params.page);
 
-        let results = await databases.movie.findAll({
+        let results = await Movie.findAll({
             include: [
                 {
-                    model: databases.trackMovies,
+                    model: TrackMovie,
                     required: false,
                     where: {
                         userId: req.authorization.user.id
@@ -50,7 +52,7 @@ export default (server, oblecto) => {
     });
 
     server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req, res) {
-        let results = await databases.movieSet.findAll({});
+        let results = await MovieSet.findAll({});
 
         res.send(results);
     });
@@ -70,13 +72,13 @@ export default (server, oblecto) => {
         if (req.params.page && Number.isInteger(req.params.page))
             page = req.params.page;
 
-        let results = await databases.movieSet.findAll({
+        let results = await MovieSet.findAll({
             include: [
                 {
-                    model: databases.movie,
+                    model: Movie,
                     include: [
                         {
-                            model: databases.trackMovies,
+                            model: TrackMovie,
                             required: false,
                             where: {
                                 userId: req.authorization.user.id
@@ -95,13 +97,10 @@ export default (server, oblecto) => {
         res.send(results);
     });
 
-
-
-    // Endpoint to get a poster based on localId
     server.get('/movie/:id/poster', async function (req, res, next) {
         // Get episode data
-        let movie = await databases.movie.findByPk(req.params.id, {
-            include: [databases.file]
+        let movie = await Movie.findByPk(req.params.id, {
+            include: [File]
         });
 
         let posterPath = oblecto.artworkUtils.moviePosterPath(movie, 'large');
@@ -119,8 +118,8 @@ export default (server, oblecto) => {
     });
 
     server.put('/movie/:id/poster', async function (req, res, next) {
-        let movie = await databases.movie.findByPk(req.params.id, {
-            include: [databases.file]
+        let movie = await Movie.findByPk(req.params.id, {
+            include: [File]
         });
 
         if (!movie) {
@@ -171,11 +170,10 @@ export default (server, oblecto) => {
         next();
     });
 
-    // Endpoint to get a fanart based on localId
     server.get('/movie/:id/fanart', async function (req, res, next) {
         // Get episode data
-        let movie = await databases.movie.findByPk(req.params.id, {
-            include: [databases.file]
+        let movie = await Movie.findByPk(req.params.id, {
+            include: [File]
         });
 
         let fanartPath = oblecto.artworkUtils.movieFanartPath(movie, 'large');
@@ -190,8 +188,8 @@ export default (server, oblecto) => {
     });
 
     server.put('/movie/:id/fanart', async function (req, res, next) {
-        let movie = await databases.movie.findByPk(req.params.id, {
-            include: [databases.file]
+        let movie = await Movie.findByPk(req.params.id, {
+            include: [File]
         });
 
         if (!movie) {
@@ -242,14 +240,13 @@ export default (server, oblecto) => {
         next();
     });
 
-    // Endpoint to retrieve episode details based on the local movie ID
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let movie = await databases.movie.findByPk(req.params.id, {
+        let movie = await Movie.findByPk(req.params.id, {
             include: [
-                databases.file,
+                File,
                 {
-                    model: databases.trackMovies,
+                    model: TrackMovie,
                     required: false,
                     where: {
                         userId: req.authorization.user.id
@@ -261,14 +258,11 @@ export default (server, oblecto) => {
         res.send(movie);
     });
 
-    // Endpoint to send episode video file to the client
-    // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/movie/:id/play', async function (req, res, next) {
-        // search for attributes
-        let movie = await databases.movie.findByPk(req.params.id, {
+        let movie = await Movie.findByPk(req.params.id, {
             include: [
                 {
-                    model: databases.file
+                    model: File
                 }
             ]
         });
@@ -279,17 +273,17 @@ export default (server, oblecto) => {
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let sets = await databases.movie.findByPk(req.params.id, {
+        let sets = await Movie.findByPk(req.params.id, {
             attributes: [],
             include: [
                 {
-                    model: databases.movieSet,
+                    model: MovieSet,
                     include: [
                         {
-                            model: databases.movie,
+                            model: Movie,
                             include: [
                                 {
-                                    model: databases.trackMovies,
+                                    model: TrackMovie,
                                     required: false,
                                     where: {
                                         userId: req.authorization.user.id
@@ -305,11 +299,10 @@ export default (server, oblecto) => {
         res.send(sets.movieSets);
     });
 
-    // Add movie to set with id
     server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
         try {
-            let [movie] = await databases.movie.findByPk(req.params.id);
-            let [set] = await databases.movieSet.findByPk(req.params.setId);
+            let [movie] = await Movie.findByPk(req.params.id);
+            let [set] = await MovieSet.findByPk(req.params.setId);
 
             set.addMovie(movie);
         } catch (e) {
@@ -317,32 +310,30 @@ export default (server, oblecto) => {
         }
     });
 
-    // Endpoint for text based searching of the movie database
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let movie = await databases.movie.findAll({
+        let movie = await Movie.findAll({
             where: {
                 movieName: {
                     [Op.like]: '%' + req.params.name + '%'
                 }
             },
-            include: [databases.file]
+            include: [File]
         });
 
         res.send(movie);
 
     });
 
-    // Endpoint to get the episodes currently being watched
     server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let tracks = await databases.trackMovies.findAll({
+        let tracks = await TrackMovie.findAll({
             include: [{
-                model: databases.movie,
+                model: Movie,
                 required: true,
                 include: [
                     {
-                        model: databases.trackMovies,
+                        model: TrackMovie,
                         required: false,
                         where: {
                             userId: req.authorization.user.id
@@ -370,5 +361,4 @@ export default (server, oblecto) => {
             return track.movie;
         }));
     });
-
 };

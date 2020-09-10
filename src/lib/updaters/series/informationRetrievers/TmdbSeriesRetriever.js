@@ -3,6 +3,11 @@ export default class TmdbSeriesRetriever {
         this.oblecto = oblecto;
     }
 
+    /**
+     *
+     * @param {Series} series
+     * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>}
+     */
     async retrieveInformation(series) {
         let seriesInfo = await this.oblecto.tmdb.tvInfo({ id: series.tmdbid });
 

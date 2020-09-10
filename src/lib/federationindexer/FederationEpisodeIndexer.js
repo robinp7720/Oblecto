@@ -35,7 +35,7 @@ export default class FederationEpisodeIndexer {
             where: {
                 tvdbid: file.fileInfo.tvdbid || null,
                 tmdbid: file.fileInfo.tmdbid || null,
-                tvshowId: series.id
+                seriesId: series.id
             },
             defaults: {
                 airedEpisodeNumber: file.fileInfo.episode,

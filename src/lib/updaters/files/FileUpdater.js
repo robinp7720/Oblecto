@@ -18,6 +18,11 @@ export default class FileUpdater {
         });
     }
 
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<void>}
+     */
     async updateFile(file) {
         console.log('Updating file ' + file.name);
 
@@ -26,6 +31,11 @@ export default class FileUpdater {
         }
     }
 
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<string>}
+     */
     getHashFromFile(file) {
         return new Promise((resolve, reject) => {
             let fd = fs.createReadStream(file.path);
@@ -44,6 +54,11 @@ export default class FileUpdater {
         });
     }
 
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<void>}
+     */
     async updateFileHash(file) {
         let hash = await this.getHashFromFile(file);
         file.update({hash});

@@ -1,12 +1,14 @@
-module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('movies', {
-        tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
+import { DataTypes, Model } from 'sequelize';
 
-        movieName: DataTypes.STRING,
+export class Movie extends Model {}
 
-        popularity: DataTypes.FLOAT,
+export const movieColumns = {
+    tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
 
-        releaseDate: DataTypes.DATEONLY,
-        overview: DataTypes.TEXT,
-    });
+    movieName: DataTypes.STRING,
+
+    popularity: DataTypes.FLOAT,
+
+    releaseDate: DataTypes.DATEONLY,
+    overview: DataTypes.TEXT,
 };

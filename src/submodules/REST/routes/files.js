@@ -3,14 +3,13 @@ import uuid from 'node-uuid';
 import errors from 'restify-errors';
 import os from 'os';
 
-import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
 
 import HLSSession from '../../handlers/HLSSessionHandler';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
 import FFMPEGStreamer from '../../handlers/FFMPEGStreamer';
-import FederationStreamer from '../../handlers/FederationStreamer';
+import {File} from '../../../models/file';
 
 let HLSSessions = {};
 let StreamSessions = {};
@@ -102,7 +101,7 @@ export default (server, oblecto) => {
         let fileInfo;
 
         try {
-            fileInfo = await databases.file.findByPk(req.params.id);
+            fileInfo = await File.findByPk(req.params.id);
         } catch (ex) {
             return next(new errors.NotFoundError('File does not exist'));
         }

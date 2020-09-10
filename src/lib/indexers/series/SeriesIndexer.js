@@ -3,7 +3,10 @@ import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 
-import databases from '../../../submodules/database';
+import FileExistsError from '../../errors/FileExistsError';
+
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
 
 export default class SeriesIndexer {
     /**
@@ -27,9 +30,17 @@ export default class SeriesIndexer {
     }
 
     async indexFile(episodePath) {
-        console.log('Indexing ' + episodePath);
+        let file;
 
-        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
+        try {
+            file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
+        } catch (error) {
+            if (error instanceof FileExistsError) {
+                return;
+            }
+
+            throw error;
+        }
 
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
         let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
@@ -49,20 +60,20 @@ export default class SeriesIndexer {
         delete episodeIdentification.tvdbid;
         delete episodeIdentification.tmdbid;
 
-        let [series, seriesCreated] = await databases.tvshow.findOrCreate(
+        let [series, seriesCreated] = await Series.findOrCreate(
             {
                 where: seriesQuery,
                 defaults: seriesIdentification
             });
 
-        let [episode, episodeCreated] = await databases.episode.findOrCreate(
+        let [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 where: {
                     ...episodeQuery,
                     airedSeason: episodeIdentification.airedSeason || 1,
                     airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
 
-                    tvshowId: series.id
+                    SeriesId: series.id
                 },
                 defaults: episodeIdentification,
             });

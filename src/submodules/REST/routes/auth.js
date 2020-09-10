@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import errors from 'restify-errors';
 import bcrypt from 'bcrypt';
-
-import databases from '../../../submodules/database';
+import {User} from '../../../models/user';
 
 export default (server, oblecto) => {
     server.post('/auth/login', async function (req, res, next) {
@@ -12,7 +11,7 @@ export default (server, oblecto) => {
 
             return next(new errors.BadRequestError('Password is missing'));
 
-        let user = await databases.user.findOne({
+        let user = await User.findOne({
             where: {
                 username: req.params.username
             },

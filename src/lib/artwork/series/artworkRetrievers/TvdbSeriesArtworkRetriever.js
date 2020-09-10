@@ -3,7 +3,12 @@ export default class TvdbSeriesArtworkRetriever {
         this.oblecto = oblecto;
     }
 
-    async retrieveEpisodeBanner (episode) {
+    /**
+     *
+     * @param {Episode} episode
+     * @returns {Promise<string>}
+     */
+    async retrieveEpisodeBanner(episode) {
         if (!episode.tvdbid) throw new Error();
 
         let data = await this.oblecto.tvdb.getEpisodeById(episode.tvdbid);
@@ -11,7 +16,12 @@ export default class TvdbSeriesArtworkRetriever {
         return `https://thetvdb.com/banners/_cache/${data.filename}`;
     }
 
-    async retrieveSeriesPoster (series) {
+    /**
+     *
+     * @param {Series} series
+     * @returns {Promise<string>}
+     */
+    async retrieveSeriesPoster(series) {
         if (!series.tvdbid) throw new Error();
 
         let data = await this.oblecto.tvdb.getSeriesPosters(series.tvdbid);

@@ -1,4 +1,5 @@
 import databases from '../../../submodules/database';
+import {Movie} from '../../../models/movie';
 
 export default class MovieUpdateCollector {
     /**
@@ -11,7 +12,7 @@ export default class MovieUpdateCollector {
 
     /**
      *
-     * @param movie - Which movie entity to update;
+     * @param {Movie} movie - Which movie entity to update;
      * @returns {Promise<void>}
      */
     async collectMovie(movie) {
@@ -24,11 +25,11 @@ export default class MovieUpdateCollector {
      * @returns {Promise<void>}
      */
     async collectAllMovies() {
-        let allMovies = databases.movie.findAll();
+        let movies = await Movie.findAll();
 
-        allMovies.each((movie) => {
+        for (let movie of movies) {
             this.collectMovie(movie);
-        });
+        }
     }
 
 }

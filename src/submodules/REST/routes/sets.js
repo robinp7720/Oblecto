@@ -1,10 +1,8 @@
 import errors from 'restify-errors';
 
-
-import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
 
-import sequelize from 'sequelize';
+import {MovieSet} from '../../../models/movieSet';
 
 export default (server) => {
 
@@ -13,7 +11,7 @@ export default (server) => {
             return next(new errors.InvalidArgumentError('Argument public is not a boolean'));
         }
 
-        let [set, setInserted] = await databases.movieSet
+        let [set, setInserted] = await MovieSet
             .findOrCreate({
                 where: {setName: req.params.name}, defaults: {
                     overview: req.params.overview,
