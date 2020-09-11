@@ -14,7 +14,7 @@ export default class SeriesArtworkCollector {
 
     /**
      *
-     * @param episode - Episode for which to download the episode banner for
+     * @param {Episode} episode - Episode for which to download the episode banner for
      * @returns {Promise<void>}
      */
     async collectArtworkEpisodeBanner(episode) {
@@ -31,7 +31,7 @@ export default class SeriesArtworkCollector {
 
     /**
      *
-     * @param series - Series for which to download the series poster for
+     * @param {Series} series - Series for which to download the series poster for
      * @returns {Promise<void>}
      */
     async collectArtworkSeriesPoster(series) {
