@@ -1,5 +1,5 @@
-import databases from '../../../submodules/database';
 import {promises as fs} from 'fs';
+import {Movie} from '../../../models/movie';
 
 export default class MovieArtworkCollector {
     /**
@@ -49,11 +49,11 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMovieFanart() {
-        let allMovies = databases.movie.findAll();
+        let movies = await Movie.findAll();
 
-        allMovies.each((movie) => {
+        for (let movie of movies) {
             this.collectArtworkMovieFanart(movie);
-        });
+        }
     }
 
     /**
@@ -61,11 +61,11 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMoviePosters() {
-        let allMovies = databases.movie.findAll();
+        let movies = await Movie.findAll();
 
-        allMovies.each((movie) => {
+        for (let movie of movies) {
             this.collectArtworkMoviePoster(movie);
-        });
+        }
     }
 
     /**
