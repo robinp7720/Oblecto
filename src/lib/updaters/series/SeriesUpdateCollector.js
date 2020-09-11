@@ -1,4 +1,5 @@
-import databases from '../../../submodules/database';
+import {Series} from '../../../models/series';
+import {Episode} from '../../../models/episode';
 
 export default class SeriesUpdateCollector {
     /**
@@ -11,7 +12,7 @@ export default class SeriesUpdateCollector {
 
     /**
      *
-     * @param episode - Episode for which to download the episode banner for
+     * @param {Episode} episode - Episode for which to download the episode banner for
      * @returns {Promise<void>}
      */
     async collectEpisode(episode) {
@@ -20,7 +21,7 @@ export default class SeriesUpdateCollector {
 
     /**
      *
-     * @param series - Series for which to download the series poster for
+     * @param {Series} series - Series for which to download the series poster for
      * @returns {Promise<void>}
      */
     async collectSeries(series) {
@@ -32,11 +33,11 @@ export default class SeriesUpdateCollector {
      * @returns {Promise<void>}
      */
     async collectAllEpisodes() {
-        let allEpisodes = databases.episode.findAll();
+        let episodes = await Episode.findAll();
 
-        allEpisodes.each((episode) => {
+        for (let episode of episodes) {
             this.collectEpisode(episode);
-        });
+        }
     }
 
     /**
@@ -44,11 +45,11 @@ export default class SeriesUpdateCollector {
      * @returns {Promise<void>}
      */
     async collectAllSeries() {
-        let allSeries = databases.tvshow.findAll();
+        let all = await Series.findAll();
 
-        allSeries.each((series) => {
+        for (let series of all) {
             this.collectSeries(series);
-        });
+        }
     }
 
     /**

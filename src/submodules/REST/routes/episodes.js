@@ -1,42 +1,52 @@
 import sequelize from 'sequelize';
-import path from 'path';
 import fs from 'fs';
 import errors from 'restify-errors';
 import jimp from 'jimp';
 
-
-import databases from '../../../submodules/database';
 import authMiddleWare from '../middleware/auth';
+import {Episode} from '../../../models/episode';
+import {Series} from '../../../models/series';
+import {TrackEpisode} from '../../../models/trackEpisode';
+import {File} from '../../../models/file';
 
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     // Endpoint to get a list of episodes from all series
-    server.get('/episodes/list/:sorting/:order', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+        let limit = 20;
+        let page = 0;
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
             return next(new errors.BadRequestError('Sorting order is invalid'));
 
-        if (!(req.params.sorting in databases.episode.rawAttributes))
+        if (!(req.params.sorting in Episode.rawAttributes))
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
-        let results = await databases.episode.findAll({
+        if (req.params.count && Number.isInteger(req.params.count))
+            limit = parseInt(req.params.count);
+
+        if (req.params.page && Number.isInteger(req.params.page))
+            page = parseInt(req.params.page);
+
+        let results = await Episode.findAll({
             include: [
-                databases.tvshow,
+                Series,
                 {
-                    model: databases.trackEpisodes,
+                    model: TrackEpisode,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ],
             order: [
                 [req.params.sorting, req.params.order]
             ],
-            limit: 30
+            limit,
+            offset: limit * page
         });
 
         res.send(results);
@@ -45,8 +55,8 @@ export default (server, oblecto) => {
     // Endpoint to get a banner image for an episode based on the local episode ID
     server.get('/episode/:id/banner', async function (req, res, next) {
         // Get episode data
-        let episode = await databases.episode.findByPk(req.params.id, {
-            include: [databases.file]
+        let episode = await Episode.findByPk(req.params.id, {
+            include: [File]
         });
 
         let thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
@@ -64,25 +74,15 @@ export default (server, oblecto) => {
     });
 
     server.put('/episode/:id/banner', async function (req, res, next) {
-        let episode = await databases.episode.findByPk(req.params.id, {
-            include: [databases.file]
+        let episode = await Episode.findByPk(req.params.id, {
+            include: [File]
         });
 
         if (!episode) {
             return next(new errors.NotFoundError('Episode does not exist'));
         }
 
-        let thumbnailPath = path.normalize(oblecto.config.assets.episodeBannerLocation) + '/' + episode.id + '.jpg';
-
-        if (oblecto.config.assets.storeWithFile) {
-            if (!episode.files[0])
-                return next(new errors.NotFoundError('No file linked to episode'));
-
-            let episodePath = episode.files[0].path;
-
-            // Set the thumbnail to have the same name but with -thumb.jpg instead of the video file extension
-            thumbnailPath = episodePath.replace(path.extname(episodePath), '-thumb.jpg');
-        }
+        let thumbnailPath = this.oblecto.artworkUtils.episodeBannerPath(episode);
 
         if (req.files.length < 1) {
             return next(new errors.MissingParameter('Image file is missing'));
@@ -107,6 +107,14 @@ export default (server, oblecto) => {
             fs.copyFile(uploadPath, thumbnailPath, (err) => {
                 if (err) throw err;
 
+                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
+                    this.oblecto.queue.pushJob('rescaleImage', {
+                        from: this.oblecto.artworkUtils.episodeBannerPath(episode),
+                        to: this.oblecto.artworkUtils.episodeBannerPath(episode, size),
+                        width: this.oblecto.config.artwork.poster[size]
+                    });
+                }
+
                 res.send(['success']);
             });
         } catch (e) {
@@ -120,8 +128,8 @@ export default (server, oblecto) => {
 
     // Endpoint to list all stored files for the specific episode
     server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req, res) {
-        let episode = databases.episode.findByPk(req.params.id, {
-            include: [databases.file]
+        let episode = await Episode.findByPk(req.params.id, {
+            include: [File]
         });
 
         res.send(episode.files);
@@ -132,8 +140,8 @@ export default (server, oblecto) => {
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/episode/:id/play', async function (req, res, next) {
         // search for attributes
-        let episode = await databases.episode.findByPk(req.params.id, {
-            include: [databases.file]
+        let episode = await Episode.findByPk(req.params.id, {
+            include: [File]
         });
 
         let file = episode.files[0];
@@ -145,15 +153,15 @@ export default (server, oblecto) => {
     // Endpoint to retrieve episode details based on the local episode ID
     server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let episode = await databases.episode.findByPk(req.params.id, {
+        let episode = await Episode.findByPk(req.params.id, {
             include: [
-                databases.file,
-                databases.tvshow,
+                File,
+                Series,
                 {
-                    model: databases.trackEpisodes,
+                    model: TrackEpisode,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ]
@@ -166,10 +174,10 @@ export default (server, oblecto) => {
     // Endpoint to retrieve the episode next in series based on the local episode ID
     server.get('/episode/:id/next', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let results = await databases.episode.findByPk(req.params.id);
-        let episode = await databases.episode.findOne({
+        let results = await Episode.findByPk(req.params.id);
+        let episode = await Episode.findOne({
             where: {
-                tvshowId: results.tvshowId,
+                SeriesId: results.SeriesId,
                 [Op.or]: [{
                     [Op.and]: [{
                         airedEpisodeNumber: {
@@ -204,20 +212,20 @@ export default (server, oblecto) => {
 
     server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let episode = await databases.episode.findAll({
+        let episode = await Episode.findAll({
             where: {
                 episodeName: {
                     [Op.like]: '%' + req.params.name + '%'
                 }
             },
             include: [
-                databases.file,
-                databases.tvshow,
+                File,
+                Series,
                 {
-                    model: databases.trackEpisodes,
+                    model: TrackEpisode,
                     required: false,
                     where: {
-                        userId: req.authorization.jwt.id
+                        userId: req.authorization.user.id
                     }
                 }
             ]
@@ -230,14 +238,14 @@ export default (server, oblecto) => {
     // Endpoint to get the episodes currently being watched
     server.get('/episodes/watching', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
-        let watching = await databases.episode.findAll({
+        let watching = await Episode.findAll({
             include: [
-                databases.tvshow,
+                Series,
                 {
-                    model: databases.trackEpisodes,
+                    model: TrackEpisode,
                     required: true,
                     where: {
-                        userId: req.authorization.jwt.id,
+                        userId: req.authorization.user.id,
                         progress: {
                             [sequelize.Op.lt]: 0.9
                         },
@@ -263,7 +271,7 @@ export default (server, oblecto) => {
             return next(new errors.NotImplementedError('Next episode is not supported when using sqlite (yet)'));
 
         // search for attributes
-        let latestWatched = await databases.episode.findAll({
+        let latestWatched = await Episode.findAll({
             attributes: {
                 include: [
                     [sequelize.fn('MAX', sequelize.col('absoluteNumber')), 'absoluteNumber'],
@@ -272,10 +280,10 @@ export default (server, oblecto) => {
                 ]
             },
             include: [{
-                model: databases.trackEpisodes,
+                model: TrackEpisode,
                 required: true,
                 where: {
-                    userId: req.authorization.jwt.id,
+                    userId: req.authorization.user.id,
                     progress: {
                         [sequelize.Op.gt]: 0.9
                     },
@@ -285,7 +293,7 @@ export default (server, oblecto) => {
                 },
             }],
             group: [
-                'tvshowId'
+                'SeriesId'
             ]
         });
 
@@ -293,19 +301,22 @@ export default (server, oblecto) => {
 
         for (let latest of latestWatched) {
             latest = latest.toJSON();
-            let next = await databases.episode.findOne({
+            let next = await Episode.findOne({
                 attributes: {
                     include: [
                         [sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']
                     ]
                 },
                 include: [
-                    databases.tvshow,
+                    Series,
                     {
-                        model: databases.trackEpisodes,
+                        model: TrackEpisode,
+                        where: {
+                            userId: req.authorization.user.id
+                        },
                     }],
                 where: sequelize.and(
-                    sequelize.where(sequelize.col('tvshowId'), '=', latest.tvshowId),
+                    sequelize.where(sequelize.col('SeriesId'), '=', latest.SeriesId),
                     sequelize.where(sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), '>', latest.seasonepisode),
                 ),
                 order: [

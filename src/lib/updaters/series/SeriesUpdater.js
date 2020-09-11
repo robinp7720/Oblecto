@@ -28,11 +28,21 @@ export default class SeriesUpdater {
         });
     }
 
+    /**
+     *
+     * @param {Series} series
+     * @returns {Promise<void>}
+     */
     async updateSeries(series) {
         let data = await this.aggregateSeriesUpdateRetriever.retrieveInformation(series);
         await series.update(data);
     }
 
+    /**
+     *
+     * @param {Episode} episode
+     * @returns {Promise<void>}
+     */
     async updateEpisode(episode) {
         let data = await this.aggregateEpisodeUpdaterRetriever.retrieveInformation(episode);
         await episode.update(data);

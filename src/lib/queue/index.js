@@ -8,8 +8,7 @@ export default class Queue {
             if (!this.jobs[job.id]) return callback();
 
             this.jobs[job.id](job.attr)
-                .then((msg) => {
-                    if (msg) console.log(msg);
+                .then(() => {
                     callback();
                 })
                 .catch((err) => {

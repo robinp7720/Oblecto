@@ -40,9 +40,13 @@ import SeriesCleaner from '../cleaners/SeriesCleaner';
 import FileCleaner from '../cleaners/FileCleaner';
 import FileIndexer from '../indexers/files/FileIndexer';
 
+import {initDatabes} from '../../submodules/database';
+
 export default class Oblecto {
     constructor(config) {
         this.config = config;
+
+        this.database = initDatabes();
 
         this.tvdb = new TVDB(this.config.tvdb.key);
         this.tmdb = new moviedb(this.config.themoviedb.key);

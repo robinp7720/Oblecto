@@ -14,6 +14,11 @@ export default class MovieUpdater {
         });
     }
 
+    /**
+     *
+     * @param {Movie} movie
+     * @returns {Promise<void>}
+     */
     async updateMovie(movie) {
         let data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie);
         await movie.update(data);

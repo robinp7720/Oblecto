@@ -1,6 +1,7 @@
 import {promises as fs} from 'fs';
 
-import databases from '../../../submodules/database';
+import {Episode} from '../../../models/episode';
+import {Series} from '../../../models/series';
 
 export default class SeriesArtworkCollector {
     /**
@@ -13,7 +14,7 @@ export default class SeriesArtworkCollector {
 
     /**
      *
-     * @param episode - Episode for which to download the episode banner for
+     * @param {Episode} episode - Episode for which to download the episode banner for
      * @returns {Promise<void>}
      */
     async collectArtworkEpisodeBanner(episode) {
@@ -30,7 +31,7 @@ export default class SeriesArtworkCollector {
 
     /**
      *
-     * @param series - Series for which to download the series poster for
+     * @param {Series} series - Series for which to download the series poster for
      * @returns {Promise<void>}
      */
     async collectArtworkSeriesPoster(series) {
@@ -50,11 +51,11 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllEpisodeBanners() {
-        let allEpisodes = databases.episode.findAll();
+        let episodes = await Episode.findAll();
 
-        allEpisodes.each((episode) => {
+        for (let episode of episodes) {
             this.collectArtworkEpisodeBanner(episode);
-        });
+        }
     }
 
     /**
@@ -62,11 +63,11 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllSeriesPosters() {
-        let allSeries = databases.tvshow.findAll();
+        let allSeries = await Series.findAll();
 
-        allSeries.each((series) => {
+        for (let series of allSeries) {
             this.collectArtworkSeriesPoster(series);
-        });
+        }
     }
 
     /**

@@ -3,8 +3,13 @@ export default class TmdbSeriesArtworkRetriever {
         this.oblecto = oblecto;
     }
 
+    /**
+     *
+     * @param {Episode} episode
+     * @returns {Promise<string>}
+     */
     async retrieveEpisodeBanner(episode) {
-        let series = await episode.getTvshow();
+        let series = await episode.getSeries();
 
         let data = await this.oblecto.tmdb.tvEpisodeImages({
             id: series.tmdbid,
@@ -15,7 +20,12 @@ export default class TmdbSeriesArtworkRetriever {
         return  `https://image.tmdb.org/t/p/original${data.stills[0]['file_path']}`;
     }
 
-    async retrieveSeriesPoster (series) {
+    /**
+     *
+     * @param {Series} series
+     * @returns {Promise<string>}
+     */
+    async retrieveSeriesPoster(series) {
         let data = await this.oblecto.tmdb.tvImages({
             id: series.tmdbid
         });

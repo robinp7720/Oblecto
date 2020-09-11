@@ -1,19 +1,20 @@
-module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('file', {
-        host: DataTypes.STRING,
-        path: DataTypes.STRING,
+import { DataTypes, Model } from 'sequelize';
 
-        name: DataTypes.STRING,
-        directory: DataTypes.STRING,
-        extension: DataTypes.STRING,
-        container: DataTypes.STRING,
+export class File extends Model {}
 
-        videoCodec: DataTypes.STRING,
-        audioCodec: DataTypes.STRING,
+export const fileColumns = {
+    host: DataTypes.STRING,
+    path: DataTypes.STRING,
 
-        duration: DataTypes.DOUBLE,
+    name: DataTypes.STRING,
+    directory: DataTypes.STRING,
+    extension: DataTypes.STRING,
+    container: DataTypes.STRING,
 
-        hash: DataTypes.STRING
+    videoCodec: DataTypes.STRING,
+    audioCodec: DataTypes.STRING,
 
-    });
+    duration: DataTypes.DOUBLE,
+
+    hash: DataTypes.STRING
 };

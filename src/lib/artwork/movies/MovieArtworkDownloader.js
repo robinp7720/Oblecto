@@ -1,5 +1,4 @@
 import Download from '../../downloader';
-import ArtworkUtils from '../ArtworkUtils';
 import TmdbMovieArtworkRetriever from './artworkRetrievers/TmdbMovieArtworkRetriever';
 import AggregateMovieArtworkRetriever from './AggregateMovieArtworkRetriever';
 

@@ -1,6 +1,7 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier';
-import databases from '../../../submodules/database';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
+import FileExistsError from '../../errors/FileExistsError';
+import { Movie } from '../../../models/movie';
 
 export default class MovieIndexer {
     /**
@@ -19,11 +20,21 @@ export default class MovieIndexer {
     }
 
     async indexFile(moviePath) {
-        let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
+        let file;
+
+        try {
+            file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
+        } catch (error) {
+            if (error instanceof FileExistsError) {
+                return;
+            }
+
+            throw error;
+        }
 
         let movieIdentification = await this.movieIdentifer.identify(moviePath);
 
-        let [movie, movieCreated] = await databases.movie.findOrCreate(
+        let [movie, movieCreated] = await Movie.findOrCreate(
             {
                 where: {
                     tmdbid: movieIdentification.tmdbid

@@ -1,7 +1,6 @@
 import restify from 'restify';
 import routes from './routes';
 import corsMiddleware from 'restify-cors-middleware';
-import authMiddleware from './middleware/auth';
 
 export default class OblectoAPI {
     /**
@@ -26,9 +25,6 @@ export default class OblectoAPI {
         this.server.use(restify.plugins.authorizationParser());
         this.server.use(restify.plugins.queryParser({ mapParams: true }));
         this.server.use(restify.plugins.bodyParser({ mapParams: true }));
-
-        // Added user authentication information to the request if the user is authenticated
-        this.server.use(authMiddleware.addAuth);
 
         // Add routes routes
         routes(this.server, this.oblecto);

@@ -1,5 +1,6 @@
+import {File} from '../../../models/file';
+
 import Path from 'path';
-import databases from '../../../submodules/database';
 import FileExistsError from '../../errors/FileExistsError';
 import VideoAnalysisError from '../../errors/VideoAnalysisError';
 import ffprobe from '../../../submodules/ffprobe';
@@ -48,7 +49,7 @@ export default class FileIndexer {
     async indexVideoFile(videoPath) {
         let parsedPath = Path.parse(videoPath);
 
-        let [file, fileInserted] = await databases.file.findOrCreate({
+        let [file, fileInserted] = await File.findOrCreate({
             where: {path: videoPath},
             defaults: {
                 host: 'local',
@@ -63,7 +64,7 @@ export default class FileIndexer {
         try {
             metadata = await ffprobe(videoPath);
         } catch (e) {
-            throw new VideoAnalysisError();
+            throw new VideoAnalysisError(videoPath);
         }
 
         let primaryVideoStream = await FileIndexer.getPrimaryVideoStream(metadata);
@@ -72,7 +73,7 @@ export default class FileIndexer {
         let duration = metadata.format.duration;
 
         if (isNaN(duration)) {
-            throw new VideoAnalysisError();
+            throw new VideoAnalysisError(videoPath);
         }
 
         if (!primaryVideoStream['codec_name']) {

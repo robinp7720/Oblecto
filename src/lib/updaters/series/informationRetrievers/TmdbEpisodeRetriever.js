@@ -4,7 +4,7 @@ export default class TmdbEpisodeRetriever {
     }
 
     async retrieveInformation(episode) {
-        let series = await episode.getTvshow();
+        let series = await episode.getSeries();
 
         let episodeInfo = await this.oblecto.tmdb.tvEpisodeInfo({
             id: series.tmdbid,

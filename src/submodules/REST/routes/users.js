@@ -1,14 +1,15 @@
 import errors from 'restify-errors';
 import bcrypt from 'bcrypt';
 
-import databases from '../../../submodules/database';
 import config from '../../../config';
 import authMiddleWare from '../middleware/auth';
+
+import {User} from '../../../models/user';
 
 
 export default (server, oblecto) => {
     server.get('/users', async function (req, res, next) {
-        let users = await databases.user.findAll({
+        let users = await User.findAll({
             attributes: ['username', 'name', 'email', 'id']
         });
 
@@ -17,7 +18,7 @@ export default (server, oblecto) => {
     });
 
     server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let user = await databases.user.findOne({
+        let user = await User.findOne({
             where: {
                 id: req.params.id
             },
@@ -30,7 +31,7 @@ export default (server, oblecto) => {
     });
 
     server.del('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let user = await databases.user.findOne({
+        let user = await User.findOne({
             where: {
                 id: req.params.id
             },
@@ -49,7 +50,7 @@ export default (server, oblecto) => {
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res, next) {
-        let user = await databases.user.findByPk(req.params.id);
+        let user = await User.findByPk(req.params.id);
 
         if (!user) {
             return next(new errors.BadRequestError('User with id does not exist'));
@@ -99,7 +100,7 @@ export default (server, oblecto) => {
         if (req.params.password)
             passwordHash = await bcrypt.hash(req.params.password, oblecto.config.authentication.saltRounds);
 
-        let [User] = await databases.user.findOrCreate({
+        let [User] = await User.findOrCreate({
             where: {
                 username: req.params.username
             },

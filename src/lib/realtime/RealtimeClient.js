@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import databases from '../../submodules/database';
+import {TrackEpisode} from '../../models/trackEpisode';
+import {TrackMovie} from '../../models/trackMovie';
 
 export default class RealtimeClient {
     /**
@@ -26,7 +27,15 @@ export default class RealtimeClient {
     }
 
     authenticationHandler(data) {
-        this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
+        try {
+            this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
+        } catch (e) {
+            console.log('An unauthorized user attempted connection to realtime server');
+            console.log('Disconnecting client...');
+
+            this.socket.disconnect();
+        }
+
     }
 
     playingHandler(data) {
@@ -50,7 +59,7 @@ export default class RealtimeClient {
     async saveEpisodeTrack(id) {
         if (this.user === null) return;
 
-        let [item, created] = await databases.trackEpisodes.findOrCreate({
+        let [item, created] = await TrackEpisode.findOrCreate({
             where: {
                 userId: this.user.id,
                 episodeId: id
@@ -74,7 +83,7 @@ export default class RealtimeClient {
     async saveMovieTrack(id) {
         if (this.user == null) return;
 
-        let [item, created] = await databases.trackMovies.findOrCreate({
+        let [item, created] = await TrackMovie.findOrCreate({
             where: {
                 userId: this.user.id,
                 movieId: id
