@@ -51,6 +51,11 @@ export default (server, oblecto) => {
         res.send([true]);
     });
 
+    server.get('/settings/maintenance/update/files', authMiddleWare.requiresAuth, function (req, res) {
+        oblecto.fileUpdateCollector.collectAllFiles();
+        res.send([true]);
+    });
+
     server.get('/settings/maintenance/clean/:type', authMiddleWare.requiresAuth, function (req, res) {
         switch  (req.params.type) {
             case 'files':
