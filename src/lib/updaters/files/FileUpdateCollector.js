@@ -1,4 +1,4 @@
-import databases from '../../../submodules/database';
+import {File} from '../../../models/file';
 
 export default class FileUpdateCollector {
     /**
@@ -23,10 +23,10 @@ export default class FileUpdateCollector {
      * @returns {Promise<void>}
      */
     async collectAllFiles() {
-        let allFiles = databases.file.findAll();
+        let files = await File.findAll();
 
-        allFiles.each((file) => {
+        for (let file of files) {
             this.collectFile(file);
-        });
+        }
     }
 }

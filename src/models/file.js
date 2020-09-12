@@ -16,5 +16,6 @@ export const fileColumns = {
 
     duration: DataTypes.DOUBLE,
 
-    hash: DataTypes.STRING
+    hash: DataTypes.STRING,
+    size: DataTypes.BIGINT
 };

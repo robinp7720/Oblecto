@@ -1,5 +1,6 @@
-import fs from 'fs';
 import crypto from 'crypto';
+import {promises as fs} from 'fs';
+
 
 export default class FileUpdater {
 
@@ -16,6 +17,14 @@ export default class FileUpdater {
         this.oblecto.queue.addJob('updateFileHash', async (file) => {
             await this.updateFileHash(file);
         });
+
+        this.oblecto.queue.addJob('updateFileSize', async (file) => {
+            await this.updateFileSize(file);
+        });
+
+        this.oblecto.queue.addJob('updateFileExtension', async (file) => {
+            await this.updateFileExtension(file);
+        });
     }
 
     /**
@@ -28,6 +37,14 @@ export default class FileUpdater {
 
         if (this.oblecto.config.files.doHash && !file.hash) {
             this.oblecto.queue.queueJob('updateFileHash', file);
+        }
+
+        if (!file.size || file.size === 0) {
+            this.oblecto.queue.queueJob('updateFileSize', file);
+        }
+
+        if (file.extension.includes('.')) {
+            this.oblecto.queue.queueJob('updateFileExtension', file);
         }
     }
 
@@ -61,6 +78,26 @@ export default class FileUpdater {
      */
     async updateFileHash(file) {
         let hash = await this.getHashFromFile(file);
-        file.update({hash});
+        await file.update({hash});
+    }
+
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<void>}
+     */
+    async updateFileSize(file) {
+        let size = (await fs.stat(file.path)).size;
+        await file.update({size});
+    }
+
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<void>}
+     */
+    async updateFileExtension(file) {
+        let extension = file.extension.replace('.','');
+        await file.update({extension});
     }
 }

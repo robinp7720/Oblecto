@@ -55,7 +55,7 @@ export default class FileIndexer {
                 host: 'local',
                 name: parsedPath.name,
                 directory: parsedPath.dir,
-                extension: parsedPath.ext,
+                extension: parsedPath.ext.replace('.',''),
             }
         });
 
