@@ -2,9 +2,9 @@ export default (server, embyEmulation) => {
     server.get('/system/info/public', async (req, res, next) => {
         res.send({
             'LocalAddress': 'http://oblecto:8096',
-            'ServerName': 'jellyfin',
+            'ServerName': embyEmulation.serverName,
             'Version': '10.6.4',
-            'ProductName': 'Jellyfin Server',
+            'ProductName': 'Oblecto Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId
         });
@@ -17,7 +17,7 @@ export default (server, embyEmulation) => {
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,
             'IsShuttingDown': false,
-            'SupportsLibraryMonitor': false,
+            'SupportsLibraryMonitor': true,
             'WebSocketPortNumber': 8096,
             'CompletedInstallations': [],
             'CanSelfRestart': false,
@@ -32,7 +32,7 @@ export default (server, embyEmulation) => {
             'HasUpdateAvailable': false,
             'EncoderLocation': 'Custom',
             'SystemArchitecture': 'X64',
-            'LocalAddress': 'http://172.20.0.13:8096',
+            'LocalAddress': 'http://192.168.178.84:8096',
             'ServerName': embyEmulation.serverName,
             'Version': embyEmulation.version,
             'OperatingSystem': 'Linux',

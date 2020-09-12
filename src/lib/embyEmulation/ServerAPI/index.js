@@ -58,7 +58,7 @@ export default class EmbyServerAPI {
 
         // Start restify server
         this.server.listen(8096,  () => {
-            console.log('%s listening at %s', this.server.name, this.server.url);
+            console.log('Jellyfin emulation server listening at %s', this.server.url);
         });
     }
 }

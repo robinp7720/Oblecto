@@ -7,4 +7,10 @@ export default (server, embyEmulation) => {
 
         next();
     });
+
+    server.get('/branding/css', async (req, res, next) => {
+        res.send();
+
+        next();
+    });
 };

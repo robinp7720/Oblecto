@@ -10,4 +10,14 @@ export default (server, embyEmulation) => {
 
         next();
     });
+
+    server.post('/sessions/playing', async (req, res, next) => {
+        embyEmulation.sessions[req.headers.emby.Token].playSession = req.params;
+
+        console.log(req.params);
+
+        res.send();
+
+        next();
+    });
 };
