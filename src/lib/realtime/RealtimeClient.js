@@ -61,8 +61,8 @@ export default class RealtimeClient {
 
         let [item, created] = await TrackEpisode.findOrCreate({
             where: {
-                userId: this.user.id,
-                episodeId: id
+                UserId: this.user.id,
+                EpisodeId: id
             },
             defaults: {
                 time: this.storage.series[id].time,
@@ -85,8 +85,8 @@ export default class RealtimeClient {
 
         let [item, created] = await TrackMovie.findOrCreate({
             where: {
-                userId: this.user.id,
-                movieId: id
+                UserId: this.user.id,
+                MovieId: id
             },
             defaults: {
                 time: this.storage.movie[id].time,
