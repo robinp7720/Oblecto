@@ -40,6 +40,7 @@
     "node-rsa": "^1.1.1",
     "node-tvdb": "^4.1.0",
     "node-uuid": "^1.4.8",
+    "primus": "^7.3.5",
     "recursive-readdir": "^2.2.2",
     "restify": "^8.5.1",
     "restify-cors-middleware": "^1.1.1",

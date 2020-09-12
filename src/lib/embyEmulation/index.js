@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import {User} from '../../models/user';
 import errors from 'restify-errors';
 import bcrypt from 'bcrypt';
+import Primus from 'primus';
+import {timeout} from 'async';
 
 export default class EmbyEmulation {
     /**
@@ -15,12 +17,71 @@ export default class EmbyEmulation {
 
         this.sessions = {};
 
+        this.websocketSessions = {};
+
         this.serverId = 'cadda85fd4f447b9ad3ccc3c83cf1cf6';
         this.version = '10.6.4';
 
         this.serverName = 'Oblecto';
 
         this.serverAPI = new EmbyServerAPI(this);
+
+        this.primus = new Primus(this.serverAPI.server, {
+            pathname: '/socket',
+            authorization: function (req, done) {
+
+                if (!req.query || !req.query.api_key)
+                    return done({ statusCode: 403, message: '' });
+
+                this.auth = 'test';
+
+                done();
+            }
+        });
+
+        this.primus.on('connection', (spark) => {
+            let req = spark.request;
+
+            if (!req.query || !req.query.api_key)
+                return spark.disconnect();
+
+            this.websocketSessions[req.query.api_key] = spark;
+
+            console.log('test');
+
+            timeout(() => {
+                console.log('sending');
+                spark.write({
+                    MessageType: 'Play',
+                    Data: {
+                        VolumeLevel: 100,
+                        IsMuted: false,
+                        IsPaused: false,
+                        RepeatMode: 'RepeatNone',
+                        ShuffleMode: 'Sorted',
+                        MaxStreamingBitrate: 140000000,
+                        PositionTicks: 0,
+                        PlaybackStartTimeTicks: 15999190139560000,
+                        SubtitleStreamIndex: 2,
+                        AudioStreamIndex: 1,
+                        BufferedRanges: [],
+                        PlayMethod: 'DirectStream',
+                        PlaySessionId: 'Thisisafuckingtest',
+                        PlaylistItemId: 'playlistItem1',
+                        MediaSourceId: 2725,
+                        CanSeek: true,
+                        ItemId: 'movie16',
+                        NowPlayingQueue: [ { Id: 'movie16', PlaylistItemId: 'playlistItem1' } ]
+                    }
+                });
+            }, 2000);
+
+
+            spark.on('data', function message(data) {
+
+                console.log(data);
+            });
+        });
     }
 
     async handleLogin(username, password) {

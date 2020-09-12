@@ -16,6 +16,11 @@ export default (server, embyEmulation) => {
 
         console.log(req.params);
 
+        embyEmulation.websocketSessions[req.headers.emby.Token].write({
+            MessageType: 'Play',
+            Data: req.params
+        });
+
         res.send();
 
         next();
