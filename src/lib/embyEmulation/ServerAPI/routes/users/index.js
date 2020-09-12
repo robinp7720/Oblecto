@@ -1,6 +1,7 @@
 import {Movie} from '../../../../../models/movie';
 import {TrackMovie} from '../../../../../models/trackMovie';
 import {File} from '../../../../../models/file';
+import {User} from '../../../../../models/user';
 
 /**
  * @param {*} server
@@ -14,22 +15,12 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/users/authenticatebyname', async (req, res, next) => {
-        let sessionToken = embyEmulation.handleLogin(req.params.Username, req.params.Wp);
+        let sessionId = await embyEmulation.handleLogin(req.params.Username, req.params.Pw);
 
         res.send({
-            User: {
-                Name: 'Robin',
-                ServerId: embyEmulation.serverId,
-                Id: sessionToken,
-                HasPassword: true,
-                HasConfiguredPassword: true,
-                HasConfiguredEasyPassword: false,
-                EnableAutoLogin: false,
-                LastLoginDate: '2020-09-11T23:37:27.3042432Z',
-                LastActivityDate: '2020-09-11T23:37:27.3042432Z'
-            },
+            User: embyEmulation.sessions[sessionId],
             SessionInfo: {},
-            AccessToken: sessionToken,
+            AccessToken: sessionId,
             ServerId: embyEmulation.serverId
         });
 
@@ -37,12 +28,16 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid', async (req, res, next) => {
+        let user = await User.findByPk(req.params.userid);
+
+        let HasPassword = user.password !== '';
+
         res.send({
-            Name: 'Robin',
+            Name: user.name,
             ServerId: embyEmulation.serverId,
-            Id: req.headers.emby.Token,
-            HasPassword: true,
-            HasConfiguredPassword: true,
+            Id: user.id,
+            HasPassword,
+            HasConfiguredPassword: HasPassword,
             HasConfiguredEasyPassword: false,
             EnableAutoLogin: false,
             LastLoginDate: '2020-09-11T23:37:27.3042432Z',
@@ -212,34 +207,20 @@ export default (server, embyEmulation) => {
                 ]
             });
 
-            res.send({
-                'Name': movie.movieName,
-                'OriginalTitle': movie.movieName,
-                'ServerId': embyEmulation.serverId,
-                'Id': 'c042cd5ec05a53975b853b127bea567b',
-                'Etag': '6448f9c5d2678db5ffa4de1c283f6e6a',
-                'DateCreated': '2020-09-07T23:53:49.0000000Z',
-                'CanDelete': false,
-                'CanDownload': true,
-                'HasSubtitles': true,
-                'Container': 'mkv,webm',
-                'SortName': movie.movieName,
-                'PremiereDate': '2020-09-04T00:00:00.0000000Z',
-                'ExternalUrls': [{'Name': 'IMDb', 'Url': 'https://www.imdb.com/title/tt4566758'}, {
-                    'Name': 'TheMovieDb',
-                    'Url': 'https://www.themoviedb.org/movie/337401'
-                }, {'Name': 'Trakt', 'Url': 'https://trakt.tv/movies/tt4566758'}],
-                'MediaSources': [{
+            let MediaSources = [];
+
+            for (let file of movie.Files) {
+                MediaSources.push({
                     'Protocol': 'File',
-                    'Id': 'c042cd5ec05a53975b853b127bea567b',
-                    'Path': '/media/Movies/Mulan.2020.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-PHOENiX.mkv',
+                    'Id': file.id,
+                    'Path': file.path,
                     'Type': 'Default',
-                    'Container': 'mkv',
+                    'Container': file.container,
                     'Size': 7990969856,
-                    'Name': 'Mulan.2020.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-PHOENiX',
+                    'Name': file.name,
                     'IsRemote': false,
                     'ETag': '313f5f26c5f6636a77c630468b6920f7',
-                    'RunTimeTicks': 69087043584,
+                    'RunTimeTicks': file.duration * 10000000,
                     'ReadAtNativeFramerate': false,
                     'IgnoreDts': false,
                     'IgnoreIndex': false,
@@ -260,92 +241,49 @@ export default (server, embyEmulation) => {
                     'RequiredHttpHeaders': {},
                     'DefaultAudioStreamIndex': 1,
                     'DefaultSubtitleStreamIndex': 2
-                }],
+                });
+            }
+
+            res.send({
+                'Name': movie.movieName,
+                'OriginalTitle': movie.originalName,
+                'ServerId': embyEmulation.serverId,
+                'Id': 'movie'+movie.id,
+                'Etag': '6448f9c5d2678db5ffa4de1c283f6e6a',
+                'DateCreated': movie.createdAt,
+                'CanDelete': false,
+                'CanDownload': true,
+                'HasSubtitles': true,
+                'Container': 'mkv,webm',
+                'SortName': movie.movieName,
+                'PremiereDate': movie.releaseDate,
+                'ExternalUrls': [
+                    {'Name': 'IMDb', 'Url': 'https://www.imdb.com/title/tt4566758'},
+                    {'Name': 'TheMovieDb', 'Url': 'https://www.themoviedb.org/movie/337401'},
+                    {'Name': 'Trakt', 'Url': 'https://trakt.tv/movies/tt4566758'}],
+                'MediaSources': MediaSources,
                 'CriticRating': 82,
                 'ProductionLocations': ['China', 'United States of America'],
                 'Path': '/media/Movies/Mulan.2020.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-PHOENiX.mkv',
                 'EnableMediaSourceDisplay': true,
                 'OfficialRating': 'PG-13',
                 'Overview': movie.overview,
-                'Taglines': [],
+                'Taglines': [movie.tagline],
                 'Genres': ['Drama', 'Action', 'War', 'Fantasy', 'Adventure'],
                 'CommunityRating': 2.6,
-                'RunTimeTicks': 69087043584,
+                'RunTimeTicks': movie.Files[0].duration*10000000,
                 'PlayAccess': 'Full',
                 'ProductionYear': movie.releaseDate.substring(0,4),
-                'RemoteTrailers': [{
-                    'Url': 'https://www.youtube.com/watch?v=01ON04GCwKs',
-                    'Name': 'Disney\'s Mulan - Official Teaser'
-                }, {
-                    'Url': 'https://www.youtube.com/watch?v=KK8FHdFluOQ',
-                    'Name': 'Official Trailer'
-                }, {
-                    'Url': 'https://www.youtube.com/watch?v=R-eFm--k21c',
-                    'Name': 'Final Trailer'
-                }, {
-                    'Url': 'https://www.youtube.com/watch?v=bJbAZh3fv0g',
-                    'Name': 'Coming Sept. 4 | Mulan | Disney+'
-                }, {'Url': 'https://www.youtube.com/watch?v=1UXZEGYSwgg', 'Name': 'Coming Sept. 4 | Mulan | Disney+'}],
-                'ProviderIds': {'Tmdb': movie.tmdbid, 'Imdb': 'tt4566758'},
+                'RemoteTrailers': [],
+                'ProviderIds': {
+                    'Tmdb': movie.tmdbid, 'Imdb': movie.imdbid
+                },
                 'IsHD': true,
                 'IsFolder': false,
                 'ParentId': 'e675012a1892a87530d2c0b0d14a9026',
                 'Type': 'Movie',
-                'People': [{
-                    'Name': 'Liu Yifei',
-                    'Id': '1ca09f328295f709601936b4b01aeb7a',
-                    'Role': 'Hua Mulan',
-                    'Type': 'Actor',
-                    //'PrimaryImageTag': '6842ed88ed28342419d73f4728ac0919',
-                    'ImageBlurHashes': {
-                        'Primary': {
-                            '6842ed88ed28342419d73f4728ac0919': 'dNO.Hl?G~M-.0cay^hocKkWE$+jFW8R.%Lofn$WCxaxZ',
-                            '65df873b3a22643475421e218331198d': 'dbE.FTxt0fRkxCWBR-s:9uWC$*aeNGoLt7WXM|f6xZae',
-                            'a7888de4da0419a4aeb29b890c8ba29d': 'dZIqM;-pyE%g_NE1OYV[_3$*?HtRt-OX=|-px^sokBoz',
-                            '3545cf180b0ab87bd64dfa9b90e0b842': 'dKEK.VE|0gfl^jS2RkNb5RS4={Nu$jE#$*ofwfNuxZso',
-                            '92249b2b41ed1654a4cbfe4b5dfd5842': 'dnJj}KflAH%M4mV@R+R*tns:xDR+NHkCxaofE1WBslay',
-                            '55f5c746c9de70c75fdf9f8e7f32096d': 'dQG[c+$~F|XT~9ob%M%00LW=w[r=IpWBn+M}kpV@-oxa',
-                            '1527755c8217b60d86d07b98e086db26': 'd$M%yO?b_N.8?bRjWVfPI[ofa0j]-=t7oKjt%MWBRjj[',
-                            '75fffe5d8b5aaa9486d9abad69e85516': 'dHD9#P4oD%Rjt7?bIUM{00of?bt7RjD%-;%MfQt7M{xu',
-                            'c3015b3291d379d6f3a3f254eb6a54a0': 'drKnG4^+_Nxu_3t7x]ayRjV@aeofW=kCxZs:t7t7oMay',
-                            'f603a118512275e0d94ab34aff40ed36': 'diG@oh-o0fE1-oxaWWNGW;WBoLjuRjWBt7WVofayazj[',
-                            '4ce2b2347a45a90ad2891e8c1465f671': 'dZIzn.-p0#xtkVRjs:jZ0zIo%1WBo#ay%Lxat7NGxZoe',
-                            '8d80d69d3dda9e433c0711a5b6a6a32b': 'dXH_3^^+%#tS_N%Mx^kW%gWU%1s9%NW;xZxGo~t7s:kC',
-                            'b26cbb24e472b924e38e3ccfcc06b4a4': 'dvKA]0-;_N%N_3t7-;tR9aRjV@axt7t7s.oe%Mj]t7of',
-                            'bd1c3930edac0b829681e88a5bfb5fa2': 'd^LD#{t7tm%M~Wjsf,t7S3ayV@WVtRt7ofof%Mj[kCof',
-                            '0c58bb79156034e0de93f4713874c5d0': 'dbGa,.?Gx^S$~Vxa%MkWNHNGe.s:WVWCNGofozofxat7',
-                            '1a1aa007152d100394c03d0a70f63c09': 'dPIO94~V0K0e^PR5%g_NS4xvxas.T0tRMxIAW=RkkDkC',
-                            '1e181b88f4dd5920b3c1f9c7aff7ad42': 'dOEf7;_3OstR~W%N.8%gR*j@xut7X9RjD%RjIobHxat7',
-                            '11f4efcd03eb1382e24a32e167d05e5b': 'dIC6+6g%5i%e~BnhE0t39Za0rsV@57Nf%3WsD%WAt7WX',
-                            'fde226709c81b2b0cda370756f0edb19': 'dUEU.Y%M5RkE};t6EMR%IqWWadM|IqbHofWEs7oLbboe',
-                            '84f4402f5ca71ffda5d8d9faf7629ae6': 'dSLMYQ%2.T%38bR+yWkqHsaK$fnipcXR%2oM.8s:Xloz',
-                            '7c75e74526da5268f82fd72305cf8ce6': 'd+LWbM%MyE%M~Wt7x]t7ELRjxGjZIpays:s:tRoftRoz',
-                            '6047b96a21478c5f62962277530fcafb': 'dZFE7h^k#Tv#}t$*rra0M{R*kCbHIoRjkWxuVsV@kCt7',
-                            'e9ac59a0c9fd6432ab9a5cc9ad2d6df5': 'dXF#wHoz5nt6$ytRS$xu0eaxwHWBEiM_xZIUM{WAs:og',
-                            '39f9e2cfd3db8d30c2f2fb3205caa6d7': 'dmJ7E#%20~NH4.RjaJWBo~W;-oxZIVofoKR*R*Rks:oL'
-                        }
-                    }
-                }],
-                'Studios': [{
-                    'Name': 'Walt Disney Pictures',
-                    'Id': 'ff966337d51b0e006da6e16df7cb7ca1'
-                }, {
-                    'Name': 'China Film Group Corporation',
-                    'Id': 'cf7a1d58185a6a4372d0e4eeccd11f7e'
-                }, {
-                    'Name': 'Good Fear',
-                    'Id': 'f6c01c4be8514f819d4aedd46b45c82f'
-                }, {
-                    'Name': 'Jason T. Reed Productions',
-                    'Id': '20ad95596d5ecd2693f9124ec697b9ae'
-                }, {'Name': 'Bioskopin21', 'Id': 'fb24bec0731b1af5991c7a3151aba2b6'}],
-                'GenreItems': [{'Name': 'Drama', 'Id': '090eac6e9de4fe1fbc194e5b96691277'}, {
-                    'Name': 'Action',
-                    'Id': 'ce06903d834d2c3417e0889dd4049f3b'
-                }, {'Name': 'War', 'Id': 'f8dbf7a2ab1427f4b038db28cd08f8ab'}, {
-                    'Name': 'Fantasy',
-                    'Id': 'a30dcc65be22eb3c21c03f7c1c7a57d1'
-                }, {'Name': 'Adventure', 'Id': '51cec9645b896084d12b259acd05ccb1'}],
+                'People': [],
+                'Studios': [],
                 'LocalTrailerCount': 0,
                 'UserData': {
                     'PlaybackPositionTicks': 0,
@@ -383,6 +321,21 @@ export default (server, embyEmulation) => {
             });
         }
 
+        next();
+    });
+
+    server.get('/users/:userid/items/:mediaid/intros', async (req, res, next) => {
+        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
+        next();
+    });
+
+    server.get('/users/:userid/items/resume', async (req, res, next) => {
+        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
+        next();
+    });
+
+    server.get('/users/:userid/items/latest', async (req, res, next) => {
+        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
         next();
     });
 };

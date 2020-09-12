@@ -49,7 +49,7 @@ export default class EmbyServerAPI {
         });
 
         this.server.pre(function (request, response, next) {
-            console.log(request.url, request.headers, request.method, request.params, request.body);
+            console.log(request.url, request.params, request.method);
             next();
         });
 
