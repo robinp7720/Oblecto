@@ -92,7 +92,7 @@
     "doRealTimeRemux": true,
     "doRealTimeTranscode": true,
     "transcodeEverything": false,
-    "iso": "mp4"
+    "removeBorders": true
   },
   "web": {
     "enabled": true

@@ -41,6 +41,7 @@ import FileCleaner from '../cleaners/FileCleaner';
 import FileIndexer from '../indexers/files/FileIndexer';
 
 import {initDatabes} from '../../submodules/database';
+import StreamSessionController from '../streamSessions/StreamSessionController';
 
 export default class Oblecto {
     constructor(config) {
@@ -84,6 +85,8 @@ export default class Oblecto {
         this.fileCleaner = new FileCleaner(this);
         this.movieCleaner = new MovieCleaner(this);
         this.seriesCleaner = new SeriesCleaner(this);
+
+        this.streamSessionController = new StreamSessionController(this);
 
         if (config.federation.enabled) {
             this.fedartionController = new FederationController(this);

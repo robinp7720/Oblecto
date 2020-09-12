@@ -98,74 +98,52 @@ export default (server, oblecto) => {
     });
 
     server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let fileInfo;
+        let file;
 
         try {
-            fileInfo = await File.findByPk(req.params.id);
+            file = await File.findByPk(req.params.id);
         } catch (ex) {
             return next(new errors.NotFoundError('File does not exist'));
         }
 
-        let sessionId = uuid.v4();
+        let streamType = 'recode';
 
-        let seeking = 'client';
+        if (req.params.noremux) streamType = 'directhttp';
 
-        if ((oblecto.config.transcoding.doRealTimeRemux || oblecto.config.transcoding.doRealTimeTranscode) && fileInfo.extension !== 'mp4' && !req.params.noremux) {
-            seeking = 'server';
-        }
+        if (file.extension === 'mp4') streamType = 'directhttp';
 
-        if (fileInfo.host !== 'local') {
-            seeking = 'server';
-        }
+        let streamSession = oblecto.streamSessionController.newSession(file, {
+            streamType,
 
-        StreamSessions[sessionId] = {
-            file: req.params.id,
-            fileInfo: fileInfo.toJSON(),
-            seeking,
-            disableRemux: req.params.noremux || false
-        };
+            format: req.params.format || 'mp4',
+            videoCodec: req.params.videoCodec || 'h264',
+            audioCodec: req.params.audioCodec || 'aac',
 
-        StreamSessions[sessionId].timeout = setTimeout(() => {
-            delete StreamSessions[sessionId];
-        }, 10000);
+            offset: req.params.offset || 0
+        });
 
-        res.send({sessionId, seeking});
+        res.send({
+            sessionId: streamSession.sessionId,
+            seeking: streamSession.streamType === 'directhttp' ? 'client' : 'server'
+        });
     });
 
     server.get('/session/stream/:sessionId', async function (req, res, next) {
-        if (!StreamSessions[req.params.sessionId]) {
+        if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
             return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
         }
 
         return next();
     }, async function (req, res, next) {
-        // search for attributes
-        let fileInfo = StreamSessions[req.params.sessionId].fileInfo;
+        oblecto.streamSessionController.sessions[req.params.sessionId].offset = req.params.offset || 0;
 
-        req.video = fileInfo;
+        await oblecto.streamSessionController.sessions[req.params.sessionId].addDestination({
+            request: req,
+            stream: res,
 
-        // Transcode
-        if (StreamSessions[req.params.sessionId].seeking === 'server') {
-            return next();
-        }
-
-        clearTimeout(StreamSessions[req.params.sessionId].timeout);
-
-        StreamSessions[req.params.sessionId].timeout = setTimeout(() => {
-            delete StreamSessions[req.params.sessionId];
-        }, fileInfo.duration * 1000);
-
-        DirectStreamer.streamFile(oblecto, fileInfo.path, req, res);
-
-    }, async function (req, res, next) {
-        if (StreamSessions[req.params.sessionId]) {
-            delete StreamSessions[req.params.sessionId];
-        }
-
-        res.writeHead(200, {
-            'Content-Type': 'video/mp4'
+            type: 'http'
         });
 
-        FFMPEGStreamer.streamFile(oblecto, req.video, req.params.offset || 0, req, res);
+        await oblecto.streamSessionController.sessions[req.params.sessionId].startStream();
     });
 };
