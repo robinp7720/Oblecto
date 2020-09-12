@@ -41,6 +41,7 @@ import FileCleaner from '../cleaners/FileCleaner';
 import FileIndexer from '../indexers/files/FileIndexer';
 
 import {initDatabes} from '../../submodules/database';
+import EmbyEmulation from '../embyEmulation';
 
 export default class Oblecto {
     constructor(config) {
@@ -94,5 +95,8 @@ export default class Oblecto {
 
             this.federationClientController.addAllSyncMasters();
         }
+
+        // Emby Server emulation
+        this.embyServer = new EmbyEmulation(this);
     }
 }
