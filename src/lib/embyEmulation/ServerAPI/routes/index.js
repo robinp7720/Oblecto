@@ -7,6 +7,9 @@ import shows from './shows'
 
 
 import {Movie} from '../../../../models/movie';
+import {File} from '../../../../models/file';
+import fs from "fs";
+import errors from 'restify-errors';
 
 /**
  *
@@ -59,6 +62,9 @@ export default (server, embyEmulation) => {
                         'IsFavorite': true,
                         'Played': false,
                         'Key': '337401'
+                    },
+                    'ImageTags': {
+                        'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'
                     }
                 });
             }
@@ -104,6 +110,48 @@ export default (server, embyEmulation) => {
             },
             'SoundtrackSongsResult': {'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0}
         });
+
+        next();
+    });
+
+    server.get('/items/:mediaid/images/primary', async (req, res, next) => {
+        let mediaid = req.params.mediaid;
+
+        if (mediaid.includes('movie')) {
+            let movie = await Movie.findByPk(mediaid.replace('movie', ''), {
+                include: [File]
+            });
+
+            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
+
+            fs.createReadStream(posterPath)
+                .on('error', () => {
+                    return next(new errors.NotFoundError('Poster for movie does not exist'));
+                })
+                .pipe(res);
+
+        }
+
+        next();
+    });
+
+    server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res, next) => {
+        let mediaid = req.params.mediaid;
+
+        if (mediaid.includes('movie')) {
+            let movie = await Movie.findByPk(mediaid.replace('movie', ''), {
+                include: [File]
+            });
+
+            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
+
+            fs.createReadStream(posterPath)
+                .on('error', () => {
+                    return next(new errors.NotFoundError('Poster for movie does not exist'));
+                })
+                .pipe(res);
+
+        }
 
         next();
     });

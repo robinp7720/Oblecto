@@ -151,7 +151,7 @@ export default (server, embyEmulation) => {
 
             let results = await Movie.findAll({
                 limit: parseInt(req.params.limit) || 100,
-                offset,
+                offset
             });
 
             let items = [];
@@ -168,7 +168,7 @@ export default (server, embyEmulation) => {
                     'OfficialRating': 'PG-13',
                     'CommunityRating': 2.6,
                     'RunTimeTicks': 69087043584,
-                    'ProductionYear': movie.releaseDate.substring(0,4),
+                    'ProductionYear': movie.releaseDate.substring(0, 4),
                     'IsFolder': false,
                     'Type': 'Movie',
                     'PrimaryImageAspectRatio': 0.6666666666666666,
@@ -181,7 +181,11 @@ export default (server, embyEmulation) => {
                         'IsFavorite': true,
                         'Played': false,
                         'Key': '337401'
+                    },
+                    'ImageTags': {
+                        'Primary': 'WhyIsThisEvenNeeded'
                     }
+
                 });
             }
 
@@ -248,7 +252,7 @@ export default (server, embyEmulation) => {
                 'Name': movie.movieName,
                 'OriginalTitle': movie.originalName,
                 'ServerId': embyEmulation.serverId,
-                'Id': 'movie'+movie.id,
+                'Id': 'movie' + movie.id,
                 'Etag': '6448f9c5d2678db5ffa4de1c283f6e6a',
                 'DateCreated': movie.createdAt,
                 'CanDelete': false,
@@ -264,16 +268,16 @@ export default (server, embyEmulation) => {
                 'MediaSources': MediaSources,
                 'CriticRating': 82,
                 'ProductionLocations': ['China', 'United States of America'],
-                'Path': '/media/Movies/Mulan.2020.1080p.DSNP.WEB-DL.DDP5.1.Atmos.H.264-PHOENiX.mkv',
+                'Path': movie.Files[0].path,
                 'EnableMediaSourceDisplay': true,
                 'OfficialRating': 'PG-13',
                 'Overview': movie.overview,
                 'Taglines': [movie.tagline],
                 'Genres': ['Drama', 'Action', 'War', 'Fantasy', 'Adventure'],
                 'CommunityRating': 2.6,
-                'RunTimeTicks': movie.Files[0].duration*10000000,
+                'RunTimeTicks': movie.Files[0].duration * 10000000,
                 'PlayAccess': 'Full',
-                'ProductionYear': movie.releaseDate.substring(0,4),
+                'ProductionYear': movie.releaseDate.substring(0, 4),
                 'RemoteTrailers': [],
                 'ProviderIds': {
                     'Tmdb': movie.tmdbid, 'Imdb': movie.imdbid
@@ -296,6 +300,12 @@ export default (server, embyEmulation) => {
                 'DisplayPreferencesId': 'dbf7709c41faaa746463d67978eb863d',
                 'Tags': [],
                 'PrimaryImageAspectRatio': 0.6666666666666666,
+                'ImageTags': {
+                    'Primary': 'ThisIDisfairlyuseless'
+                },
+                'BackdropImageTags': [
+                    'be04a5eac7bc48ea3f5834aa816a03f0'
+                ],
                 'MediaStreams': [],
                 'VideoType': 'VideoFile',
                 //'ImageTags': {'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'},
@@ -311,7 +321,7 @@ export default (server, embyEmulation) => {
                 'LockedFields': [],
                 'LockData': false,
                 'Width': 1920,
-                'Height': 1080
+                'Height': 1080,
             });
         } else {
             res.send({
@@ -325,17 +335,17 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid/items/:mediaid/intros', async (req, res, next) => {
-        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
+        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
         next();
     });
 
     server.get('/users/:userid/items/resume', async (req, res, next) => {
-        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
+        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
         next();
     });
 
     server.get('/users/:userid/items/latest', async (req, res, next) => {
-        res.send({'Items':[],'TotalRecordCount':0,'StartIndex':0});
+        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
         next();
     });
 };
