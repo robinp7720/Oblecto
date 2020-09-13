@@ -16,6 +16,10 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.inputStream = new Stream.PassThrough;
         this.outputStream = new Stream.PassThrough;
+
+        this.outputStream.on('close', () => {
+            this.emit('close');
+        });
     }
 
     async addDestination(destination) {
@@ -64,14 +68,10 @@ export default class RecodeStreamSession extends StreamSession {
             .on('start', (cmd) => {})
             .on('end', () => {
                 this.process.kill();
-
-                this.emit('close');
             });
 
         this.process.on('error', (err) => {
             this.process.kill();
-
-            this.emit('close');
         });
 
         this.process.pipe(this.outputStream, {end: true});
