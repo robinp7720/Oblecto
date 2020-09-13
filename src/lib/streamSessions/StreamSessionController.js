@@ -3,6 +3,7 @@ import DirectStreamSession from './StreamSessionTypes/DirectStreamSession';
 import DirectHttpStreamSession from './StreamSessionTypes/DirectHttpStreamSession';
 import RecodeStreamSession from './StreamSessionTypes/RecodeStreamSession';
 import RecodeFederationStreamSession from './StreamSessionTypes/RecodeFederationStreamSession';
+import logger from '../../submodules/logger';
 
 export default class StreamSessionController {
     constructor(oblecto) {
@@ -23,6 +24,7 @@ export default class StreamSessionController {
         this.sessions[streamSession.sessionId] = streamSession;
 
         streamSession.on('close', () => {
+            logger.log('INFO', streamSession.sessionId, 'output stream has closed');
             delete this.sessions[streamSession.sessionId];
         });
 

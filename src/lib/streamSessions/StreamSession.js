@@ -1,5 +1,6 @@
 import events from 'events';
 import {v4} from 'uuid';
+import logger from '../../submodules/logger';
 
 export default class StreamSession extends events.EventEmitter{
     /**
@@ -10,6 +11,8 @@ export default class StreamSession extends events.EventEmitter{
      */
     constructor(file, options, oblecto) {
         super();
+
+        logger.log('INFO', 'New StreamSession initiating');
 
         this.oblecto = oblecto;
 
@@ -28,6 +31,7 @@ export default class StreamSession extends events.EventEmitter{
 
     startTimeout() {
         this.timeout = setTimeout(() => {
+            logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out');
             this.emit('close');
         }, 10000);
     }
