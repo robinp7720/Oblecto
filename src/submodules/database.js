@@ -58,12 +58,12 @@ export function initDatabes() {
     Episode.belongsTo(Series);
     Series.hasMany(Episode);
 
-    MovieSet.belongsToMany(Movie, {through: 'movieSetAllocations'});
-    MovieSet.belongsToMany(User, {through: 'movieSetUsers'});
-    Movie.belongsToMany(MovieSet, {through: 'movieSetAllocations'});
+    MovieSet.belongsToMany(Movie, {through: 'MovieSetAllocations'});
+    MovieSet.belongsToMany(User, {through: 'MovieSetUsers'});
+    Movie.belongsToMany(MovieSet, {through: 'MovieSetAllocations'});
 
-    SeriesSet.belongsToMany(Series, {through: 'tvshowSetAllocations'});
-    Series.belongsToMany(SeriesSet, {through: 'tvshowSetAllocations'});
+    SeriesSet.belongsToMany(Series, {through: 'SeriesSetAllocations'});
+    Series.belongsToMany(SeriesSet, {through: 'SeriesSetAllocations'});
 
     Episode.belongsToMany(File, {through: EpisodeFiles});
     Movie.belongsToMany(File, {through: MovieFiles});
