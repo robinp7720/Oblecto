@@ -105,15 +105,11 @@ export default (server, oblecto) => {
 
         let posterPath = oblecto.artworkUtils.moviePosterPath(movie, 'large');
 
-        // Check if the thumbnail exists
-        fs.exists(posterPath, function (exists) {
-            if (!exists)
+        fs.createReadStream(posterPath)
+            .on('error', () => {
                 return next(new errors.NotFoundError('Poster for movie does not exist'));
-
-            // If the thumbnail exists, simply pipe that to the client
-            fs.createReadStream(posterPath).pipe(res);
-
-        });
+            })
+            .pipe(res);
 
     });
 
@@ -178,13 +174,11 @@ export default (server, oblecto) => {
 
         let fanartPath = oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
-        // Check if the thumbnail exists
-        fs.exists(fanartPath, function (exists) {
-            if (exists) {
-                // If the thumbnail exists, simply pipe that to the client
-                fs.createReadStream(fanartPath).pipe(res);
-            }
-        });
+        fs.createReadStream(fanartPath)
+            .on('error', () => {
+                return next(new errors.NotFoundError('Fanart for movie does not exist'));
+            })
+            .pipe(res);
     });
 
     server.put('/movie/:id/fanart', async function (req, res, next) {
