@@ -1,6 +1,5 @@
 import FederationServerConnection from './FederationServerConnection';
-import databases from '../../../submodules/database';
-import FFMPEGStreamer from '../../../submodules/handlers/FFMPEGStreamer';
+import {File} from '../../../models/file';
 
 export default class FederationMediaServerConnection extends FederationServerConnection {
     constructor(oblecto, socket) {
@@ -19,15 +18,15 @@ export default class FederationMediaServerConnection extends FederationServerCon
         let split = data.split(':');
 
         switch (split[0]) {
-        case 'FILEID':
-            await this.setFileId(split[1]);
-            break;
-        case 'OFFSET':
-            this.setOffset(split[1]);
-            break;
-        case 'START':
-            this.startStream();
-            break;
+            case 'FILEID':
+                await this.setFileId(split[1]);
+                break;
+            case 'OFFSET':
+                this.setOffset(split[1]);
+                break;
+            case 'START':
+                await this.startStream();
+                break;
         }
     }
 
@@ -40,7 +39,7 @@ export default class FederationMediaServerConnection extends FederationServerCon
         this.fileInfo = null;
 
         try {
-            this.fileInfo = await databases.file.findByPk(this.fileId);
+            this.fileInfo = await File.findByPk(this.fileId);
             this.socket.write(`READY:${this.fileId}\n`);
 
         } catch (e) {
@@ -48,10 +47,23 @@ export default class FederationMediaServerConnection extends FederationServerCon
         }
     }
 
-    startStream() {
+    async startStream() {
         if (!this.fileInfo) return;
 
-        FFMPEGStreamer.streamFile(this.oblecto, this.fileInfo, this.offset, null, this.socket);
-        //fs.createReadStream(_this.fileInfo.path).pipe(_this.socket);
+        let streamSession = this.oblecto.streamSessionController.newSession(this.fileInfo, {
+            streamType: 'recode',
+
+            format: 'mkv',
+            videoCodec: 'copy',
+            audioCodec: 'copy',
+
+            offset: this.offset
+        });
+
+        await streamSession.addDestination({
+            stream: this.socket,
+        });
+
+        await streamSession.startStream();
     }
 }
