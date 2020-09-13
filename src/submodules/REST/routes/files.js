@@ -1,5 +1,4 @@
 import fs from 'fs';
-import uuid from 'node-uuid';
 import errors from 'restify-errors';
 import os from 'os';
 
@@ -8,8 +7,8 @@ import authMiddleWare from '../middleware/auth';
 import HLSSession from '../../handlers/HLSSessionHandler';
 
 import DirectStreamer from '../../handlers/DirectStreamer';
-import FFMPEGStreamer from '../../handlers/FFMPEGStreamer';
 import {File} from '../../../models/file';
+import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
 
 let HLSSessions = {};
 let StreamSessions = {};
@@ -124,7 +123,7 @@ export default (server, oblecto) => {
 
         res.send({
             sessionId: streamSession.sessionId,
-            seeking: streamSession.streamType === 'directhttp' ? 'client' : 'server'
+            seeking: streamSession instanceof DirectHttpStreamSession ? 'client' : 'server'
         });
     });
 
