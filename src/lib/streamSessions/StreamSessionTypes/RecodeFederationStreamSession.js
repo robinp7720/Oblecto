@@ -41,7 +41,7 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         this.started = true;
 
-        let process = ffmpeg(await this.getFederationStream())
+        this.process = ffmpeg(await this.getFederationStream())
             //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
@@ -54,22 +54,21 @@ export default class RecodeFederationStreamSession extends StreamSession {
                 '-copyts',
             ])
             .on('start', (cmd) => {
-                console.log('--- ffmpeg start process ---');
-                console.log(`cmd: ${cmd}`);
+
             })
             .on('end', () => {
-                console.log('--- end processing ---');
+                this.process.kill();
+
+                this.emit('close');
             });
 
-        process.on('error', (err) => {
-            console.log('--- ffmpeg meets error ---');
-            console.log(err);
-            process.kill();
+        this.process.on('error', (err) => {
+            this.process.kill();
 
             this.emit('close');
         });
 
-        process.pipe(this.outputStream, {end: true});
+        this.process.pipe(this.outputStream, {end: true});
     }
 
     async getFederationStream() {

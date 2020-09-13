@@ -23,6 +23,10 @@ export default class StreamSession extends events.EventEmitter{
 
         this.offset = options.offset || 0;
 
+        this.startTimeout();
+    }
+
+    startTimeout() {
         this.timeout = setTimeout(() => {
             this.emit('close');
         }, 10000);

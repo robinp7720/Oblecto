@@ -10,6 +10,10 @@ export default class DirectHttpStreamSession extends StreamSession {
     async addDestination(destination) {
         // HTTP Streamer only supports a single destination
         this.destinations[0] = destination;
+
+        destination.stream.on('close', () => {
+            this.startTimeout();
+        });
     }
 
     async startStream() {
@@ -30,8 +34,6 @@ export default class DirectHttpStreamSession extends StreamSession {
             let start = parseInt(partialstart, 10);
             let end = partialend ? parseInt(partialend, 10) : this.file.size  - 1;
             let chunksize = (end - start) + 1;
-
-            console.log('RANGE: ' + start + ' - ' + end + ' = ' + chunksize);
 
             let stream;
 
@@ -56,8 +58,6 @@ export default class DirectHttpStreamSession extends StreamSession {
             return;
 
         }
-
-        console.log('ALL: ' + this.file.size);
 
         res.writeHead(200, {
             'Content-Length': this.file.size,

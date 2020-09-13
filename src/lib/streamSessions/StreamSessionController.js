@@ -22,12 +22,8 @@ export default class StreamSessionController {
 
         this.sessions[streamSession.sessionId] = streamSession;
 
-        console.log('Session started:', streamSession.sessionId);
-
         streamSession.on('close', () => {
             delete this.sessions[streamSession.sessionId];
-
-            console.log('Active Sessions:', Object.keys(this.sessions).length);
         });
 
         return streamSession;

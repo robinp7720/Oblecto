@@ -48,7 +48,7 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.started = true;
 
-        let process = ffmpeg(this.file.path)
+        this.process = ffmpeg(this.file.path)
             //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
@@ -61,23 +61,20 @@ export default class RecodeStreamSession extends StreamSession {
                 '-movflags', 'empty_moov',
                 '-copyts',
             ])
-            .on('start', (cmd) => {
-                console.log('--- ffmpeg start process ---');
-                console.log(`cmd: ${cmd}`);
-            })
+            .on('start', (cmd) => {})
             .on('end', () => {
-                console.log('--- end processing ---');
+                this.process.kill();
+
+                this.emit('close');
             });
 
-        process.on('error', (err) => {
-            console.log('--- ffmpeg meets error ---');
-            console.log(err);
-            process.kill();
+        this.process.on('error', (err) => {
+            this.process.kill();
 
             this.emit('close');
         });
 
-        process.pipe(this.outputStream, {end: true});
+        this.process.pipe(this.outputStream, {end: true});
     }
 
 
