@@ -37,6 +37,7 @@
     "mkdirp": "^0.5.5",
     "moviedb-promise": "^1.5.0",
     "mysql2": "^1.7.0",
+    "neo-blessed": "^0.2.0",
     "node-rsa": "^1.1.1",
     "node-tvdb": "^4.1.0",
     "node-uuid": "^1.4.8",

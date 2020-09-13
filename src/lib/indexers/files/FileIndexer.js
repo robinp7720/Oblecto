@@ -76,10 +76,6 @@ export default class FileIndexer {
             throw new VideoAnalysisError(videoPath);
         }
 
-        if (!primaryVideoStream['codec_name']) {
-            console.log(metadata);
-        }
-
         await file.update({
             duration,
             host: 'local',

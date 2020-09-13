@@ -7,7 +7,10 @@ import {promises as fs} from 'fs';
 
     switch (args[0]) {
         case 'start':
-            require('../core').default.start();
+            require('../core/index').default.start();
+            break;
+        case 'start-tui':
+            require('../core/graphical').default.start();
             break;
 
         case 'init':
@@ -27,10 +30,16 @@ import {promises as fs} from 'fs';
         default:
             console.log(`Oblecto ${packageInfo.version}`);
             console.log();
-            console.log('Usage:');
+            console.log('First time setup:');
             console.log('oblecto init');
             console.log('oblecto init database');
+            console.log();
+            console.log('Start oblecto without TUI:');
             console.log('oblecto start');
+            console.log('Start oblecto with TUI:');
+            console.log('oblecto start-tui');
+            console.log();
+            console.log('User maintenance:');
             console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
             console.log('oblecto deluser USERNAME');
 

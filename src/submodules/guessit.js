@@ -2,19 +2,24 @@ import web from 'guessit-wrapper';
 import binary from 'guessit-exec';
 import which from 'which';
 
+import logger from './logger';
+
 let use_binary = true;
 
 which('guessit', function (err, resolvedPath) {
     if (err) {
-        console.log('Guessit is not installed, Using web based identifier');
-        console.log('This may reduce indexing and identification speed considerably.');
-        console.log('Consider installing guessit for your distributions package repos');
+        logger.log('INFO', 'Guessit binary has not been found');
+        logger.log('INFO', 'Using the web based identifier');
+        logger.log('INFO', 'This may significantly reduce indexing speeds');
+        logger.log('INFO', 'Please install guessit form you package manager');
 
         return;
     }
 
+    logger.log('INFO', 'Guessit binary has been found');
+    logger.log('INFO', 'Using local guessit binary');
+
     use_binary = true;
-    console.log('Guessit binary has been found at', resolvedPath);
 });
 
 export default {

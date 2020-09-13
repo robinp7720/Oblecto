@@ -44,8 +44,6 @@ export default class Downloader {
             writeMode = 'w';
         }
 
-        console.log('Starting download');
-
         try {
             let response = await axiosTimeout({
                 method: 'get',
@@ -55,8 +53,6 @@ export default class Downloader {
             });
 
             await fs.writeFile(dest, response.data, {flags: writeMode});
-
-            console.log('Downloaded');
         } catch (e) {
             throw e;
         }

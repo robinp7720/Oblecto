@@ -14,7 +14,7 @@ export default class AggregateSeriesArtworkRetriever {
             try {
                 return await retriever.retrieveEpisodeBanner(episode);
             } catch(e) {
-                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
             }
         }
 
@@ -26,7 +26,7 @@ export default class AggregateSeriesArtworkRetriever {
             try {
                 return await retriever.retrieveSeriesPoster(series);
             } catch(e) {
-                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
             }
         }
 

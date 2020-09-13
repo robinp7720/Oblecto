@@ -1,4 +1,5 @@
 import async from 'async';
+import logger from '../../submodules/logger';
 
 export default class Queue {
     constructor(concurrency) {
@@ -12,11 +13,6 @@ export default class Queue {
                     callback();
                 })
                 .catch((err) => {
-                    if (!err)
-                        return callback();
-
-                    console.log(err);
-
                     callback();
                 });
         }, concurrency);
@@ -28,6 +24,8 @@ export default class Queue {
      * @param {function} job
      */
     addJob (id, job) {
+        logger.log('INFO', 'New queue item has been registered:', id);
+
         this.jobs[id] = job;
     }
 

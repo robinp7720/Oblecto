@@ -8,6 +8,8 @@ export default class TmdbMovieArtworkRetriever {
             id: movie.tmdbid
         });
 
+
+
         return `https://image.tmdb.org/t/p/original${data.backdrops[0]['file_path']}`;
     }
 

@@ -14,7 +14,7 @@ export default class AggregateMovieArtworkRetriever {
             try {
                 return await retriever.retrieveFanart(movie);
             } catch(e) {
-                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
             }
         }
 
@@ -26,7 +26,7 @@ export default class AggregateMovieArtworkRetriever {
             try {
                 return await retriever.retrievePoster(movie);
             } catch(e) {
-                console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
             }
         }
 

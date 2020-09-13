@@ -3,9 +3,9 @@ import config from '../config';
 
 
 export default {
-    oblecto: null,
+    oblecto: new Oblecto(config),
 
     start() {
-        this.oblecto = new Oblecto(config);
+
     }
 };
