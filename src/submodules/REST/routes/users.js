@@ -100,7 +100,7 @@ export default (server, oblecto) => {
         if (req.params.password)
             passwordHash = await bcrypt.hash(req.params.password, oblecto.config.authentication.saltRounds);
 
-        let [User] = await User.findOrCreate({
+        let [user] = await User.findOrCreate({
             where: {
                 username: req.params.username
             },
@@ -111,7 +111,7 @@ export default (server, oblecto) => {
             }
         });
 
-        res.send(User);
+        res.send(user);
 
         next();
 
