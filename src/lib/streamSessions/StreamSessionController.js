@@ -36,6 +36,10 @@ export default class StreamSessionController {
             return new RecodeFederationStreamSession(file, options, this.oblecto);
         }
 
+        if (this.oblecto.config.transcoding.transcodeEverything) {
+            return new RecodeStreamSession(file, options, this.oblecto);
+        }
+
         if (options.streamType === 'direct') {
             return new DirectStreamSession(file, options, this.oblecto);
         }
