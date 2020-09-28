@@ -17,6 +17,15 @@ export default class RealtimeController {
             transports: ['websocket', 'polling']
         });
 
-        this.server.on('connection', socket => this.clients[socket.id] = new RealtimeClient(this.oblecto, socket));
+        this.server.on('connection', socket => {
+            this.connectionHandler(socket);
+        });
+    }
+
+    connectionHandler(socket) {
+        this.clients[socket.id] = new RealtimeClient(this.oblecto, socket);
+        this.clients[socket.id].on('disconnect', () => {
+            delete this.clients[socket.id];
+        });
     }
 }

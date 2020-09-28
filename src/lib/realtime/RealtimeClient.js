@@ -1,13 +1,18 @@
 import jwt from 'jsonwebtoken';
+import events from 'events';
 import {TrackEpisode} from '../../models/trackEpisode';
 import {TrackMovie} from '../../models/trackMovie';
 
-export default class RealtimeClient {
+export default class RealtimeClient extends events.EventEmitter {
     /**
      * @param {Oblecto} oblecto
      * @param {*} socket
      */
     constructor(oblecto, socket) {
+        super();
+
+        this.clientName = 'default';
+
         this.oblecto = oblecto;
         this.socket = socket;
         this.user = null;
@@ -19,7 +24,7 @@ export default class RealtimeClient {
 
         this.socket.on('authenticate', (data) => this.authenticationHandler(data));
         this.socket.on('playing', (data) => this.playingHandler(data));
-        this.socket.on('disconnect', (data) => this.disconnectHandler(data));
+        this.socket.on('disconnect', () => this.disconnectHandler());
 
         setInterval(() => {
             this.saveAllTracks();
@@ -35,7 +40,6 @@ export default class RealtimeClient {
 
             this.socket.disconnect();
         }
-
     }
 
     playingHandler(data) {
@@ -52,8 +56,8 @@ export default class RealtimeClient {
         this.storage.movie[data.movieId] = data;
     }
 
-    disconnectHandler(data) {
-        delete this;
+    disconnectHandler() {
+        this.emit('disconnect');
     }
 
     async saveEpisodeTrack(id) {
@@ -72,7 +76,7 @@ export default class RealtimeClient {
 
         if (created) return;
 
-        item.update({
+        await item.update({
             time: this.storage.series[id].time,
             progress: this.storage.series[id].progress
         });
@@ -96,7 +100,7 @@ export default class RealtimeClient {
 
         if (created) return;
 
-        item.update({
+        await item.update({
             time: this.storage.movie[id].time,
             progress: this.storage.movie[id].progress
         });
