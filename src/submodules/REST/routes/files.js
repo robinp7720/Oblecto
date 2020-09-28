@@ -11,7 +11,6 @@ import {File} from '../../../models/file';
 import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
 
 let HLSSessions = {};
-let StreamSessions = {};
 
 /**
  *
@@ -110,6 +109,7 @@ export default (server, oblecto) => {
         if (req.params.noremux) streamType = 'directhttp';
 
         if (file.extension === 'mp4') streamType = 'directhttp';
+        if(['ac3'].indexOf(file.audioCodec) > -1) streamType = 'recode';
 
         let streamSession = oblecto.streamSessionController.newSession(file, {
             streamType,
