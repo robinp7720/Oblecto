@@ -7,6 +7,7 @@ import settings from './settings';
 import users from './users';
 import web from './web';
 import sets from './sets';
+import clients from './clients';
 
 import config from '../../../config';
 
@@ -24,4 +25,5 @@ export default (server, oblecto) => {
     settings(server, oblecto);
     users(server, oblecto);
     sets(server, oblecto);
+    clients(server, oblecto);
 };

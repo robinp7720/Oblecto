@@ -117,4 +117,16 @@ export default class RealtimeClient extends events.EventEmitter {
             await this.saveMovieTrack(i);
         }
     }
+
+    async playEpisode(episodeId) {
+        this.socket.emit('play', {
+            episodeId
+        });
+    }
+
+    async playMovie(movieId) {
+        this.socket.emit('play', {
+            movieId
+        });
+    }
 }
