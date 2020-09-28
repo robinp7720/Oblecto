@@ -352,7 +352,7 @@ export default (server, oblecto) => {
         // We are only interested in the episode objects, so extract all the episode object from
         // each track object and send the final mapped array to the client
         res.send(tracks.map((track) => {
-            return track.movie;
+            return track.Movie;
         }));
     });
 };
