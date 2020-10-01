@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import {promises as fs} from 'fs';
+import ffprobe from '../../../submodules/ffprobe';
+import VideoAnalysisError from '../../errors/VideoAnalysisError';
 
 
 export default class FileUpdater {
@@ -25,6 +27,42 @@ export default class FileUpdater {
         this.oblecto.queue.addJob('updateFileExtension', async (file) => {
             await this.updateFileExtension(file);
         });
+
+        this.oblecto.queue.addJob('updateFileFFProbe', async (file) => {
+            await this.updateFileFFProbe(file);
+        });
+    }
+
+    static async getPrimaryVideoStream(metadata) {
+        let streams = metadata.streams;
+        let primaryStream = {duration: 0};
+
+        for (const stream of streams) {
+            if (stream.duration || 1 >= primaryStream.duration) {
+                if (stream['codec_type'] !=='video')
+                    continue;
+
+                primaryStream = stream;
+            }
+        }
+
+        return primaryStream;
+    }
+
+    static async getPrimaryAudioStream(metadata) {
+        let streams = metadata.streams;
+        let primaryStream = {duration: 0};
+
+        for (const stream of streams) {
+            if (stream.duration || 1 >= primaryStream.duration) {
+                if (stream['codec_type'] !=='audio')
+                    continue;
+
+                primaryStream = stream;
+            }
+        }
+
+        return primaryStream;
     }
 
     /**
@@ -33,8 +71,6 @@ export default class FileUpdater {
      * @returns {Promise<void>}
      */
     async updateFile(file) {
-        console.log('Updating file ' + file.name);
-
         if (this.oblecto.config.files.doHash && !file.hash) {
             this.oblecto.queue.queueJob('updateFileHash', file);
         }
@@ -45,6 +81,10 @@ export default class FileUpdater {
 
         if (file.extension.includes('.')) {
             this.oblecto.queue.queueJob('updateFileExtension', file);
+        }
+
+        if (!file.duration || file.duration === 0) {
+            this.oblecto.queue.queueJob('updateFileFFProbe', file);
         }
     }
 
@@ -99,5 +139,30 @@ export default class FileUpdater {
     async updateFileExtension(file) {
         let extension = file.extension.replace('.','');
         await file.update({extension});
+    }
+
+    /**
+     *
+     * @param {File} file
+     * @returns {Promise<void>}
+     */
+    async updateFileFFProbe(file) {
+        let metadata = await ffprobe(file.path);
+
+        let primaryVideoStream = await FileUpdater.getPrimaryVideoStream(metadata);
+        let primaryAudioStream = await FileUpdater.getPrimaryAudioStream(metadata);
+
+        let duration = metadata.format.duration;
+
+        if (isNaN(duration)) {
+            throw new VideoAnalysisError(file.path);
+        }
+
+        await file.update({
+            duration,
+            container: metadata.format['format_name'],
+            videoCodec: primaryVideoStream['codec_name'],
+            audioCodec: primaryAudioStream['codec_name']
+        });
     }
 }

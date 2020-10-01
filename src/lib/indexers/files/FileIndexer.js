@@ -2,8 +2,6 @@ import {File} from '../../../models/file';
 
 import Path from 'path';
 import FileExistsError from '../../errors/FileExistsError';
-import VideoAnalysisError from '../../errors/VideoAnalysisError';
-import ffprobe from '../../../submodules/ffprobe';
 
 export default class FileIndexer {
 
@@ -12,38 +10,6 @@ export default class FileIndexer {
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
-    }
-
-    static async getPrimaryVideoStream(metadata) {
-        let streams = metadata.streams;
-        let primaryStream = {duration: 0};
-
-        for (const stream of streams) {
-            if (stream.duration || 1 >= primaryStream.duration) {
-                if (stream['codec_type'] !=='video')
-                    continue;
-
-                primaryStream = stream;
-            }
-        }
-
-        return primaryStream;
-    }
-
-    static async getPrimaryAudioStream(metadata) {
-        let streams = metadata.streams;
-        let primaryStream = {duration: 0};
-
-        for (const stream of streams) {
-            if (stream.duration || 1 >= primaryStream.duration) {
-                if (stream['codec_type'] !=='audio')
-                    continue;
-
-                primaryStream = stream;
-            }
-        }
-
-        return primaryStream;
     }
 
     async indexVideoFile(videoPath) {
@@ -57,31 +23,6 @@ export default class FileIndexer {
                 directory: parsedPath.dir,
                 extension: parsedPath.ext.replace('.',''),
             }
-        });
-
-        let metadata = {};
-
-        try {
-            metadata = await ffprobe(videoPath);
-        } catch (e) {
-            throw new VideoAnalysisError(videoPath);
-        }
-
-        let primaryVideoStream = await FileIndexer.getPrimaryVideoStream(metadata);
-        let primaryAudioStream = await FileIndexer.getPrimaryAudioStream(metadata);
-
-        let duration = metadata.format.duration;
-
-        if (isNaN(duration)) {
-            throw new VideoAnalysisError(videoPath);
-        }
-
-        await file.update({
-            duration,
-            host: 'local',
-            container: metadata.format['format_name'],
-            videoCodec: primaryVideoStream['codec_name'],
-            audioCodec: primaryAudioStream['codec_name']
         });
 
         if (!fileInserted) {
