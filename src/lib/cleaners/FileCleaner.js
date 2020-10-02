@@ -2,6 +2,7 @@ import {promises as fs} from 'fs';
 import {File} from '../../models/file';
 import {Movie} from '../../models/movie';
 import {Episode} from '../../models/episode';
+import logger from '../../submodules/logger';
 
 export default class FileCleaner{
     constructor(oblecto) {
@@ -9,13 +10,16 @@ export default class FileCleaner{
     }
 
     async removedDeletedFiled () {
-        let results = await File.findAll();
+        let files = await File.findAll();
 
-        for (let item of results) {
-            if (await fs.stat(item.path)) continue;
+        for (let file of files) {
+            try {
+                await fs.stat(file.path);
+            } catch (e) {
+                logger.log('INFO', file.path, 'not found. Removing from database');
 
-            await item.destroy();
-
+                await file.destroy();
+            }
         }
 
     }

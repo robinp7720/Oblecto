@@ -1,4 +1,7 @@
-import databases from '../../submodules/database';
+import {Episode} from '../../models/episode';
+import {File} from '../../models/file';
+import {Series} from '../../models/series';
+import logger from '../../submodules/logger';
 
 export default class SeriesCleaner {
     /**
@@ -9,24 +12,22 @@ export default class SeriesCleaner {
     }
 
     async removeFileLessEpisodes() {
-        console.log('Removing episodes with no linked files');
-
-        let results = await databases.episode.findAll({
-            include: [databases.file]
+        let results = await Episode.findAll({
+            include: [File]
         });
 
         for (let item of results) {
-            if (item.files && item.files.length > 0)
+            if (item.Files && item.Files.length > 0)
                 continue;
 
-            console.log(`Removing ${item.episodeName}`);
+            logger.log('INFO', 'Removing', item.episodeName, 'as it has no linked files');
 
             await item.destroy();
         }
     }
 
     async removePathLessShows() {
-        await databases.tvshow.destroy({
+        await Series.destroy({
             where: {
                 directory: ''
             }
@@ -34,15 +35,15 @@ export default class SeriesCleaner {
     }
 
     async removeEpisodeslessShows() {
-        console.log('Removing Shows without episodes');
-
-        let results = await databases.tvshow.findAll({
-            include: [databases.episode]
+        let results = await Series.findAll({
+            include: [Episode]
         });
 
         for (let item of results) {
-            if (item.episodes && item.episodes.length > 0)
+            if (item.Episodes && item.Episodes.length > 0)
                 continue;
+
+            logger.log('INFO', 'Removing', item.seriesName, 'as it has no linked episodes');
 
             await item.destroy();
         }
