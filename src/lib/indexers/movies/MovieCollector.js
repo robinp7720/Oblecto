@@ -29,7 +29,6 @@ export default class MovieCollector {
      * @returns {Promise<void>}
      */
     async collectFile(file) {
-        console.log('Pushing file', file, 'to queue');
         let extension = path.parse(file).ext.toLowerCase();
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
