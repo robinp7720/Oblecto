@@ -12,6 +12,7 @@ import {SeriesSet, seriesSetColumns} from '../models/seriesSet';
 import {TrackMovie, trackMovieColumns} from '../models/trackMovie';
 import {TrackEpisode, trackEpisodesColumns} from '../models/trackEpisode';
 import {User, userColumns} from '../models/user';
+import {Stream, streamColumns} from '../models/stream';
 
 export function initDatabes() {
     let options = {
@@ -43,6 +44,7 @@ export function initDatabes() {
     Series.init(seriesColumns, {sequelize});
 
     File.init(fileColumns, {sequelize});
+    Stream.init(streamColumns, {sequelize});
 
     EpisodeFiles.init(episodeFilesColumns, {sequelize});
     MovieFiles.init(movieFileColumns, {sequelize});
@@ -70,6 +72,8 @@ export function initDatabes() {
 
     File.belongsToMany(Episode, {through: EpisodeFiles});
     File.belongsToMany(Movie, {through: MovieFiles});
+    Stream.belongsTo(File);
+    File.hasMany(Stream);
 
     TrackEpisode.belongsTo(User);
     TrackEpisode.belongsTo(Episode);
