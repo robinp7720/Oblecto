@@ -47,9 +47,22 @@ export default {
             top: 0,
             left: '50%',
             width: '50%',
-            height: '100%',
+            height: '50%',
             content: '',
             label: 'Log',
+            tags: true,
+            border: {
+                type: 'line'
+            }
+        });
+
+        this.sessionBox = blessed.list({
+            top: '50%',
+            left: '50%',
+            width: '50%',
+            height: '50%',
+            content: '',
+            label: 'Web Socket Sessions',
             tags: true,
             border: {
                 type: 'line'
@@ -60,6 +73,7 @@ export default {
         this.screen.append(this.streamerSessionsBox);
         this.screen.append(this.queueBox);
         this.screen.append(this.logBox);
+        this.screen.append(this.sessionBox);
 
         this.screen.render();
     },
@@ -79,6 +93,7 @@ export default {
         setInterval(() => {
             this.renderStreamerSessions();
             this.renderQueue();
+            this.renderSessions();
             this.screen.render();
         }, 1000);
     },
@@ -129,8 +144,27 @@ export default {
                     this.queueBox.addItem(i.id + ' - ' + JSON.stringify(i.attr));
 
             }
+        }
+    },
 
-            //console.log(i, this.oblecto.queue.queue._tasks[i])
+    renderSessions() {
+        this.sessionBox.clearItems();
+
+        this.sessionBox.setLabel('Web Socket sessions: '+ Object.keys(this.oblecto.realTimeController.clients).length);
+
+        for (let sessionId of Object.keys(this.oblecto.realTimeController.clients)) {
+            let client = this.oblecto.realTimeController.clients[sessionId];
+
+            this.sessionBox.addItem('Session Id: ' + sessionId);
+
+            if (client.user === null)
+                this.sessionBox.addItem('Session is not authenticated');
+            else
+                this.sessionBox.addItem('User:' + JSON.stringify(client.user));
+
+            this.sessionBox.addItem('Details:' + JSON.stringify(client.storage));
+
+            this.sessionBox.addItem(' ');
         }
     }
 };
