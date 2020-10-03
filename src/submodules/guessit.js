@@ -4,14 +4,14 @@ import which from 'which';
 
 import logger from './logger';
 
-let use_binary = true;
+let use_binary = false;
 
 which('guessit', function (err, resolvedPath) {
     if (err) {
         logger.log('INFO', 'Guessit binary has not been found');
         logger.log('INFO', 'Using the web based identifier');
         logger.log('INFO', 'This may significantly reduce indexing speeds');
-        logger.log('INFO', 'Please install guessit form you package manager');
+        logger.log('INFO', 'Please install guessit from you package manager');
 
         return;
     }
