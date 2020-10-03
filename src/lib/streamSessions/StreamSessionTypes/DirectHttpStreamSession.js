@@ -1,14 +1,27 @@
 import StreamSession from '../StreamSession';
 import mimeTypes from 'mime-types';
 import fs from 'fs';
+import logger from '../../../submodules/logger';
 
 export default class DirectHttpStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
+
+        this.format = this.file.extension;
+        this.videoCodec = this.file.videoCodec;
+        this.audioCodec = this.file.audioCodec;
     }
 
     async addDestination(destination) {
         // HTTP Streamer only supports a single destination
+        if (destination.type !== 'http') {
+            logger.log('ERROR', 'DirectHttpStreamer only supports http stream types');
+            return;
+        }
+
+        if (this.destinations[0])
+            this.destinations[0].stream.destroy();
+
         this.destinations[0] = destination;
 
         destination.stream.on('close', () => {
