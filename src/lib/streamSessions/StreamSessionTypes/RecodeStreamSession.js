@@ -1,6 +1,7 @@
 import StreamSession from '../StreamSession';
 import ffmpeg from '../../../submodules/ffmpeg';
 import Stream from 'stream';
+import logger from '../../../submodules/logger';
 
 export default class RecodeStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
@@ -18,6 +19,7 @@ export default class RecodeStreamSession extends StreamSession {
         this.outputStream = new Stream.PassThrough;
 
         this.outputStream.on('close', () => {
+            logger.log('INFO', this.sessionId, 'output stream has closed');
             this.emit('close');
         });
     }
@@ -26,11 +28,17 @@ export default class RecodeStreamSession extends StreamSession {
         this.destinations.push(destination);
         this.outputStream.pipe(destination.stream);
 
+        if (destination.type === 'http') {
+            destination.stream.writeHead(200, {
+                'Content-Type': this.getOutputMimetype()
+            });
+        }
+
         let _this = this;
 
         destination.stream
             .on('error', (err) => {
-                console.log(err);
+                logger.log('ERROR', this.sessionId, err);
             })
             .on('close', function () {
                 for (let i in _this.destinations) {
@@ -40,7 +48,8 @@ export default class RecodeStreamSession extends StreamSession {
                 }
 
                 if (_this.destinations.length === 0) {
-                    _this.outputStream.destroy();
+                    logger.log('INFO', _this.sessionId, 'last client has disconnected. Setting timeout output stream');
+                    _this.startTimeout();
                 }
             });
     }
@@ -53,7 +62,6 @@ export default class RecodeStreamSession extends StreamSession {
         this.started = true;
 
         this.process = ffmpeg(this.file.path)
-            //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
@@ -62,15 +70,19 @@ export default class RecodeStreamSession extends StreamSession {
                 '-noaccurate_seek',
             ])
             .outputOptions([
-                '-movflags', 'empty_moov',
+                '-movflags empty_moov',
                 '-copyts',
             ])
-            .on('start', (cmd) => {})
+            .on('start', (cmd) => {
+                logger.log('INFO', this.sessionId, cmd);
+            })
             .on('end', () => {
                 this.process.kill();
             });
 
         this.process.on('error', (err) => {
+            logger.log('ERROR', this.sessionId, err);
+
             this.process.kill();
         });
 
