@@ -34,6 +34,7 @@
     "jimp": "^0.13.0",
     "jsonwebtoken": "^8.5.1",
     "mdns": "^2.4.0",
+    "mime-types": "^2.1.27",
     "mkdirp": "^0.5.5",
     "moviedb-promise": "^1.5.0",
     "mysql2": "^1.7.0",
