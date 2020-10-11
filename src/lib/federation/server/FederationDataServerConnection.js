@@ -1,5 +1,8 @@
 import FederationServerConnection from './FederationServerConnection';
-import databases from '../../../submodules/database';
+import {File} from '../../../models/file';
+import {Movie} from '../../../models/movie';
+import {Episode} from '../../../models/episode';
+import {Series} from '../../../models/series';
 
 export default class FederationDataServerConnection extends FederationServerConnection {
     constructor(oblecto, socket) {
@@ -38,11 +41,11 @@ export default class FederationDataServerConnection extends FederationServerConn
     }
 
     async syncFiles() {
-        let results = await databases.file.findAll({
-            include: [databases.movie,
+        let results = await File.findAll({
+            include: [Movie,
                 {
-                    model: databases.episode,
-                    include: [databases.tvshow]
+                    model: Episode,
+                    include: [Series]
                 }]
         });
 
@@ -53,27 +56,27 @@ export default class FederationDataServerConnection extends FederationServerConn
 
             let fileInfo = {};
 
-            if (file.episodes[0]) {
+            if (file.Episodes[0]) {
                 fileInfo.type = 'episode';
 
-                fileInfo.episode = file.episodes[0].airedEpisodeNumber;
-                fileInfo.season = file.episodes[0].airedSeason;
+                fileInfo.episode = file.Episodes[0].airedEpisodeNumber;
+                fileInfo.season = file.Episodes[0].airedSeason;
 
-                if (file.episodes[0].tvdbid)
-                    fileInfo.tvdbid = file.episodes[0].tvdbid;
+                if (file.Episodes[0].tvdbid)
+                    fileInfo.tvdbid = file.Episodes[0].tvdbid;
 
-                if (file.episodes[0].tmdbid)
-                    fileInfo.tmdbid = file.episodes[0].tmdbid;
+                if (file.Episodes[0].tmdbid)
+                    fileInfo.tmdbid = file.Episodes[0].tmdbid;
 
-                if (file.episodes[0].tvshow.tvdbid)
-                    fileInfo.seriesTvdbid = file.episodes[0].tvshow.tvdbid;
-                if (file.episodes[0].tvshow.tmdbid)
-                    fileInfo.seriesTmdbid = file.episodes[0].tvshow.tmdbid;
+                if (file.Episodes[0].Series.tvdbid)
+                    fileInfo.seriesTvdbid = file.Episodes[0].Series.tvdbid;
+                if (file.Episodes[0].Series.tmdbid)
+                    fileInfo.seriesTmdbid = file.Episodes[0].Series.tmdbid;
             }
 
-            if (file.movies[0]) {
+            if (file.Movies[0]) {
                 fileInfo.type = 'movie';
-                fileInfo.tmdbid = file.movies[0].tmdbid;
+                fileInfo.tmdbid = file.Movies[0].tmdbid;
             }
 
             let syncInfo = {

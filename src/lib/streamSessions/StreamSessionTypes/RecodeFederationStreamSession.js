@@ -28,7 +28,9 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         this.started = true;
 
-        this.process = ffmpeg(await this.getFederationStream())
+        await this.initFederationStream();
+
+        this.process = ffmpeg(this.inputStream)
             //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
@@ -56,7 +58,7 @@ export default class RecodeFederationStreamSession extends StreamSession {
         this.process.pipe(this.outputStream, {end: true});
     }
 
-    async getFederationStream() {
+    async initFederationStream() {
         this.federationClient = new FederationMediaClient(this.oblecto, this.file.host);
 
         await this.federationClient.connect();

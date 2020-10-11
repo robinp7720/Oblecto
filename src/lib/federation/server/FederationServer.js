@@ -8,7 +8,6 @@ export default class FederationServer {
         let options = {
             key: fs.readFileSync(this.oblecto.config.federation.key),
             cert: fs.readFileSync('/etc/oblecto/keys/public-cert.pem'),
-            ca: [fs.readFileSync('/etc/oblecto/keys/csr.pem')],
         };
 
         this.server = tls.createServer(options, (socket) => {

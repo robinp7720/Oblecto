@@ -1,4 +1,6 @@
-import databases from '../../submodules/database';
+import {Series} from '../../models/series';
+import {Episode} from '../../models/episode';
+import {File} from '../../models/file';
 
 export default class FederationEpisodeIndexer {
     constructor(oblecto) {
@@ -11,7 +13,7 @@ export default class FederationEpisodeIndexer {
     }
 
     async indexEpisode(file) {
-        let [fileEntity, fileInserted] = await databases.file.findOrCreate({
+        let [fileEntity, fileInserted] = await File.findOrCreate({
             where: {
                 host: file.host,
                 path: file.id
@@ -24,18 +26,18 @@ export default class FederationEpisodeIndexer {
             }
         });
 
-        let [series, seriesInserted] = await databases.tvshow.findOrCreate({
+        let [series, seriesInserted] = await Series.findOrCreate({
             where: {
                 tvdbid: file.fileInfo.seriesTvdbid || null,
                 tmdbid: file.fileInfo.seriesTmdbid || null
             }
         });
 
-        let [episode, episodeInserted] = await databases.episode.findOrCreate({
+        let [episode, episodeInserted] = await Episode.findOrCreate({
             where: {
                 tvdbid: file.fileInfo.tvdbid || null,
                 tmdbid: file.fileInfo.tmdbid || null,
-                seriesId: series.id
+                SeriesId: series.id
             },
             defaults: {
                 airedEpisodeNumber: file.fileInfo.episode,

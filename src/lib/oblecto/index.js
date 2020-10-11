@@ -88,7 +88,7 @@ export default class Oblecto {
 
         this.streamSessionController = new StreamSessionController(this);
 
-        if (config.federation.enabled) {
+        if (config.federation.enable) {
             this.fedartionController = new FederationController(this);
             this.federationClientController = new FederationClientController(this);
 
