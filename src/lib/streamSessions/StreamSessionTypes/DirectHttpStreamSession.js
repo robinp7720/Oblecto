@@ -13,14 +13,18 @@ export default class DirectHttpStreamSession extends StreamSession {
     }
 
     async addDestination(destination) {
-        // HTTP Streamer only supports a single destination
+        // Logically we only support http destinations
+        // Therefore, throw an error if the type is not http
         if (destination.type !== 'http') {
             logger.log('ERROR', 'DirectHttpStreamer only supports http stream types');
-            return;
+            throw new Error('HTTP Streamer only supports HTTP stream types');
         }
 
-        if (this.destinations[0])
+        // This streamer only supports a single stream destination,
+        // so if another destination was found, destroy the output stream and remove it
+        if (this.destinations[0]) {
             this.destinations[0].stream.destroy();
+        }
 
         this.destinations[0] = destination;
 
@@ -37,7 +41,8 @@ export default class DirectHttpStreamSession extends StreamSession {
 
         let mimeType = mimeTypes.lookup(this.file.path);
 
-        if (req.headers.range) { // meaning client (browser) has moved the forward/back slider
+        if (req.headers.range) {
+            // meaning client (browser) has moved the forward/back slider
             // which has sent this request back to this server logic ... cool
             let range = req.headers.range;
             let parts = range.replace(/bytes=/, '').split('-');

@@ -15,9 +15,6 @@ export default class RecodeStreamSession extends StreamSession {
             this.audioCodec = 'copy';
         }
 
-        this.inputStream = new Stream.PassThrough;
-        this.outputStream = new Stream.PassThrough;
-
         this.outputStream.on('close', () => {
             logger.log('INFO', this.sessionId, 'output stream has closed');
             this.emit('close');
@@ -25,33 +22,7 @@ export default class RecodeStreamSession extends StreamSession {
     }
 
     async addDestination(destination) {
-        this.destinations.push(destination);
-        this.outputStream.pipe(destination.stream);
-
-        if (destination.type === 'http') {
-            destination.stream.writeHead(200, {
-                'Content-Type': this.getOutputMimetype()
-            });
-        }
-
-        let _this = this;
-
-        destination.stream
-            .on('error', (err) => {
-                logger.log('ERROR', this.sessionId, err);
-            })
-            .on('close', function () {
-                for (let i in _this.destinations) {
-                    if (_this.destinations[i].stream === this) {
-                        _this.destinations.splice(i, 1);
-                    }
-                }
-
-                if (_this.destinations.length === 0) {
-                    logger.log('INFO', _this.sessionId, 'last client has disconnected. Setting timeout output stream');
-                    _this.startTimeout();
-                }
-            });
+        await super.addDestination(destination);
     }
 
     async startStream() {
@@ -87,18 +58,5 @@ export default class RecodeStreamSession extends StreamSession {
         });
 
         this.process.pipe(this.outputStream, {end: true});
-    }
-
-
-    getFfmpegVideoCodec() {
-        let codec = this.videoCodec;
-
-        let codecs = {
-            'h264': 'libx264'
-        };
-
-        if (codecs[codec]) codec = codecs[codec];
-
-        return codec;
     }
 }

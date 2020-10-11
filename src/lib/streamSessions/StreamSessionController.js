@@ -24,7 +24,7 @@ export default class StreamSessionController {
         this.sessions[streamSession.sessionId] = streamSession;
 
         streamSession.on('close', () => {
-            logger.log('INFO', streamSession.sessionId, 'output stream has closed');
+            logger.log('INFO', streamSession.sessionId, 'has ended');
             delete this.sessions[streamSession.sessionId];
         });
 

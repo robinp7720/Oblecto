@@ -2,6 +2,7 @@ import StreamSession from '../StreamSession';
 import ffmpeg from '../../../submodules/ffmpeg';
 import Stream from 'stream';
 import FederationMediaClient from '../../federation/client/FederationMediaClient';
+import logger from '../../../submodules/logger';
 
 export default class RecodeFederationStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
@@ -11,31 +12,13 @@ export default class RecodeFederationStreamSession extends StreamSession {
         this.outputStream = new Stream.PassThrough;
 
         this.outputStream.on('close', () => {
+            logger.log('INFO', this.sessionId, 'output stream has closed');
             this.emit('close');
         });
     }
 
     async addDestination(destination) {
-        this.destinations.push(destination);
-        this.outputStream.pipe(destination.stream);
-
-        let _this = this;
-
-        destination.stream
-            .on('error', (err) => {
-                console.log(err);
-            })
-            .on('close', function () {
-                for (let i in _this.destinations) {
-                    if (_this.destinations[i].stream === this) {
-                        _this.destinations.splice(i, 1);
-                    }
-                }
-
-                if (_this.destinations.length === 0) {
-                    _this.outputStream.destroy();
-                }
-            });
+        await super.addDestination(destination);
     }
 
     async startStream() {
@@ -65,6 +48,8 @@ export default class RecodeFederationStreamSession extends StreamSession {
             });
 
         this.process.on('error', (err) => {
+            logger.log('ERROR', this.sessionId, err);
+
             this.process.kill();
         });
 
@@ -80,17 +65,4 @@ export default class RecodeFederationStreamSession extends StreamSession {
         await this.federationClient.setStreamOffset(this.offset);
         await this.federationClient.startStreamFile(this.file.path);
     }
-
-    getFfmpegVideoCodec() {
-        let codec = this.videoCodec;
-
-        let codecs = {
-            'h264': 'libx264'
-        };
-
-        if (codecs[codec]) codec = codecs[codec];
-
-        return codec;
-    }
-
 }
