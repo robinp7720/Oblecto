@@ -89,10 +89,9 @@
     "interval": 10
   },
   "transcoding": {
-    "doRealTimeRemux": true,
-    "doRealTimeTranscode": true,
     "transcodeEverything": false,
-    "removeBorders": true
+    "hardwareAcceleration": false,
+    "hardwareAccelerator": "cuda"
   },
   "web": {
     "enabled": true
