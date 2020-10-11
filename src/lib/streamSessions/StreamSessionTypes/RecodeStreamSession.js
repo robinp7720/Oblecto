@@ -14,11 +14,6 @@ export default class RecodeStreamSession extends StreamSession {
         if (this.audioCodec === this.file.audioCodec) {
             this.audioCodec = 'copy';
         }
-
-        this.outputStream.on('close', () => {
-            logger.log('INFO', this.sessionId, 'output stream has closed');
-            this.emit('close');
-        });
     }
 
     async addDestination(destination) {
@@ -32,18 +27,26 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.started = true;
 
+        let inputOptions = [
+            '-noaccurate_seek',
+        ];
+
+        let outputOptions = [
+            '-movflags', 'empty_moov',
+            '-copyts',
+        ];
+
+        if (this.oblecto.config.transcoding.hardwareAcceleration) {
+            inputOptions.push('-hwaccel ' + this.oblecto.config.transcoding.hardwareAccelerator);
+        }
+
         this.process = ffmpeg(this.file.path)
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
             .seekInput(this.offset)
-            .inputOptions([
-                '-noaccurate_seek',
-            ])
-            .outputOptions([
-                '-movflags empty_moov',
-                '-copyts',
-            ])
+            .inputOptions(inputOptions)
+            .outputOptions(outputOptions)
             .on('start', (cmd) => {
                 logger.log('INFO', this.sessionId, cmd);
             })

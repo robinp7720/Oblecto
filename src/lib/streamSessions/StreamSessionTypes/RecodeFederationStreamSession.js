@@ -7,14 +7,6 @@ import logger from '../../../submodules/logger';
 export default class RecodeFederationStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
-
-        this.inputStream = new Stream.PassThrough;
-        this.outputStream = new Stream.PassThrough;
-
-        this.outputStream.on('close', () => {
-            logger.log('INFO', this.sessionId, 'output stream has closed');
-            this.emit('close');
-        });
     }
 
     async addDestination(destination) {
@@ -30,18 +22,26 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         await this.initFederationStream();
 
+        let inputOptions = [
+            '-noaccurate_seek',
+        ];
+
+        let outputOptions = [
+            '-movflags', 'empty_moov',
+            '-copyts',
+        ];
+
+        if (this.oblecto.config.transcoding.hardwareAcceleration) {
+            inputOptions.push('-hwaccel ' + this.oblecto.config.transcoding.hardwareAccelerator);
+        }
+
         this.process = ffmpeg(this.inputStream)
             //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
-            .inputOptions([
-                '-noaccurate_seek',
-            ])
-            .outputOptions([
-                '-movflags', 'empty_moov',
-                '-copyts',
-            ])
+            .inputOptions(inputOptions)
+            .outputOptions(outputOptions)
             .on('start', (cmd) => {
 
             })
