@@ -4,6 +4,7 @@ import DirectHttpStreamSession from './StreamSessionTypes/DirectHttpStreamSessio
 import RecodeStreamSession from './StreamSessionTypes/RecodeStreamSession';
 import RecodeFederationStreamSession from './StreamSessionTypes/RecodeFederationStreamSession';
 import logger from '../../submodules/logger';
+import HLSStreamer from './StreamSessionTypes/HLSStreamer';
 
 export default class StreamSessionController {
     constructor(oblecto) {
@@ -34,6 +35,10 @@ export default class StreamSessionController {
     createSession(file, options) {
         if (file.host !== 'local') {
             return new RecodeFederationStreamSession(file, options, this.oblecto);
+        }
+
+        if (options.format === 'hls') {
+            return new HLSStreamer(file, options, this.oblecto);
         }
 
         if (this.oblecto.config.transcoding.transcodeEverything) {
