@@ -32,7 +32,7 @@ export default class RecodeStreamSession extends StreamSession {
         ];
 
         let outputOptions = [
-            '-movflags', 'empty_moov',
+            '-movflags empty_moov',
             '-copyts',
         ];
 
@@ -41,6 +41,10 @@ export default class RecodeStreamSession extends StreamSession {
 
             // The Nvidia NVENC encoder doesn't support 10 bit encoding, so we need to force 8 bit
             // if the cuda accelerator has been selected
+
+            // TODO: Fix washed out colors for some 10 bit video streams when using the NVENC encoder
+            // Depending on the input color range, this may result in washed out colors since the color range is kept
+            // but considered to be a full range color space even if the input range is limited.
 
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
                 outputOptions.push('-pix_fmt yuv420p');
@@ -56,15 +60,10 @@ export default class RecodeStreamSession extends StreamSession {
             .outputOptions(outputOptions)
             .on('start', (cmd) => {
                 logger.log('INFO', this.sessionId, cmd);
-            })
-            .on('end', () => {
-                this.endSession();
             });
 
         this.process.on('error', (err) => {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
-
-            this.endSession();
         });
 
         this.process.pipe(this.outputStream, {end: true});
