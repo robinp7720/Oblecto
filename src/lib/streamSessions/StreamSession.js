@@ -30,13 +30,28 @@ export default class StreamSession extends events.EventEmitter{
         this.inputStream = new Stream.PassThrough;
         this.outputStream = new Stream.PassThrough;
 
+        this.outputStream.on('pause', () => this.outputPause());
+        this.outputStream.on('resume', () => this.outputResume());
+
         this.outputStream.on('close', () => {
             logger.log('INFO', this.sessionId, 'output stream has closed');
             this.endSession();
         });
 
+
+        this.httpHeaders = {
+            'Content-Type': this.getOutputMimetype(),
+            'Accept-Ranges': 'none',
+        };
+
+        this.httpStatusCode = 200;
+        this.timeoutTime = 10000;
+
         this.startTimeout();
     }
+
+    outputPause() {}
+    outputResume() {}
 
     endSession() {
         if (this.process) {
@@ -47,10 +62,12 @@ export default class StreamSession extends events.EventEmitter{
     }
 
     startTimeout() {
+        if (this.timeout) this.clearTimeout();
+
         this.timeout = setTimeout(() => {
-            logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out');
-            this.endSession();
-        }, 10000);
+            logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
+            this.outputStream.destroy();
+        }, this.timeoutTime);
     }
 
     async addDestination(destination) {
@@ -58,9 +75,7 @@ export default class StreamSession extends events.EventEmitter{
         this.outputStream.pipe(destination.stream);
 
         if (destination.type === 'http') {
-            destination.stream.writeHead(200, {
-                'Content-Type': this.getOutputMimetype()
-            });
+            destination.stream.writeHead(this.httpStatusCode, this.httpHeaders);
         }
 
         let _this = this;
@@ -83,8 +98,12 @@ export default class StreamSession extends events.EventEmitter{
             });
     }
 
-    async startStream() {
+    clearTimeout() {
         clearTimeout(this.timeout);
+    }
+
+    async startStream() {
+        this.clearTimeout();
     }
 
     getOutputMimetype() {
