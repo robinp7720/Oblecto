@@ -20,11 +20,9 @@ let axiosTimeout = function (options) {
 
             resolve(response);
         } catch (e) {
-            console.log(e);
             clearTimeout(timeout);
             return reject(e);
         }
-
     });
 };
 
@@ -40,21 +38,17 @@ export default class Downloader {
     static async download(url, dest, overwrite) {
         let writeMode = 'wx';
 
-        if (overwrite === true) {
+        if (overwrite) {
             writeMode = 'w';
         }
 
-        try {
-            let response = await axiosTimeout({
-                method: 'get',
-                url: url,
-                responseType: 'arraybuffer',
-                responseEncoding: 'binary'
-            });
+        let response = await axiosTimeout({
+            method: 'get',
+            url: url,
+            responseType: 'arraybuffer',
+            responseEncoding: 'binary'
+        });
 
-            await fs.writeFile(dest, response.data, {flags: writeMode});
-        } catch (e) {
-            throw e;
-        }
+        await fs.writeFile(dest, response.data, {flags: writeMode});
     }
 }
