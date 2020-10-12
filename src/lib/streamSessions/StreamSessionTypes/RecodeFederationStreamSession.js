@@ -13,6 +13,12 @@ export default class RecodeFederationStreamSession extends StreamSession {
         await super.addDestination(destination);
     }
 
+    endSession() {
+        super.endSession();
+
+        this.federationClient.closeConnection();
+    }
+
     async startStream() {
         await super.startStream();
 
@@ -50,15 +56,10 @@ export default class RecodeFederationStreamSession extends StreamSession {
             .outputOptions(outputOptions)
             .on('start', (cmd) => {
                 logger.log('INFO', this.sessionId, cmd);
-            })
-            .on('end', () => {
-                this.endSession();
             });
 
         this.process.on('error', (err) => {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
-
-            this.endSession();
         });
 
         this.process.pipe(this.outputStream, {end: true});

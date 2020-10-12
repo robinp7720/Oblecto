@@ -59,4 +59,9 @@ export default class FederationMediaClient extends FederationClient {
     async setStreamOffset(offset) {
         this.socket.write(`OFFSET:${offset}\n`);
     }
+
+    async closeConnection() {
+        this.socket.destroy();
+        delete this;
+    }
 }
