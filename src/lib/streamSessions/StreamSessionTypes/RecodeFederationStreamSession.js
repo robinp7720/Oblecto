@@ -33,26 +33,32 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         if (this.oblecto.config.transcoding.hardwareAcceleration) {
             inputOptions.push('-hwaccel ' + this.oblecto.config.transcoding.hardwareAccelerator);
+
+            // The Nvidia NVENC encoder doesn't support 10 bit encoding, so we need to force 8 bit
+            // if the cuda accelerator has been selected
+
+            if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
+                outputOptions.push('-pix_fmt yuv420p');
+            }
         }
 
         this.process = ffmpeg(this.inputStream)
-            //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
             .inputOptions(inputOptions)
             .outputOptions(outputOptions)
             .on('start', (cmd) => {
-
+                logger.log('INFO', this.sessionId, cmd);
             })
             .on('end', () => {
-                this.process.kill();
+                this.endSession();
             });
 
         this.process.on('error', (err) => {
-            logger.log('ERROR', this.sessionId, err);
+            if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
 
-            this.process.kill();
+            this.endSession();
         });
 
         this.process.pipe(this.outputStream, {end: true});

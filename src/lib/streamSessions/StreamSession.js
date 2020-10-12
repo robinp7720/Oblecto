@@ -32,16 +32,24 @@ export default class StreamSession extends events.EventEmitter{
 
         this.outputStream.on('close', () => {
             logger.log('INFO', this.sessionId, 'output stream has closed');
-            this.emit('close');
+            this.endSession();
         });
 
         this.startTimeout();
     }
 
+    endSession() {
+        if (this.process) {
+            this.process.kill();
+        }
+
+        this.emit('close');
+    }
+
     startTimeout() {
         this.timeout = setTimeout(() => {
             logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out');
-            this.emit('close');
+            this.endSession();
         }, 10000);
     }
 
