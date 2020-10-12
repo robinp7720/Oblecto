@@ -48,7 +48,7 @@ export default (server, oblecto) => {
     });
 
 
-    server.get('/session/create/:id'/*, authMiddleWare.requiresAuth*/, async function (req, res, next) {
+    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let file;
 
         try {
