@@ -3,6 +3,7 @@ import {promises as fs} from 'fs';
 import NodeRSA from 'node-rsa';
 import EventEmitter from 'events';
 import {readFileSync} from 'fs';
+import logger from '../../../submodules/logger';
 
 export default class FederationClient{
     /**
@@ -24,6 +25,8 @@ export default class FederationClient{
     }
 
     async connect() {
+        logger.log('INFO', 'Connecting to federation master:', this.serverName);
+
         this.socket = tls.connect({
             host: this.host,
             port: this.port ,
@@ -36,17 +39,11 @@ export default class FederationClient{
         this.socket.on('error', (error) => this.errorHandler(error));
         this.socket.on('close', () => this.closeHandler());
 
-        if (this.isSecure) return;
-
-        await this.waitForSecure();
-        // We need to authenticate the client now
+        if (!this.isSecure) await this.waitForSecure();
 
         this.socket.write(`IAM:${this.oblecto.config.federation.uuid}\n`);
 
         await this.waitForAuth();
-
-        console.log('We are ready!');
-
     }
 
     write(header, content) {
@@ -69,8 +66,6 @@ export default class FederationClient{
 
     headerHandler(data) {
         let split = data.split(':');
-
-        //console.log(split);
 
         switch (split[0]) {
             case 'CHALLENGE':
@@ -98,23 +93,19 @@ export default class FederationClient{
             return;
         }
 
-        console.log('An error has occured during authentication');
-
         delete this;
     }
 
     secureConnectHandler() {
         this.isSecure = true;
-
-        console.log('Secure Connection initiated');
     }
 
     errorHandler (error) {
-        console.log('error', error);
+
     }
 
-    closeHandler (_this) {
-        console.log('Connection has closed');
+    closeHandler () {
+
     }
 
     waitForSecure() {

@@ -16,9 +16,9 @@ export default class FederationMediaClient extends FederationClient {
         let split = data.split(':');
 
         switch (split[0]) {
-        case 'READY':
-            this.readyHandler(split[1]);
-            break;
+            case 'READY':
+                this.readyHandler(split[1]);
+                break;
         }
 
     }
@@ -39,12 +39,11 @@ export default class FederationMediaClient extends FederationClient {
 
     async readyHandler(data) {
         if (data !== this.fileId) {
-            console.log('Server did not respect file id. Destroying connection');
+            // The server didn't respect the file id
+            // This really shouldn't happen so we destroy the client
 
             this.socket.destroy();
         }
-
-        console.log('server is ready');
 
         this.socket.pipe(this.streamDestination);
 
@@ -53,8 +52,6 @@ export default class FederationMediaClient extends FederationClient {
 
     async startStream() {
         if (!this.streamDestination) throw new Error('No destination');
-
-        console.log('sending start signal');
 
         this.socket.write('START:START\n');
     }
