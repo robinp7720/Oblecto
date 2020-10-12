@@ -17,7 +17,8 @@ export default class TmdbEpisodeRetriever {
             episodeName: episodeInfo.name,
             airedEpisodeNumber: episodeInfo.episode_number,
             airedSeason: episodeInfo.season_number,
-            overview: episodeInfo.overview
+            overview: episodeInfo.overview,
+            firstAired: episodeInfo.air_date
         };
 
         let externalIds = {};
@@ -30,11 +31,11 @@ export default class TmdbEpisodeRetriever {
             });
         }
 
-        if (!episode.tvdbid) {
+        if (!episode.tvdbid && externalIds.tvdb_id) {
             data.tvdbid = externalIds.tvdb_id;
         }
 
-        if (!episode.imdbid) {
+        if (!episode.imdbid && externalIds.imdb_id) {
             data.imdbid = externalIds.imdb_id;
         }
 
