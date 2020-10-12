@@ -20,17 +20,7 @@ export default class MovieIndexer {
     }
 
     async indexFile(moviePath) {
-        let file;
-
-        try {
-            file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
-        } catch (error) {
-            if (error instanceof FileExistsError) {
-                return;
-            }
-
-            throw error;
-        }
+        let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
         let movieIdentification = await this.movieIdentifer.identify(moviePath);
 
@@ -42,13 +32,12 @@ export default class MovieIndexer {
                 defaults: movieIdentification
             });
 
-
         movie.addFile(file);
 
-        if (movieCreated) {
-            this.oblecto.queue.queueJob('updateMovie', movie);
-            this.oblecto.queue.queueJob('downloadMovieFanart', movie);
-            this.oblecto.queue.pushJob('downloadMoviePoster', movie);
-        }
+        if (!movieCreated) return;
+
+        this.oblecto.queue.queueJob('updateMovie', movie);
+        this.oblecto.queue.queueJob('downloadMovieFanart', movie);
+        this.oblecto.queue.pushJob('downloadMoviePoster', movie);
     }
 }

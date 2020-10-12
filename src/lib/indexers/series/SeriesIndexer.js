@@ -30,17 +30,7 @@ export default class SeriesIndexer {
     }
 
     async indexFile(episodePath) {
-        let file;
-
-        try {
-            file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
-        } catch (error) {
-            if (error instanceof FileExistsError) {
-                return;
-            }
-
-            throw error;
-        }
+        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
         let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
         let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
