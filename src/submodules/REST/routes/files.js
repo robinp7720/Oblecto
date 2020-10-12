@@ -9,6 +9,7 @@ import HLSSession from '../../handlers/HLSSessionHandler';
 import DirectStreamer from '../../handlers/DirectStreamer';
 import {File} from '../../../models/file';
 import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
+import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer';
 
 let HLSSessions = {};
 
@@ -18,84 +19,36 @@ let HLSSessions = {};
  * @param {Oblecto} oblecto
  */
 export default (server, oblecto) => {
-    server.get('/HLS/:session/segment/:id', async function (req, res, next) {
-        // TODO: Determine whether or not to remux or transcode depending on video encoding
-
-        if (!HLSSessions[req.params.session]) {
-            return next(new errors.NotFoundError('Session does not exist'));
+    server.get('/HLS/:sessionId/segment/:id', async function (req, res, next) {
+        if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
+            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
         }
+
+        let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
+
+        // TODO: Send approriate error if session is not a HLS stream session
+        if (!(streamSession instanceof HLSStreamer)) return next();
 
         let segmentId = parseInt(req.params.id);
 
-        DirectStreamer.streamFile(
-            `${os.tmpdir()}/oblecto/sessions/${req.params.session}/${('000' + segmentId).substr(-3)}.ts`,
-            req, res
-        );
-
-        // While that file is being streamed, we need to make sure that the next segment will be available.
-        // Check if the next file in the sequence exists, and it it doesn't resume ffmpeg and delete the first few
-        // segments.
-
-        fs.readdir(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/`, (err, files) => {
-            if (err) {
-                return false;
-            }
-
-            files.forEach(function (val, index) {
-                let sequenceId = val.replace('index', '')
-                    .replace('.vtt', '')
-                    .replace('.ts', '');
-
-                sequenceId = parseInt(sequenceId);
-
-                if (segmentId - sequenceId > 5) {
-                    fs.unlink(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/${val}`, (err) => {
-                        if (err) {
-                            console.error(err);
-                        }
-                    });
-                }
-            });
-        });
+        streamSession.streamSegment(req, res, segmentId);
     });
 
-    server.get('/HLS/:session/playlist', async function (req, res, next) {
-        if (!HLSSessions[req.params.session]) {
-            return next(new errors.NotFoundError('Session does not exist'));
+    server.get('/HLS/:sessionId/playlist', async function (req, res, next) {
+        if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
+            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
         }
 
-        fs.access(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/index.m3u8`, fs.constants.F_OK, (err) => {
-            if (err) {
-                return next(new errors.NotFoundError('Playlist file doesn\'t exist'));
-            }
+        let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
-            HLSSessions[req.params.session].resetTimeout();
+        // TODO: Send approriate error if session is not a HLS stream session
+        if (!(streamSession instanceof HLSStreamer)) return next(new errors.InvalidContentError('Not a HLS stream'));
 
-            res.writeHead(200, {
-                'Content-Type': 'application/x-mpegURL'
-            });
-
-            fs.createReadStream(`${os.tmpdir()}/oblecto/sessions/${req.params.session}/index.m3u8`).pipe(res);
-        });
+        streamSession.sendPlaylistFile(res);
     });
 
 
-    server.get('/HLS/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let session = new HLSSession(req.params.id);
-
-        if (req.query.offset) {
-            session.offset = req.query.offset;
-        }
-
-        await session.start();
-
-        HLSSessions[session.sessionId] = session;
-
-        res.send(session.sessionId);
-
-    });
-
-    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/session/create/:id'/*, authMiddleWare.requiresAuth*/, async function (req, res, next) {
         let file;
 
         try {
@@ -103,6 +56,8 @@ export default (server, oblecto) => {
         } catch (ex) {
             return next(new errors.NotFoundError('File does not exist'));
         }
+
+        if (!file) return next(new errors.NotFoundError('File does not exist'));
 
         let streamType = 'recode';
 

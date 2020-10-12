@@ -1,7 +1,8 @@
 import StreamSession from '../StreamSession';
 import mimeTypes from 'mime-types';
-import fs from 'fs';
+import {promises as fs, createReadStream} from 'fs';
 import logger from '../../../submodules/logger';
+import {File} from '../../../models/file';
 
 export default class DirectHttpStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
@@ -39,7 +40,23 @@ export default class DirectHttpStreamSession extends StreamSession {
         let req = this.destinations[0].request;
         let res = this.destinations[0].stream;
 
-        let mimeType = mimeTypes.lookup(this.file.path);
+        DirectHttpStreamSession.httpStreamHandler(req, res, this.file.path);
+    }
+
+    static async httpStreamHandler(req, res, file) {
+        let path = file;
+        let size;
+
+        if (file instanceof File) {
+            path = file.path;
+            size = file.size;
+        }
+
+        if (!size) {
+            size = (await fs.stat(path)).size;
+        }
+
+        let mimeType = mimeTypes.lookup(path);
 
         if (req.headers.range) {
             // meaning client (browser) has moved the forward/back slider
@@ -50,22 +67,16 @@ export default class DirectHttpStreamSession extends StreamSession {
             let partialend = parts[1];
 
             let start = parseInt(partialstart, 10);
-            let end = partialend ? parseInt(partialend, 10) : this.file.size  - 1;
+            let end = partialend ? parseInt(partialend, 10) : size  - 1;
             let chunksize = (end - start) + 1;
 
-            let stream;
-
-            try {
-                stream = fs.createReadStream(this.file.path, {
-                    start: start,
-                    end: end
-                });
-            } catch (e) {
-                console.log(e);
-            }
+            let stream = createReadStream(path, {
+                start: start,
+                end: end
+            });
 
             res.writeHead(206, {
-                'Content-Range': 'bytes ' + start + '-' + end + '/' + this.file.size,
+                'Content-Range': 'bytes ' + start + '-' + end + '/' + size,
                 'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize,
                 'Content-Type': mimeType
@@ -74,20 +85,15 @@ export default class DirectHttpStreamSession extends StreamSession {
             stream.pipe(res);
 
             return;
-
         }
 
         res.writeHead(200, {
-            'Content-Length': this.file.size,
+            'Content-Length': size,
             'Accept-Ranges': 'bytes',
             'Content-Type': mimeType
         });
 
-        try {
-            fs.createReadStream(this.file.path).pipe(res);
-        } catch (e) {
-            console.log(e);
-        }
+        createReadStream(path).pipe(res);
     }
 
 }
