@@ -14,8 +14,6 @@ export default class FederationServerConnection {
         this.clientId = '';
         this.authenticated = false;
         this.challenge = uuidv4();
-
-        console.log(this.challenge);
     }
 
     dataHandler(chunk) {
@@ -35,8 +33,6 @@ export default class FederationServerConnection {
     headerHandler(data) {
         let split = data.split(':');
 
-        console.log(split);
-
         switch (split[0]) {
             case 'IAM':
                 this.clientIdHandler(split[1]);
@@ -46,7 +42,6 @@ export default class FederationServerConnection {
                 break;
             default:
                 if (!this.authenticated) {
-                    console.log('client is not authorized!');
                     this.socket.destroy();
                 }
                 break;
@@ -54,10 +49,11 @@ export default class FederationServerConnection {
     }
 
     async clientIdHandler(clientId) {
-        this.cluidId = clientId;
+        this.clientId = clientId;
 
-        if (!this.oblecto.config.federation.clients[clientId])
-            return;
+        // Check if the client server is known
+        // If an unknown client is trying to connect, we should just ignore it
+        if (!this.oblecto.config.federation.clients[clientId]) return;
 
         let key = await fs.readFile(this.oblecto.config.federation.clients[clientId].key);
         this.key = NodeRSA(key);
@@ -66,11 +62,8 @@ export default class FederationServerConnection {
     }
 
     authHandler(data) {
-        console.log('Getting auth', data);
-
-        if (data == this.challenge) {
+        if (data === this.challenge) {
             this.authenticated = true;
-            console.log('Client has been authenticated!');
             this.write('AUTH','ACCEPTED');
 
             return;
@@ -81,11 +74,11 @@ export default class FederationServerConnection {
     }
 
     closeHandler() {
-        console.log('Connection has closed');
+
     }
 
     errorHandler(error) {
-        console.log('An error has occured', error);
+
     }
 
     write(header, content) {

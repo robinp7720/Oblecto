@@ -36,7 +36,6 @@ export default class FederationDataServerConnection extends FederationServerConn
     }
 
     async startFullSync() {
-        console.log('Starting full sync with client');
         await this.syncFiles();
     }
 

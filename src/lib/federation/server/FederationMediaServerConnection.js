@@ -1,5 +1,6 @@
 import FederationServerConnection from './FederationServerConnection';
 import {File} from '../../../models/file';
+import logger from '../../../submodules/logger';
 
 export default class FederationMediaServerConnection extends FederationServerConnection {
     constructor(oblecto, socket) {
@@ -41,7 +42,6 @@ export default class FederationMediaServerConnection extends FederationServerCon
         try {
             this.fileInfo = await File.findByPk(this.fileId);
             this.socket.write(`READY:${this.fileId}\n`);
-
         } catch (e) {
             this.socket.write('ERROR:FILEID\n');
         }
@@ -65,5 +65,9 @@ export default class FederationMediaServerConnection extends FederationServerCon
         });
 
         await streamSession.startStream();
+    }
+
+    async closeHandler() {
+        logger.log('INFO', 'Federation media stream has closed');
     }
 }

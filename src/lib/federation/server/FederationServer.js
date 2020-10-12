@@ -10,9 +10,7 @@ export default class FederationServer {
             cert: fs.readFileSync('/etc/oblecto/keys/public-cert.pem'),
         };
 
-        this.server = tls.createServer(options, (socket) => {
-
-        });
+        this.server = tls.createServer(options, (socket) => {});
 
         this.server.listen(port);
 
@@ -21,13 +19,9 @@ export default class FederationServer {
         this.server.on('secureConnection', (socket) => this.secureConnectionHandler(socket));
     }
 
-    errorHandler(error) {
-        console.log(error);
-    }
-    connectionHandler(socket) {
-        console.log('A client has connected!');
-    }
-    secureConnectionHandler(socket) {
-        console.log('A secure connection has been initiated');
-    }
+    errorHandler(error) {}
+
+    connectionHandler(socket) {}
+
+    secureConnectionHandler(socket) {}
 }
