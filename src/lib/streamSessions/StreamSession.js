@@ -21,9 +21,13 @@ export default class StreamSession extends events.EventEmitter{
         this.sessionId = v4();
         this.destinations = [];
 
-        this.format = options.format || 'mp4';
-        this.videoCodec = options.videoCodec || 'h264';
-        this.audioCodec = options.audioCodec || 'aac';
+        this.targetFormats = options.target.formats;
+        this.targetVideoCodecs = options.target.videoCodecs;
+        this.targetAudioCodecs = options.target.audioCodecs;
+
+        this.format = this.targetFormats[0] || 'mp4';
+        this.videoCodec = this.targetVideoCodecs[0] || 'h264';
+        this.audioCodec = this.targetAudioCodecs[0] || 'aac';
 
         this.offset = options.offset || 0;
 
@@ -45,7 +49,7 @@ export default class StreamSession extends events.EventEmitter{
         };
 
         this.httpStatusCode = 200;
-        this.timeoutTime = 10000;
+        this.timeoutTime = 1000000;
 
         this.startTimeout();
     }
@@ -112,6 +116,11 @@ export default class StreamSession extends events.EventEmitter{
 
         if (this.format === 'mpegts')
             return 'video/mp2t';
+
+        if (this.format === 'matroska')
+            return 'video/video/x-matroska';
+
+        return 'video';
     }
 
     getFfmpegVideoCodec() {

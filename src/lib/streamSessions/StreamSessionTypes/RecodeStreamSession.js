@@ -1,17 +1,16 @@
 import StreamSession from '../StreamSession';
 import ffmpeg from '../../../submodules/ffmpeg';
-import Stream from 'stream';
 import logger from '../../../submodules/logger';
 
 export default class RecodeStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
 
-        if (this.videoCodec === this.file.videoCodec) {
+        if (this.videoCodec === this.file.videoCodec || this.file.videoCodec in this.targetVideoCodecs) {
             this.videoCodec = 'copy';
         }
 
-        if (this.audioCodec === this.file.audioCodec) {
+        if (this.audioCodec === this.file.audioCodec || this.file.audioCodec in this.targetAudioCodecs) {
             this.audioCodec = 'copy';
         }
     }

@@ -37,7 +37,7 @@ export default class StreamSessionController {
             return new RecodeFederationStreamSession(file, options, this.oblecto);
         }
 
-        if (options.format === 'hls') {
+        if (options.streamType === 'hls') {
             return new HLSStreamer(file, options, this.oblecto);
         }
 

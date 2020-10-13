@@ -61,17 +61,19 @@ export default (server, oblecto) => {
 
         let streamType = 'recode';
 
-        if (req.params.noremux) streamType = 'directhttp';
+        if (req.params.type in ['recode', 'directhttp', 'hls'])
+            streamType = req.params.type;
 
-        if (file.extension === 'mp4') streamType = 'directhttp';
-        if(['ac3'].indexOf(file.audioCodec) > -1) streamType = 'recode';
+        if (req.params.noremux) streamType = 'directhttp';
 
         let streamSession = oblecto.streamSessionController.newSession(file, {
             streamType,
 
-            format: req.params.format || 'mp4',
-            videoCodec: req.params.videoCodec || 'h264',
-            audioCodec: req.params.audioCodec || 'aac',
+            target: {
+                formats: (req.params.format || 'mp4').split(','),
+                videoCodecs: (req.params.videoCodec || 'h264').split(','),
+                audioCodecs: (req.params.audioCodec || 'aac').split(',')
+            },
 
             offset: req.params.offset || 0
         });
@@ -97,6 +99,8 @@ export default (server, oblecto) => {
 
             type: 'http'
         });
+
+        if (req.params.nostart) return;
 
         await oblecto.streamSessionController.sessions[req.params.sessionId].startStream();
     });
