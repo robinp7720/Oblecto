@@ -49,7 +49,7 @@ export default class StreamSession extends events.EventEmitter{
         };
 
         this.httpStatusCode = 200;
-        this.timeoutTime = 1000000;
+        this.timeoutTime = 10000;
 
         this.startTimeout();
     }
