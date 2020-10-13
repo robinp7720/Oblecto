@@ -15,14 +15,22 @@ import {User, userColumns} from '../models/user';
 import {Stream, streamColumns} from '../models/stream';
 
 export function initDatabes() {
+    let dialect = config.database.dialect || 'sqlite';
+    let poolmax = config.queue.concurrency;
+
+    if (dialect === 'sqlite') {
+        poolmax = 1;
+    }
+
+
     let options = {
-        dialect: config.database.dialect || 'sqlite',
+        dialect,
 
         logging: false,
         //operatorsAliases: false,
 
         pool: {
-            max: 5,
+            max: poolmax,
             min: 0,
             acquire: 30000,
             idle: 10000
