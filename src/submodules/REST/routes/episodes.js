@@ -59,17 +59,13 @@ export default (server, oblecto) => {
             include: [File]
         });
 
-        let thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
+        let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
 
-        // Check if the thumbnail exists
-        fs.stat(thumbnailPath, function (err) {
-            if (err)
+        fs.createReadStream(imagePath)
+            .pipe(res)
+            .on('error', ()  => {
                 return next(new errors.NotFoundError('No banner found'));
-
-            // If the thumbnail exists, simply pipe that to the client
-            fs.createReadStream(thumbnailPath).pipe(res);
-
-        });
+            });
 
     });
 
