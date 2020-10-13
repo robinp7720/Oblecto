@@ -8,7 +8,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
 
         const guessitIdentification = await guessit.identify(path);
 
-        let episode = await this.oblecto.tmdb.tvEpisodeInfo({
+        let episode = await this.oblecto.tmdb.episodeInfo({
             id: series.tmdbid,
             season_number: guessitIdentification.season || 1,
             episode_number: guessitIdentification.episode

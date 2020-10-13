@@ -1,5 +1,5 @@
 import TVDB from 'node-tvdb';
-import moviedb from 'moviedb-promise';
+import {MovieDb} from 'moviedb-promise';
 
 import Queue from '../queue';
 import ImageScaler from '../artwork/ArtworkScaler';
@@ -50,7 +50,7 @@ export default class Oblecto {
         this.database = initDatabes();
 
         this.tvdb = new TVDB(this.config.tvdb.key);
-        this.tmdb = new moviedb(this.config.themoviedb.key);
+        this.tmdb = new MovieDb(this.config.themoviedb.key);
 
         this.queue = new Queue(this.config.queue.concurrency);
 
