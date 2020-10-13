@@ -1,4 +1,3 @@
-import StreamSession from './StreamSession';
 import DirectStreamSession from './StreamSessionTypes/DirectStreamSession';
 import DirectHttpStreamSession from './StreamSessionTypes/DirectHttpStreamSession';
 import RecodeStreamSession from './StreamSessionTypes/RecodeStreamSession';
