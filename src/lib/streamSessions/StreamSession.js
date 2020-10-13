@@ -1,5 +1,5 @@
 import events from 'events';
-import {v4} from 'uuid';
+import {v4} from 'node-uuid';
 import logger from '../../submodules/logger';
 import Stream from 'stream';
 
