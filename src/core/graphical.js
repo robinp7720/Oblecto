@@ -85,6 +85,7 @@ export default {
 
         logger.on('log', (log) => {
             this.logBox.addItem(`[${log.level}] ${log.messages.join(' ')}`);
+            this.logBox.down(1);
             this.screen.render();
         });
 
