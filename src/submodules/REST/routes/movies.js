@@ -99,11 +99,14 @@ export default (server, oblecto) => {
 
     server.get('/movie/:id/poster', async function (req, res, next) {
         // Get episode data
-        let movie = await Movie.findByPk(req.params.id, {
-            include: [File]
-        });
+        let movie;
+        try {
+            movie = await Movie.findByPk(req.params.id);
+        } catch(e) {
+            return next(new errors.NotFoundError('Movie not found'));
+        }
 
-        let posterPath = oblecto.artworkUtils.moviePosterPath(movie, 'large');
+        let posterPath = oblecto.artworkUtils.moviePosterPath(movie, req.params.size || 'medium');
 
         fs.createReadStream(posterPath)
             .on('error', () => {

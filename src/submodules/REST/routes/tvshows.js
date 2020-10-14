@@ -79,17 +79,17 @@ export default (server, oblecto) => {
 
         try {
             show = await Series.findByPk(req.params.id);
-        } catch (e) {
+        } catch(e) {
             return next(new errors.NotFoundError('Series does not exist'));
         }
 
         let imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.params.size || 'medium');
 
         fs.createReadStream(imagePath)
-            .pipe(res)
             .on('error', ()  => {
                 return next(new errors.NotFoundError('No poster found'));
-            });
+            })
+            .pipe(res);
     });
 
     server.put('/series/:id/poster', async function (req, res, next) {
