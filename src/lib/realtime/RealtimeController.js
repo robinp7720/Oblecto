@@ -28,4 +28,12 @@ export default class RealtimeController {
             delete this.clients[socket.id];
         });
     }
+
+    close() {
+        for (let client of Object.keys(this.clients)) {
+            this.clients[client].disconnect();
+        }
+
+        this.server.close();
+    }
 }

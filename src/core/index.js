@@ -7,5 +7,9 @@ export default {
 
     start() {
 
-    }
+    },
+
+    close() {
+        this.oblecto.close();
+    },
 };

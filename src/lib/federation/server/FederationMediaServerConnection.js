@@ -5,7 +5,6 @@ import logger from '../../../submodules/logger';
 export default class FederationMediaServerConnection extends FederationServerConnection {
     constructor(oblecto, socket) {
         super(oblecto, socket);
-        this.clientId = null;
         this.fileId = null;
         this.fileInfo = null;
         this.offset = 0;

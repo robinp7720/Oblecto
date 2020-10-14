@@ -24,4 +24,8 @@ export default class FederationServer {
     connectionHandler(socket) {}
 
     secureConnectionHandler(socket) {}
+
+    close() {
+        this.server.close();
+    }
 }

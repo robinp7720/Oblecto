@@ -20,7 +20,8 @@
     "prepare": "npm run build && npm run build:web",
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
     "debug": "./node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0",
-    "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'"
+    "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'",
+    "test": "scripts/test.sh"
   },
   "dependencies": {
     "async": "^3.2.0",

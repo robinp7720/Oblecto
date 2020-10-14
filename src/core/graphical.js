@@ -91,12 +91,18 @@ export default {
 
         this.oblecto = new Oblecto(config);
 
-        setInterval(() => {
+        this.updater = setInterval(() => {
             this.renderStreamerSessions();
             this.renderQueue();
             this.renderSessions();
             this.screen.render();
         }, 1000);
+    },
+
+    close() {
+        this.oblecto.close();
+        clearInterval(this.updater);
+        this.screen.destroy();
     },
 
     renderStreamerSessions() {

@@ -119,4 +119,8 @@ export default class FederationClient{
             this.eventEmitter.once('auth', resolve);
         });
     }
+
+    close() {
+        this.socket.destroy();
+    }
 }

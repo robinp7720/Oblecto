@@ -12,5 +12,10 @@ export default class FederationController{
         this.federationMediaServer = new FederationMediaServer(this.oblecto, this.oblecto.config.federation.mediaPort);
         this.federationDataServer = new FederationDataServer(this.oblecto, this.oblecto.config.federation.dataPort);
     }
+
+    close() {
+        this.federationDataServer.close();
+        this.federationMediaServer.close();
+    }
 }
 

@@ -22,8 +22,14 @@ export default class FederationClientController{
     }
 
     requestFullSync() {
-        for (let server of this.syncClients) {
+        for (let server of this.syncServers) {
             server.requestFullSync();
+        }
+    }
+
+    close() {
+        for (let server of this.syncServers) {
+            server.close();
         }
     }
 }

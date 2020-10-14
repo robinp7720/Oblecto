@@ -98,4 +98,12 @@ export default class Oblecto {
             this.federationClientController.addAllSyncMasters();
         }
     }
+
+    close() {
+        for (let item of Object.keys(this)) {
+            if (this[item].close) {
+                this[item].close();
+            }
+        }
+    }
 }

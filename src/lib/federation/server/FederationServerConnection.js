@@ -84,4 +84,8 @@ export default class FederationServerConnection {
     write(header, content) {
         this.socket.write(`${header}:${content}\n`);
     }
+
+    close() {
+        this.socket.close();
+    }
 }

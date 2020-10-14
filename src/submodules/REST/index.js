@@ -37,4 +37,8 @@ export default class OblectoAPI {
             logger.log('INFO', this.server.name, 'REST API Listening at', this.server.url);
         });
     }
+
+    close() {
+        this.server.close();
+    }
 }

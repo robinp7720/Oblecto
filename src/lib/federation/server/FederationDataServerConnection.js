@@ -21,10 +21,6 @@ export default class FederationDataServerConnection extends FederationServerConn
             case 'SYNC':
                 this.syncHandler(split[1]);
                 break;
-            case 'OFFSET':
-                break;
-            case 'START':
-                break;
         }
     }
 
