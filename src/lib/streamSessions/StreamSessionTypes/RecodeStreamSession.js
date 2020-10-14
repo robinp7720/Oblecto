@@ -50,6 +50,32 @@ export default class RecodeStreamSession extends StreamSession {
             }
         }
 
+        let streams = await this.file.getStreams();
+
+        let videoStreamIndex = 0;
+        let audioStreams = [];
+
+        for (let stream of streams) {
+            if (stream.codec_type === 'video') videoStreamIndex = stream.index;
+            if (stream.codec_type === 'audio') audioStreams.push(stream);
+        }
+
+        outputOptions.push(`-map 0:${videoStreamIndex}`);
+
+        let audioStreamSelected = false;
+
+        for (let stream of audioStreams) {
+            if (stream.tags_language === 'eng'){
+                outputOptions.push(`-map 0:${stream.index}`);
+                audioStreamSelected = true;
+            }
+        }
+
+        if (!audioStreamSelected) {
+            outputOptions.push(`-map 0:${audioStreams[0].index}`);
+        }
+
+
         this.process = ffmpeg(this.file.path)
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
