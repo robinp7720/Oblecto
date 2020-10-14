@@ -53,9 +53,11 @@ export default class FederationMediaServerConnection extends FederationServerCon
         let streamSession = this.oblecto.streamSessionController.newSession(this.fileInfo, {
             streamType: 'recode',
 
-            format: 'matroska',
-            videoCodec: 'copy',
-            audioCodec: 'copy',
+            target: {
+                formats: ['matroska'],
+                videoCodecs: ['copy'],
+                audioCodecs: ['copy'],
+            },
 
             offset: this.offset
         });
