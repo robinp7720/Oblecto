@@ -1,17 +1,8 @@
-import fs from 'fs';
 import errors from 'restify-errors';
-import os from 'os';
-
 import authMiddleWare from '../middleware/auth';
-
-import HLSSession from '../../handlers/HLSSessionHandler';
-
-import DirectStreamer from '../../handlers/DirectStreamer';
 import {File} from '../../../models/file';
 import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
 import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer';
-
-let HLSSessions = {};
 
 /**
  *
