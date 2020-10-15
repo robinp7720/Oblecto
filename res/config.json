@@ -17,15 +17,18 @@
   "tvdb": {
     "key": "4908EBCEE2556E3D"
   },
+  "themoviedb": {
+    "key": "b06b4917705eeed4e4b273d4c90fe158"
+  },
+  "fanart.tv": {
+    "key": "b6821e30b1a791e04d43543936de1fd0"
+  },
   "assets": {
     "storeWithFile": false,
     "episodeBannerLocation": "/etc/oblecto/assets/episodeBanners/",
     "showPosterLocation": "/etc/oblecto/assets/showPosters/",
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
     "movieFanartLocation": "/etc/oblecto/assets/movieFanart/"
-  },
-  "themoviedb": {
-    "key": "b06b4917705eeed4e4b273d4c90fe158"
   },
   "database": {
     "dialect": "sqlite",
