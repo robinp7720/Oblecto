@@ -1,5 +1,6 @@
 import Download from '../../downloader';
 import TmdbMovieArtworkRetriever from './artworkRetrievers/TmdbMovieArtworkRetriever';
+import FanarttvMovieArtworkRetriever from './artworkRetrievers/FanarttvMovieArtworkRetriever';
 import AggregateMovieArtworkRetriever from './AggregateMovieArtworkRetriever';
 
 export default class MovieArtworkDownloader {
@@ -7,6 +8,7 @@ export default class MovieArtworkDownloader {
         this.oblecto = oblecto;
 
         this.movieArtworkRetriever = new AggregateMovieArtworkRetriever();
+        this.movieArtworkRetriever.loadRetriever(new FanarttvMovieArtworkRetriever(this.oblecto));
         this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
