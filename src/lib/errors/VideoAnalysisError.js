@@ -1,5 +1,5 @@
-import ExtendableError from './ExtendableError';
+import WarnExtendableError from './WarnExtendableError';
 
-export default class VideoAnalysisError extends ExtendableError {
+export default class VideoAnalysisError extends WarnExtendableError {
 
 }
