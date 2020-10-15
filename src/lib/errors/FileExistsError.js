@@ -1,5 +1,5 @@
-import ExtendableError from './ExtendableError';
+import DebugExtendableError from './DebugExtendableError';
 
-export default class FileExistsError extends ExtendableError {
+export default class FileExistsError extends DebugExtendableError {
 
 }

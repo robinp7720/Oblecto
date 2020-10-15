@@ -1,3 +1,6 @@
+import WarnExtendableError from '../../errors/WarnExtendableError';
+import logger from '../../../submodules/logger';
+
 export default class AggregateMovieArtworkRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -13,23 +16,24 @@ export default class AggregateMovieArtworkRetriever {
         for (let retriever of this.retrievers) {
             try {
                 return await retriever.retrieveFanart(movie);
-            } catch(e) {
-                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+            } catch(err) {
+                logger.log(err.level || 'ERROR', err.message);
             }
         }
 
-        throw new Error('Could not find a Fanart image');
+        throw new WarnExtendableError(`Could not find fanart of ${movie.movieName}`);
     }
 
     async retrievePoster(movie) {
         for (let retriever of this.retrievers) {
             try {
                 return await retriever.retrievePoster(movie);
-            } catch(e) {
-                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+            } catch(err) {
+                logger.log(err.level || 'ERROR', err.message);
             }
+
         }
 
-        throw new Error('Could not find a Poster image');
+        throw new Error(`Could not find a poster for ${movie.movieName}`);
     }
 }

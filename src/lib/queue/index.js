@@ -8,11 +8,21 @@ export default class Queue {
         this.queue = async.queue((job, callback) => {
             if (!this.jobs[job.id]) return callback();
 
+            let jobTimeout = setTimeout(() => {
+                logger.log('WARN', `Job ${job.id} is taking a long time. Maybe something is wrong?`);
+            }, 20000);
+
             this.jobs[job.id](job.attr)
                 .then(() => {
+                    clearTimeout(jobTimeout);
+
                     callback();
                 })
                 .catch((err) => {
+                    clearTimeout(jobTimeout);
+
+                    logger.log(err.level || 'ERROR', err.message);
+
                     callback();
                 });
         }, concurrency);
