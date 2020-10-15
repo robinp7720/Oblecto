@@ -1,8 +1,8 @@
 import AggregateSeriesArtworkRetriever from './AggregateSeriesArtworkRetriever';
 import Download from '../../downloader';
-import ArtworkUtils from '../ArtworkUtils';
 import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever';
 import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever';
+import FanarttvSeriesArtworkRetriever from './artworkRetrievers/FanarttvSeriesArtworkRetriever';
 
 export default class SeriesArtworkDownloader {
     constructor(oblecto) {
@@ -11,6 +11,7 @@ export default class SeriesArtworkDownloader {
         this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever();
         this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever(this.oblecto));
         this.seriesArtworkRetriever.loadRetriever(new TmdbSeriesArtworkRetriever(this.oblecto));
+        this.seriesArtworkRetriever.loadRetriever(new FanarttvSeriesArtworkRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('downloadEpisodeBanner', (episode) => this.downloadEpisodeBanner(episode));

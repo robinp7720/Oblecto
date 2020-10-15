@@ -8,5 +8,8 @@ export default async (args) => {
         case 'database':
             await require('./database').default(args);
             break;
+        case 'assets':
+            await require('./assets').default(args);
+            break;
     }
 };

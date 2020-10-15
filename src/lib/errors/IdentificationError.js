@@ -1,5 +1,5 @@
-import ExtendableError from './ExtendableError';
+import InfoExtendableError from './InfoExtendableError';
 
-export default class IdentificationError extends ExtendableError {
+export default class IdentificationError extends InfoExtendableError {
 
 }

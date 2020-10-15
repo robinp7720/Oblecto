@@ -1,5 +1,4 @@
 import guessit from '../../../../submodules/guessit';
-import VideoIdentificationError from '../../../errors/VideoIdentificationError';
 import IdentificationError from '../../../errors/IdentificationError';
 
 export default class TvdbEpisodeIdentifier {
@@ -32,7 +31,7 @@ export default class TvdbEpisodeIdentifier {
             return episode;
         }
 
-        throw new VideoIdentificationError();
+        throw new IdentificationError();
     }
 
     async identify(path, series) {

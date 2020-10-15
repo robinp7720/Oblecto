@@ -1,3 +1,5 @@
+import WarnExtendableError from '../../errors/WarnExtendableError';
+
 export default class AggregateSeriesArtworkRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -18,7 +20,7 @@ export default class AggregateSeriesArtworkRetriever {
             }
         }
 
-        throw new Error();
+        throw new WarnExtendableError(`No banner found for episode ${episode.episodeName}`);
     }
 
     async retrieveSeriesPoster(series) {
@@ -30,6 +32,6 @@ export default class AggregateSeriesArtworkRetriever {
             }
         }
 
-        throw new Error();
+        throw new WarnExtendableError(`No poster found for ${series.seriesName}`);
     }
 }
