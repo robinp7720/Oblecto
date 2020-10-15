@@ -11,7 +11,7 @@ export default class TmdbSeriesArtworkRetriever {
     async retrieveEpisodeBanner(episode) {
         let series = await episode.getSeries();
 
-        let data = await this.oblecto.tmdb.tvEpisodeImages({
+        let data = await this.oblecto.tmdb.episodeImages({
             id: series.tmdbid,
             episode_number: episode.airedEpisodeNumber,
             season_number: episode.airedSeason
