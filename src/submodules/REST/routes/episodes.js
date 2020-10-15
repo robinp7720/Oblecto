@@ -55,17 +55,23 @@ export default (server, oblecto) => {
     // Endpoint to get a banner image for an episode based on the local episode ID
     server.get('/episode/:id/banner', async function (req, res, next) {
         // Get episode data
-        let episode = await Episode.findByPk(req.params.id, {
-            include: [File]
-        });
+        let episode;
 
-        let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
+        try {
+            episode = await Episode.findByPk(req.params.id, {
+                include: [File]
+            });
+        } catch (e) {
+            return next(new errors.NotFoundError('Episode not found'));
+        }
+
+        let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.params.size || 'medium');
 
         fs.createReadStream(imagePath)
-            .pipe(res)
             .on('error', ()  => {
                 return next(new errors.NotFoundError('No banner found'));
-            });
+            })
+            .pipe(res);
 
     });
 
