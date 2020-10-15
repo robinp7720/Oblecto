@@ -42,6 +42,9 @@ import {promises as fs} from 'fs';
             console.log('User maintenance:');
             console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
             console.log('oblecto deluser USERNAME');
+            console.log();
+            console.log('Server maintenance:');
+            console.log('oblecto init assets');
 
     }
 })();

@@ -1,12 +1,7 @@
-import mkdirp from 'mkdirp';
 import {v4 as uuidv4} from 'uuid';
 import {promises as fs} from 'fs';
 import NodeRSA from 'node-rsa';
-
-let createDirectory = function (dir) {
-    console.log(`Creating directory ${dir}`);
-    mkdirp(dir);
-};
+import generateAssetDirectories from '../helpers/generateAssetDirectories';
 
 export default async (args) => {
     let config = JSON.parse(await fs.readFile(__dirname + '/../../../../res/config.json'));
@@ -21,26 +16,7 @@ export default async (args) => {
         }
     }
 
-    // Create directories for image assets
-    for (let size in config.artwork.fanart) {
-        createDirectory(`${config.assets.movieFanartLocation}/${size}`);
-    }
-
-    for (let size in config.artwork.poster) {
-        createDirectory(`${config.assets.moviePosterLocation}/${size}`);
-        createDirectory(`${config.assets.showPosterLocation}/${size}`);
-    }
-
-    for (let size in config.artwork.banner) {
-        createDirectory(`${config.assets.episodeBannerLocation}/${size}`);
-    }
-
-    let size = 'original';
-
-    createDirectory(`${config.assets.movieFanartLocation}/${size}`);
-    createDirectory(`${config.assets.moviePosterLocation}/${size}`);
-    createDirectory(`${config.assets.showPosterLocation}/${size}`);
-    createDirectory(`${config.assets.episodeBannerLocation}/${size}`);
+    generateAssetDirectories(config);
 
     config.authentication.secret = uuidv4();
 
