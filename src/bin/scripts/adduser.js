@@ -2,6 +2,7 @@ import {promises as fs} from 'fs';
 import bcrypt from 'bcrypt';
 import {User} from '../../models/user';
 import {initDatabes} from '../../submodules/database';
+import argumentError from './helpers/argumentError';
 
 export default async (args) => {
     const sequelize = initDatabes();
@@ -9,7 +10,7 @@ export default async (args) => {
     let config = JSON.parse(await fs.readFile('/etc/oblecto/config.json'));
 
     if (args.length < 5) {
-        console.log('Invalid number of arguments');
+        argumentError('adduser', ['username', 'password', 'realname', 'email']);
         return;
     }
 
