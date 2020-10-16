@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import {promises as fs} from 'fs';
+import {promises as fs, createReadStream} from 'fs';
 import ffprobe from '../../../submodules/ffprobe';
 import VideoAnalysisError from '../../errors/VideoAnalysisError';
 
@@ -95,7 +95,7 @@ export default class FileUpdater {
      */
     getHashFromFile(file) {
         return new Promise((resolve, reject) => {
-            let fd = fs.createReadStream(file.path);
+            let fd = createReadStream(file.path);
             let hash = crypto.createHash('sha1');
 
             hash.setEncoding('hex');
