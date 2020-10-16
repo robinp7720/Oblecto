@@ -7,7 +7,7 @@ export default class FanarttvSeriesArtworkRetriever {
     }
 
     async retrieveSeriesPoster(series) {
-        if (!(series.tvdbid)) throw new DebugExtendableError(`No tvdb id found for movie ${series.seriesName}`);
+        if (!series.tvdbid) throw new DebugExtendableError(`Fanart.tv Series poster retriever failed for ${series.seriesName}`);
 
         let {data} = await axiosTimeout({
             method: 'get',

@@ -105,7 +105,9 @@ export default class FileUpdater {
                 resolve(hash.read());
             });
 
-            fd.on('error', reject);
+            fd.on('error', () => {
+                reject(new VideoAnalysisError(`Failed to calculate hash for ${file.path}`));
+            });
 
             fd.pipe(hash);
         });
@@ -147,7 +149,13 @@ export default class FileUpdater {
      * @returns {Promise<void>}
      */
     async updateFileFFProbe(file) {
-        let metadata = await ffprobe(file.path);
+        let metadata;
+
+        try {
+            metadata = await ffprobe(file.path);
+        } catch (e) {
+            throw new VideoAnalysisError(`Failed to ffprobe ${file.path}`);
+        }
 
         let primaryVideoStream = await FileUpdater.getPrimaryVideoStream(metadata);
         let primaryAudioStream = await FileUpdater.getPrimaryAudioStream(metadata);
@@ -155,7 +163,7 @@ export default class FileUpdater {
         let duration = metadata.format.duration;
 
         if (isNaN(duration)) {
-            throw new VideoAnalysisError(file.path);
+            throw new VideoAnalysisError(`Could not extract duration from ${file.path}`);
         }
 
         await file.update({

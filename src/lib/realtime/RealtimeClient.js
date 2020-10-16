@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import events from 'events';
 import {TrackEpisode} from '../../models/trackEpisode';
 import {TrackMovie} from '../../models/trackMovie';
+import logger from '../../submodules/logger';
 
 export default class RealtimeClient extends events.EventEmitter {
     /**
@@ -35,8 +36,8 @@ export default class RealtimeClient extends events.EventEmitter {
         try {
             this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
         } catch (e) {
-            console.log('An unauthorized user attempted connection to realtime server');
-            console.log('Disconnecting client...');
+            logger.log('WARN', 'An unauthorized user attempted connection to realtime server');
+            logger.log('WARN', 'Disconnecting client...');
 
             this.socket.disconnect();
         }

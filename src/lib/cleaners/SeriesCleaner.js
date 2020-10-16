@@ -12,6 +12,7 @@ export default class SeriesCleaner {
     }
 
     async removeFileLessEpisodes() {
+        logger.log('INFO', 'Removing all episodes without linked files');
         let results = await Episode.findAll({
             include: [File]
         });
@@ -27,6 +28,7 @@ export default class SeriesCleaner {
     }
 
     async removePathLessShows() {
+        logger.log('INFO', 'Removing series without at attached path');
         await Series.destroy({
             where: {
                 directory: ''
@@ -35,6 +37,7 @@ export default class SeriesCleaner {
     }
 
     async removeEpisodeslessShows() {
+        logger.log('INFO', 'Removing series without attached episodes');
         let results = await Series.findAll({
             include: [Episode]
         });

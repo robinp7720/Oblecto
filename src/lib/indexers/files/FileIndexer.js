@@ -32,7 +32,7 @@ export default class FileIndexer {
         });
 
         if (!fileInserted) {
-            throw new FileExistsError();
+            throw new FileExistsError(`${videoPath} is already in the file database`);
         }
 
         this.oblecto.queue.queueJob('indexFileStreams', file);

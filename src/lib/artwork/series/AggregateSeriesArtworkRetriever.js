@@ -1,4 +1,5 @@
 import WarnExtendableError from '../../errors/WarnExtendableError';
+import logger from '../../../submodules/logger';
 
 export default class AggregateSeriesArtworkRetriever {
     constructor(oblecto) {
@@ -16,7 +17,7 @@ export default class AggregateSeriesArtworkRetriever {
             try {
                 return await retriever.retrieveEpisodeBanner(episode);
             } catch(e) {
-                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                logger.log(e);
             }
         }
 
@@ -28,7 +29,7 @@ export default class AggregateSeriesArtworkRetriever {
             try {
                 return await retriever.retrieveSeriesPoster(series);
             } catch(e) {
-                //console.log(`Artwork url retrieval using ${retriever.constructor.name} failed`);
+                logger.log(e);
             }
         }
 

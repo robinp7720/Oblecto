@@ -21,7 +21,7 @@ export default class Queue {
                 .catch((err) => {
                     clearTimeout(jobTimeout);
 
-                    logger.log(err.level || 'ERROR', err.message);
+                    logger.log(err);
 
                     callback();
                 });
