@@ -1,11 +1,12 @@
 import {User} from '../../models/user';
 import {initDatabes} from '../../submodules/database';
+import argumentError from './helpers/argumentError';
 
 export default async (args) => {
     const sequelize = initDatabes();
 
     if (args.length < 2) {
-        console.log('Invalid number of arguments');
+        argumentError('deluser', ['username']);
         return;
     }
 
