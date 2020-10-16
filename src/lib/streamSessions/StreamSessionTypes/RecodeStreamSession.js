@@ -64,8 +64,9 @@ export default class RecodeStreamSession extends StreamSession {
 
         let audioStreamSelected = false;
 
+
         for (let stream of audioStreams) {
-            if (stream.tags_language === 'eng' && streams.index !== undefined){
+            if (stream.tags_language === 'eng' && stream.index !== undefined){
                 outputOptions.push(`-map 0:${stream.index}`);
                 audioStreamSelected = true;
             }
