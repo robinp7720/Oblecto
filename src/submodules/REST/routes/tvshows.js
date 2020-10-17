@@ -1,10 +1,10 @@
 import path from 'path';
 import fs from 'fs';
 import sequelize from 'sequelize';
+import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
 import errors from 'restify-errors';
-import jimp from 'jimp';
 
 import {Series} from '../../../models/series';
 import {Episode} from '../../../models/episode';
@@ -113,9 +113,9 @@ export default (server, oblecto) => {
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await jimp.read(uploadPath);
-
-            let ratio = image.bitmap.height / image.bitmap.width;
+            let image = await sharp(uploadPath);
+            let metadata = await image.metadata();
+            let ratio = metadata.height / metadata.width;
 
             if (!(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));

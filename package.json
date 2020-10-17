@@ -30,7 +30,6 @@
     "fluent-ffmpeg": "^2.1.2",
     "guessit-exec": "0.0.1",
     "guessit-wrapper": "^1.0.1",
-    "jimp": "^0.16.1",
     "jsonwebtoken": "^8.5.1",
     "mime-types": "^2.1.27",
     "mkdirp": "^1.0.4",

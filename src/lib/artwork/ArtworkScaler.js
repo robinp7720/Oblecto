@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+sharp.cache(false);
 
 export default class ImageScaler {
     constructor(oblecto) {
