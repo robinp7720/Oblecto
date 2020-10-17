@@ -2,6 +2,7 @@ import {promises as fs} from 'fs';
 import generateAssetDirectories from '../helpers/generateAssetDirectories';
 
 export default async (args) => {
+    console.log('Initing assets');
     try {
         let config = JSON.parse(await fs.readFile('/etc/oblecto/config.json'));
         generateAssetDirectories(config);

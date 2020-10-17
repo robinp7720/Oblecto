@@ -16,6 +16,11 @@ export default async (args) => {
         }
     });
 
+    if (user == null){
+        console.log('No user found to delete');
+        return;
+    }
+
     await user.destroy();
 
     console.log('User has been deleted');

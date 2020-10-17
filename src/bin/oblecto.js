@@ -1,61 +1,74 @@
 #!/usr/bin/env node
 import {promises as fs} from 'fs';
+import cliManager from './cliManager';
 
-(async () => {
-    let packageInfo = JSON.parse(await fs.readFile(__dirname + '/../../package.json'));
-    let args = process.argv.slice(2);
+let CLI = new cliManager();
+CLI.registerCommand({
+    args: ['init'],
+    executePath: './scripts/init/general',
+    runType: 'default',
+    category: 'First-time Setup',
+    description: 'Setup Oblecto'
+});
+CLI.registerCommand({
+    args: ['init', 'database'],
+    executePath: './scripts/init/database',
+    runType: 'default',
+    category: 'First-time Setup',
+    description: 'Setup Database'
+});
+CLI.registerCommand({
+    args: ['help'],
+    runType: 'help'
+});
+CLI.registerCommand({
+    args: ['start'],
+    executePath: '../core/index',
+    runType: 'start',
+    category: 'Startup',
+    description: 'Start Oblecto without the TUI'
+});
+CLI.registerCommand({
+    args: ['start-tui'],
+    executePath: '../core/graphical',
+    runType: 'start',
+    category: 'Startup',
+    description: 'Start Oblecto with the TUI'
+});
+CLI.registerCommand({
+    args: ['adduser', '[username]', '[password]', '[realname]', '[email]'],
+    executePath: './scripts/adduser',
+    runType: 'default',
+    category: 'User maintenance',
+    description: 'Add user'
+});
+CLI.registerCommand({
+    args: ['deluser', '[username]'],
+    executePath: './scripts/deluser',
+    runType: 'default',
+    category: 'User maintenance',
+    description: 'Delete user'
+});
+CLI.registerCommand({
+    args: ['changepassword', '[username]', '[password]'],
+    executePath: './scripts/changepassword',
+    runType: 'default',
+    category: 'User maintenance',
+    description: 'Change user password'
+});
+CLI.registerCommand({
+    args: ['removepassword', '[username]'],
+    executePath: './scripts/removepassword',
+    runType: 'default',
+    category: 'User maintenance',
+    description: 'Remove user password'
+});
+CLI.registerCommand({
+    args: ['init', 'assets'],
+    executePath: './scripts/init/assets',
+    runType: 'default',
+    category: 'Server maintenance',
+    description: 'Create Asset Folders'
+});
 
-    switch (args[0]) {
-        case 'start':
-            require('../core/index').default.start();
-            break;
-        case 'start-tui':
-            require('../core/graphical').default.start();
-            break;
-
-        case 'init':
-            await require('./scripts/init').default(args);
-
-            break;
-
-        case 'adduser':
-            await require('./scripts/adduser').default(args);
-
-            break;
-
-        case 'changepassword':
-            await require('./scripts/changepassword').default(args);
-            break;
-
-        case 'removepassword':
-            await require('./scripts/removepassword').default(args);
-            break;
-
-        case 'deluser':
-            await require('./scripts/deluser').default(args);
-
-            break;
-
-        default:
-            console.log(`Oblecto ${packageInfo.version}`);
-            console.log();
-            console.log('First time setup:');
-            console.log('oblecto init');
-            console.log('oblecto init database');
-            console.log();
-            console.log('Start oblecto without TUI:');
-            console.log('oblecto start');
-            console.log('Start oblecto with TUI:');
-            console.log('oblecto start-tui');
-            console.log();
-            console.log('User maintenance:');
-            console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
-            console.log('oblecto deluser USERNAME');
-            console.log('oblecto changepassword USERNAME PASSWORD');
-            console.log('oblecto removepassword USERNAME');
-            console.log();
-            console.log('Server maintenance:');
-            console.log('oblecto init assets');
-
-    }
-})();
+CLI.execute(process.argv.slice(2));
