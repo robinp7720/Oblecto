@@ -1,7 +1,7 @@
 import fs from 'fs';
 import errors from 'restify-errors';
 import sequelize from 'sequelize';
-import jimp from 'jimp';
+import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
 
@@ -125,7 +125,7 @@ export default (server, oblecto) => {
             return next(new errors.NotFoundError('Movie does not exist'));
         }
 
-        let posterPath = this.oblecto.artworkUtils.moviePosterPath(movie);
+        let posterPath = oblecto.artworkUtils.moviePosterPath(movie);
 
         if (req.files.length < 1) {
             return next(new errors.MissingParameter('Image file is missing'));
@@ -134,14 +134,13 @@ export default (server, oblecto) => {
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await jimp.read(uploadPath);
-
-            let ratio = image.bitmap.height / image.bitmap.width;
+            let image = await sharp(uploadPath);
+            let metadata = await image.metadata();
+            let ratio = metadata.height / metadata.width;
 
             if ( !(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
             }
-
         } catch (e) {
             return next(new errors.InvalidContent('File is not an image'));
         }
@@ -150,11 +149,11 @@ export default (server, oblecto) => {
             fs.copyFile(uploadPath, posterPath, (err) => {
                 if (err) throw err;
 
-                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
-                    this.oblecto.queue.pushJob('rescaleImage', {
-                        from: this.oblecto.artworkUtils.moviePosterPath(movie),
-                        to: this.oblecto.artworkUtils.moviePosterPath(movie, size),
-                        width: this.oblecto.config.artwork.poster[size]
+                for (let size of Object.keys(oblecto.config.artwork.poster)) {
+                    oblecto.queue.pushJob('rescaleImage', {
+                        from: oblecto.artworkUtils.moviePosterPath(movie),
+                        to: oblecto.artworkUtils.moviePosterPath(movie, size),
+                        width: oblecto.config.artwork.poster[size]
                     });
                 }
 
@@ -202,9 +201,9 @@ export default (server, oblecto) => {
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await jimp.read(uploadPath);
-
-            let ratio = image.bitmap.width / image.bitmap.height;
+            let image = await sharp(uploadPath);
+            let metadata = await image.metadata();
+            let ratio = metadata.height / metadata.width;
 
             if ( !(1 <= ratio <= 2)) {
                 return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
@@ -218,11 +217,11 @@ export default (server, oblecto) => {
             fs.copyFile(uploadPath, fanartPath, (err) => {
                 if (err) throw err;
 
-                for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
-                    this.oblecto.queue.pushJob('rescaleImage', {
-                        from: this.oblecto.artworkUtils.movieFanartPath(movie),
-                        to: this.oblecto.artworkUtils.movieFanartPath(movie, size),
-                        width: this.oblecto.config.artwork.poster[size]
+                for (let size of Object.keys(oblecto.config.artwork.poster)) {
+                    oblecto.queue.pushJob('rescaleImage', {
+                        from: oblecto.artworkUtils.movieFanartPath(movie),
+                        to: oblecto.artworkUtils.movieFanartPath(movie, size),
+                        width: oblecto.config.artwork.poster[size]
                     });
                 }
 
