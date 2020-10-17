@@ -1,3 +1,6 @@
+import logger from '../../submodules/logger';
+import IdentificationError from '../errors/IdentificationError';
+
 export default class AggregateUpdateRetriever {
     constructor() {
         this.retrievers = [];
@@ -16,11 +19,11 @@ export default class AggregateUpdateRetriever {
 
                 information = {...information, ...currentInformation};
             } catch (e) {
-                console.log(e);
+                logger.log(e)
             }
         }
 
-        if (Object.keys(information).length === 0) throw new Error();
+        if (Object.keys(information).length === 0) throw new IdentificationError('No identification match could be found');
 
         return information;
     }

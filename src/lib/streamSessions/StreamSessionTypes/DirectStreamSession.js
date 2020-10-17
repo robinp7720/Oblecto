@@ -1,7 +1,7 @@
 import mimeTypes from 'mime-types';
 import StreamSession from '../StreamSession';
 import fs from 'fs';
-
+import logger from '../../../submodules/logger';
 
 export default class DirectStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
@@ -27,7 +27,7 @@ export default class DirectStreamSession extends StreamSession {
         try {
             fs.createReadStream(this.file.path).pipe(this.outputStream);
         } catch (e) {
-            console.log(e);
+            logger.log(e);
         }
     }
 }

@@ -11,6 +11,7 @@ export default class MovieCleaner {
     }
 
     async removeFileLessMovies() {
+        logger.log('INFO', 'Removing movies without linked files');
         let results = await Movie.findAll({
             include: [File]
         });

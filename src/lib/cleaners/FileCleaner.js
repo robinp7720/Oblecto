@@ -10,6 +10,7 @@ export default class FileCleaner{
     }
 
     async removedDeletedFiled () {
+        logger.log('INFO', 'Removing all non existent files from the database');
         let files = await File.findAll();
 
         for (let file of files) {
@@ -25,6 +26,7 @@ export default class FileCleaner{
     }
 
     async removeAssoclessFiles () {
+        logger.log('INFO', 'Removing files from the database without any attached media items');
         let results = await File.findAll({
             include: [Movie, Episode]
         });
