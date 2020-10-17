@@ -27,6 +27,10 @@ import {promises as fs} from 'fs';
             await require('./scripts/changepassword').default(args);
             break;
 
+        case 'removepassword':
+            await require('./scripts/removepassword').default(args);
+            break;
+
         case 'deluser':
             await require('./scripts/deluser').default(args);
 
@@ -48,6 +52,7 @@ import {promises as fs} from 'fs';
             console.log('oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
             console.log('oblecto deluser USERNAME');
             console.log('oblecto changepassword USERNAME PASSWORD');
+            console.log('oblecto removepassword USERNAME');
             console.log();
             console.log('Server maintenance:');
             console.log('oblecto init assets');
