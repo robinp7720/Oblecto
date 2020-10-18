@@ -1,3 +1,5 @@
+import promiseTimeout from '../../../../submodules/promiseTimeout';
+
 export default class TmdbMovieRetriever {
 
     /**
@@ -8,7 +10,7 @@ export default class TmdbMovieRetriever {
     }
 
     async retrieveInformation(movie) {
-        let movieInfo = await this.oblecto.tmdb.movieInfo({ id: movie.tmdbid });
+        let movieInfo = await promiseTimeout(this.oblecto.tmdb.movieInfo({ id: movie.tmdbid }));
 
         let data = {
             imdbid: movieInfo.imdb_id,

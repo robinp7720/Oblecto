@@ -36,7 +36,7 @@ export default class SeriesUpdateCollector {
         let episodes = await Episode.findAll();
 
         for (let episode of episodes) {
-            this.collectEpisode(episode);
+            await this.collectEpisode(episode);
         }
     }
 
@@ -48,7 +48,7 @@ export default class SeriesUpdateCollector {
         let all = await Series.findAll();
 
         for (let series of all) {
-            this.collectSeries(series);
+            await this.collectSeries(series);
         }
     }
 

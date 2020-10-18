@@ -1,6 +1,5 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
-import FileExistsError from '../../errors/FileExistsError';
 import { Movie } from '../../../models/movie';
 
 export default class MovieIndexer {

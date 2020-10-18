@@ -1,6 +1,6 @@
-import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
 import SeriesIdentifer from '../SeriesIdentifer';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
 export default class TmdbSeriesIdentifier extends SeriesIdentifer {
     constructor(oblecto) {
@@ -20,9 +20,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
         throw new IdentificationError();
     }
 
-    async identify(path) {
-        const guessitIdentification = await guessit.identify(path);
-
+    async identify(path, guessitIdentification) {
         let cacheId = guessitIdentification.title;
 
         if (guessitIdentification.year) {
@@ -33,7 +31,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await this.oblecto.tmdb.searchTv({query: guessitIdentification.title})).results;
+        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({query: guessitIdentification.title}))).results;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError();

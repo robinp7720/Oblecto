@@ -1,5 +1,7 @@
 import WarnExtendableError from '../../errors/WarnExtendableError';
 import logger from '../../../submodules/logger';
+import Downloader from '../../downloader';
+import DebugExtendableError from '../../errors/DebugExtendableError';
 
 export default class AggregateMovieArtworkRetriever {
     constructor(oblecto) {
@@ -15,25 +17,30 @@ export default class AggregateMovieArtworkRetriever {
     async retrieveFanart(movie) {
         for (let retriever of this.retrievers) {
             try {
-                return await retriever.retrieveFanart(movie);
-            } catch(err) {
-                logger.log(err.level || 'ERROR', err.message);
+                let urls = await retriever.retrieveFanart(movie);
+                if (urls.length === 0) throw new DebugExtendableError('No URLs found');
+
+                return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.movieFanartPath(movie));
+            } catch(e) {
+                logger.log(e);
             }
         }
 
-        throw new WarnExtendableError(`Could not find fanart of ${movie.movieName}`);
+        throw new WarnExtendableError(`No fanart found for movie ${movie.movieName}`);
     }
 
     async retrievePoster(movie) {
         for (let retriever of this.retrievers) {
             try {
-                return await retriever.retrievePoster(movie);
-            } catch(err) {
-                logger.log(err.level || 'ERROR', err.message);
-            }
+                let urls = await retriever.retrievePoster(movie);
+                if (urls.length === 0) throw new DebugExtendableError('No URLs found');
 
+                return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.moviePosterPath(movie));
+            } catch(e) {
+                logger.log(e);
+            }
         }
 
-        throw new Error(`Could not find a poster for ${movie.movieName}`);
+        throw new WarnExtendableError(`No poster found for movie ${movie.movieName}`);
     }
 }

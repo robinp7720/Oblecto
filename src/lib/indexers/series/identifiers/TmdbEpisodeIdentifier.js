@@ -1,18 +1,17 @@
 import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
 import EpisodeIdentifier from '../EpisodeIdentifier';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
 export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
-    async identify(path, series) {
+    async identify(path, guessitIdentification, series) {
         if (!series.tmdbid) throw new IdentificationError();
 
-        const guessitIdentification = await guessit.identify(path);
-
-        let episode = await this.oblecto.tmdb.episodeInfo({
+        let episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
             id: series.tmdbid,
             season_number: guessitIdentification.season || 1,
             episode_number: guessitIdentification.episode
-        });
+        }));
 
         return {
             tmdbid: episode.id,

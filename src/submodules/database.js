@@ -1,5 +1,6 @@
 import Sequelize from 'sequelize';
 import config from '../config.js';
+import logger from './logger';
 
 import {Episode, episodeColumns} from '../models/episode';
 import {EpisodeFiles, episodeFilesColumns} from '../models/episodeFiles';
@@ -19,9 +20,9 @@ export function initDatabase() {
     let poolmax = config.queue.concurrency;
 
     if (dialect === 'sqlite') {
+        logger.log('INFO', 'Using SQLITE, setting poolmax to 1');
         poolmax = 1;
     }
-
 
     let options = {
         dialect,
@@ -34,6 +35,10 @@ export function initDatabase() {
             min: 0,
             acquire: 30000,
             idle: 10000
+        },
+
+        retry: {
+            max: 5
         }
     };
 

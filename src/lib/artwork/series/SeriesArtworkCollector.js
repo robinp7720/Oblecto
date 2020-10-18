@@ -54,7 +54,7 @@ export default class SeriesArtworkCollector {
         let episodes = await Episode.findAll();
 
         for (let episode of episodes) {
-            this.collectArtworkEpisodeBanner(episode);
+            await this.collectArtworkEpisodeBanner(episode);
         }
     }
 
@@ -66,7 +66,7 @@ export default class SeriesArtworkCollector {
         let allSeries = await Series.findAll();
 
         for (let series of allSeries) {
-            this.collectArtworkSeriesPoster(series);
+            await this.collectArtworkSeriesPoster(series);
         }
     }
 
@@ -75,7 +75,7 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAll() {
-        await this.collectAllEpisodeBanners();
         await this.collectAllSeriesPosters();
+        await this.collectAllEpisodeBanners();
     }
 }

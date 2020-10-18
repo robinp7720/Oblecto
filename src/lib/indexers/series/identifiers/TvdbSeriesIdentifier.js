@@ -8,10 +8,6 @@ export default class TvdbSeriesIdentifier {
         this.tvShowCache = {};
     }
 
-    async tvShowInfo(id) {
-        return tvdb.getSeriesById(id);
-    }
-
     retrieveSeries(tvdbSearch, guessitIdentification) {
         for (let series of tvdbSearch) {
             if (!series.firstAired) continue;
@@ -23,9 +19,7 @@ export default class TvdbSeriesIdentifier {
         throw new IdentificationError();
     }
 
-    async identify(path) {
-        const guessitIdentification = await guessit.identify(path);
-
+    async identify(path, guessitIdentification) {
         let cacheId = guessitIdentification.title;
 
         if (guessitIdentification.year) {
