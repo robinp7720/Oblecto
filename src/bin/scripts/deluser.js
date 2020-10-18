@@ -1,9 +1,9 @@
 import {User} from '../../models/user';
-import {initDatabes} from '../../submodules/database';
+import {initDatabase} from '../../submodules/database';
 import argumentError from './helpers/argumentError';
 
 export default async (args) => {
-    const sequelize = initDatabes();
+    const sequelize = initDatabase();
 
     if (args.length < 2) {
         argumentError('deluser', ['username']);

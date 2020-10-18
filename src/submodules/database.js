@@ -14,7 +14,7 @@ import {TrackEpisode, trackEpisodesColumns} from '../models/trackEpisode';
 import {User, userColumns} from '../models/user';
 import {Stream, streamColumns} from '../models/stream';
 
-export function initDatabes() {
+export function initDatabase() {
     let dialect = config.database.dialect || 'sqlite';
     let poolmax = config.queue.concurrency;
 
