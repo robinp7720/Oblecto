@@ -75,7 +75,7 @@ export default (server, oblecto) => {
 
     });
 
-    server.put('/episode/:id/banner', async function (req, res, next) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res, next) {
         let episode = await Episode.findByPk(req.params.id, {
             include: [File]
         });
