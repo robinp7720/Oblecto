@@ -40,14 +40,14 @@ import SeriesCleaner from '../cleaners/SeriesCleaner';
 import FileCleaner from '../cleaners/FileCleaner';
 import FileIndexer from '../indexers/files/FileIndexer';
 
-import {initDatabes} from '../../submodules/database';
+import {initDatabase} from '../../submodules/database';
 import StreamSessionController from '../streamSessions/StreamSessionController';
 
 export default class Oblecto {
     constructor(config) {
         this.config = config;
 
-        this.database = initDatabes();
+        this.database = initDatabase();
 
         this.tvdb = new TVDB(this.config.tvdb.key);
         this.tmdb = new MovieDb(this.config.themoviedb.key);
