@@ -116,7 +116,7 @@ export default (server, oblecto) => {
 
     });
 
-    server.put('/movie/:id/poster', async function (req, res, next) {
+    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res, next) {
         let movie = await Movie.findByPk(req.params.id, {
             include: [File]
         });
@@ -183,7 +183,7 @@ export default (server, oblecto) => {
             .pipe(res);
     });
 
-    server.put('/movie/:id/fanart', async function (req, res, next) {
+    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res, next) {
         let movie = await Movie.findByPk(req.params.id, {
             include: [File]
         });

@@ -92,7 +92,7 @@ export default (server, oblecto) => {
             .pipe(res);
     });
 
-    server.put('/series/:id/poster', async function (req, res, next) {
+    server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req, res, next) {
         let show = await Series.findByPk(req.params.id);
 
         if (!show) {
