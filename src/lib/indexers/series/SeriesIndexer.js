@@ -1,13 +1,18 @@
+import {Op} from 'sequelize';
+
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 
 import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
+import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
+import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
 import IdentificationError from '../../errors/IdentificationError';
-import logger from '../../../submodules/logger'
+import logger from '../../../submodules/logger';
 import guessit from '../../../submodules/guessit';
+
 
 export default class SeriesIndexer {
     /**
@@ -20,11 +25,25 @@ export default class SeriesIndexer {
         this.seriesIdentifier = new AggregateIdentifier();
         this.episodeIdentifer = new AggregateIdentifier();
 
-        //this.seriesIdentifier.loadIdentifier(new TvdbSeriesIdentifier());
-        this.seriesIdentifier.loadIdentifier(new TmdbSeriesIdentifier(this.oblecto));
+        const seriesIdentifiers = {
+            'tmdb': TmdbSeriesIdentifier,
+            'tvdb': TvdbSeriesIdentifier,
+        };
 
-        //this.episodeIdentifer.loadIdentifier(new TvdbEpisodeIdentifier());
-        this.episodeIdentifer.loadIdentifier(new TmdbEpisodeIdentifier(this.oblecto));
+        const episodeIdentifiers = {
+            'tmdb': TmdbEpisodeIdentifier,
+            'tvdb': TvdbEpisodeIdentifier
+        };
+
+        for (let identifier of this.oblecto.config.tvshows.seriesIdentifiers) {
+            logger.log('DEBUG', `Loading ${identifier} series identifier`);
+            this.seriesIdentifier.loadIdentifier(new seriesIdentifiers[identifier](this.oblecto));
+        }
+
+        for (let identifier of this.oblecto.config.tvshows.episodeIdentifiers) {
+            logger.log('DEBUG', `Loading ${identifier} episode identifier`);
+            this.episodeIdentifer.loadIdentifier(new episodeIdentifiers[identifier](this.oblecto));
+        }
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path));
@@ -36,22 +55,23 @@ export default class SeriesIndexer {
         try {
             seriesIdentification = await this.seriesIdentifier.identify(file.path, guessitIdentification);
         } catch (e) {
-            throw new IdentificationError(`Could not identify series of ${file.path}`)
+            throw new IdentificationError(`Could not identify series of ${file.path}`);
         }
 
-        logger.log('DEBUG', `${file.path} series identified: ${seriesIdentification.seriesName}`)
+        logger.log('DEBUG', `${file.path} series identified: ${seriesIdentification.seriesName}`);
 
-        let seriesQuery = {};
+        const identifiers = ['tvdbid', 'tmdbid'];
 
-        if (seriesIdentification.tvdbid) seriesQuery['tvdbid'] = seriesIdentification.tvdbid;
-        if (seriesIdentification.tmdbid) seriesQuery['tmdbid'] = seriesIdentification.tmdbid;
+        let seriesQuery = [];
 
-        delete seriesIdentification.tvdbid;
-        delete seriesIdentification.tmdbid;
+        for (let identifier of identifiers) {
+            if (!seriesIdentification[identifier]) continue;
+            seriesQuery.push({[identifier]: seriesIdentification[identifier]});
+        }
 
         let [series, seriesCreated] = await Series.findOrCreate(
             {
-                where: seriesQuery,
+                where: {[Op.or] : seriesQuery},
                 defaults: seriesIdentification
             });
 
@@ -70,28 +90,19 @@ export default class SeriesIndexer {
 
         let series = await this.indexSeries(file, guessitIdentification);
 
-        let episodeIdentification
+        let episodeIdentification;
 
         try {
             episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, series);
         } catch (e) {
-            throw new IdentificationError(`Could not identify episode ${episodePath}`)
+            throw new IdentificationError(`Could not identify episode ${episodePath}`);
         }
 
         logger.log('DEBUG', `${file.path} episode identified ${episodeIdentification.episodeName}`);
 
-        let episodeQuery = {};
-
-        if (episodeIdentification.tvdbid) episodeQuery['tvdbid'] = episodeIdentification.tvdbid;
-        if (episodeIdentification.tmdbid) episodeQuery['tmdbid'] = episodeIdentification.tmdbid;
-
-        delete episodeIdentification.tvdbid;
-        delete episodeIdentification.tmdbid;
-
         let [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 where: {
-                    ...episodeQuery,
                     airedSeason: episodeIdentification.airedSeason || 1,
                     airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
 

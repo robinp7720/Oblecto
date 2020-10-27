@@ -1,5 +1,6 @@
-import logger from '../../../../submodules/logger'
+import logger from '../../../../submodules/logger';
 import promiseTimeout from '../../../../submodules/promiseTimeout';
+import DebugExtendableError from '../../../errors/DebugExtendableError';
 
 export default class TmdbEpisodeRetriever {
     constructor(oblecto) {
@@ -9,13 +10,15 @@ export default class TmdbEpisodeRetriever {
     async retrieveInformation(episode) {
         let series = await episode.getSeries();
 
+        if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
+
         let episodeInfo = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
             id: series.tmdbid,
             season_number: episode.airedSeason,
             episode_number: episode.airedEpisodeNumber
         }));
 
-        logger.log('DEBUG',`Episode information for ${episode.episodeName} retrieved`);
+        logger.log('DEBUG',`Episode information for ${episode.episodeName} retrieved from tmdb`);
 
         let data = {
             episodeName: episodeInfo.name,

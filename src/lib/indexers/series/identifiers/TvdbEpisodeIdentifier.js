@@ -1,27 +1,30 @@
-import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
+import EpisodeIdentifier from '../EpisodeIdentifier';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
-export default class TvdbEpisodeIdentifier {
+export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
     constructor(oblecto) {
-        this.oblecto = oblecto;
+        super(oblecto);
 
         this.episodeCache = {};
     }
 
     async getEpisodes(tvdbId) {
-        // TODO; We should probably move caching directly into the library
+        // TODO: Caching should be moved somewhere else or at least improved. This implementation is terrible
         if (this.episodeCache[tvdbId]) {
             return this.episodeCache[tvdbId];
         }
 
         if (this.episodeCache.length > 100) this.episodeCache = {};
 
-        this.episodeCache[tvdbId] = await this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId);
+        this.episodeCache[tvdbId] = await promiseTimeout(this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId));
 
         return this.episodeCache[tvdbId];
     }
 
-    retrieveEpisode(tvdbEpisodes, guessitIdentification) {
+    async retrieveEpisode(series, guessitIdentification) {
+        let tvdbEpisodes = await this.getEpisodes(series.tvdbid);
+
         for (let episode of tvdbEpisodes) {
             if (episode.episodeName === guessitIdentification.episode_name) return episode;
 
@@ -37,14 +40,13 @@ export default class TvdbEpisodeIdentifier {
     async identify(path, guessitIdentification, series) {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
 
-        // Some single  season shows don't have a season in the title, therefor whe should set it to 1 by default
+        // Some single season shows don't have a season in the title, therefor whe should set it to 1 by default
+        // TODO: This should probably be done directly in the SeriesIndex.js file to avoid duplication in every identifier
         if (!guessitIdentification.season) {
             guessitIdentification.season = 1;
         }
 
-        let tvdbEpisodes = await this.getEpisodes(series.tvdbid);
-
-        let episode = this.retrieveEpisode(tvdbEpisodes, guessitIdentification);
+        let episode = await this.retrieveEpisode(series, guessitIdentification);
 
         return {
             tvdbid: episode.id,
