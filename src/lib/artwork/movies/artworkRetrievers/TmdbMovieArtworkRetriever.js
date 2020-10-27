@@ -12,7 +12,13 @@ export default class TmdbMovieArtworkRetriever {
             id: movie.tmdbid
         });
 
-        return `https://image.tmdb.org/t/p/original${data.backdrops[0]['file_path']}`;
+        let urls = [];
+
+        for (let image of data.backdrops) {
+            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
+        }
+
+        return urls;
     }
 
     async retrievePoster(movie) {
@@ -22,6 +28,12 @@ export default class TmdbMovieArtworkRetriever {
             id: movie.tmdbid
         });
 
-        return `https://image.tmdb.org/t/p/original${data.posters[0]['file_path']}`;
+        let urls = [];
+
+        for (let image of data.posters) {
+            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
+        }
+
+        return urls;
     }
 }

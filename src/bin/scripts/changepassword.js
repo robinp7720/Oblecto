@@ -1,11 +1,11 @@
 import {User} from '../../models/user';
-import {initDatabes} from '../../submodules/database';
+import {initDatabase} from '../../submodules/database';
 import argumentError from './helpers/argumentError';
 import bcrypt from 'bcrypt';
 import {promises as fs} from "fs";
 
 export default async (args) => {
-    const sequelize = initDatabes();
+    const sequelize = initDatabase();
 
     let config = JSON.parse(await fs.readFile('/etc/oblecto/config.json'));
 

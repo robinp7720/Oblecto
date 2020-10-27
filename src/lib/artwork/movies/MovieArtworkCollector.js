@@ -52,7 +52,7 @@ export default class MovieArtworkCollector {
         let movies = await Movie.findAll();
 
         for (let movie of movies) {
-            this.collectArtworkMovieFanart(movie);
+            await this.collectArtworkMovieFanart(movie);
         }
     }
 
@@ -64,7 +64,7 @@ export default class MovieArtworkCollector {
         let movies = await Movie.findAll();
 
         for (let movie of movies) {
-            this.collectArtworkMoviePoster(movie);
+            await this.collectArtworkMoviePoster(movie);
         }
     }
 
@@ -73,7 +73,7 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAll() {
-        await this.collectAllMovieFanart();
         await this.collectAllMoviePosters();
+        await this.collectAllMovieFanart();
     }
 }

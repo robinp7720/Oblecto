@@ -15,3 +15,8 @@ If you have further questions or need help setting up Oblecto, please don't hesi
 
 ## I've set this thing up. Now where's the place I actually watch my media?
 Simply go to the oblecto front end at ```localhost:8080```. Oblecto will redirect you to the frontend. The frontend is maintained sepperatly at https://github.com/robinp7720/Oblecto-Web
+
+
+## Powered by
+<img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" height="150" title="TMDb API">&emsp;
+<img src="https://www.thetvdb.com/images/attribution/logo2.png" height="150" title="tvdb API">

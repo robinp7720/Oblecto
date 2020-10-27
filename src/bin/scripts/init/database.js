@@ -1,7 +1,7 @@
-import {initDatabes} from '../../../submodules/database';
+import {initDatabase} from '../../../submodules/database';
 
 export default async (args) => {
-    const sequelize = initDatabes();
+    const sequelize = initDatabase();
 
     let options = {};
 

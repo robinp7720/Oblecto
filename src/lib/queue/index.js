@@ -5,11 +5,11 @@ export default class Queue {
     constructor(concurrency) {
         this.jobs = {};
 
-        this.queue = async.queue((job, callback) => {
+        this.queue = async.priorityQueue((job, callback) => {
             if (!this.jobs[job.id]) return callback();
 
             let jobTimeout = setTimeout(() => {
-                logger.log('WARN', `Job ${job.id} is taking a long time. Maybe something is wrong?`);
+                logger.log('WARN', `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
             this.jobs[job.id](job.attr)
@@ -48,8 +48,17 @@ export default class Queue {
         this.queue.push({
             id,
             attr: job
-        });
+        }, 5);
     }
+
+    lowPriorityJob(id, job) {
+        this.queue.push({
+            id,
+            attr: job
+        }, 20);
+    }
+
+
 
     /**
      *  Add a job to the front of the queue
@@ -57,9 +66,9 @@ export default class Queue {
      * @param {object} job
      */
     pushJob(id, job) {
-        this.queue.unshift({
+        this.queue.push({
             id,
             attr: job
-        });
+        },0);
     }
 }

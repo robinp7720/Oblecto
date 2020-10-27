@@ -1,3 +1,5 @@
+import promiseTimeout from '../../../../submodules/promiseTimeout';
+
 export default class TmdbSeriesRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -9,7 +11,7 @@ export default class TmdbSeriesRetriever {
      * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>}
      */
     async retrieveInformation(series) {
-        let seriesInfo = await this.oblecto.tmdb.tvInfo({ id: series.tmdbid });
+        let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }));
 
         let data = {
             seriesName: seriesInfo.name,
@@ -31,7 +33,7 @@ export default class TmdbSeriesRetriever {
         let externalIds = {};
 
         if (!(series.tvdbid && series.imdbid)) {
-            externalIds = await this.oblecto.tmdb.tvExternalIds({id: series.tmdbid});
+            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({id: series.tmdbid}));
         }
 
         if (!series.tvdbid) {

@@ -1,5 +1,7 @@
 import WarnExtendableError from '../../errors/WarnExtendableError';
 import logger from '../../../submodules/logger';
+import DebugExtendableError from '../../errors/DebugExtendableError';
+import Downloader from '../../downloader';
 
 export default class AggregateSeriesArtworkRetriever {
     constructor(oblecto) {
@@ -15,7 +17,10 @@ export default class AggregateSeriesArtworkRetriever {
     async retrieveEpisodeBanner(episode) {
         for (let retriever of this.retrievers) {
             try {
-                return await retriever.retrieveEpisodeBanner(episode);
+                let urls = await retriever.retrieveEpisodeBanner(episode);
+                if (urls.length === 0) throw new DebugExtendableError('No URLs found');
+
+                return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.episodeBannerPath(episode));
             } catch(e) {
                 logger.log(e);
             }
@@ -27,7 +32,10 @@ export default class AggregateSeriesArtworkRetriever {
     async retrieveSeriesPoster(series) {
         for (let retriever of this.retrievers) {
             try {
-                return await retriever.retrieveSeriesPoster(series);
+                let urls = await retriever.retrieveSeriesPoster(series);
+                if (urls.length === 0) throw new DebugExtendableError('No URLs found');
+
+                return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.seriesPosterPath(series));
             } catch(e) {
                 logger.log(e);
             }

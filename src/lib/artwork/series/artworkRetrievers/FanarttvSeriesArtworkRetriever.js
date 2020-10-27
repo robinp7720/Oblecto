@@ -1,9 +1,14 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError';
 import axiosTimeout from '../../../../submodules/axiosTimeout';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
 export default class FanarttvSeriesArtworkRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
+    }
+
+    async retrieveEpisodeBanner(episode) {
+        return [];
     }
 
     async retrieveSeriesPoster(series) {
@@ -14,6 +19,12 @@ export default class FanarttvSeriesArtworkRetriever {
             url: `http://webservice.fanart.tv/v3/tv/${series.tvdbid}?api_key=${this.oblecto.config['fanart.tv'].key}`
         });
 
-        return data.tvposter[0].url;
+        let urls = [];
+
+        for (let poster of data.tvposter) {
+            urls.push(poster.url);
+        }
+
+        return urls;
     }
 }

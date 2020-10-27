@@ -1,17 +1,17 @@
 import AggregateSeriesArtworkRetriever from './AggregateSeriesArtworkRetriever';
-import Download from '../../downloader';
 import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever';
 import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever';
 import FanarttvSeriesArtworkRetriever from './artworkRetrievers/FanarttvSeriesArtworkRetriever';
+import logger from '../../../submodules/logger';
 
 export default class SeriesArtworkDownloader {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever();
-        this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever(this.oblecto));
+        this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever(this.oblecto);
         this.seriesArtworkRetriever.loadRetriever(new TmdbSeriesArtworkRetriever(this.oblecto));
         this.seriesArtworkRetriever.loadRetriever(new FanarttvSeriesArtworkRetriever(this.oblecto));
+        this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('downloadEpisodeBanner', (episode) => this.downloadEpisodeBanner(episode));
@@ -19,12 +19,9 @@ export default class SeriesArtworkDownloader {
     }
 
     async downloadEpisodeBanner(episode) {
-        let url = await this.seriesArtworkRetriever.retrieveEpisodeBanner(episode);
+        await this.seriesArtworkRetriever.retrieveEpisodeBanner(episode);
 
-        await Download.download(
-            url,
-            this.oblecto.artworkUtils.episodeBannerPath(episode)
-        );
+        logger.log('DEBUG', `Banner for ${episode.episodeName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.banner)) {
             this.oblecto.queue.pushJob('rescaleImage', {
@@ -36,12 +33,9 @@ export default class SeriesArtworkDownloader {
     }
 
     async downloadSeriesPoster(series) {
-        let url = await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
+        await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
 
-        await Download.download(
-            url,
-            this.oblecto.artworkUtils.seriesPosterPath(series)
-        );
+        logger.log('DEBUG', `Poster for ${series.seriesName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {

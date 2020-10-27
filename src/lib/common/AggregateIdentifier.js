@@ -31,7 +31,7 @@ export default class AggregateIdentifier {
             identification = {...identification, ...currentIdentification};
         }
 
-        if (Object.keys(identification).length === 0) throw new IdentificationError();
+        if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${args[0]}`);
 
         return identification;
     }

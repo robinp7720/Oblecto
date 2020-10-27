@@ -2,12 +2,13 @@ import Download from '../../downloader';
 import TmdbMovieArtworkRetriever from './artworkRetrievers/TmdbMovieArtworkRetriever';
 import FanarttvMovieArtworkRetriever from './artworkRetrievers/FanarttvMovieArtworkRetriever';
 import AggregateMovieArtworkRetriever from './AggregateMovieArtworkRetriever';
+import logger from '../../../submodules/logger';
 
 export default class MovieArtworkDownloader {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.movieArtworkRetriever = new AggregateMovieArtworkRetriever();
+        this.movieArtworkRetriever = new AggregateMovieArtworkRetriever(this.oblecto);
         this.movieArtworkRetriever.loadRetriever(new FanarttvMovieArtworkRetriever(this.oblecto));
         this.movieArtworkRetriever.loadRetriever(new TmdbMovieArtworkRetriever(this.oblecto));
 
@@ -22,12 +23,9 @@ export default class MovieArtworkDownloader {
     }
 
     async downloadMoviePoster(movie) {
-        let url = await this.movieArtworkRetriever.retrievePoster(movie);
+        await this.movieArtworkRetriever.retrievePoster(movie);
 
-        await Download.download(
-            url,
-            this.oblecto.artworkUtils.moviePosterPath(movie)
-        );
+        logger.log('DEBUG', `Poster for ${movie.movieName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {
@@ -39,12 +37,9 @@ export default class MovieArtworkDownloader {
     }
 
     async downloadMovieFanart(movie) {
-        let url = await this.movieArtworkRetriever.retrieveFanart(movie);
+        await this.movieArtworkRetriever.retrieveFanart(movie);
 
-        await Download.download(
-            url,
-            this.oblecto.artworkUtils.movieFanartPath(movie)
-        );
+        logger.log('DEBUG', `Fanart for ${movie.movieName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.fanart)) {
             this.oblecto.queue.pushJob('rescaleImage', {

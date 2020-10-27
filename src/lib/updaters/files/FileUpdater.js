@@ -72,7 +72,7 @@ export default class FileUpdater {
      */
     async updateFile(file) {
         if (this.oblecto.config.files.doHash && !file.hash) {
-            this.oblecto.queue.queueJob('updateFileHash', file);
+            this.oblecto.queue.lowPriorityJob('updateFileHash', file);
         }
 
         if (!file.size || file.size === 0) {
@@ -85,6 +85,7 @@ export default class FileUpdater {
 
         if (!file.duration || file.duration === 0) {
             this.oblecto.queue.queueJob('updateFileFFProbe', file);
+            this.oblecto.queue.queueJob('indexFileStreams', file);
         }
     }
 
