@@ -3,10 +3,11 @@ import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
 import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 
-import FileExistsError from '../../errors/FileExistsError';
-
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
+import IdentificationError from '../../errors/IdentificationError';
+import logger from '../../../submodules/logger'
+import guessit from '../../../submodules/guessit';
 
 export default class SeriesIndexer {
     /**
@@ -29,14 +30,18 @@ export default class SeriesIndexer {
         this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path));
     }
 
-    async indexFile(episodePath) {
-        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
+    async indexSeries(file, guessitIdentification) {
+        let seriesIdentification;
 
-        let seriesIdentification = await this.seriesIdentifier.identify(episodePath);
-        let episodeIdentification = await this.episodeIdentifer.identify(episodePath, seriesIdentification);
+        try {
+            seriesIdentification = await this.seriesIdentifier.identify(file.path, guessitIdentification);
+        } catch (e) {
+            throw new IdentificationError(`Could not identify series of ${file.path}`)
+        }
+
+        logger.log('DEBUG', `${file.path} series identified: ${seriesIdentification.seriesName}`)
 
         let seriesQuery = {};
-        let episodeQuery = {};
 
         if (seriesIdentification.tvdbid) seriesQuery['tvdbid'] = seriesIdentification.tvdbid;
         if (seriesIdentification.tmdbid) seriesQuery['tmdbid'] = seriesIdentification.tmdbid;
@@ -44,17 +49,44 @@ export default class SeriesIndexer {
         delete seriesIdentification.tvdbid;
         delete seriesIdentification.tmdbid;
 
-        if (episodeIdentification.tvdbid) episodeQuery['tvdbid'] = episodeIdentification.tvdbid;
-        if (episodeIdentification.tmdbid) episodeQuery['tmdbid'] = episodeIdentification.tmdbid;
-
-        delete episodeIdentification.tvdbid;
-        delete episodeIdentification.tmdbid;
-
         let [series, seriesCreated] = await Series.findOrCreate(
             {
                 where: seriesQuery,
                 defaults: seriesIdentification
             });
+
+        if (seriesCreated) {
+            this.oblecto.queue.pushJob('updateSeries', series);
+            this.oblecto.queue.queueJob('downloadSeriesPoster', series);
+        }
+
+        return series;
+    }
+
+    async indexFile(episodePath) {
+        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
+
+        const guessitIdentification = await guessit.identify(episodePath);
+
+        let series = await this.indexSeries(file, guessitIdentification);
+
+        let episodeIdentification
+
+        try {
+            episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, series);
+        } catch (e) {
+            throw new IdentificationError(`Could not identify episode ${episodePath}`)
+        }
+
+        logger.log('DEBUG', `${file.path} episode identified ${episodeIdentification.episodeName}`);
+
+        let episodeQuery = {};
+
+        if (episodeIdentification.tvdbid) episodeQuery['tvdbid'] = episodeIdentification.tvdbid;
+        if (episodeIdentification.tmdbid) episodeQuery['tmdbid'] = episodeIdentification.tmdbid;
+
+        delete episodeIdentification.tvdbid;
+        delete episodeIdentification.tmdbid;
 
         let [episode, episodeCreated] = await Episode.findOrCreate(
             {
@@ -72,12 +104,7 @@ export default class SeriesIndexer {
 
         if (episodeCreated) {
             this.oblecto.queue.pushJob('updateEpisode', episode);
-            this.oblecto.queue.pushJob('downloadEpisodeBanner', episode);
-        }
-
-        if (seriesCreated) {
-            this.oblecto.queue.pushJob('updateSeries', series);
-            this.oblecto.queue.pushJob('downloadSeriesPoster', series);
+            this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
         }
     }
 

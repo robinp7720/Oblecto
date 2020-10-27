@@ -91,5 +91,6 @@ export const streamColumns = {
     quarter_sample: DataTypes.BOOLEAN,
     divx_packed: DataTypes.BOOLEAN,
 
-    side_data_type: DataTypes.STRING
+    side_data_type: DataTypes.STRING,
+    closed_captions: DataTypes.STRING
 };

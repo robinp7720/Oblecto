@@ -1,3 +1,6 @@
+import logger from '../../../../submodules/logger'
+import promiseTimeout from '../../../../submodules/promiseTimeout';
+
 export default class TmdbEpisodeRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -6,12 +9,13 @@ export default class TmdbEpisodeRetriever {
     async retrieveInformation(episode) {
         let series = await episode.getSeries();
 
-        let episodeInfo = await this.oblecto.tmdb.tvEpisodeInfo({
+        let episodeInfo = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
             id: series.tmdbid,
             season_number: episode.airedSeason,
             episode_number: episode.airedEpisodeNumber
+        }));
 
-        });
+        logger.log('DEBUG',`Episode information for ${episode.episodeName} retrieved`);
 
         let data = {
             episodeName: episodeInfo.name,
@@ -24,11 +28,15 @@ export default class TmdbEpisodeRetriever {
         let externalIds = {};
 
         if (!(episode.tvdbid && episode.imdbid)) {
-            externalIds = await this.oblecto.tmdb.tvEpisodeExternalIds({
+            logger.log('DEBUG',`External ids for ${episode.episodeName} missing`);
+
+            externalIds = await promiseTimeout(this.oblecto.tmdb.episodeExternalIds({
                 id: series.tmdbid,
                 season_number: episode.airedSeason,
                 episode_number: episode.airedEpisodeNumber
-            });
+            }));
+
+            logger.log('DEBUG',`External ids for ${episode.episodeName} retrieved`);
         }
 
         if (!episode.tvdbid && externalIds.tvdb_id) {

@@ -14,7 +14,15 @@ export default class FanarttvMovieArtworkRetriever {
             url: `http://webservice.fanart.tv/v3/movies/${movie.tmdbid || movie.imdbid}?api_key=${this.oblecto.config['fanart.tv'].key}`
         });
 
-        return data.moviebackground[0].url;
+        if (!data.moviebackground) return [];
+
+        let urls = [];
+
+        for (let image of data.moviebackground) {
+            urls.push(image.url);
+        }
+
+        return urls;
     }
 
     async retrievePoster(movie) {
@@ -25,6 +33,14 @@ export default class FanarttvMovieArtworkRetriever {
             url: `http://webservice.fanart.tv/v3/movies/${movie.tmdbid || movie.imdbid}?api_key=${this.oblecto.config['fanart.tv'].key}`
         });
 
-        return data.movieposter[0].url;
+        if (!data.movieposter) return [];
+
+        let urls = [];
+
+        for (let image of data.movieposter) {
+            urls.push(image.url);
+        }
+
+        return urls;
     }
 }

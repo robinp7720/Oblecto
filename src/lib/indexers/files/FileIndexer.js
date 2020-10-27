@@ -3,10 +3,7 @@ import {File} from '../../../models/file';
 import Path from 'path';
 import FileExistsError from '../../errors/FileExistsError';
 import ffprobe from '../../../submodules/ffprobe';
-import VideoAnalysisError from '../../errors/VideoAnalysisError';
 import {Stream} from '../../../models/stream';
-import {DataTypes} from 'sequelize';
-
 export default class FileIndexer {
 
     /**
@@ -34,8 +31,6 @@ export default class FileIndexer {
         if (!fileInserted) {
             throw new FileExistsError(`${videoPath} is already in the file database`);
         }
-
-        this.oblecto.queue.queueJob('indexFileStreams', file);
 
         await this.oblecto.fileUpdateCollector.collectFile(file);
 

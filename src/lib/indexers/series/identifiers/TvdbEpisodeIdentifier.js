@@ -34,10 +34,8 @@ export default class TvdbEpisodeIdentifier {
         throw new IdentificationError();
     }
 
-    async identify(path, series) {
+    async identify(path, guessitIdentification, series) {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
-
-        const guessitIdentification = await guessit.identify(path);
 
         // Some single  season shows don't have a season in the title, therefor whe should set it to 1 by default
         if (!guessitIdentification.season) {

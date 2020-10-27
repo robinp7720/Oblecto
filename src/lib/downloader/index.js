@@ -1,5 +1,7 @@
 import {promises as fs} from 'fs';
 import axiosTimeout from '../../submodules/axiosTimeout';
+import logger from '../../submodules/logger';
+import DebugExtendableError from '../errors/DebugExtendableError';
 
 export default class Downloader {
     constructor(oblecto) {
@@ -26,4 +28,22 @@ export default class Downloader {
 
         await fs.writeFile(dest, response.data, {flags: writeMode});
     }
+
+    static async attemptDownload(urls, path) {
+        for (let url of urls) {
+            try {
+                await Downloader.download(
+                    url,
+                    path,
+                );
+
+                return;
+            } catch (err) {
+                logger.log('DEBUG', `Error while downloading ${url}. Continuing to next url`);
+            }
+        }
+
+        throw new DebugExtendableError('Failed to download any url from array');
+    }
+
 }

@@ -1,4 +1,5 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
 export default class TmdbSeriesArtworkRetriever {
     constructor(oblecto) {
@@ -15,13 +16,19 @@ export default class TmdbSeriesArtworkRetriever {
 
         let series = await episode.getSeries();
 
-        let data = await this.oblecto.tmdb.episodeImages({
+        let data = await promiseTimeout(this.oblecto.tmdb.episodeImages({
             id: series.tmdbid,
             episode_number: episode.airedEpisodeNumber,
             season_number: episode.airedSeason
-        });
+        }));
 
-        return  `https://image.tmdb.org/t/p/original${data.stills[0]['file_path']}`;
+        let urls = [];
+
+        for (let image of data.stills) {
+            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
+        }
+
+        return urls;
     }
 
     /**
@@ -32,10 +39,16 @@ export default class TmdbSeriesArtworkRetriever {
     async retrieveSeriesPoster(series) {
         if (!series.tmdbid) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
 
-        let data = await this.oblecto.tmdb.tvImages({
+        let data = await promiseTimeout(this.oblecto.tmdb.tvImages({
             id: series.tmdbid
-        });
+        }));
 
-        return `https://image.tmdb.org/t/p/original${data.posters[0]['file_path']}`;
+        let urls = [];
+
+        for (let image of data.posters) {
+            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
+        }
+
+        return urls;
     }
 }

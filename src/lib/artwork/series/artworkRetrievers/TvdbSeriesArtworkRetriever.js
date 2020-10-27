@@ -1,4 +1,5 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError';
+import promiseTimeout from '../../../../submodules/promiseTimeout';
 
 export default class TvdbSeriesArtworkRetriever {
     constructor(oblecto) {
@@ -13,9 +14,9 @@ export default class TvdbSeriesArtworkRetriever {
     async retrieveEpisodeBanner(episode) {
         if (!episode.tvdbid) throw new DebugExtendableError(`TVDB Episode banner retriever failed for ${episode.episodeName}`);
 
-        let data = await this.oblecto.tvdb.getEpisodeById(episode.tvdbid);
+        let data = await promiseTimeout(this.oblecto.tvdb.getEpisodeById(episode.tvdbid));
 
-        return `https://thetvdb.com/banners/_cache/${data.filename}`;
+        return [`https://thetvdb.com/banners/_cache/${data.filename}`];
     }
 
     /**
@@ -26,8 +27,14 @@ export default class TvdbSeriesArtworkRetriever {
     async retrieveSeriesPoster(series) {
         if (!series.tvdbid) throw new DebugExtendableError(`TVDB Series poster retriever failed for ${series.seriesName}`);
 
-        let data = await this.oblecto.tvdb.getSeriesPosters(series.tvdbid);
+        let data = await promiseTimeout(this.oblecto.tvdb.getSeriesPosters(series.tvdbid));
 
-        return `http://thetvdb.com/banners/${data[0].fileName}`;
+        let urls = [];
+
+        for (let image of data) {
+            urls.push(`http://thetvdb.com/banners/${image.fileName}`);
+        }
+
+        return urls;
     }
 }

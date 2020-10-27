@@ -26,28 +26,33 @@ export default class FederationEpisodeIndexer {
             }
         });
 
+        let seriesQuery = {};
+
+        if (file.fileInfo.seriesTvdbid) seriesQuery.tvdbid = file.fileInfo.seriesTvdbid;
+        if (file.fileInfo.seriesTmdbid) seriesQuery.tmdbid = file.fileInfo.seriesTmdbid;
+
         let [series, seriesInserted] = await Series.findOrCreate({
-            where: {
-                tvdbid: file.fileInfo.seriesTvdbid || null,
-                tmdbid: file.fileInfo.seriesTmdbid || null
-            }
+            where: seriesQuery
         });
 
+        let episodeQuery = {
+            SeriesId: series.id
+        };
+
+        if (file.fileInfo.tvdbid) episodeQuery.tvdbid = file.fileInfo.tvdbid;
+        if (file.fileInfo.tmdbid) episodeQuery.tmdbid = file.fileInfo.tmdbid;
+
         let [episode, episodeInserted] = await Episode.findOrCreate({
-            where: {
-                tvdbid: file.fileInfo.tvdbid || null,
-                tmdbid: file.fileInfo.tmdbid || null,
-                SeriesId: series.id
-            },
+            where: episodeQuery,
             defaults: {
                 airedEpisodeNumber: file.fileInfo.episode,
                 airedSeason: file.fileInfo.season
             }
         });
 
-        await episode.addFile(fileEntity);
 
         if (!episodeInserted) return;
+        await episode.addFile(fileEntity);
         await this.oblecto.seriesUpdateCollector.collectEpisode(episode);
         await this.oblecto.seriesArtworkCollector.collectArtworkEpisodeBanner(episode);
 
