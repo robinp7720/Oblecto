@@ -7,9 +7,10 @@ export default function (...args) {
         let timeout = setTimeout(() => {
             timedout = true;
 
-            reject(new WarnExtendableError(`Timeout expired for ${args[0].url}`));
-        }, 10000);
+            reject(new WarnExtendableError(`Axios timeout failed and promise timeout expired for ${args[0].url}`));
+        }, 20000);
 
+        args[0].timeout = 10000;
 
         axios(...args).then(response => {
             if (timedout) return;
