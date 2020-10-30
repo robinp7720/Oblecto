@@ -2,6 +2,10 @@ import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
 
 import TmdbSeriesRetriever from './informationRetrievers/TmdbSeriesRetriever';
 import TmdbEpisodeRetriever from './informationRetrievers/TmdbEpisodeRetriever';
+import TvdbEpisodeRetriever from './informationRetrievers/TvdbEpisodeRetriever';
+
+import logger from '../../../submodules/logger';
+import TvdbSeriesRetriever from './informationRetrievers/TvdbSeriesRetriever';
 
 
 export default class SeriesUpdater {
@@ -13,10 +17,27 @@ export default class SeriesUpdater {
         this.oblecto = oblecto;
 
         this.aggregateSeriesUpdateRetriever = new AggregateUpdateRetriever();
-        this.aggregateSeriesUpdateRetriever.loadRetriever(new TmdbSeriesRetriever(this.oblecto));
-
         this.aggregateEpisodeUpdaterRetriever = new AggregateUpdateRetriever();
-        this.aggregateEpisodeUpdaterRetriever.loadRetriever(new TmdbEpisodeRetriever(this.oblecto));
+
+        const seriesUpdateRetrievers = {
+            'tmdb': TmdbSeriesRetriever,
+            'tvdb': TvdbSeriesRetriever
+        };
+
+        const episodeUpdateRetrievers = {
+            'tmdb': TmdbEpisodeRetriever,
+            'tvdb': TvdbEpisodeRetriever
+        };
+
+        for (let updater of this.oblecto.config.tvshows.seriesUpdaters) {
+            logger.log('DEBUG', `Loading ${updater} series updater`);
+            this.aggregateSeriesUpdateRetriever.loadRetriever(new seriesUpdateRetrievers[updater](this.oblecto));
+        }
+
+        for (let updater of this.oblecto.config.tvshows.episodeUpdaters) {
+            logger.log('DEBUG', `Loading ${updater} episode updater`);
+            this.aggregateEpisodeUpdaterRetriever.loadRetriever(new episodeUpdateRetrievers[updater](this.oblecto));
+        }
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.addJob('updateEpisode', async (job) => {

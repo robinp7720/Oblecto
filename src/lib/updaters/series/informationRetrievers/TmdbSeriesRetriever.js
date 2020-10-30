@@ -1,6 +1,10 @@
 import promiseTimeout from '../../../../submodules/promiseTimeout';
+import DebugExtendableError from '../../../errors/DebugExtendableError';
 
 export default class TmdbSeriesRetriever {
+    /**
+     * @param {Oblecto} oblecto
+     */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
@@ -11,20 +15,15 @@ export default class TmdbSeriesRetriever {
      * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>}
      */
     async retrieveInformation(series) {
+        if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
+
         let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }));
 
         let data = {
             seriesName: seriesInfo.name,
-            //alias:  seriesInfo.
-            //genre:  seriesInfo.genres.map((item) => return item.)
             status: seriesInfo.status,
             firstAired: seriesInfo.first_air_date,
-            //network:
-            //runtime: seriesInfo.
             overview: seriesInfo.overview,
-            //airsDayOfWeek:
-            //airsTime:
-            //rating:
             popularity: seriesInfo.popularity,
             siteRating: seriesInfo.vote_average,
             siteRatingCount: seriesInfo.vote_count

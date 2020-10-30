@@ -41,6 +41,10 @@
     "port": 8080
   },
   "tvshows": {
+    "seriesIdentifiers": ["tmdb"],
+    "episodeIdentifiers": ["tmdb"],
+    "seriesUpdaters": ["tmdb", "tvdb"],
+    "episodeUpdaters": ["tmdb", "tvdb"],
     "doReIndex": false,
     "ignoreSeriesMismatch": true,
     "indexBroken": false,

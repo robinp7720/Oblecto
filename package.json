@@ -27,6 +27,7 @@
     "async": "^3.2.0",
     "axios": "^0.20.0",
     "bcrypt": "^5.0.0",
+    "fastest-levenshtein": "^1.0.12",
     "fluent-ffmpeg": "^2.1.2",
     "guessit-exec": "0.0.1",
     "guessit-wrapper": "^1.0.1",
