@@ -60,8 +60,6 @@ export default class RecodeStreamSession extends StreamSession {
             if (stream.codec_type === 'audio') audioStreams.push(stream);
         }
 
-        outputOptions.push(`-map 0:${videoStreamIndex}`);
-
         let audioStreamSelected = false;
 
 
@@ -74,8 +72,12 @@ export default class RecodeStreamSession extends StreamSession {
 
         if (!audioStreamSelected && audioStreams.length > 0) {
             outputOptions.push(`-map 0:${audioStreams[0].index}`);
+            audioStreamSelected = true;
         }
 
+        if (audioStreamSelected) {
+            outputOptions.push(`-map 0:${videoStreamIndex}`);
+        }
 
         this.process = ffmpeg(this.file.path)
             .format(this.format)
