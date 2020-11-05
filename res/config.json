@@ -103,6 +103,9 @@
   "web": {
     "enabled": true
   },
+  "streaming": {
+    "defaultTargetLanguageCode":  "eng"
+  },
   "federation": {
     "key": "/etc/oblecto/id_rsa",
     "dataPort": 9131,
