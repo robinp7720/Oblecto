@@ -107,7 +107,11 @@ export default class HLSStreamer extends StreamSession {
     }
 
     async streamSegment(req, res, segmentId) {
-        this.startTimeout();
+        this.clearTimeout();
+
+        res.on('close', () => {
+            this.startTimeout();
+        });
 
         DirectHttpStreamSession.httpStreamHandler(req, res, `${os.tmpdir()}/oblecto/sessions/${this.sessionId}/${('000' + segmentId).substr(-3)}.ts`);
 
@@ -123,6 +127,24 @@ export default class HLSStreamer extends StreamSession {
             if (segmentId > sequenceId) {
                 await pfs.unlink(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/${file}`);
             }
+        }
+    }
+
+    async addDestination(destination) {
+        this.destinations.push(destination);
+
+        destination.stream.on('close', () => {
+            for (let i in this.destinations) {
+                if (this.destinations[i].stream === destination.stream) {
+                    this.destinations.splice(i, 1);
+                }
+            }
+        });
+    }
+
+    async startStream() {
+        for (let { stream } of this.destinations) {
+            this.sendPlaylistFile(stream);
         }
     }
 }
