@@ -16,7 +16,7 @@ export default class TmdbEpisodeRetriever {
             id: series.tmdbid,
             season_number: episode.airedSeason,
             episode_number: episode.airedEpisodeNumber
-        }));
+        }, {timeout: 5000}));
 
         logger.log('DEBUG',`Episode information for ${episode.episodeName} retrieved from tmdb`);
 
@@ -37,7 +37,7 @@ export default class TmdbEpisodeRetriever {
                 id: series.tmdbid,
                 season_number: episode.airedSeason,
                 episode_number: episode.airedEpisodeNumber
-            }));
+            }, {timeout: 5000}));
 
             logger.log('DEBUG',`External ids for ${episode.episodeName} retrieved`);
         }

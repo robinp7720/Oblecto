@@ -17,7 +17,7 @@ export default class TmdbSeriesRetriever {
     async retrieveInformation(series) {
         if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
 
-        let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }));
+        let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, {timeout: 5000}));
 
         let data = {
             seriesName: seriesInfo.name,
@@ -32,7 +32,7 @@ export default class TmdbSeriesRetriever {
         let externalIds = {};
 
         if (!(series.tvdbid && series.imdbid)) {
-            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({id: series.tmdbid}));
+            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({id: series.tmdbid}, {timeout: 5000}));
         }
 
         if (!series.tvdbid) {
