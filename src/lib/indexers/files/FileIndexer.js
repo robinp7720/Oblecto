@@ -12,7 +12,7 @@ export default class FileIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.addJob('indexFileStreams', this.indexVideoFileStreams);
+        this.oblecto.queue.registerJob('indexFileStreams', this.indexVideoFileStreams);
     }
 
     async indexVideoFile(videoPath) {

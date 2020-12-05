@@ -12,23 +12,23 @@ export default class FileUpdater {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.addJob('updateFile', async (file) => {
+        this.oblecto.queue.registerJob('updateFile', async (file) => {
             await this.updateFile(file);
         });
 
-        this.oblecto.queue.addJob('updateFileHash', async (file) => {
+        this.oblecto.queue.registerJob('updateFileHash', async (file) => {
             await this.updateFileHash(file);
         });
 
-        this.oblecto.queue.addJob('updateFileSize', async (file) => {
+        this.oblecto.queue.registerJob('updateFileSize', async (file) => {
             await this.updateFileSize(file);
         });
 
-        this.oblecto.queue.addJob('updateFileExtension', async (file) => {
+        this.oblecto.queue.registerJob('updateFileExtension', async (file) => {
             await this.updateFileExtension(file);
         });
 
-        this.oblecto.queue.addJob('updateFileFFProbe', async (file) => {
+        this.oblecto.queue.registerJob('updateFileFFProbe', async (file) => {
             await this.updateFileFFProbe(file);
         });
     }

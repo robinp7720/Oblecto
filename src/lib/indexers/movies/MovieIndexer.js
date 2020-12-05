@@ -15,7 +15,7 @@ export default class MovieIndexer {
         this.movieIdentifer.loadIdentifier(new TmdbMovieIdentifier(this.oblecto));
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
+        this.oblecto.queue.registerJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
     async indexFile(moviePath) {
