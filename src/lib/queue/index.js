@@ -2,7 +2,13 @@ import async from 'async';
 import logger from '../../submodules/logger';
 
 export default class Queue {
-    constructor(concurrency) {
+    /**
+     *
+     * @param {Oblecto} oblecto
+     */
+    constructor(oblecto) {
+        this.oblecto = oblecto;
+
         this.jobs = {};
 
         this.queue = async.priorityQueue((job, callback) => {
@@ -25,7 +31,7 @@ export default class Queue {
 
                     callback();
                 });
-        }, concurrency);
+        }, this.oblecto.config.queue.concurrency);
     }
 
     /**
@@ -33,7 +39,16 @@ export default class Queue {
      * @param {string} id
      * @param {function} job
      */
-    addJob (id, job) {
+    registerJob(id, job) {
+        if (this.jobs[id]) {
+            logger.log('ERROR', `A job has been registered which was already registered: ${id}`);
+            logger.log('ERROR', 'This should not happen. Shutting down server');
+
+            this.oblecto.close();
+
+            return;
+        }
+
         logger.log('INFO', 'New queue item has been registered:', id);
 
         this.jobs[id] = job;
@@ -42,33 +57,28 @@ export default class Queue {
     /**
      *  Add a job to the end of the queue
      * @param {string} id
-     * @param {object} job
+     * @param {object} attr
+     * @param {number} priority
      */
-    queueJob(id, job) {
-        this.queue.push({
-            id,
-            attr: job
-        }, 5);
+    queueJob(id, attr, priority = 5) {
+        this.queue.push({id, attr}, priority);
     }
 
-    lowPriorityJob(id, job) {
-        this.queue.push({
-            id,
-            attr: job
-        }, 20);
+    /**
+     *  Adds a queue which should be completed as soon as possible
+     * @param {string} id
+     * @param {object} attr
+     */
+    lowPriorityJob(id, attr) {
+        this.queueJob(id, attr, 20);
     }
-
-
 
     /**
      *  Add a job to the front of the queue
      * @param {string} id
-     * @param {object} job
+     * @param {object} attr
      */
-    pushJob(id, job) {
-        this.queue.push({
-            id,
-            attr: job
-        },0);
+    pushJob(id, attr) {
+        this.queueJob(id, attr, 0);
     }
 }

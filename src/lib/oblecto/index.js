@@ -52,7 +52,7 @@ export default class Oblecto {
         this.tvdb = new TVDB(this.config.tvdb.key);
         this.tmdb = new MovieDb(this.config.themoviedb.key);
 
-        this.queue = new Queue(this.config.queue.concurrency);
+        this.queue = new Queue(this);
 
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);

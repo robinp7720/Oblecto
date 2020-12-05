@@ -14,8 +14,8 @@ export default class SeriesArtworkDownloader {
         this.seriesArtworkRetriever.loadRetriever(new TvdbSeriesArtworkRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('downloadEpisodeBanner', (episode) => this.downloadEpisodeBanner(episode));
-        this.oblecto.queue.addJob('downloadSeriesPoster', (series) => this.downloadSeriesPoster(series));
+        this.oblecto.queue.registerJob('downloadEpisodeBanner', (episode) => this.downloadEpisodeBanner(episode));
+        this.oblecto.queue.registerJob('downloadSeriesPoster', (series) => this.downloadSeriesPoster(series));
     }
 
     async downloadEpisodeBanner(episode) {

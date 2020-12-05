@@ -9,7 +9,7 @@ export default class MovieUpdater {
         this.aggregateMovieUpdateRetriever.loadRetriever(new TmdbMovieRetriever(this.oblecto));
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('updateMovie', async (job) => {
+        this.oblecto.queue.registerJob('updateMovie', async (job) => {
             await this.updateMovie(job);
         });
     }

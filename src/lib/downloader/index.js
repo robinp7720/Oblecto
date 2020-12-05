@@ -7,7 +7,7 @@ export default class Downloader {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.addJob('downloadFile', async (job) => {
+        this.oblecto.queue.registerJob('downloadFile', async (job) => {
             await Downloader.download(job.url, job.dest, job.overwrite);
         });
     }

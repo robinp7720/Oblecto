@@ -6,7 +6,7 @@ export default class FederationMovieIndexer {
         this.oblecto = oblecto;
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('federationIndexMovie', async (job) => {
+        this.oblecto.queue.registerJob('federationIndexMovie', async (job) => {
             await this.indexMovie(job);
         });
     }
