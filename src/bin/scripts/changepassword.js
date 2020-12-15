@@ -2,7 +2,7 @@ import {User} from '../../models/user';
 import {initDatabase} from '../../submodules/database';
 import argumentError from './helpers/argumentError';
 import bcrypt from 'bcrypt';
-import {promises as fs} from "fs";
+import {promises as fs} from 'fs';
 
 export default async (args) => {
     const sequelize = initDatabase();
