@@ -92,5 +92,5 @@ export const streamColumns = {
     divx_packed: DataTypes.BOOLEAN,
 
     side_data_type: DataTypes.STRING,
-    closed_captions: DataTypes.STRING
+    closed_captions: DataTypes.BOOLEAN
 };
