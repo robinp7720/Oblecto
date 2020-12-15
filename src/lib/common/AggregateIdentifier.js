@@ -1,4 +1,5 @@
 import IdentificationError from '../errors/IdentificationError';
+import logger from '../../submodules/logger'
 
 export default class AggregateIdentifier {
     /**
@@ -25,6 +26,7 @@ export default class AggregateIdentifier {
             try {
                 currentIdentification = await identifier.identify(...args);
             } catch (e) {
+                logger.log(e);
                 continue;
             }
 
