@@ -8,12 +8,10 @@ import users from './users';
 import web from './web';
 import sets from './sets';
 import clients from './clients';
-
-import config from '../../../config';
-
+import files from './files';
 
 export default (server, oblecto) => {
-    if (config.web.enabled) {
+    if (oblecto.config.web.enabled) {
         web(server, oblecto);
     }
 

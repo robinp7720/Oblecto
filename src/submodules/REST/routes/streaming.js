@@ -17,27 +17,13 @@ export default (server, oblecto) => {
 
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
-        // TODO: Send appropriate error if session is not a HLS stream session
+        // TODO: Send approriate error if session is not a HLS stream session
         if (!(streamSession instanceof HLSStreamer)) return next();
 
         let segmentId = parseInt(req.params.id);
 
         streamSession.streamSegment(req, res, segmentId);
     });
-
-    server.get('/HLS/:sessionId/playlist', async function (req, res, next) {
-        if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
-            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
-        }
-
-        let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
-
-        // TODO: Send appropriate error if session is not a HLS stream session
-        if (!(streamSession instanceof HLSStreamer)) return next(new errors.InvalidContentError('Not a HLS stream'));
-
-        streamSession.sendPlaylistFile(res);
-    });
-
 
     server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let file;
@@ -52,8 +38,9 @@ export default (server, oblecto) => {
 
         let streamType = 'recode';
 
-        if (req.params.type in ['recode', 'directhttp', 'hls'])
+        if (['recode', 'directhttp', 'hls'].indexOf(req.params.type) > -1) {
             streamType = req.params.type;
+        }
 
         if (req.params.noremux) streamType = 'directhttp';
 
@@ -82,9 +69,13 @@ export default (server, oblecto) => {
 
         return next();
     }, async function (req, res, next) {
-        oblecto.streamSessionController.sessions[req.params.sessionId].offset = req.params.offset || 0;
+        let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
-        await oblecto.streamSessionController.sessions[req.params.sessionId].addDestination({
+        if (req.params.offset) {
+            streamSession.offset = req.params.offset;
+        }
+
+        await streamSession.addDestination({
             request: req,
             stream: res,
 
@@ -93,6 +84,6 @@ export default (server, oblecto) => {
 
         if (req.params.nostart) return;
 
-        await oblecto.streamSessionController.sessions[req.params.sessionId].startStream();
+        await streamSession.startStream();
     });
 };
