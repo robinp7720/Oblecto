@@ -1,6 +1,6 @@
 import auth from './auth';
 import episodes from './episodes';
-import files from './files';
+import streaming from './streaming';
 import movies from './movies';
 import tvshows from './tvshows';
 import settings from './settings';
@@ -19,6 +19,7 @@ export default (server, oblecto) => {
 
     auth(server, oblecto);
     episodes(server, oblecto);
+    streaming(server, oblecto);
     files(server, oblecto);
     movies(server, oblecto);
     tvshows(server, oblecto);
