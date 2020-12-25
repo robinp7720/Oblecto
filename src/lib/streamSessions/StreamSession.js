@@ -118,7 +118,7 @@ export default class StreamSession extends events.EventEmitter{
             return 'video/mp2t';
 
         if (this.format === 'matroska')
-            return 'video/video/x-matroska';
+            return 'video/x-matroska';
 
         return 'video';
     }
