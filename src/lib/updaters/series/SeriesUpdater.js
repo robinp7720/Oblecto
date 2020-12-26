@@ -40,11 +40,11 @@ export default class SeriesUpdater {
         }
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('updateEpisode', async (job) => {
+        this.oblecto.queue.registerJob('updateEpisode', async (job) => {
             await this.updateEpisode(job);
         });
 
-        this.oblecto.queue.addJob('updateSeries', async (job) => {
+        this.oblecto.queue.registerJob('updateSeries', async (job) => {
             await this.updateSeries(job);
         });
     }

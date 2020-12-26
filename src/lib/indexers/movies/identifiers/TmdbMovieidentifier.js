@@ -17,7 +17,7 @@ export default class TmdbMovieIdentifier extends MovieIdentifier{
             query.primary_release_year = identification.year;
         }
 
-        let res = await promiseTimeout(this.oblecto.tmdb.searchMovie(query));
+        let res = await promiseTimeout(this.oblecto.tmdb.searchMovie(query, {timeout: 5000}));
 
         let identifiedMovie = res.results[0];
 

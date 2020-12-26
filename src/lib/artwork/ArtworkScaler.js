@@ -5,7 +5,7 @@ export default class ImageScaler {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.addJob('rescaleImage', async (job) => {
+        this.oblecto.queue.registerJob('rescaleImage', async (job) => {
             await ImageScaler.rescaleImage(job.from, job.to, {
                 width: job.width,
                 height: job.height

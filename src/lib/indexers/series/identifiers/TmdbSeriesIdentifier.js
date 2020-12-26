@@ -31,7 +31,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({query: guessitIdentification.title}))).results;
+        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({query: guessitIdentification.title}, {timeout: 5000}))).results;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError();

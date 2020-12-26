@@ -46,7 +46,7 @@ export default class SeriesIndexer {
         }
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('indexEpisode', async (job) => await this.indexFile(job.path));
+        this.oblecto.queue.registerJob('indexEpisode', async (job) => await this.indexFile(job.path));
     }
 
     async indexSeries(file, guessitIdentification) {

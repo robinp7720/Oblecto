@@ -11,7 +11,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
             id: series.tmdbid,
             season_number: guessitIdentification.season || 1,
             episode_number: guessitIdentification.episode
-        }));
+        }, {timeout: 5000}));
 
         return {
             tmdbid: episode.id,

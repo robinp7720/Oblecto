@@ -7,7 +7,7 @@ export default class FederationEpisodeIndexer {
         this.oblecto = oblecto;
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.addJob('federationIndexEpisode', async (job) => {
+        this.oblecto.queue.registerJob('federationIndexEpisode', async (job) => {
             await this.indexEpisode(job);
         });
     }

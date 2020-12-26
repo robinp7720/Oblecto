@@ -6,6 +6,9 @@ export default class RecodeStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
 
+        // LanguageCode is the ISO 639-2 code for the desired language
+        this.targetLanguageCode = oblecto.config.streaming.defaultTargetLanguageCode;
+
         if (this.videoCodec === this.file.videoCodec || this.file.videoCodec in this.targetVideoCodecs) {
             this.videoCodec = 'copy';
         }
@@ -48,6 +51,38 @@ export default class RecodeStreamSession extends StreamSession {
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
                 outputOptions.push('-pix_fmt yuv420p');
             }
+        }
+
+        let streams = await this.file.getStreams();
+
+        let videoStreamIndex = 0;
+        let audioStreams = [];
+
+        for (let stream of streams) {
+            if (stream.codec_type === 'video') videoStreamIndex = stream.index;
+            if (stream.codec_type === 'audio') audioStreams.push(stream);
+        }
+
+        let audioStreamSelected = false;
+
+
+        for (let stream of audioStreams) {
+            if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
+                outputOptions.push(`-map 0:${stream.index}`);
+                audioStreamSelected = true;
+            }
+        }
+
+        // If no language was found for the given language code, we don't want a video without any audio
+        // so choose the first audio stream available within the file.
+        // This will usually be english
+        if (!audioStreamSelected && audioStreams.length > 0) {
+            outputOptions.push(`-map 0:${audioStreams[0].index}`);
+            audioStreamSelected = true;
+        }
+
+        if (audioStreamSelected) {
+            outputOptions.push(`-map 0:${videoStreamIndex}`);
         }
 
         this.process = ffmpeg(this.file.path)
