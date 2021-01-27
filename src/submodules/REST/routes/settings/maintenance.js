@@ -30,7 +30,6 @@ export default (server, oblecto) => {
         res.send([true]);
     });
 
-
     server.get('/settings/maintenance/movies/download/art', authMiddleWare.requiresAuth, function (req, res) {
         oblecto.movieArtworkCollector.collectAll();
         res.send([true]);

@@ -36,6 +36,8 @@ export default class RecodeStreamSession extends StreamSession {
         let outputOptions = [
             '-movflags empty_moov',
             '-copyts',
+            '-preset ultrafast',
+            '-tune zerolatency'
         ];
 
         if (this.oblecto.config.transcoding.hardwareAcceleration) {
