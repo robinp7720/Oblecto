@@ -11,7 +11,7 @@ which('guessit', function (err, resolvedPath) {
         logger.log('INFO', 'Guessit binary has not been found');
         logger.log('INFO', 'Using the web based identifier');
         logger.log('INFO', 'This may significantly reduce indexing speeds');
-        logger.log('INFO', 'Please install guessit from you package manager');
+        logger.log('INFO', 'Please install guessit from your package manager');
 
         return;
     }
