@@ -57,35 +57,29 @@ export default class RecodeStreamSession extends StreamSession {
 
         let streams = await this.file.getStreams();
 
-        let videoStreamIndex = 0;
         let audioStreams = [];
+        let videoStreams = [];
 
         for (let stream of streams) {
-            if (stream.codec_type === 'video') videoStreamIndex = stream.index;
+            if (stream.codec_type === 'video') videoStreams.push(stream);
             if (stream.codec_type === 'audio') audioStreams.push(stream);
         }
 
-        let audioStreamSelected = false;
+        // Define default streams. We don't want to end up with a video without any audio or video streams
+        let selectedAudioStream = audioStreams[0].index;
+        let selectedVideoStream = videoStreams[0].index;
 
-
+        // Find a video stream with the desired language code
+        // TODO: Some languages may be identified by multiple language codes
+        //  EG: French sometimes uses both "Fra" and "Fre"
         for (let stream of audioStreams) {
             if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
-                outputOptions.push(`-map 0:${stream.index}`);
-                audioStreamSelected = true;
+                selectedAudioStream = stream.index;
             }
         }
 
-        // If no language was found for the given language code, we don't want a video without any audio
-        // so choose the first audio stream available within the file.
-        // This will usually be english
-        if (!audioStreamSelected && audioStreams.length > 0) {
-            outputOptions.push(`-map 0:${audioStreams[0].index}`);
-            audioStreamSelected = true;
-        }
-
-        if (audioStreamSelected) {
-            outputOptions.push(`-map 0:${videoStreamIndex}`);
-        }
+        outputOptions.push(`-map 0:${selectedAudioStream}`);
+        outputOptions.push(`-map 0:${selectedVideoStream}`);
 
         this.process = ffmpeg(this.file.path)
             .format(this.format)
