@@ -17,7 +17,7 @@ export default class TmdbSeriesRetriever {
     async retrieveInformation(series) {
         if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
 
-        let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, {timeout: 5000}));
+        const seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, {timeout: 5000}));
 
         let data = {
             seriesName: seriesInfo.name,
@@ -26,7 +26,8 @@ export default class TmdbSeriesRetriever {
             overview: seriesInfo.overview,
             popularity: seriesInfo.popularity,
             siteRating: seriesInfo.vote_average,
-            siteRatingCount: seriesInfo.vote_count
+            siteRatingCount: seriesInfo.vote_count,
+            genre: JSON.stringify(seriesInfo.genres.map(i => i.name))
         };
 
         let externalIds = {};

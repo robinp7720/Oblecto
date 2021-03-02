@@ -1,6 +1,7 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 import { Movie } from '../../../models/movie';
+import logger from '../../../submodules/logger';
 
 export default class MovieIndexer {
     /**
@@ -10,9 +11,16 @@ export default class MovieIndexer {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-        this.movieIdentifer = new AggregateIdentifier();
+        this.movieIdentifier = new AggregateIdentifier();
 
-        this.movieIdentifer.loadIdentifier(new TmdbMovieIdentifier(this.oblecto));
+        const movieIdentifiers = {
+            'tmdb': TmdbMovieIdentifier
+        };
+
+        for (let identifier of this.oblecto.config.movies.movieIdentifiers) {
+            logger.log('DEBUG', `Loading ${identifier} movie identifier`);
+            this.movieIdentifier.loadIdentifier(new movieIdentifiers[identifier](this.oblecto));
+        }
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.registerJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
@@ -21,7 +29,7 @@ export default class MovieIndexer {
     async indexFile(moviePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
-        let movieIdentification = await this.movieIdentifer.identify(moviePath);
+        let movieIdentification = await this.movieIdentifier.identify(moviePath);
 
         let [movie, movieCreated] = await Movie.findOrCreate(
             {

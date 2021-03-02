@@ -3,10 +3,9 @@ import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
 import TmdbSeriesRetriever from './informationRetrievers/TmdbSeriesRetriever';
 import TmdbEpisodeRetriever from './informationRetrievers/TmdbEpisodeRetriever';
 import TvdbEpisodeRetriever from './informationRetrievers/TvdbEpisodeRetriever';
-
-import logger from '../../../submodules/logger';
 import TvdbSeriesRetriever from './informationRetrievers/TvdbSeriesRetriever';
 
+import logger from '../../../submodules/logger';
 
 export default class SeriesUpdater {
 

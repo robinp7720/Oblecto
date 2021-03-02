@@ -18,6 +18,7 @@ export default class TmdbMovieRetriever {
             movieName: movieInfo.title,
             originalName: movieInfo.original_title,
             tagline: movieInfo.tagline,
+            genres: JSON.stringify(movieInfo.genres.map(i => i.name)),
 
             originalLanguage: movieInfo.original_language,
 

@@ -52,6 +52,8 @@
     ]
   },
   "movies": {
+    "movieIdentifiers": ["tmdb"],
+    "movieUpdaters": ["tmdb"],
     "doReIndex": false,
     "indexBroken": false,
     "directories": [
