@@ -66,8 +66,8 @@ export default class RecodeStreamSession extends StreamSession {
         }
 
         // Define default streams. We don't want to end up with a video without any audio or video streams
-        let selectedAudioStream = audioStreams[0].index;
-        let selectedVideoStream = videoStreams[0].index;
+        let selectedAudioStream = audioStreams?.[0]?.index;
+        let selectedVideoStream = videoStreams?.[0]?.index;
 
         // Find a video stream with the desired language code
         // TODO: Some languages may be identified by multiple language codes
@@ -78,8 +78,10 @@ export default class RecodeStreamSession extends StreamSession {
             }
         }
 
-        outputOptions.push(`-map 0:${selectedAudioStream}`);
-        outputOptions.push(`-map 0:${selectedVideoStream}`);
+        if (!(selectedVideoStream === undefined || selectedAudioStream === undefined)) {
+            outputOptions.push(`-map 0:${selectedAudioStream}`);
+            outputOptions.push(`-map 0:${selectedVideoStream}`);
+        }
 
         this.process = ffmpeg(this.file.path)
             .format(this.format)
