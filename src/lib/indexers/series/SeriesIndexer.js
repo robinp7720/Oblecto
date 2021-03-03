@@ -88,6 +88,12 @@ export default class SeriesIndexer {
 
         const guessitIdentification = await guessit.identify(episodePath);
 
+        // Some single season shows usually don't have a season in the title,
+        // therefore whe should set it to 1 by default.
+        if (!guessitIdentification.season) {
+            guessitIdentification.season = 1;
+        }
+
         let series = await this.indexSeries(file, guessitIdentification);
 
         let episodeIdentification;

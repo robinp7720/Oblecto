@@ -40,12 +40,6 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
     async identify(path, guessitIdentification, series) {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
 
-        // Some single season shows don't have a season in the title, therefor whe should set it to 1 by default
-        // TODO: This should probably be done directly in the SeriesIndex.js file to avoid duplication in every identifier
-        if (!guessitIdentification.season) {
-            guessitIdentification.season = 1;
-        }
-
         let episode = await this.retrieveEpisode(series, guessitIdentification);
 
         return {
