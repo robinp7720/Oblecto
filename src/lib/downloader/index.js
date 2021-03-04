@@ -13,20 +13,20 @@ export default class Downloader {
     }
 
     static async download(url, dest, overwrite) {
-        let writeMode = 'wx';
+        let flags = 'wx';
 
         if (overwrite) {
-            writeMode = 'w';
+            flags = 'w';
         }
 
-        let response = await axiosTimeout({
+        let { data } = await axiosTimeout({
             method: 'get',
-            url: url,
+            url,
             responseType: 'arraybuffer',
             responseEncoding: 'binary'
         });
 
-        await fs.writeFile(dest, response.data, {flags: writeMode});
+        await fs.writeFile(dest, data, { flags });
     }
 
     static async attemptDownload(urls, path) {
