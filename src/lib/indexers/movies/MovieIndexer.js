@@ -26,6 +26,11 @@ export default class MovieIndexer {
         this.oblecto.queue.registerJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
+    /**
+     * Index file based on file path
+     * @param moviePath
+     * @returns {Promise<void>}
+     */
     async indexFile(moviePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
