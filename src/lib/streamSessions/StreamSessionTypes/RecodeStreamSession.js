@@ -18,10 +18,6 @@ export default class RecodeStreamSession extends StreamSession {
         }
     }
 
-    async addDestination(destination) {
-        await super.addDestination(destination);
-    }
-
     async startStream() {
         await super.startStream();
 
