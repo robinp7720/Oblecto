@@ -59,7 +59,7 @@ export default class SeriesIndexer {
      * Identify and index the series of a given file
      *
      * @param {File} file - File to be indexed
-     * @param {*} guessitIdentification - Guessit identification Object
+     * @param {GuessitIdentification} guessitIdentification - Guessit identification Object
      * @returns {Promise<Series>} - Matched series
      */
     async indexSeries(file, guessitIdentification) {
@@ -105,7 +105,12 @@ export default class SeriesIndexer {
     async indexFile(episodePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
+        /**
+         * @type {GuessitIdentification}
+         */
         const guessitIdentification = await guessit.identify(episodePath);
+
+        console.log(guessitIdentification.source);
 
         // Some single season shows usually don't have a season in the title,
         // therefore whe should set it to 1 by default.

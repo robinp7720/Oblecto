@@ -20,9 +20,7 @@ export default class SeriesCleaner {
      */
     async removeFileLessEpisodes() {
         logger.log('INFO', 'Removing all episodes without linked files');
-        let results = await Episode.findAll({
-            include: [File]
-        });
+        let results = await Episode.findAll({ include: [File] });
 
         for (let item of results) {
             if (item.Files && item.Files.length > 0)
@@ -41,11 +39,7 @@ export default class SeriesCleaner {
      */
     async removePathLessShows() {
         logger.log('INFO', 'Removing series without at attached path');
-        await Series.destroy({
-            where: {
-                directory: ''
-            }
-        });
+        await Series.destroy({ where: { directory: '' } });
     }
 
     /**
@@ -55,9 +49,7 @@ export default class SeriesCleaner {
      */
     async removeEpisodeslessShows() {
         logger.log('INFO', 'Removing series without attached episodes');
-        let results = await Series.findAll({
-            include: [Episode]
-        });
+        let results = await Series.findAll({ include: [Episode] });
 
         for (let item of results) {
             if (item.Episodes && item.Episodes.length > 0)

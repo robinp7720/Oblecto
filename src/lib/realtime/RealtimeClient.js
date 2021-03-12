@@ -6,6 +6,10 @@ import logger from '../../submodules/logger';
 import Oblecto from '../oblecto';
 import { Socket } from '@types/socket.io';
 
+/**
+ * @typedef {import('@types/socket.io').Socket} Socket
+ */
+
 export default class RealtimeClient extends EventEmitter {
     /**
      * @param {Oblecto} oblecto - Oblecto server instance
@@ -122,14 +126,10 @@ export default class RealtimeClient extends EventEmitter {
     }
 
     async playEpisode(episodeId) {
-        this.socket.emit('play', {
-            episodeId
-        });
+        this.socket.emit('play', { episodeId });
     }
 
     async playMovie(movieId) {
-        this.socket.emit('play', {
-            movieId
-        });
+        this.socket.emit('play', { movieId });
     }
 }

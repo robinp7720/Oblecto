@@ -21,7 +21,10 @@ export default class SeriesCollector {
      * @returns {Promise<void>}
      */
     async collectDirectory(directory) {
-        let files = await recursive(directory);
+        /**
+         * @type {string[]}
+         */
+        const files = await recursive(directory);
 
         files.forEach(file => {
             this.collectFile(file);

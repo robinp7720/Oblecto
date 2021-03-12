@@ -37,9 +37,7 @@ export default class FileCleaner{
      */
     async removeAssoclessFiles () {
         logger.log('INFO', 'Removing files from the database without any attached media items');
-        let results = await File.findAll({
-            include: [Movie, Episode]
-        });
+        let results = await File.findAll({ include: [Movie, Episode] });
 
         results.forEach((item) => {
             if (item.Movies.length === 0 && item.Episodes.length === 0) {

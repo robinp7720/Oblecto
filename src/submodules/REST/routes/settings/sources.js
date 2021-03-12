@@ -24,9 +24,7 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('No path specified'));
         }
 
-        oblecto.config[req.params.type].directories.push({
-            path: req.params.path
-        });
+        oblecto.config[req.params.type].directories.push({ path: req.params.path });
 
         res.send('success');
 

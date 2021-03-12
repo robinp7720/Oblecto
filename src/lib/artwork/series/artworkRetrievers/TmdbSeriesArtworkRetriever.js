@@ -36,9 +36,7 @@ export default class TmdbSeriesArtworkRetriever {
     async retrieveSeriesPoster(series) {
         if (!series.tmdbid) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
 
-        let data = await promiseTimeout(this.oblecto.tmdb.tvImages({
-            id: series.tmdbid
-        }));
+        let data = await promiseTimeout(this.oblecto.tmdb.tvImages({ id: series.tmdbid }));
 
         return data.posters.map(image => `https://image.tmdb.org/t/p/original${image['file_path']}`);
     }

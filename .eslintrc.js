@@ -11,6 +11,7 @@ module.exports = {
         'sourceType': 'module',
         'ecmaVersion': 2020,
     },
+    'settings': { 'jsdoc': { 'mode': 'typescript' } },
     'plugins': ['jsdoc'],
     'rules': {
         'indent': ['error', 4, { 'SwitchCase': 1 }],
@@ -19,15 +20,26 @@ module.exports = {
         'semi': ['error', 'always'],
         'func-call-spacing': ['error', 'never'],
         'rest-spread-spacing': ['error', 'never'],
-        'object-curly-spacing': ['error', 'always'],
+
         'newline-after-var': ['error', 'always'],
-        'array-bracket-newline': ['error', { 'multiline': true }],
-        'array-bracket-spacing': ['error', 'never'],
+
         'lines-around-directive': ['error', 'never'],
         'spaced-comment': ['error', 'always'],
         'no-multiple-empty-lines': ['error', { 'max': 1 }],
-        // 'camelcase': ['error', { 'properties': 'always' }],
         'no-unused-vars': ['error', { 'args': 'none' }],
+
+        'array-bracket-newline': ['error', { 'multiline': true }],
+        'array-bracket-spacing': ['error', 'never'],
+
         'object-property-newline': ['error', { 'allowAllPropertiesOnSameLine': true }],
+        'object-curly-spacing': ['error', 'always'],
+        'object-curly-newline': [
+            'error', {
+                'ObjectExpression': { 'minProperties': 3, 'multiline': true },
+                'ObjectPattern': { 'multiline': true, },
+                'ImportDeclaration': 'never',
+                'ExportDeclaration': { 'multiline': true, 'minProperties': 3 }
+            }
+        ]
     }
 };

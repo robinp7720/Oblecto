@@ -26,9 +26,7 @@ class Logger extends EventEmitter{
             return;
         }
 
-        this.emit('log', {
-            level, messages
-        });
+        this.emit('log', { level, messages });
     }
 }
 

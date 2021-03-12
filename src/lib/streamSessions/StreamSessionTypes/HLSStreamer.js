@@ -98,9 +98,7 @@ export default class HLSStreamer extends StreamSession {
     sendPlaylistFile(res) {
         this.startTimeout();
 
-        res.writeHead(200, {
-            'Content-Type': 'application/x-mpegURL'
-        });
+        res.writeHead(200, { 'Content-Type': 'application/x-mpegURL' });
 
         fs.createReadStream(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/index.m3u8`).pipe(res);
     }

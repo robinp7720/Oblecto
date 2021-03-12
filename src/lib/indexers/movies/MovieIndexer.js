@@ -14,9 +14,7 @@ export default class MovieIndexer {
 
         this.movieIdentifier = new AggregateIdentifier();
 
-        const movieIdentifiers = {
-            'tmdb': TmdbMovieIdentifier
-        };
+        const movieIdentifiers = { 'tmdb': TmdbMovieIdentifier };
 
         for (let identifier of this.oblecto.config.movies.movieIdentifiers) {
             logger.log('DEBUG', `Loading ${identifier} movie identifier`);
@@ -40,9 +38,7 @@ export default class MovieIndexer {
 
         let [movie, movieCreated] = await Movie.findOrCreate(
             {
-                where: {
-                    tmdbid: movieIdentification.tmdbid
-                },
+                where: { tmdbid: movieIdentification.tmdbid },
                 defaults: movieIdentification
             });
 

@@ -141,9 +141,7 @@ export default class StreamSession extends EventEmitter {
             }
         }
 
-        let codecs = {
-            'h264': 'libx264'
-        };
+        let codecs = { 'h264': 'libx264' };
 
         if (codecs[this.videoCodec]) return codecs[this.videoCodec];
 

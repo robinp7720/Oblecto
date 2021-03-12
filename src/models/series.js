@@ -3,10 +3,18 @@ import { DataTypes, Model } from 'sequelize';
 export class Series extends Model {}
 
 export const seriesColumns = {
-    tvdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
-    imdbid: { type: DataTypes.STRING(64), allowNull: true, unique: true },
-    zap2itId: { type: DataTypes.STRING(64), allowNull: true, unique: true },
-    tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
+    tvdbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
+    imdbid: {
+        type: DataTypes.STRING(64), allowNull: true, unique: true 
+    },
+    zap2itId: {
+        type: DataTypes.STRING(64), allowNull: true, unique: true 
+    },
+    tmdbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
 
     seriesName: DataTypes.STRING,
     alias: DataTypes.STRING,

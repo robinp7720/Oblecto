@@ -40,9 +40,7 @@ export function initDatabase() {
             idle: 10000
         },
 
-        retry: {
-            max: 5
-        }
+        retry: { max: 5 }
     };
 
     if (options.dialect !== 'sqlite') {

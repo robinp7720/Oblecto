@@ -34,9 +34,7 @@ export default (server, oblecto) => {
 
             duplicates.push(
                 (await File.findAll({
-                    where: {
-                        hash: fileHashCount.hash
-                    },
+                    where: { hash: fileHashCount.hash },
                     include: [Episode, Movie]
 
                 }))

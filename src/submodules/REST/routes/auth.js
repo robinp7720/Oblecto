@@ -12,9 +12,7 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('Password is missing'));
 
         let user = await User.findOne({
-            where: {
-                username: req.params.username
-            },
+            where: { username: req.params.username },
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
 

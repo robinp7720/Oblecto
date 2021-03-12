@@ -18,9 +18,7 @@ const ConfigManager = {
         }
     },
     loadConfigFiles: function loadConfigs () {
-        config = {
-            ...this.loadFile('/etc/oblecto/config.json')
-        };
+        config = { ...this.loadFile('/etc/oblecto/config.json') };
     },
     saveConfig: function saveConfig () {
         fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4), (stat, err) => {

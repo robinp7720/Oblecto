@@ -3,9 +3,15 @@ import { DataTypes, Model } from 'sequelize';
 export class Episode extends Model {}
 
 export const episodeColumns = {
-    tvdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
-    tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
-    imdbid: { type: DataTypes.STRING, allowNull: true, unique: true },
+    tvdbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
+    tmdbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
+    imdbid: {
+        type: DataTypes.STRING, allowNull: true, unique: true 
+    },
 
     episodeName: { type: DataTypes.STRING, allowNull: true },
 

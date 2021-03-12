@@ -36,9 +36,7 @@ export default (server, oblecto) => {
                 {
                     model: TrackMovie,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ],
             order: [[req.params.sorting, req.params.order]],
@@ -75,16 +73,12 @@ export default (server, oblecto) => {
                         {
                             model: TrackMovie,
                             required: false,
-                            where: {
-                                userId: req.authorization.user.id
-                            }
+                            where: { userId: req.authorization.user.id }
                         }
                     ]
                 },
             ],
-            where: {
-                id: req.params.id
-            },
+            where: { id: req.params.id },
             limit,
             offset: limit * page
         });
@@ -113,9 +107,7 @@ export default (server, oblecto) => {
     });
 
     server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let movie = await Movie.findByPk(req.params.id, {
-            include: [File]
-        });
+        let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
         if (!movie) {
             return next(new errors.NotFoundError('Movie does not exist'));
@@ -166,9 +158,7 @@ export default (server, oblecto) => {
 
     server.get('/movie/:id/fanart', async function (req, res, next) {
         // Get episode data
-        let movie = await Movie.findByPk(req.params.id, {
-            include: [File]
-        });
+        let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
         let fanartPath = oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
@@ -180,9 +170,7 @@ export default (server, oblecto) => {
     });
 
     server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let movie = await Movie.findByPk(req.params.id, {
-            include: [File]
-        });
+        let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
         if (!movie) {
             return next(new errors.NotFoundError('Movie does not exist'));
@@ -239,9 +227,7 @@ export default (server, oblecto) => {
                 {
                     model: TrackMovie,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ]
         });
@@ -250,13 +236,7 @@ export default (server, oblecto) => {
     });
 
     server.get('/movie/:id/play', async function (req, res, next) {
-        let movie = await Movie.findByPk(req.params.id, {
-            include: [
-                {
-                    model: File
-                }
-            ]
-        });
+        let movie = await Movie.findByPk(req.params.id, { include: [{ model: File }] });
 
         let file = movie.files[0];
 
@@ -276,9 +256,7 @@ export default (server, oblecto) => {
                                 {
                                     model: TrackMovie,
                                     required: false,
-                                    where: {
-                                        userId: req.authorization.user.id
-                                    }
+                                    where: { userId: req.authorization.user.id }
                                 }
                             ]
                         }
@@ -304,11 +282,7 @@ export default (server, oblecto) => {
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let movie = await Movie.findAll({
-            where: {
-                movieName: {
-                    [Op.like]: '%' + req.params.name + '%'
-                }
-            },
+            where: { movieName: { [Op.like]: '%' + req.params.name + '%' } },
             include: [File]
         });
 
@@ -327,21 +301,15 @@ export default (server, oblecto) => {
                         {
                             model: TrackMovie,
                             required: false,
-                            where: {
-                                userId: req.authorization.user.id
-                            }
+                            where: { userId: req.authorization.user.id }
                         }
                     ]
                 }
             ],
             where: {
                 userId: req.authorization.user.id,
-                progress: {
-                    [sequelize.Op.lt]: 0.9
-                },
-                updatedAt: {
-                    [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
-                }
+                progress: { [sequelize.Op.lt]: 0.9 },
+                updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
             },
             order: [['updatedAt', 'DESC'],],
         });

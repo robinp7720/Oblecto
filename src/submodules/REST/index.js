@@ -13,9 +13,7 @@ export default class OblectoAPI {
         this.oblecto = oblecto;
 
         // Initialize REST based server
-        this.server = restify.createServer({
-            'name': 'Oblecto'
-        });
+        this.server = restify.createServer({ 'name': 'Oblecto' });
 
         // Allow remote clients to connect to the backend
         const cors = corsMiddleware({
