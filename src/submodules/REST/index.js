@@ -3,7 +3,7 @@ import routes from './routes';
 import corsMiddleware from 'restify-cors-middleware';
 import logger from '../logger';
 
-import Oblecto from '../../../../lib/oblecto';
+import Oblecto from '../../lib/oblecto';
 
 export default class OblectoAPI {
     /**

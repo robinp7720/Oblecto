@@ -4,7 +4,6 @@ import { TrackEpisode } from '../../models/trackEpisode';
 import { TrackMovie } from '../../models/trackMovie';
 import logger from '../../submodules/logger';
 import Oblecto from '../oblecto';
-import { Socket } from '@types/socket.io';
 
 export default class RealtimeClient extends EventEmitter {
     /**

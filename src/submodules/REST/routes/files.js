@@ -4,7 +4,7 @@ import sequelize from 'sequelize';
 import { Episode } from '../../../models/episode';
 import { Movie } from '../../../models/movie';
 
-import Oblecto from '../../../../lib/oblecto';
+import Oblecto from '../../../lib/oblecto';
 import Server from 'restify/lib/server';
 
 /**
