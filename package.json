@@ -1,9 +1,10 @@
 {
   "name": "oblecto",
-  "version": "v0.2.6-beta.2",
+  "version": "v0.2.9",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
+  "license": "AGPL-3.0-or-later",
   "private": false,
   "bin": {
     "oblecto": "./dist/bin/oblecto.js"
