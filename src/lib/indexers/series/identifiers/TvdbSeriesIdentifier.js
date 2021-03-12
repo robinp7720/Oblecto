@@ -1,12 +1,12 @@
 import IdentificationError from '../../../errors/IdentificationError';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import SeriesIdentifier from '../SeriesIdentifer';
-import {distance} from 'fastest-levenshtein';
-
+import { distance } from 'fastest-levenshtein';
+import Oblecto from '../../../oblecto';
 
 export default class TvdbSeriesIdentifier extends SeriesIdentifier {
     /**
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto instance
      */
     constructor(oblecto) {
         super(oblecto);
@@ -24,7 +24,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         for (let item of found) {
             let currentDistance = distance(guessitId.title, item.seriesName);
 
-            if (shortestDistance == -1 || currentDistance < shortestDistance) {
+            if (shortestDistance === -1 || currentDistance < shortestDistance) {
                 shortestDistance = currentDistance;
                 shortestItem = item;
             }

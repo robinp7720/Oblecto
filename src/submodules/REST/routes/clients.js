@@ -1,9 +1,12 @@
 import authMiddleWare from '../middleware/auth';
 
+import Oblecto from '../../../../lib/oblecto';
+import Server from 'restify/lib/server';
+
 /**
  *
- * @param {Server} server
- * @param {Oblecto} oblecto
+ * @param {Server} server - Restify server object
+ * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
     server.get('/clients', authMiddleWare.requiresAuth, async function (req, res, next) {

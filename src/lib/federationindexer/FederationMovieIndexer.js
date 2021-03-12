@@ -1,5 +1,5 @@
-import {File} from '../../models/file';
-import {Movie} from '../../models/movie';
+import { File } from '../../models/file';
+import { Movie } from '../../models/movie';
 
 export default class FederationMovieIndexer {
     constructor(oblecto) {
@@ -12,7 +12,7 @@ export default class FederationMovieIndexer {
     }
 
     async indexMovie(file) {
-        let [fileEntity, fileInserted] = await File.findOrCreate({
+        let [fileEntity] = await File.findOrCreate({
             where: {
                 host: file.host,
                 path: file.id

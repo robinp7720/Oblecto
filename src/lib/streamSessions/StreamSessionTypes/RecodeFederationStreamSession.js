@@ -1,6 +1,5 @@
 import StreamSession from '../StreamSession';
 import ffmpeg from '../../../submodules/ffmpeg';
-import Stream from 'stream';
 import FederationMediaClient from '../../federation/client/FederationMediaClient';
 import logger from '../../../submodules/logger';
 
@@ -28,9 +27,7 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         await this.initFederationStream();
 
-        let inputOptions = [
-            '-noaccurate_seek',
-        ];
+        let inputOptions = ['-noaccurate_seek',];
 
         let outputOptions = [
             '-movflags', 'empty_moov',
@@ -62,7 +59,7 @@ export default class RecodeFederationStreamSession extends StreamSession {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
         });
 
-        this.process.pipe(this.outputStream, {end: true});
+        this.process.pipe(this.outputStream, { end: true });
     }
 
     async initFederationStream() {

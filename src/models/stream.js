@@ -1,7 +1,6 @@
-import {DataTypes, Model} from 'sequelize';
+import { DataTypes, Model } from 'sequelize';
 
-export class Stream extends Model {
-}
+export class Stream extends Model {}
 
 export const streamColumns = {
     index: DataTypes.INTEGER,

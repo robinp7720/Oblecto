@@ -5,6 +5,9 @@ let createDirectory = function (dir) {
     mkdirp(dir);
 };
 
+/**
+ * @param {*} config - Oblecto config object
+ */
 export default function (config) {
     // Create directories for image assets
     for (let size in config.artwork.fanart) {

@@ -1,5 +1,4 @@
-import os from 'os'
-import fs from 'fs'
+import fs from 'fs';
 
 let config = {};
 
@@ -21,12 +20,12 @@ const ConfigManager = {
     loadConfigFiles: function loadConfigs () {
         config = {
             ...this.loadFile('/etc/oblecto/config.json')
-        }
+        };
     },
     saveConfig: function saveConfig () {
         fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4), (stat, err) => {
             if (err) {
-                console.log('An error has occurred while writing the config file: ', err)
+                console.log('An error has occurred while writing the config file: ', err);
             }
         });
     }
@@ -34,7 +33,7 @@ const ConfigManager = {
 
 ConfigManager.loadConfigFiles();
 
-export default config
+export default config;
 
-export { ConfigManager }
+export { ConfigManager };
 

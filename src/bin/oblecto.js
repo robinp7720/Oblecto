@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 
 (async () => {
     let packageInfo = JSON.parse(await fs.readFile(__dirname + '/../../package.json'));

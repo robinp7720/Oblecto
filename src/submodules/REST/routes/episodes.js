@@ -4,10 +4,10 @@ import errors from 'restify-errors';
 import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
-import {Episode} from '../../../models/episode';
-import {Series} from '../../../models/series';
-import {TrackEpisode} from '../../../models/trackEpisode';
-import {File} from '../../../models/file';
+import { Episode } from '../../../models/episode';
+import { Series } from '../../../models/series';
+import { TrackEpisode } from '../../../models/trackEpisode';
+import { File } from '../../../models/file';
 
 const Op = sequelize.Op;
 
@@ -42,9 +42,7 @@ export default (server, oblecto) => {
                     }
                 }
             ],
-            order: [
-                [req.params.sorting, req.params.order]
-            ],
+            order: [[req.params.sorting, req.params.order]],
             limit,
             offset: limit * page
         });
@@ -137,7 +135,6 @@ export default (server, oblecto) => {
         res.send(episode.files);
     });
 
-
     // Endpoint to send episode video file to the client
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/episode/:id/play', async function (req, res, next) {
@@ -180,26 +177,30 @@ export default (server, oblecto) => {
         let episode = await Episode.findOne({
             where: {
                 SeriesId: results.SeriesId,
-                [Op.or]: [{
-                    [Op.and]: [{
-                        airedEpisodeNumber: {
-                            [Op.gt]: results.airedEpisodeNumber
-                        }
+                [Op.or]: [
+                    {
+                        [Op.and]: [
+                            {
+                                airedEpisodeNumber: {
+                                    [Op.gt]: results.airedEpisodeNumber
+                                }
+                            },
+                            {
+                                airedSeason: {
+                                    [Op.gte]: results.airedSeason
+                                }
+                            },
+                        ]
                     },
                     {
-                        airedSeason: {
-                            [Op.gte]: results.airedSeason
-                        }
-                    },
-                    ]
-                },
-                {
-                    [Op.and]: [{
-                        airedSeason: {
-                            [Op.gt]: results.airedSeason
-                        }
-                    }, ]
-                }
+                        [Op.and]: [
+                            {
+                                airedSeason: {
+                                    [Op.gt]: results.airedSeason
+                                }
+                            },
+                        ]
+                    }
                 ]
             },
             order: [
@@ -255,10 +256,9 @@ export default (server, oblecto) => {
                             [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
                         }
                     },
-                }],
-            order: [
-                ['updatedAt', 'DESC'],
+                }
             ],
+            order: [['updatedAt', 'DESC'],],
         });
 
         // We are only interested in the episode objects, so extract all the episode object from
@@ -281,22 +281,22 @@ export default (server, oblecto) => {
                     [sequelize.fn('MAX', sequelize.col('firstAired')), 'firstAired']
                 ]
             },
-            include: [{
-                model: TrackEpisode,
-                required: true,
-                where: {
-                    userId: req.authorization.user.id,
-                    progress: {
-                        [sequelize.Op.gt]: 0.9
+            include: [
+                {
+                    model: TrackEpisode,
+                    required: true,
+                    where: {
+                        userId: req.authorization.user.id,
+                        progress: {
+                            [sequelize.Op.gt]: 0.9
+                        },
+                        updatedAt: {
+                            [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
+                        }
                     },
-                    updatedAt: {
-                        [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
-                    }
-                },
-            }],
-            group: [
-                'SeriesId'
-            ]
+                }
+            ],
+            group: ['SeriesId']
         });
 
         let nextUp = [];
@@ -305,9 +305,7 @@ export default (server, oblecto) => {
             latest = latest.toJSON();
             let next = await Episode.findOne({
                 attributes: {
-                    include: [
-                        [sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']
-                    ]
+                    include: [[sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']]
                 },
                 include: [
                     Series,
@@ -316,14 +314,13 @@ export default (server, oblecto) => {
                         where: {
                             userId: req.authorization.user.id
                         },
-                    }],
+                    }
+                ],
                 where: sequelize.and(
                     sequelize.where(sequelize.col('SeriesId'), '=', latest.SeriesId),
                     sequelize.where(sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), '>', latest.seasonepisode),
                 ),
-                order: [
-                    sequelize.col('seasonepisode')
-                ]
+                order: [sequelize.col('seasonepisode')]
             });
 
             if (next) {
@@ -334,6 +331,5 @@ export default (server, oblecto) => {
         res.send(nextUp);
 
     });
-
 
 };

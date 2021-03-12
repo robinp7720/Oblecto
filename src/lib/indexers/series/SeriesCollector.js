@@ -1,18 +1,23 @@
 import recursive from 'recursive-readdir';
 import path from 'path';
+import Oblecto from '../../oblecto';
 
+/**
+ * Module for oblecto to scan for media files which are to be indexed by the episode indexer
+ */
 export default class SeriesCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
 
     /**
+     *  Add all files within a directory to the queue to be indexed
      *
-     * @param {String} directory - Which directory to add to the index queue
+     * @param {string} directory - Which directory to add to the index queue
      * @returns {Promise<void>}
      */
     async collectDirectory(directory) {
@@ -24,19 +29,21 @@ export default class SeriesCollector {
     }
 
     /**
+     *  Queue a file to be indexed
      *
-     * @param {String} file - File path to add to the index queue
+     * @param {string} file - File path to add to the index queue
      * @returns {Promise<void>}
      */
     async collectFile(file) {
         let extension = path.parse(file).ext.toLowerCase();
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
-            this.oblecto.queue.queueJob('indexEpisode',{path: file});
+            this.oblecto.queue.queueJob('indexEpisode',{ path: file });
         }
     }
 
     /**
+     * Index all TV Show libraries
      *
      * @returns {Promise<void>}
      */

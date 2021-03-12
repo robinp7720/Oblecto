@@ -3,9 +3,6 @@ import errors from 'restify-errors';
 
 import { ConfigManager } from '../../../../config';
 
-
-
-
 export default (server, oblecto) => {
     // API Endpoint to request a re-index of certain library types
     server.get('/sources/:type', authMiddleWare.requiresAuth, function (req, res, next) {

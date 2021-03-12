@@ -4,7 +4,7 @@ import which from 'which';
 
 import logger from './logger';
 
-let use_binary = false;
+let useBinary = false;
 
 which('guessit', function (err, resolvedPath) {
     if (err) {
@@ -19,12 +19,12 @@ which('guessit', function (err, resolvedPath) {
     logger.log('INFO', 'Guessit binary has been found');
     logger.log('INFO', 'Using local guessit binary');
 
-    use_binary = true;
+    useBinary = true;
 });
 
 export default {
     async identify(search) {
-        if (use_binary) {
+        if (useBinary) {
             return binary(search);
         }
 

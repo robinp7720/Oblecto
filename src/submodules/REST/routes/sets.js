@@ -2,7 +2,7 @@ import errors from 'restify-errors';
 
 import authMiddleWare from '../middleware/auth';
 
-import {MovieSet} from '../../../models/movieSet';
+import { MovieSet } from '../../../models/movieSet';
 
 export default (server) => {
 
@@ -11,14 +11,14 @@ export default (server) => {
             return next(new errors.InvalidArgumentError('Argument public is not a boolean'));
         }
 
-        let [set, setInserted] = await MovieSet
+        let [set] = await MovieSet
             .findOrCreate({
-                where: {setName: req.params.name}, defaults: {
+                where: { setName: req.params.name },
+                defaults: {
                     overview: req.params.overview,
                     public: req.params.public
                 }
             });
-
 
         res.send(set);
     });

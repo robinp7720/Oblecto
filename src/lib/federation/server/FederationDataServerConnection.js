@@ -1,8 +1,8 @@
 import FederationServerConnection from './FederationServerConnection';
-import {File} from '../../../models/file';
-import {Movie} from '../../../models/movie';
-import {Episode} from '../../../models/episode';
-import {Series} from '../../../models/series';
+import { File } from '../../../models/file';
+import { Movie } from '../../../models/movie';
+import { Episode } from '../../../models/episode';
+import { Series } from '../../../models/series';
 
 export default class FederationDataServerConnection extends FederationServerConnection {
     constructor(oblecto, socket) {
@@ -37,11 +37,13 @@ export default class FederationDataServerConnection extends FederationServerConn
 
     async syncFiles() {
         let results = await File.findAll({
-            include: [Movie,
+            include: [
+                Movie,
                 {
                     model: Episode,
                     include: [Series]
-                }]
+                }
+            ]
         });
 
         for (let result of results) {
@@ -89,6 +91,13 @@ export default class FederationDataServerConnection extends FederationServerConn
     }
 }
 
+/**
+ * Sleep for a certain amount of milliseconds
+ *
+ * @param {number} ms - Milliseconds
+ *
+ * @returns {Promise<void>}
+ */
 function sleep(ms) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);

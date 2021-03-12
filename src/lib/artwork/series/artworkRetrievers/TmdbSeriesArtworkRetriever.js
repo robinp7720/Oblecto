@@ -12,7 +12,7 @@ export default class TmdbSeriesArtworkRetriever {
     /**
      *
      * @param {Episode} episode - Episode for which to retrieve banner URLs for
-     * @returns {Promise<string>} - Array of poster urls
+     * @returns {Promise<string[]>} - Array of poster urls
      */
     async retrieveEpisodeBanner(episode) {
         if (!episode.tmdbid) throw new DebugExtendableError(`TMDB Episode banner retriever failed for ${episode.episodeName}`);
@@ -31,7 +31,7 @@ export default class TmdbSeriesArtworkRetriever {
     /**
      *
      * @param {Series} series - Series for which to retrieve a poster for
-     * @returns {Promise<string>} - Array of banner urls
+     * @returns {Promise<string[]>} - Array of banner urls
      */
     async retrieveSeriesPoster(series) {
         if (!series.tmdbid) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);

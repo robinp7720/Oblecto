@@ -1,6 +1,7 @@
 import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
 import TmdbMovieRetriever from './informationRetrievers/TmdbMovieRetriever';
 import logger from '../../../submodules/logger';
+import { Movie } from '../../../models/movie';
 
 export default class MovieUpdater {
     constructor(oblecto) {
@@ -24,12 +25,14 @@ export default class MovieUpdater {
     }
 
     /**
+     * Fetch new movie metadata for a given movie entity
      *
-     * @param {Movie} movie
+     * @param {Movie} movie - Movie entity to be updated
      * @returns {Promise<void>}
      */
     async updateMovie(movie) {
         let data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie);
+
         await movie.update(data);
     }
 }

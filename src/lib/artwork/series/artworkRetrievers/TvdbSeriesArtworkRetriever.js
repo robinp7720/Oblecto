@@ -18,7 +18,7 @@ export default class TvdbSeriesArtworkRetriever {
     /**
      *
      * @param {Episode} episode - Episode for which to retrieve banner URLs for
-     * @returns {Promise<string>} - Array of poster urls
+     * @returns {Promise<string[]>} - Array of poster urls
      */
     async retrieveEpisodeBanner(episode) {
         if (!episode.tvdbid) throw new DebugExtendableError(`TVDB Episode banner retriever failed for ${episode.episodeName}`);
@@ -31,7 +31,7 @@ export default class TvdbSeriesArtworkRetriever {
     /**
      *
      * @param {Series} series - Series for which to retrieve a poster for
-     * @returns {Promise<string>} - Array of banner urls
+     * @returns {Promise<string>[]} - Array of banner urls
      */
     async retrieveSeriesPoster(series) {
         if (!series.tvdbid) throw new DebugExtendableError(`TVDB Series poster retriever failed for ${series.seriesName}`);

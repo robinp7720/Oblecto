@@ -4,6 +4,9 @@ import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRet
 import FanarttvSeriesArtworkRetriever from './artworkRetrievers/FanarttvSeriesArtworkRetriever';
 import logger from '../../../submodules/logger';
 
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
+
 export default class SeriesArtworkDownloader {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -18,6 +21,11 @@ export default class SeriesArtworkDownloader {
         this.oblecto.queue.registerJob('downloadSeriesPoster', this.downloadSeriesPoster);
     }
 
+    /**
+     *
+     * @param {Episode} episode - Episode for which to download a banner for
+     * @returns {Promise<void>}
+     */
     async downloadEpisodeBanner(episode) {
         await this.seriesArtworkRetriever.retrieveEpisodeBanner(episode);
 
@@ -32,6 +40,11 @@ export default class SeriesArtworkDownloader {
         }
     }
 
+    /**
+     *
+     * @param {Series} series - Series for which to download a poster for
+     * @returns {Promise<void>}
+     */
     async downloadSeriesPoster(series) {
         await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
 

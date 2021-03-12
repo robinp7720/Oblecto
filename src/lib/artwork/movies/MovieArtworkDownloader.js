@@ -1,4 +1,3 @@
-import Download from '../../downloader';
 import TmdbMovieArtworkRetriever from './artworkRetrievers/TmdbMovieArtworkRetriever';
 import FanarttvMovieArtworkRetriever from './artworkRetrievers/FanarttvMovieArtworkRetriever';
 import AggregateMovieArtworkRetriever from './AggregateMovieArtworkRetriever';

@@ -3,9 +3,11 @@ import routes from './routes';
 import corsMiddleware from 'restify-cors-middleware';
 import logger from '../logger';
 
+import Oblecto from '../../../../lib/oblecto';
+
 export default class OblectoAPI {
     /**
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -17,7 +19,7 @@ export default class OblectoAPI {
 
         // Allow remote clients to connect to the backend
         const cors = corsMiddleware({
-            preflightMaxAge: 5, //Optional
+            preflightMaxAge: 5, // Optional
             origins: ['*'],
             allowHeaders: ['API-Token', 'authorization'],
             exposeHeaders: ['API-Token-Expiry']

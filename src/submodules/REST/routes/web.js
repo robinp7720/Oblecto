@@ -6,7 +6,6 @@ export default (server, oblecto) => {
         directory: __dirname + '/../../../../Oblecto-Web/dist/',
     }));
 
-
     server.get('/web/logo.png', async (req, res, next) => {
         fs.readFile(__dirname + '/../../../../images/logomark.png', function (err, body) {
             res.writeHead(200, {

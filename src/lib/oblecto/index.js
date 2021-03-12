@@ -1,5 +1,5 @@
 import TVDB from 'node-tvdb';
-import {MovieDb} from 'moviedb-promise';
+import { MovieDb } from 'moviedb-promise';
 
 import Queue from '../queue';
 import ImageScaler from '../artwork/ArtworkScaler';
@@ -40,7 +40,7 @@ import SeriesCleaner from '../cleaners/SeriesCleaner';
 import FileCleaner from '../cleaners/FileCleaner';
 import FileIndexer from '../indexers/files/FileIndexer';
 
-import {initDatabase} from '../../submodules/database';
+import { initDatabase } from '../../submodules/database';
 import StreamSessionController from '../streamSessions/StreamSessionController';
 
 export default class Oblecto {
@@ -52,7 +52,7 @@ export default class Oblecto {
         this.tvdb = new TVDB(this.config.tvdb.key);
         this.tmdb = new MovieDb(this.config.themoviedb.key);
 
-        this.queue = new Queue(this);
+        this.queue = new Queue(this.config.queue.concurrency);
 
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);

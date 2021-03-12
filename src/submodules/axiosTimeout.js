@@ -1,6 +1,9 @@
 import WarnExtendableError from '../lib/errors/WarnExtendableError';
 import axios from 'axios';
 
+/**
+ * @param {...any} args - Arguments which will be passed to axios
+ */
 export default function (...args) {
     return new Promise(function(resolve, reject) {
         let timedout = false;

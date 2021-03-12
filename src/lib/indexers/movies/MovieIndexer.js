@@ -2,11 +2,12 @@ import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 import { Movie } from '../../../models/movie';
 import logger from '../../../submodules/logger';
+import Oblecto from '../../oblecto';
 
 export default class MovieIndexer {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -28,7 +29,8 @@ export default class MovieIndexer {
 
     /**
      * Index file based on file path
-     * @param moviePath
+     *
+     * @param {string} moviePath - Path to Movie to be indexed
      * @returns {Promise<void>}
      */
     async indexFile(moviePath) {

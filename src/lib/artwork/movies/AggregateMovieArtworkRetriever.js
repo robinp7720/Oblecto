@@ -18,6 +18,7 @@ export default class AggregateMovieArtworkRetriever {
         for (let retriever of this.retrievers) {
             try {
                 let urls = await retriever.retrieveFanart(movie);
+
                 if (urls.length === 0) throw new DebugExtendableError('No URLs found');
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.movieFanartPath(movie));
@@ -33,6 +34,7 @@ export default class AggregateMovieArtworkRetriever {
         for (let retriever of this.retrievers) {
             try {
                 let urls = await retriever.retrievePoster(movie);
+
                 if (urls.length === 0) throw new DebugExtendableError('No URLs found');
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.moviePosterPath(movie));

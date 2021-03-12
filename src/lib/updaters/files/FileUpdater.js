@@ -1,13 +1,15 @@
 import crypto from 'crypto';
-import {promises as fs, createReadStream} from 'fs';
+import { promises as fs, createReadStream } from 'fs';
 import ffprobe from '../../../submodules/ffprobe';
 import VideoAnalysisError from '../../errors/VideoAnalysisError';
+import Oblecto from '../../oblecto';
 
+import { File } from '../../../models/file';
 
 export default class FileUpdater {
 
     /**
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -35,7 +37,7 @@ export default class FileUpdater {
 
     static async getPrimaryVideoStream(metadata) {
         let streams = metadata.streams;
-        let primaryStream = {duration: 0};
+        let primaryStream = { duration: 0 };
 
         for (const stream of streams) {
             if (stream.duration || 1 >= primaryStream.duration) {
@@ -51,7 +53,7 @@ export default class FileUpdater {
 
     static async getPrimaryAudioStream(metadata) {
         let streams = metadata.streams;
-        let primaryStream = {duration: 0};
+        let primaryStream = { duration: 0 };
 
         for (const stream of streams) {
             if (stream.duration || 1 >= primaryStream.duration) {
@@ -67,7 +69,7 @@ export default class FileUpdater {
 
     /**
      *
-     * @param {File} file
+     * @param {File} file - Update relevant metadata for a file
      * @returns {Promise<void>}
      */
     async updateFile(file) {
@@ -91,8 +93,8 @@ export default class FileUpdater {
 
     /**
      *
-     * @param {File} file
-     * @returns {Promise<string>}
+     * @param {File} file - File to get hash fore
+     * @returns {Promise<string>} - File hash
      */
     getHashFromFile(file) {
         return new Promise((resolve, reject) => {
@@ -116,37 +118,40 @@ export default class FileUpdater {
 
     /**
      *
-     * @param {File} file
+     * @param {File} file - Update the file hash in the database
      * @returns {Promise<void>}
      */
     async updateFileHash(file) {
         let hash = await this.getHashFromFile(file);
-        await file.update({hash});
+
+        await file.update({ hash });
     }
 
     /**
      *
-     * @param {File} file
+     * @param {File} file - Update the file size in the database
      * @returns {Promise<void>}
      */
     async updateFileSize(file) {
         let size = (await fs.stat(file.path)).size;
-        await file.update({size});
+
+        await file.update({ size });
     }
 
     /**
      *
-     * @param {File} file
+     * @param {File} file - Update the file extension in the database
      * @returns {Promise<void>}
      */
     async updateFileExtension(file) {
         let extension = file.extension.replace('.','');
-        await file.update({extension});
+
+        await file.update({ extension });
     }
 
     /**
      *
-     * @param {File} file
+     * @param {File} file - Update the streams index
      * @returns {Promise<void>}
      */
     async updateFileFFProbe(file) {

@@ -2,6 +2,10 @@ import StreamSession from '../StreamSession';
 import ffmpeg from '../../../submodules/ffmpeg';
 import logger from '../../../submodules/logger';
 
+/**
+ * Streamer session to allow for playback on devices which don't support the native file format.
+ * This streamer also allows for sever side seeking
+ */
 export default class RecodeStreamSession extends StreamSession {
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
@@ -9,10 +13,15 @@ export default class RecodeStreamSession extends StreamSession {
         // LanguageCode is the ISO 639-2 code for the desired language
         this.targetLanguageCode = oblecto.config.streaming.defaultTargetLanguageCode;
 
+        // If only the container format needs to be changed, there is no need to recode the video and audio streams
+        // Therefore, copy streams should be used if the target codecs are the same as the source codecs
+
+        // Copy the video stream if the target format is the same
         if (this.videoCodec === this.file.videoCodec || this.file.videoCodec in this.targetVideoCodecs) {
             this.videoCodec = 'copy';
         }
 
+        // Copy the audio stream if the target format is the same
         if (this.audioCodec === this.file.audioCodec || this.file.audioCodec in this.targetAudioCodecs) {
             this.audioCodec = 'copy';
         }
@@ -25,9 +34,7 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.started = true;
 
-        let inputOptions = [
-            '-noaccurate_seek',
-        ];
+        let inputOptions = ['-noaccurate_seek',];
 
         let outputOptions = [
             '-movflags empty_moov',
@@ -43,8 +50,9 @@ export default class RecodeStreamSession extends StreamSession {
             // if the cuda accelerator has been selected
 
             // TODO: Fix washed out colors for some 10 bit video streams when using the NVENC encoder
-            // Depending on the input color range, this may result in washed out colors since the color range is kept
-            // but considered to be a full range color space even if the input range is limited.
+            //       Depending on the input color range, this may result in washed out colors since the
+            //       color range is kept but considered to be a full range color space even if the input
+            //       range is limited.
 
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
                 outputOptions.push('-pix_fmt yuv420p');
@@ -67,7 +75,7 @@ export default class RecodeStreamSession extends StreamSession {
 
         // Find a video stream with the desired language code
         // TODO: Some languages may be identified by multiple language codes
-        //  EG: French sometimes uses both "Fra" and "Fre"
+        //       EG: French sometimes uses both "Fra" and "Fre"
         for (let stream of audioStreams) {
             if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
                 selectedAudioStream = stream.index;
@@ -94,6 +102,6 @@ export default class RecodeStreamSession extends StreamSession {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
         });
 
-        this.process.pipe(this.outputStream, {end: true});
+        this.process.pipe(this.outputStream, { end: true });
     }
 }

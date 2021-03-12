@@ -5,12 +5,17 @@ import TmdbEpisodeRetriever from './informationRetrievers/TmdbEpisodeRetriever';
 import TvdbEpisodeRetriever from './informationRetrievers/TvdbEpisodeRetriever';
 import TvdbSeriesRetriever from './informationRetrievers/TvdbSeriesRetriever';
 
+import Oblecto from '../../oblecto';
+
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
+
 import logger from '../../../submodules/logger';
 
 export default class SeriesUpdater {
 
     /**
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -50,21 +55,23 @@ export default class SeriesUpdater {
 
     /**
      *
-     * @param {Series} series
+     * @param {Series} series - Series to fetch updated metadata for
      * @returns {Promise<void>}
      */
     async updateSeries(series) {
         let data = await this.aggregateSeriesUpdateRetriever.retrieveInformation(series);
+
         await series.update(data);
     }
 
     /**
      *
-     * @param {Episode} episode
+     * @param {Episode} episode - Episode to fetch updated metadata for
      * @returns {Promise<void>}
      */
     async updateEpisode(episode) {
         let data = await this.aggregateEpisodeUpdaterRetriever.retrieveInformation(episode);
+
         await episode.update(data);
     }
 }

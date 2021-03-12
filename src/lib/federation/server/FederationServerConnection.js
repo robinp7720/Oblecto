@@ -1,5 +1,5 @@
 import NodeRSA from 'node-rsa';
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class FederationServerConnection {
@@ -56,6 +56,7 @@ export default class FederationServerConnection {
         if (!this.oblecto.config.federation.clients[clientId]) return;
 
         let key = await fs.readFile(this.oblecto.config.federation.clients[clientId].key);
+
         this.key = NodeRSA(key);
 
         this.write('CHALLENGE', this.key.encrypt(this.challenge, 'base64'));

@@ -4,4 +4,3 @@ import core from './core/graphical';
     core.start();
 })();
 
-

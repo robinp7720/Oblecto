@@ -1,4 +1,4 @@
-import {EventEmitter} from 'events';
+import { EventEmitter } from 'events';
 
 class Logger extends EventEmitter{
     constructor() {
@@ -8,8 +8,6 @@ class Logger extends EventEmitter{
 
         this.on('log', (log) => {
             if(this.silent) return;
-
-            //if (log.level === 'DEBUG') return;
 
             if (log instanceof Error) {
                 console.log(log.level, log);
