@@ -15,7 +15,9 @@ import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';
 import guessit from '../../../submodules/guessit';
 
-import Oblecto from '../../oblecto';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 /**
  * Oblecto module to identify and index series and episodes

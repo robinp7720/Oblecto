@@ -4,7 +4,9 @@ import promiseTimeout from '../../../../submodules/promiseTimeout';
 import { Episode } from '../../../../models/episode';
 import { Series } from '../../../../models/series';
 
-import Oblecto from '../../../oblecto';
+/**
+ * @typedef {import('../../../oblecto').default} Oblecto
+ */
 
 export default class TvdbSeriesArtworkRetriever {
     /**

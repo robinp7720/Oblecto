@@ -2,9 +2,12 @@ import crypto from 'crypto';
 import { promises as fs, createReadStream } from 'fs';
 import ffprobe from '../../../submodules/ffprobe';
 import VideoAnalysisError from '../../errors/VideoAnalysisError';
-import Oblecto from '../../oblecto';
 
 import { File } from '../../../models/file';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class FileUpdater {
 

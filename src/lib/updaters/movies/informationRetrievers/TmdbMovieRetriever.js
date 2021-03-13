@@ -1,7 +1,10 @@
 import promiseTimeout from '../../../../submodules/promiseTimeout';
-import Oblecto from '../../../oblecto';
 
 import { Movie } from '../../../../models/movie';
+
+/**
+ * @typedef {import('../../..//oblecto').default} Oblecto
+ */
 
 export default class TmdbMovieRetriever {
 

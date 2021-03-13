@@ -2,7 +2,10 @@ import { promises as fs } from 'fs';
 import axiosTimeout from '../../submodules/axiosTimeout';
 import logger from '../../submodules/logger';
 import DebugExtendableError from '../errors/DebugExtendableError';
-import Oblecto from '../oblecto';
+
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class Downloader {
     /**

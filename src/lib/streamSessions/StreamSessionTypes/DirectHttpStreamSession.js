@@ -5,16 +5,17 @@ import logger from '../../../submodules/logger';
 
 import { File } from '../../../models/file';
 
-import Oblecto from '../../oblecto';
-
-import Response from 'restify/lib/response';
-import Request from 'restify/lib/request';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import('restify/lib/response')} Response
+ * @typedef {import('restify/lib/request)} Request
+ */
 
 export default class DirectHttpStreamSession extends StreamSession {
     /**
-     * @param { File } file - File to stream
-     * @param { * } options - Streamer options
-     * @param { Oblecto } oblecto - Oblecto server instance
+     * @param {File} file - File to stream
+     * @param {*} options - Streamer options
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
@@ -55,9 +56,9 @@ export default class DirectHttpStreamSession extends StreamSession {
     }
 
     /**
-     * @param { Request } req - HTTP server request object
-     * @param { Response } res - HTTP server response object
-     * @param { File|string } file - File path or object to stream
+     * @param {Request} req - HTTP server request object
+     * @param {Response} res - HTTP server response object
+     * @param {File|string} file - File path or object to stream
      */
     static async httpStreamHandler(req, res, file) {
         let path = file;

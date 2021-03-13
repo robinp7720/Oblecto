@@ -4,7 +4,10 @@ import NodeRSA from 'node-rsa';
 import EventEmitter from 'events';
 import { readFileSync } from 'fs';
 import logger from '../../../submodules/logger';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class FederationClient{
     /**

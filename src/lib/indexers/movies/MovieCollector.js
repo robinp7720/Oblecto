@@ -1,7 +1,9 @@
 import recursive from 'recursive-readdir';
 import path from 'path';
 
-import Oblecto from '../../oblecto';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class MovieCollector {
     /**

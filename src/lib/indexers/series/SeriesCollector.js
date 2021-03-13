@@ -1,6 +1,9 @@
 import recursive from 'recursive-readdir';
 import path from 'path';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 /**
  * Module for oblecto to scan for media files which are to be indexed by the episode indexer

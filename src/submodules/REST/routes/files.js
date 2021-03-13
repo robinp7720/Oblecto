@@ -1,11 +1,14 @@
+import sequelize from 'sequelize';
+
 import authMiddleWare from '../middleware/auth';
 import { File } from '../../../models/file';
-import sequelize from 'sequelize';
 import { Episode } from '../../../models/episode';
 import { Movie } from '../../../models/movie';
 
-import Oblecto from '../../../../lib/oblecto';
-import Server from 'restify/lib/server';
+/**
+ * @typedef {import('../../../lib/oblecto').default} Oblecto
+ * @typedef {import('restify/lib/server')} Server
+ */
 
 /**
  *

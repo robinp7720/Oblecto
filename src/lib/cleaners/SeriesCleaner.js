@@ -2,7 +2,10 @@ import { Episode } from '../../models/episode';
 import { File } from '../../models/file';
 import { Series } from '../../models/series';
 import logger from '../../submodules/logger';
-import Oblecto from '../oblecto';
+
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class SeriesCleaner {
     /**

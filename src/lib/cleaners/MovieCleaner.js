@@ -1,7 +1,10 @@
 import { Movie } from '../../models/movie';
 import { File } from '../../models/file';
 import logger from '../../submodules/logger';
-import Oblecto from '../oblecto';
+
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class MovieCleaner {
     /**

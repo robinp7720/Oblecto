@@ -2,7 +2,10 @@ import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 import { Movie } from '../../../models/movie';
 import logger from '../../../submodules/logger';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class MovieIndexer {
     /**

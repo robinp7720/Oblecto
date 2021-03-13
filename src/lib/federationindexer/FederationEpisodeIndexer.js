@@ -2,7 +2,9 @@ import { Series } from '../../models/series';
 import { Episode } from '../../models/episode';
 import { File } from '../../models/file';
 
-import Oblecto from '../oblecto';
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class FederationEpisodeIndexer {
     /**

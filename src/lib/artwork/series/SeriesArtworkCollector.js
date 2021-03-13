@@ -1,6 +1,8 @@
 import { Episode } from '../../../models/episode';
 import { Series } from '../../../models/series';
-import Oblecto from '../../oblecto';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 import { fileExists } from '../../../submodules/utils';
 
 export default class SeriesArtworkCollector {

@@ -3,11 +3,10 @@ import { EventEmitter } from 'events';
 import { TrackEpisode } from '../../models/trackEpisode';
 import { TrackMovie } from '../../models/trackMovie';
 import logger from '../../submodules/logger';
-import Oblecto from '../oblecto';
-import { Socket } from '@types/socket.io';
 
 /**
- * @typedef {import('@types/socket.io').Socket} Socket
+ * @typedef {import('../oblecto').default} Oblecto
+ * @typedef {import('socket.io').Socket} Socket
  */
 
 export default class RealtimeClient extends EventEmitter {

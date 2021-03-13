@@ -1,6 +1,9 @@
 import socketio from 'socket.io';
 import RealtimeClient from './RealtimeClient';
-import Oblecto from '../oblecto';
+
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class RealtimeController {
     /**
