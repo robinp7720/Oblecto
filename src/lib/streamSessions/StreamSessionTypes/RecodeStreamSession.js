@@ -3,10 +3,20 @@ import ffmpeg from '../../../submodules/ffmpeg';
 import logger from '../../../submodules/logger';
 
 /**
+ * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import("../../../models/file").File} File
+ */
+
+/**
  * Streamer session to allow for playback on devices which don't support the native file format.
  * This streamer also allows for sever side seeking
  */
 export default class RecodeStreamSession extends StreamSession {
+    /**
+     * @param {File} file - File to be streamed
+     * @param {any} options - Options for Media streamer
+     * @param {Oblecto} oblecto - Oblecto server instance
+     */
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
 

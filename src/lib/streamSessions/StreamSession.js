@@ -1,12 +1,11 @@
 import { EventEmitter } from 'events';
 import { v4 } from 'uuid';
 import logger from '../../submodules/logger';
-import Stream from 'stream';
-
-import { File } from '../../models/file';
+import * as Stream from 'stream';
 
 /**
  * @typedef {import('../oblecto').default} Oblecto
+ * @typedef {import("../../models/file").File} File
  */
 
 export default class StreamSession extends EventEmitter {
@@ -18,8 +17,6 @@ export default class StreamSession extends EventEmitter {
      */
     constructor(file, options, oblecto) {
         super();
-
-        oblecto.imageScaler;
 
         logger.log('INFO', 'New StreamSession initiating');
 

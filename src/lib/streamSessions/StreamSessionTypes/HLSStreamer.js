@@ -1,12 +1,22 @@
 import StreamSession from '../StreamSession';
 import mkdirp from 'mkdirp';
-import os from 'os';
+import * as os from 'os';
 import ffmpeg from '../../../submodules/ffmpeg';
-import fs from 'fs';
+import * as fs from 'fs';
 import { promises as pfs } from 'fs';
 import DirectHttpStreamSession from './DirectHttpStreamSession';
 
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import("../../../models/file").File} File
+ */
+
 export default class HLSStreamer extends StreamSession {
+    /**
+     * @param {File} file - File to be streamed
+     * @param {any} options - Options for Media streamer
+     * @param {Oblecto} oblecto - Oblecto server instance
+     */
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
 

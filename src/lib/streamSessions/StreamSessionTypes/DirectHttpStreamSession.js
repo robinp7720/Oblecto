@@ -3,12 +3,11 @@ import mimeTypes from 'mime-types';
 import { promises as fs, createReadStream } from 'fs';
 import logger from '../../../submodules/logger';
 
-import { File } from '../../../models/file';
-
 /**
  * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import('../../../models/file.js')} File
  * @typedef {import('restify/lib/response')} Response
- * @typedef {import('restify/lib/request)} Request
+ * @typedef {import('restify/lib/request')} Request
  */
 
 export default class DirectHttpStreamSession extends StreamSession {
