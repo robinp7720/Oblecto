@@ -41,9 +41,7 @@ export default class Queue {
     registerJob(id, job) {
         if (this.jobs[id]) {
             logger.log('ERROR', `A job has been registered which was already registered: ${id}`);
-            logger.log('ERROR', 'This should not happen. Shutting down server');
-
-            this.oblecto.close();
+            logger.log('ERROR', 'This should not happen');
 
             return;
         }
