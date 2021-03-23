@@ -1,20 +1,20 @@
 import MovieIdentifier from '../MovieIdentifier';
-import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
 import promiseTimeout from '../../../../submodules/promiseTimeout';
 
-export default class TmdbMovieIdentifier extends MovieIdentifier{
-    async identify(path) {
-        let identification = await guessit.identify(path);
+export default class TmdbMovieIdentifier extends MovieIdentifier {
+    /**
+     * Identify a Movie based a file path
+     *
+     * @param {string} moviePath File path to the Movie
+     * @param {*} guessitIdentification - Guessit identification object
+     * @returns {Promise<*>} - Movie identification object
+     */
+    async identify(moviePath, guessitIdentification) {
+        let query = { query: guessitIdentification.title };
 
-        if (!identification.title) {
-            throw new IdentificationError('Title extraction was unsuccessful');
-        }
-
-        let query = { query: identification.title };
-
-        if (identification.year) {
-            query.primary_release_year = identification.year;
+        if (guessitIdentification.year) {
+            query.primary_release_year = guessitIdentification.year;
         }
 
         let res = await promiseTimeout(this.oblecto.tmdb.searchMovie(query, { timeout: 5000 }));

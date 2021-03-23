@@ -2,6 +2,8 @@ import AggregateIdentifier from '../../common/AggregateIdentifier';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier';
 import { Movie } from '../../../models/movie';
 import logger from '../../../submodules/logger';
+import guessit from '../../../submodules/guessit';
+import IdentificationError from '../../errors/IdentificationError';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
@@ -28,16 +30,40 @@ export default class MovieIndexer {
         this.oblecto.queue.registerJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
+    async matchFile(moviePath, guessitIdentification) {
+        try {
+            return await this.movieIdentifier.identify(moviePath, guessitIdentification);
+        } catch (e) {
+            if (guessitIdentification.year) {
+                logger.log('INFO', `Could not identify ${moviePath}. Maybe the specified year is wrong?`);
+                logger.log('INFO', 'Attempting to identify without year');
+
+                delete guessitIdentification.year;
+
+                return await this.movieIdentifier.identify(moviePath, guessitIdentification);
+            }
+        }
+
+        throw new IdentificationError();
+    }
+
     /**
      * Index file based on file path
      *
      * @param {string} moviePath - Path to Movie to be indexed
+     * @param {boolean} doReindex - Whether or not to reindex a file if it has already been indexed
      * @returns {Promise<void>}
      */
-    async indexFile(moviePath) {
-        let file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
+    async indexFile(moviePath, doReindex) {
+        const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
-        let movieIdentification = await this.movieIdentifier.identify(moviePath);
+        const guessitIdentification = await guessit.identify(moviePath);
+
+        if (!guessitIdentification.title) {
+            throw new IdentificationError('Title extraction was unsuccessful');
+        }
+
+        const movieIdentification = await this.matchFile(moviePath, guessitIdentification);
 
         let [movie, movieCreated] = await Movie.findOrCreate(
             {
@@ -47,7 +73,7 @@ export default class MovieIndexer {
 
         movie.addFile(file);
 
-        if (!movieCreated) return;
+        if (!movieCreated && !doReindex) return;
 
         this.oblecto.queue.queueJob('updateMovie', movie);
         this.oblecto.queue.queueJob('downloadMovieFanart', movie);
