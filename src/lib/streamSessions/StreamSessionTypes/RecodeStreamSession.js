@@ -86,9 +86,18 @@ export default class RecodeStreamSession extends StreamSession {
         // Find a video stream with the desired language code
         // TODO: Some languages may be identified by multiple language codes
         //       EG: French sometimes uses both "Fra" and "Fre"
+
+        // TODO: Allow direction selection of audio stream as well as through language code
         for (let stream of audioStreams) {
             if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
                 selectedAudioStream = stream.index;
+
+                // When we have found a matching stream, we don't want to keep looking for others
+                // Some media files may have multiple streams with the same language code.
+                // Usually this is because of commentary or similar tracks.
+                // These tracks are usually the end
+                // TODO: Filter out commentary tracks separately
+                break;
             }
         }
 
