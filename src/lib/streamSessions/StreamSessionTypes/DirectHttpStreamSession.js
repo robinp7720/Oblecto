@@ -1,11 +1,11 @@
 import StreamSession from '../StreamSession';
+import { File } from '../../../models/file';
 import mimeTypes from 'mime-types';
 import { promises as fs, createReadStream } from 'fs';
 import logger from '../../../submodules/logger';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
- * @typedef {import('../../../models/file.js')} File
  * @typedef {import('restify/lib/response')} Response
  * @typedef {import('restify/lib/request')} Request
  */
@@ -25,6 +25,10 @@ export default class DirectHttpStreamSession extends StreamSession {
     }
 
     async addDestination(destination) {
+        if (this.timeout) {
+            this.clearTimeout();
+        }
+
         // Logically we only support http destinations
         // Therefore, throw an error if the type is not http
         if (destination.type !== 'http') {
@@ -36,6 +40,7 @@ export default class DirectHttpStreamSession extends StreamSession {
         // so if another destination was found, destroy the output stream and remove it
         if (this.destinations[0]) {
             this.destinations[0].stream.destroy();
+            delete this.destinations[0];
         }
 
         this.destinations[0] = destination;

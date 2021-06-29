@@ -34,6 +34,7 @@ export default class StreamSession extends EventEmitter {
         this.videoCodec = this.targetVideoCodecs[0] || 'h264';
         this.audioCodec = this.targetAudioCodecs[0] || 'aac';
 
+        this.process = null;
         this.offset = options.offset || 0;
 
         this.inputStream = new Stream.PassThrough;
@@ -73,6 +74,12 @@ export default class StreamSession extends EventEmitter {
         if (this.timeout) this.clearTimeout();
 
         this.timeout = setTimeout(() => {
+            // Some video clients start a new connection before closing the old one.
+            // we don't want to kill the session if a client is still connected
+            for (const session of this.destinations) {
+                if (session) return;
+            }
+
             logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
             this.outputStream.destroy();
         }, this.timeoutTime);
