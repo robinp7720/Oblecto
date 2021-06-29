@@ -20,7 +20,7 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkEpisodeBanner(episode) {
-        if (!await fileExists(this.oblecto.artworkUtils.episodeBannerPath(episode))) return;
+        if (await fileExists(this.oblecto.artworkUtils.episodeBannerPath(episode))) return;
 
         this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
     }
@@ -31,7 +31,7 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkSeriesPoster(series) {
-        if (!await fileExists(this.oblecto.artworkUtils.seriesPosterPath(series))) return;
+        if (await fileExists(this.oblecto.artworkUtils.seriesPosterPath(series))) return;
 
         this.oblecto.queue.queueJob('downloadSeriesPoster', series);
     }
