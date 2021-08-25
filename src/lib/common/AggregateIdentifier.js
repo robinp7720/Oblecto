@@ -2,6 +2,9 @@ import IdentificationError from '../errors/IdentificationError';
 import logger from '../../submodules/logger';
 import MediaIdentifier from '../indexers/MediaIdentifier';
 
+// TODO: Combine this with the AggregateUpdateRetriever
+// This is no reason to have two seperate classes that basically do the same thing
+
 export default class AggregateIdentifier {
     /**
      * Wrapper class to combine multiple identifiers and return information as a combined json output
@@ -33,6 +36,15 @@ export default class AggregateIdentifier {
             }
 
             identification = { ...identification, ...currentIdentification };
+        }
+
+        // Cleanup the input data to make sure that the data is predictable
+        for (let key of Object.keys(identification)) {
+            // Remove strings from retrieved information if they are empty.
+            // The imdbid is a string which would be null if no id supplied.
+            // The empty string however causes issues.
+            // Hence, they must be removed
+            if (identification[key] === '') delete identification[key];
         }
 
         if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${args[0]}`);
