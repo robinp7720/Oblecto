@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import ExtendableError from '../../lib/errors/ExtendableError';
 
 class Logger extends EventEmitter{
     constructor() {
@@ -8,9 +9,15 @@ class Logger extends EventEmitter{
 
         this.on('log', (log) => {
             if(this.silent) return;
+            if (log.level === 'DEBUG') return;
+
+            if (log instanceof ExtendableError) {
+                console.log(log.level, log);
+                return;
+            }
 
             if (log instanceof Error) {
-                console.log(log.level, log);
+                console.log('ERROR', log);
                 return;
             }
 
