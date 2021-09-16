@@ -48,7 +48,7 @@
     "restify-errors": "^8.0.2",
     "sequelize": "^6.6.2",
     "sharp": "^0.28.1",
-    "socket.io": "^4.0.1",
+    "socket.io": "^2.3.0",
     "sqlite3": "^5.0.2",
     "uuid": "^8.3.2",
     "which": "^2.0.2"
