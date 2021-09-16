@@ -87,7 +87,7 @@ export default class RecodeStreamSession extends StreamSession {
         // TODO: Some languages may be identified by multiple language codes
         //       EG: French sometimes uses both "Fra" and "Fre"
 
-        // TODO: Allow direction selection of audio stream as well as through language code
+        // TODO: Allow direct selection of audio stream as well as through language code
         for (let stream of audioStreams) {
             if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
                 selectedAudioStream = stream.index;
@@ -107,6 +107,7 @@ export default class RecodeStreamSession extends StreamSession {
         }
 
         this.process = ffmpeg(this.file.path)
+            //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
@@ -121,6 +122,18 @@ export default class RecodeStreamSession extends StreamSession {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
         });
 
-        this.process.pipe(this.outputStream, { end: true });
+        this.process.pipe(this.destinations[0].stream, { end: true });
+    }
+
+    outputPause() {
+        super.outputPause();
+
+        this.process.kill('SIGSTOP');
+    }
+
+    outputResume() {
+        super.outputResume();
+
+        this.process.kill('SIGCONT');
     }
 }
