@@ -1,5 +1,3 @@
-import sequelize from 'sequelize';
-
 import authMiddleWare from '../middleware/auth';
 import { File } from '../../../models/file';
 import { Episode } from '../../../models/episode';
@@ -37,7 +35,9 @@ export default (server, oblecto) => {
 
             duplicates.push(
                 (await File.findAll({
-                    where: { hash: fileHashCount.hash },
+                    where: {
+                        hash: fileHashCount.hash
+                    },
                     include: [Episode, Movie]
 
                 }))

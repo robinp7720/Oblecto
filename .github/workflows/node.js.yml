@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - name: Install dependancies
-      run: sudo apt-get update && sudo apt-get install libavahi-compat-libdnssd-dev python-guessit
+      run: sudo apt-get update && sudo apt-get install libavahi-compat-libdnssd-dev python3-guessit
     - uses: actions/checkout@v2
     - name: Checkout submodules
       run: git submodule update --init --recursive

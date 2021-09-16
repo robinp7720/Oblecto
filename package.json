@@ -22,7 +22,9 @@
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
     "debug": "./node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0",
     "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'",
-    "test": "scripts/test.sh"
+    "test:mocha": "mocha tests/mocha",
+    "test:startup": "scripts/test.sh",
+    "test": "npm run test:mocha; npm run test:startup"
   },
   "dependencies": {
     "async": "^3.2.0",
@@ -61,6 +63,8 @@
     "@types/socket.io": "^2.1.13",
     "eslint": "^7.25.0",
     "eslint-plugin-jsdoc": "^32.3.3",
+    "chai": "^4.3.3",
+    "expect.js": "^0.3.1",
     "jshint": "^2.12.0",
     "mocha": "^8.3.2",
     "nodemon": "^2.0.7"
