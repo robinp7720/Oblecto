@@ -2,6 +2,8 @@ export default class ExtendableError extends Error {
     constructor(message) {
         super(message);
         this.name = this.constructor.name;
+        this.level = 'ERROR';
+
         if (typeof Error.captureStackTrace === 'function') {
             Error.captureStackTrace(this, this.constructor);
         } else {
