@@ -2,7 +2,10 @@ import IdentificationError from '../../../errors/IdentificationError';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import SeriesIdentifier from '../SeriesIdentifer';
 import { distance } from 'fastest-levenshtein';
-import Oblecto from '../../../oblecto';
+
+/**
+ * @typedef {import('../../../oblecto').default} Oblecto
+ */
 
 export default class TvdbSeriesIdentifier extends SeriesIdentifier {
     /**

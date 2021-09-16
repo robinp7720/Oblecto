@@ -26,6 +26,15 @@ export default class AggregateUpdateRetriever {
             }
         }
 
+        // Cleanup the input data to make sure that the data is predictable
+        for (let key of Object.keys(information)) {
+            // Remove strings from retrieved information if they are empty.
+            // The imdbid is a string which would be null if no id supplied.
+            // The empty string however causes issues.
+            // Hence, they must be removed
+            if (information[key] === '') delete information[key];
+        }
+
         if (Object.keys(information).length === 0) throw new IdentificationError('No identification match could be found');
 
         return information;

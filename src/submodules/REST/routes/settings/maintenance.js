@@ -1,7 +1,9 @@
 import authMiddleWare from '../../middleware/auth';
 
-import Oblecto from '../../../../lib/oblecto';
-import Server from 'restify/lib/server';
+/**
+ * @typedef {import('../../../../lib/oblecto').default} Oblecto
+ * @typedef {import('restify/lib/server')} Server
+ */
 
 /**
  *

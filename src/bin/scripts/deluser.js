@@ -10,11 +10,7 @@ export default async (args) => {
         return;
     }
 
-    let user = await User.findOne({
-        where: {
-            username: args[1]
-        }
-    });
+    let user = await User.findOne({ where: { username: args[1] } });
 
     await user.destroy();
 

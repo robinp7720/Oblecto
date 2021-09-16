@@ -4,10 +4,11 @@ export default class MovieIdentifier extends MediaIdentifier {
     /**
      * Identify a Movie based a file path
      *
-     * @param {string} path File path to the Movie
-     * @returns {Promise<JSON>} - Movie identification object
+     * @param {string} moviePath File path to the Movie
+     * @param {*} guessitIdentification - Guessit identification object
+     * @returns {Promise<*>} - Movie identification object
      */
-    async identify(path) {
+    async identify(moviePath, guessitIdentification) {
 
     }
 }

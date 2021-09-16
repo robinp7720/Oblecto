@@ -5,12 +5,14 @@ import TmdbEpisodeRetriever from './informationRetrievers/TmdbEpisodeRetriever';
 import TvdbEpisodeRetriever from './informationRetrievers/TvdbEpisodeRetriever';
 import TvdbSeriesRetriever from './informationRetrievers/TvdbSeriesRetriever';
 
-import Oblecto from '../../oblecto';
-
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
 
 import logger from '../../../submodules/logger';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class SeriesUpdater {
 

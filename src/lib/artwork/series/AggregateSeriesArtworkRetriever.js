@@ -23,7 +23,7 @@ export default class AggregateSeriesArtworkRetriever {
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.episodeBannerPath(episode));
             } catch(e) {
-                logger.log(e);
+                logger.log(e.level, `${retriever.constructor.name}: ${e.message}`);
             }
         }
 
@@ -39,7 +39,7 @@ export default class AggregateSeriesArtworkRetriever {
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.seriesPosterPath(series));
             } catch(e) {
-                logger.log(e);
+                logger.log(e.level, `${retriever.constructor.name}: ${e.message}`);
             }
         }
 

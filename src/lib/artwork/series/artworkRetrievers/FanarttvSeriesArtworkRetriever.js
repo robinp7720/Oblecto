@@ -3,10 +3,32 @@ import axiosTimeout from '../../../../submodules/axiosTimeout';
 
 import { Episode } from '../../../../models/episode';
 import { Series } from '../../../../models/series';
+import InfoExtendableError from '../../../errors/InfoExtendableError';
 
 export default class FanarttvSeriesArtworkRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
+
+        this.key = this.oblecto.config['fanart.tv'].key;
+    }
+
+    /**
+     *  Get artwork info from fanarttv
+     *
+     * @param {number | string} id - tvdbid of series item
+     * @returns {Promise<*>} - Artwork lists
+     */
+    async getArtwork(id) {
+        try {
+            const { data } = await axiosTimeout({
+                method: 'get',
+                url: `http://webservice.fanart.tv/v3/tv/${id}?api_key=${this.key}`
+            });
+
+            return data;
+        } catch (e) {
+            throw new InfoExtendableError(`No artwork found for id ${id}`);
+        }
     }
 
     /**
@@ -24,13 +46,12 @@ export default class FanarttvSeriesArtworkRetriever {
      * @returns {Promise<string[]>} - Array of banner urls
      */
     async retrieveSeriesPoster(series) {
-        if (!series.tvdbid) throw new DebugExtendableError(`Fanart.tv Series poster retriever failed for ${series.seriesName}`);
+        if (!series.tvdbid) throw new DebugExtendableError(`No TVDBID for ${series.seriesName}`);
 
-        let { data } = await axiosTimeout({
-            method: 'get',
-            url: `http://webservice.fanart.tv/v3/tv/${series.tvdbid}?api_key=${this.oblecto.config['fanart.tv'].key}`
-        });
+        const { tvposter } = await this.getArtwork(series.tvdbid);
 
-        return data.tvposter.map(image => image.url);
+        if (!tvposter) throw new DebugExtendableError(`No TVPoster available for ${series.seriesName}`);
+
+        return tvposter.map(image => image.url);
     }
 }

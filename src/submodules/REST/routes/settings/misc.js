@@ -2,8 +2,10 @@ import authMiddleWare from '../../middleware/auth';
 import errors from 'restify-errors';
 import { ConfigManager } from '../../../../config';
 
-import Oblecto from '../../../../lib/oblecto';
-import Server from 'restify/lib/server';
+/**
+ * @typedef {import('../../../../lib/oblecto').default} Oblecto
+ * @typedef {import('restify/lib/server')} Server
+ */
 
 /**
  *

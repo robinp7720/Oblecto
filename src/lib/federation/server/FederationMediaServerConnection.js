@@ -61,9 +61,7 @@ export default class FederationMediaServerConnection extends FederationServerCon
             offset: this.offset
         });
 
-        await streamSession.addDestination({
-            stream: this.socket,
-        });
+        await streamSession.addDestination({ stream: this.socket, });
 
         await streamSession.startStream();
     }

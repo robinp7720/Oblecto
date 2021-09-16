@@ -1,6 +1,8 @@
 import { Movie } from '../../../models/movie';
 
-import Oblecto from '../../oblecto';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class MovieUpdateCollector {
     /**

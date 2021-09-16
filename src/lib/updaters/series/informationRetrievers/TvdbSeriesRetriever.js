@@ -1,8 +1,11 @@
 import promiseTimeout from '../../../../submodules/promiseTimeout';
 import DebugExtendableError from '../../../errors/DebugExtendableError';
-import Oblecto from '../../../oblecto';
 
 import { Series } from '../../../../models/series';
+
+/**
+ * @typedef {import('../../..//oblecto').default} Oblecto
+ */
 
 export default class TvdbSeriesRetriever {
     /**

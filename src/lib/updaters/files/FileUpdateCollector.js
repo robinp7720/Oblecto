@@ -1,6 +1,8 @@
 import { File } from '../../../models/file';
 
-import Oblecto from '../../oblecto';
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 /**
  * Module for oblecto to queue file updates

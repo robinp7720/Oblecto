@@ -3,8 +3,12 @@ import { DataTypes, Model } from 'sequelize';
 export class Movie extends Model {}
 
 export const movieColumns = {
-    tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
-    imdbid: { type: DataTypes.STRING, allowNull: true, unique: true },
+    tmdbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
+    imdbid: {
+        type: DataTypes.STRING, allowNull: true, unique: true 
+    },
 
     movieName: DataTypes.STRING,
     originalName: DataTypes.STRING,

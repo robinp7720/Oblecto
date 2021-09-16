@@ -8,9 +8,7 @@ import { User } from '../../../models/user';
 
 export default (server, oblecto) => {
     server.get('/users', async function (req, res, next) {
-        let users = await User.findAll({
-            attributes: ['username', 'name', 'email', 'id']
-        });
+        let users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
 
         res.send(users);
         next();
@@ -18,9 +16,7 @@ export default (server, oblecto) => {
 
     server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let user = await User.findOne({
-            where: {
-                id: req.params.id
-            },
+            where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
 
@@ -31,9 +27,7 @@ export default (server, oblecto) => {
 
     server.del('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
         let user = await User.findOne({
-            where: {
-                id: req.params.id
-            },
+            where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
 
@@ -55,27 +49,19 @@ export default (server, oblecto) => {
         }
 
         if (req.params.username) {
-            user.update({
-                username: req.params.username,
-            });
+            user.update({ username: req.params.username, });
         }
 
         if (req.params.password) {
-            user.update({
-                password: await bcrypt.hash(req.params.password, config.authentication.saltRounds)
-            });
+            user.update({ password: await bcrypt.hash(req.params.password, config.authentication.saltRounds) });
         }
 
         if (req.params.email) {
-            user.update({
-                email: req.params.email
-            });
+            user.update({ email: req.params.email });
         }
 
         if (req.params.name) {
-            user.update({
-                name: req.params.name
-            });
+            user.update({ name: req.params.name });
         }
 
         next();
@@ -99,9 +85,7 @@ export default (server, oblecto) => {
             passwordHash = await bcrypt.hash(req.params.password, oblecto.config.authentication.saltRounds);
 
         let [user] = await User.findOrCreate({
-            where: {
-                username: req.params.username
-            },
+            where: { username: req.params.username },
             defaults: {
                 name: req.params.name,
                 email: req.params.email,

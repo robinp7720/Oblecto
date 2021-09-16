@@ -6,9 +6,7 @@ import logger from '../submodules/logger';
 
 export default {
     oblecto: null,
-    screen: blessed.screen({
-        smartCSR: true
-    }),
+    screen: blessed.screen({ smartCSR: true }),
 
     initScreen() {
         // Create a screen object.
@@ -24,9 +22,7 @@ export default {
             content: '',
             label: 'Active Streaming Sessions: 0',
             tags: true,
-            border: {
-                type: 'line'
-            }
+            border: { type: 'line' }
         });
 
         this.queueBox = blessed.list({
@@ -37,9 +33,7 @@ export default {
             content: '',
             label: 'Queue: 0',
             tags: true,
-            border: {
-                type: 'line'
-            }
+            border: { type: 'line' }
         });
 
         this.logBox = blessed.list({
@@ -50,9 +44,7 @@ export default {
             content: '',
             label: 'Log',
             tags: true,
-            border: {
-                type: 'line'
-            }
+            border: { type: 'line' }
         });
 
         this.sessionBox = blessed.list({
@@ -63,9 +55,7 @@ export default {
             content: '',
             label: 'Web Socket Sessions',
             tags: true,
-            border: {
-                type: 'line'
-            }
+            border: { type: 'line' }
         });
 
         // Append our box to the screen.

@@ -17,9 +17,7 @@ export default async (args) => {
     let hash = await bcrypt.hash(args[2], config.authentication.saltRounds);
 
     let [user, inserted] = await User.findOrCreate({
-        where: {
-            username: args[1]
-        },
+        where: { username: args[1] },
         defaults: {
             name: args[3],
             email: args[4],

@@ -1,5 +1,8 @@
 import FederationClient from './FederationClient';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class FederationDataClient extends FederationClient {
     /**

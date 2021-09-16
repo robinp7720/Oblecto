@@ -1,7 +1,10 @@
 import { Movie } from '../../models/movie';
 import { File } from '../../models/file';
 import logger from '../../submodules/logger';
-import Oblecto from '../oblecto';
+
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class MovieCleaner {
     /**
@@ -19,9 +22,7 @@ export default class MovieCleaner {
      */
     async removeFileLessMovies() {
         logger.log('INFO', 'Removing movies without linked files');
-        let results = await Movie.findAll({
-            include: [File]
-        });
+        let results = await Movie.findAll({ include: [File] });
 
         for (let item of results) {
             if (item.Files && item.Files.length > 0)

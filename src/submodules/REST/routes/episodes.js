@@ -37,9 +37,7 @@ export default (server, oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ],
             order: [[req.params.sorting, req.params.order]],
@@ -56,9 +54,7 @@ export default (server, oblecto) => {
         let episode;
 
         try {
-            episode = await Episode.findByPk(req.params.id, {
-                include: [File]
-            });
+            episode = await Episode.findByPk(req.params.id, { include: [File] });
         } catch (e) {
             return next(new errors.NotFoundError('Episode not found'));
         }
@@ -74,9 +70,7 @@ export default (server, oblecto) => {
     });
 
     server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let episode = await Episode.findByPk(req.params.id, {
-            include: [File]
-        });
+        let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         if (!episode) {
             return next(new errors.NotFoundError('Episode does not exist'));
@@ -128,9 +122,7 @@ export default (server, oblecto) => {
 
     // Endpoint to list all stored files for the specific episode
     server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req, res) {
-        let episode = await Episode.findByPk(req.params.id, {
-            include: [File]
-        });
+        let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         res.send(episode.files);
     });
@@ -139,9 +131,7 @@ export default (server, oblecto) => {
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
     server.get('/episode/:id/play', async function (req, res, next) {
         // search for attributes
-        let episode = await Episode.findByPk(req.params.id, {
-            include: [File]
-        });
+        let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         let file = episode.files[0];
 
@@ -159,9 +149,7 @@ export default (server, oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ]
         });
@@ -180,27 +168,11 @@ export default (server, oblecto) => {
                 [Op.or]: [
                     {
                         [Op.and]: [
-                            {
-                                airedEpisodeNumber: {
-                                    [Op.gt]: results.airedEpisodeNumber
-                                }
-                            },
-                            {
-                                airedSeason: {
-                                    [Op.gte]: results.airedSeason
-                                }
-                            },
+                            { airedEpisodeNumber: { [Op.gt]: results.airedEpisodeNumber } },
+                            { airedSeason: { [Op.gte]: results.airedSeason } },
                         ]
                     },
-                    {
-                        [Op.and]: [
-                            {
-                                airedSeason: {
-                                    [Op.gt]: results.airedSeason
-                                }
-                            },
-                        ]
-                    }
+                    { [Op.and]: [{ airedSeason: { [Op.gt]: results.airedSeason } },] }
                 ]
             },
             order: [
@@ -216,20 +188,14 @@ export default (server, oblecto) => {
     server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let episode = await Episode.findAll({
-            where: {
-                episodeName: {
-                    [Op.like]: '%' + req.params.name + '%'
-                }
-            },
+            where: { episodeName: { [Op.like]: '%' + req.params.name + '%' } },
             include: [
                 File,
                 Series,
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ]
         });
@@ -249,12 +215,8 @@ export default (server, oblecto) => {
                     required: true,
                     where: {
                         userId: req.authorization.user.id,
-                        progress: {
-                            [sequelize.Op.lt]: 0.9
-                        },
-                        updatedAt: {
-                            [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
-                        }
+                        progress: { [sequelize.Op.lt]: 0.9 },
+                        updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
                     },
                 }
             ],
@@ -287,12 +249,8 @@ export default (server, oblecto) => {
                     required: true,
                     where: {
                         userId: req.authorization.user.id,
-                        progress: {
-                            [sequelize.Op.gt]: 0.9
-                        },
-                        updatedAt: {
-                            [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
-                        }
+                        progress: { [sequelize.Op.gt]: 0.9 },
+                        updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
                     },
                 }
             ],
@@ -304,16 +262,12 @@ export default (server, oblecto) => {
         for (let latest of latestWatched) {
             latest = latest.toJSON();
             let next = await Episode.findOne({
-                attributes: {
-                    include: [[sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']]
-                },
+                attributes: { include: [[sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']] },
                 include: [
                     Series,
                     {
                         model: TrackEpisode,
-                        where: {
-                            userId: req.authorization.user.id
-                        },
+                        where: { userId: req.authorization.user.id },
                     }
                 ],
                 where: sequelize.and(

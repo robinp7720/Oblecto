@@ -2,7 +2,9 @@ import { Series } from '../../models/series';
 import { Episode } from '../../models/episode';
 import { File } from '../../models/file';
 
-import Oblecto from '../oblecto';
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ */
 
 export default class FederationEpisodeIndexer {
     /**
@@ -37,13 +39,9 @@ export default class FederationEpisodeIndexer {
         if (file.fileInfo.seriesTvdbid) seriesQuery.tvdbid = file.fileInfo.seriesTvdbid;
         if (file.fileInfo.seriesTmdbid) seriesQuery.tmdbid = file.fileInfo.seriesTmdbid;
 
-        let [series, seriesInserted] = await Series.findOrCreate({
-            where: seriesQuery
-        });
+        let [series, seriesInserted] = await Series.findOrCreate({ where: seriesQuery });
 
-        let episodeQuery = {
-            SeriesId: series.id
-        };
+        let episodeQuery = { SeriesId: series.id };
 
         if (file.fileInfo.tvdbid) episodeQuery.tvdbid = file.fileInfo.tvdbid;
         if (file.fileInfo.tmdbid) episodeQuery.tmdbid = file.fileInfo.tmdbid;

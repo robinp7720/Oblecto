@@ -1,11 +1,12 @@
 import { EventEmitter } from 'events';
 import { v4 } from 'uuid';
 import logger from '../../submodules/logger';
-import Stream from 'stream';
+import * as Stream from 'stream';
 
-import Oblecto from '../oblecto';
-
-import { File } from '../../models/file';
+/**
+ * @typedef {import('../oblecto').default} Oblecto
+ * @typedef {import("../../models/file").File} File
+ */
 
 export default class StreamSession extends EventEmitter {
     /**
@@ -33,6 +34,7 @@ export default class StreamSession extends EventEmitter {
         this.videoCodec = this.targetVideoCodecs[0] || 'h264';
         this.audioCodec = this.targetAudioCodecs[0] || 'aac';
 
+        this.process = null;
         this.offset = options.offset || 0;
 
         this.inputStream = new Stream.PassThrough;
@@ -72,6 +74,12 @@ export default class StreamSession extends EventEmitter {
         if (this.timeout) this.clearTimeout();
 
         this.timeout = setTimeout(() => {
+            // Some video clients start a new connection before closing the old one.
+            // we don't want to kill the session if a client is still connected
+            for (const session of this.destinations) {
+                if (session) return;
+            }
+
             logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
             this.outputStream.destroy();
         }, this.timeoutTime);
@@ -141,9 +149,7 @@ export default class StreamSession extends EventEmitter {
             }
         }
 
-        let codecs = {
-            'h264': 'libx264'
-        };
+        let codecs = { 'h264': 'libx264' };
 
         if (codecs[this.videoCodec]) return codecs[this.videoCodec];
 

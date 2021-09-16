@@ -3,7 +3,9 @@ import routes from './routes';
 import corsMiddleware from 'restify-cors-middleware';
 import logger from '../logger';
 
-import Oblecto from '../../lib/oblecto';
+/**
+ * @typedef {import('../../lib/oblecto').default} Oblecto
+ */
 
 export default class OblectoAPI {
     /**

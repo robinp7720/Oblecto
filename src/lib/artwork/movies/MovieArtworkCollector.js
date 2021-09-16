@@ -1,6 +1,9 @@
-import Oblecto from '../../oblecto';
 import { Movie } from '../../../models/movie';
 import { fileExists } from '../../../submodules/utils';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class MovieArtworkCollector {
     /**

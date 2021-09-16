@@ -4,8 +4,10 @@ import { File } from '../../../models/file';
 import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
 import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer';
 
-import Oblecto from '../../../lib/oblecto';
-import Server from 'restify/lib/server';
+/**
+ * @typedef {import('../../../lib/oblecto').default} Oblecto
+ * @typedef {import('restify/lib/server')} Server
+ */
 
 /**
  * Add routes for streaming

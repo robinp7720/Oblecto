@@ -3,10 +3,20 @@ import ffmpeg from '../../../submodules/ffmpeg';
 import logger from '../../../submodules/logger';
 
 /**
+ * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import("../../../models/file").File} File
+ */
+
+/**
  * Streamer session to allow for playback on devices which don't support the native file format.
  * This streamer also allows for sever side seeking
  */
 export default class RecodeStreamSession extends StreamSession {
+    /**
+     * @param {File} file - File to be streamed
+     * @param {any} options - Options for Media streamer
+     * @param {Oblecto} oblecto - Oblecto server instance
+     */
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
 
@@ -76,9 +86,18 @@ export default class RecodeStreamSession extends StreamSession {
         // Find a video stream with the desired language code
         // TODO: Some languages may be identified by multiple language codes
         //       EG: French sometimes uses both "Fra" and "Fre"
+
+        // TODO: Allow direct selection of audio stream as well as through language code
         for (let stream of audioStreams) {
             if (stream.tags_language === this.targetLanguageCode && stream.index !== undefined){
                 selectedAudioStream = stream.index;
+
+                // When we have found a matching stream, we don't want to keep looking for others
+                // Some media files may have multiple streams with the same language code.
+                // Usually this is because of commentary or similar tracks.
+                // These tracks are usually the end
+                // TODO: Filter out commentary tracks separately
+                break;
             }
         }
 
@@ -88,6 +107,7 @@ export default class RecodeStreamSession extends StreamSession {
         }
 
         this.process = ffmpeg(this.file.path)
+            //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
@@ -102,6 +122,18 @@ export default class RecodeStreamSession extends StreamSession {
             if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
         });
 
-        this.process.pipe(this.outputStream, { end: true });
+        this.process.pipe(this.destinations[0].stream, { end: true });
+    }
+
+    outputPause() {
+        super.outputPause();
+
+        this.process.kill('SIGSTOP');
+    }
+
+    outputResume() {
+        super.outputResume();
+
+        this.process.kill('SIGCONT');
     }
 }

@@ -1,6 +1,9 @@
 import recursive from 'recursive-readdir';
 import path from 'path';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 /**
  * Module for oblecto to scan for media files which are to be indexed by the episode indexer
@@ -21,7 +24,10 @@ export default class SeriesCollector {
      * @returns {Promise<void>}
      */
     async collectDirectory(directory) {
-        let files = await recursive(directory);
+        /**
+         * @type {string[]}
+         */
+        const files = await recursive(directory);
 
         files.forEach(file => {
             this.collectFile(file);

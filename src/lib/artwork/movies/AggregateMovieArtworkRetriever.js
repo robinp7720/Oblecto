@@ -17,13 +17,13 @@ export default class AggregateMovieArtworkRetriever {
     async retrieveFanart(movie) {
         for (let retriever of this.retrievers) {
             try {
-                let urls = await retriever.retrieveFanart(movie);
+                const urls = await retriever.retrieveFanart(movie);
 
                 if (urls.length === 0) throw new DebugExtendableError('No URLs found');
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.movieFanartPath(movie));
             } catch(e) {
-                logger.log(e);
+                logger.log(e.level, `${retriever.constructor.name}: ${e.message}`);
             }
         }
 
@@ -33,13 +33,13 @@ export default class AggregateMovieArtworkRetriever {
     async retrievePoster(movie) {
         for (let retriever of this.retrievers) {
             try {
-                let urls = await retriever.retrievePoster(movie);
+                const urls = await retriever.retrievePoster(movie);
 
                 if (urls.length === 0) throw new DebugExtendableError('No URLs found');
 
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.moviePosterPath(movie));
             } catch(e) {
-                logger.log(e);
+                logger.log(e.level, `${retriever.constructor.name}: ${e.message}`);
             }
         }
 

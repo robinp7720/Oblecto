@@ -4,7 +4,10 @@ import Path from 'path';
 import FileExistsError from '../../errors/FileExistsError';
 import ffprobe from '../../../submodules/ffprobe';
 import { Stream } from '../../../models/stream';
-import Oblecto from '../../oblecto';
+
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ */
 
 export default class FileIndexer {
     /**

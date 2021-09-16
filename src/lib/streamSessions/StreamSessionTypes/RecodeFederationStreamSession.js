@@ -3,7 +3,17 @@ import ffmpeg from '../../../submodules/ffmpeg';
 import FederationMediaClient from '../../federation/client/FederationMediaClient';
 import logger from '../../../submodules/logger';
 
+/**
+ * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import("../../../models/file").File} File
+ */
+
 export default class RecodeFederationStreamSession extends StreamSession {
+    /**
+     * @param {File} file - File to be streamed
+     * @param {any} options - Options for Media streamer
+     * @param {Oblecto} oblecto - Oblecto server instance
+     */
     constructor(file, options, oblecto) {
         super(file, options, oblecto);
     }

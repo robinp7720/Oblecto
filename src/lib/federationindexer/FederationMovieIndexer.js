@@ -25,11 +25,7 @@ export default class FederationMovieIndexer {
             }
         });
 
-        let [movie, movieInserted] = await Movie.findOrCreate({
-            where: {
-                tmdbid: file.fileInfo.tmdbid
-            }
-        });
+        let [movie, movieInserted] = await Movie.findOrCreate({ where: { tmdbid: file.fileInfo.tmdbid } });
 
         await movie.addFile(fileEntity);
 

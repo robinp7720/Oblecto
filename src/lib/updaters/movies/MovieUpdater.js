@@ -9,9 +9,7 @@ export default class MovieUpdater {
 
         this.aggregateMovieUpdateRetriever = new AggregateUpdateRetriever();
 
-        const movieUpdateRetrievers = {
-            'tmdb': TmdbMovieRetriever
-        };
+        const movieUpdateRetrievers = { 'tmdb': TmdbMovieRetriever };
 
         for (let updater of this.oblecto.config.movies.movieUpdaters) {
             logger.log('DEBUG', `Loading ${updater} movie updater`);

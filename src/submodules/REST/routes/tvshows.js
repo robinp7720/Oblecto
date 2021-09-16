@@ -53,9 +53,7 @@ export default (server, oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: {
-                        userId: req.authorization.user.id
-                    }
+                    where: { userId: req.authorization.user.id }
                 }
             ],
             where: { SeriesId: req.params.id },
@@ -134,13 +132,7 @@ export default (server, oblecto) => {
     });
 
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
-        let series = await Series.findAll({
-            where: {
-                seriesName: {
-                    [Op.like]: '%' + req.params.name + '%'
-                }
-            }
-        });
+        let series = await Series.findAll({ where: { seriesName: { [Op.like]: '%' + req.params.name + '%' } } });
 
         res.send(series);
 
