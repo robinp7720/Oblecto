@@ -1,5 +1,5 @@
-import {User} from '../../models/user';
-import {initDatabase} from '../../submodules/database';
+import { User } from '../../models/user';
+import { initDatabase } from '../../submodules/database';
 import argumentError from './helpers/argumentError';
 
 export default async (args) => {

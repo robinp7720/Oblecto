@@ -1,5 +1,6 @@
 import IdentificationError from '../errors/IdentificationError';
-import logger from '../../submodules/logger'
+import logger from '../../submodules/logger';
+import MediaIdentifier from '../indexers/MediaIdentifier';
 
 export default class AggregateIdentifier {
     /**
@@ -10,8 +11,9 @@ export default class AggregateIdentifier {
     }
 
     /**
+     * Load another MediaIdentifier to be used
      *
-     * @param {MediaIdentifier} identifier
+     * @param {MediaIdentifier} identifier - Identifier object
      */
     loadIdentifier(identifier) {
         this.identifiers.push(identifier);
@@ -30,11 +32,11 @@ export default class AggregateIdentifier {
                 continue;
             }
 
-            identification = {...identification, ...currentIdentification};
+            identification = { ...identification, ...currentIdentification };
         }
 
         if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${args[0]}`);
 
         return identification;
     }
-};
+}

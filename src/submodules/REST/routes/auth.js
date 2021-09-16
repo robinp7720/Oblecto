@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import errors from 'restify-errors';
 import bcrypt from 'bcrypt';
-import {User} from '../../../models/user';
+import { User } from '../../../models/user';
 
 export default (server, oblecto) => {
     server.post('/auth/login', async function (req, res, next) {
@@ -39,6 +39,6 @@ export default (server, oblecto) => {
 
         let accessToken = jwt.sign(tokenPayload, oblecto.config.authentication.secret);
 
-        res.send({accessToken});
+        res.send({ accessToken });
     });
 };

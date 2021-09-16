@@ -1,12 +1,12 @@
-import {promises as fs} from 'fs';
-
-import {Episode} from '../../../models/episode';
-import {Series} from '../../../models/series';
+import { Episode } from '../../../models/episode';
+import { Series } from '../../../models/series';
+import Oblecto from '../../oblecto';
+import { fileExists } from '../../../submodules/utils';
 
 export default class SeriesArtworkCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -18,13 +18,7 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkEpisodeBanner(episode) {
-        let stat;
-
-        try {
-            stat = await fs.stat(this.oblecto.artworkUtils.episodeBannerPath(episode));
-        } catch (e) {}
-
-        if (stat) return;
+        if (!await fileExists(this.oblecto.artworkUtils.episodeBannerPath(episode))) return;
 
         this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
     }
@@ -35,13 +29,7 @@ export default class SeriesArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkSeriesPoster(series) {
-        let stat;
-
-        try {
-            stat = await fs.stat(this.oblecto.artworkUtils.seriesPosterPath(series));
-        } catch (e) {}
-
-        if (stat) return;
+        if (!await fileExists(this.oblecto.artworkUtils.seriesPosterPath(series))) return;
 
         this.oblecto.queue.queueJob('downloadSeriesPoster', series);
     }

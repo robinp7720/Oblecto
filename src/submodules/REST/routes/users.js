@@ -4,8 +4,7 @@ import bcrypt from 'bcrypt';
 import config from '../../../config';
 import authMiddleWare from '../middleware/auth';
 
-import {User} from '../../../models/user';
-
+import { User } from '../../../models/user';
 
 export default (server, oblecto) => {
     server.get('/users', async function (req, res, next) {
@@ -46,7 +45,6 @@ export default (server, oblecto) => {
 
         next();
     });
-
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res, next) {
@@ -116,6 +114,5 @@ export default (server, oblecto) => {
         next();
 
     });
-
 
 };

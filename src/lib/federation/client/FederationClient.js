@@ -1,15 +1,16 @@
 import tls from 'tls';
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 import NodeRSA from 'node-rsa';
 import EventEmitter from 'events';
-import {readFileSync} from 'fs';
+import { readFileSync } from 'fs';
 import logger from '../../../submodules/logger';
+import Oblecto from '../../oblecto';
 
 export default class FederationClient{
     /**
      *
-     * @param {Oblecto} oblecto
-     * @param {string} server
+     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param {string} server - Federation server name
      */
     constructor(oblecto, server) {
         this.oblecto = oblecto;

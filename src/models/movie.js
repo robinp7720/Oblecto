@@ -9,6 +9,7 @@ export const movieColumns = {
     movieName: DataTypes.STRING,
     originalName: DataTypes.STRING,
     tagline: DataTypes.STRING,
+    genres: DataTypes.STRING,
 
     originalLanguage: DataTypes.STRING,
 

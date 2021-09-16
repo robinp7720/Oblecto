@@ -1,9 +1,14 @@
-import {File} from '../../../models/file';
+import { File } from '../../../models/file';
 
+import Oblecto from '../../oblecto';
+
+/**
+ * Module for oblecto to queue file updates
+ */
 export default class FileUpdateCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -26,7 +31,7 @@ export default class FileUpdateCollector {
         let files = await File.findAll();
 
         for (let file of files) {
-            this.collectFile(file);
+            await this.collectFile(file);
         }
     }
 }

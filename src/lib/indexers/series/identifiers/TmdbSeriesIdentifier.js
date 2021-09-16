@@ -12,9 +12,9 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
     /**
      * Find the most relevant series match from a TMDB Search output
      *
-     * @param tmdbSearch
-     * @param guessitIdentification
-     * @returns {{first_air_date}|*}
+     * @param {*} tmdbSearch - Search results object
+     * @param {*} guessitIdentification - Guessit identification object
+     * @returns {{first_air_date}|*} - Best result match
      */
     retrieveSeries(tmdbSearch, guessitIdentification) {
         // If TMDB only found one series that matches, we'll just ignore the date
@@ -35,10 +35,11 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
     }
 
     /**
+     *  Identify the series of a given file
      *
-     * @param {string} path
-     * @param guessitIdentification
-     * @returns {Promise<{overview, tmdbid, seriesName}|*>}
+     * @param {string} path - Path of file to be identified
+     * @param {*} guessitIdentification - Guessit identification object
+     * @returns {Promise<{overview, tmdbid, seriesName}|*>} - Matched identification object
      */
     async identify(path, guessitIdentification) {
         let cacheId = guessitIdentification.title;
@@ -51,7 +52,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({query: guessitIdentification.title}, {timeout: 5000}))).results;
+        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: guessitIdentification.title }, { timeout: 5000 }))).results;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError('Search result from TMDB returned empty');

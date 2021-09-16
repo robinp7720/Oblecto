@@ -8,17 +8,12 @@ export default class DirectStreamSession extends StreamSession {
         super(file, options, oblecto);
 
         this.mimeType = mimeTypes.lookup(file.path);
-    }
 
-    async addDestination(destination) {
-        await super.addDestination(destination);
-
-        if (destination.type === 'http') {
-            this.destinations[0].request.writeHead(200, {
-                'Content-Length': this.file.size,
-                'Content-Type': this.mimeType
-            });
-        }
+        this.httpHeaders = {
+            'Accept-Ranges': 'none',
+            'Content-Length': this.file.size,
+            'Content-Type': this.mimeType
+        };
     }
 
     async startStream() {

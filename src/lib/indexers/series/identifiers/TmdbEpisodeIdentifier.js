@@ -1,9 +1,18 @@
-import guessit from '../../../../submodules/guessit';
 import IdentificationError from '../../../errors/IdentificationError';
 import EpisodeIdentifier from '../EpisodeIdentifier';
 import promiseTimeout from '../../../../submodules/promiseTimeout';
 
+import { Series } from '../../../../models/series';
+
 export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
+    /**
+     *  Identify an episode using TMDB
+     *
+     * @param {string} path - Path to the episode to be identified
+     * @param {*} guessitIdentification - Guessit identification object
+     * @param {Series} series - Series to which the episode should belong
+     * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Identification object
+     */
     async identify(path, guessitIdentification, series) {
         if (!series.tmdbid) throw new IdentificationError();
 
@@ -11,7 +20,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
             id: series.tmdbid,
             season_number: guessitIdentification.season || 1,
             episode_number: guessitIdentification.episode
-        }, {timeout: 5000}));
+        }, { timeout: 5000 }));
 
         return {
             tmdbid: episode.id,

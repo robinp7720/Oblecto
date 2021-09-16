@@ -1,13 +1,15 @@
-import {File} from '../../../models/file';
+import { File } from '../../../models/file';
 
 import Path from 'path';
 import FileExistsError from '../../errors/FileExistsError';
 import ffprobe from '../../../submodules/ffprobe';
-import {Stream} from '../../../models/stream';
-export default class FileIndexer {
+import { Stream } from '../../../models/stream';
+import Oblecto from '../../oblecto';
 
+export default class FileIndexer {
     /**
-     * @param {Oblecto} oblecto
+     *
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -19,7 +21,7 @@ export default class FileIndexer {
         let parsedPath = Path.parse(videoPath);
 
         let [file, fileInserted] = await File.findOrCreate({
-            where: {path: videoPath},
+            where: { path: videoPath },
             defaults: {
                 host: 'local',
                 name: parsedPath.name,
@@ -68,7 +70,7 @@ export default class FileIndexer {
                 stream['tags_language'] = stream_base.tags.language;
                 stream['tags_title'] = stream_base.tags.title;
 
-                delete stream.tags
+                delete stream.tags;
             }
 
             delete stream.id;

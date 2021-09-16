@@ -1,10 +1,11 @@
 import FederationClient from './FederationClient';
+import Oblecto from '../../oblecto';
 
 export default class FederationDataClient extends FederationClient {
     /**
      *
-     * @param {Oblecto} oblecto
-     * @param {string} server
+     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param {string} server - Federation server name
      */
     constructor(oblecto, server) {
         super(oblecto, server);
@@ -32,6 +33,7 @@ export default class FederationDataClient extends FederationClient {
         let input = Buffer.from(data, 'base64').toString();
 
         let file = JSON.parse(input);
+
         file.host = this.serverName;
 
         switch (file.fileInfo.type) {

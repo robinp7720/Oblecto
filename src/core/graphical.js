@@ -4,7 +4,6 @@ import Oblecto from '../lib/oblecto';
 import config from '../config';
 import logger from '../submodules/logger';
 
-
 export default {
     oblecto: null,
     screen: blessed.screen({
@@ -114,7 +113,6 @@ export default {
         this.streamerSessionsBox.clearItems();
 
         this.streamerSessionsBox.setLabel('Active Streaming Sessions: '+ Object.keys(this.oblecto.streamSessionController.sessions).length);
-
 
         for (let sessionId of Object.keys(this.oblecto.streamSessionController.sessions)) {
             this.streamerSessionsBox.addItem(this.oblecto.streamSessionController.sessions[sessionId].constructor.name + ':');

@@ -5,6 +5,10 @@ import RecodeFederationStreamSession from './StreamSessionTypes/RecodeFederation
 import logger from '../../submodules/logger';
 import HLSStreamer from './StreamSessionTypes/HLSStreamer';
 
+import StreamSession from './StreamSession';
+
+import { File } from '../../models/file';
+
 export default class StreamSessionController {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -13,10 +17,11 @@ export default class StreamSessionController {
     }
 
     /**
+     * Initiate a new streaming session with a specified file
      *
-     * @param {File} file
-     * @param options
-     * @returns {StreamSession}
+     * @param {File} file - File for which to initiate a new streamer session for
+     * @param {*} options - options for created streamer session
+     * @returns {StreamSession} - Created streamer session
      */
     newSession(file, options) {
         const streamSession = this.createSession(file, options);
@@ -31,6 +36,13 @@ export default class StreamSessionController {
         return streamSession;
     }
 
+    /**
+     * Create a new streamer session based on the given options
+     *
+     * @param {File} file - File for which to create a stream session
+     * @param {*} options - Streamer object
+     * @returns {HLSStreamer|DirectHttpStreamSession|RecodeFederationStreamSession|DirectStreamSession|RecodeStreamSession} - New stream session
+     */
     createSession(file, options) {
         if (file.host !== 'local') {
             return new RecodeFederationStreamSession(file, options, this.oblecto);
@@ -57,6 +69,12 @@ export default class StreamSessionController {
         }
     }
 
+    /**
+     * Returns whether a specified streamer session exists
+     *
+     * @param {string} sessionId - Stream id to check
+     * @returns {boolean} - Whether or not the stream session exists
+     */
     sessionExists(sessionId) {
         return this.sessions[sessionId] !== undefined;
     }

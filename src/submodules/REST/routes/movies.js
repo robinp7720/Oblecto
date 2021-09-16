@@ -5,10 +5,10 @@ import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
 
-import {TrackMovie} from '../../../models/trackMovie';
-import {File} from '../../../models/file';
-import {Movie} from '../../../models/movie';
-import {MovieSet} from '../../../models/movieSet';
+import { TrackMovie } from '../../../models/trackMovie';
+import { File } from '../../../models/file';
+import { Movie } from '../../../models/movie';
+import { MovieSet } from '../../../models/movieSet';
 
 const Op = sequelize.Op;
 
@@ -41,9 +41,7 @@ export default (server, oblecto) => {
                     }
                 }
             ],
-            order: [
-                [req.params.sorting, req.params.order]
-            ],
+            order: [[req.params.sorting, req.params.order]],
             limit,
             offset: limit * page
         });
@@ -58,19 +56,16 @@ export default (server, oblecto) => {
     });
 
     server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let limit = 20;
-        let page = 0;
+        let limit = req.params.count || 20;
+        let page = req.params.page || 0;
+
+        if (!Number.isInteger(limit) || !Number.isInteger(page))
+            return next(new errors.BadRequestError('Limit or Page must be a number'));
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
             return next(new errors.BadRequestError('Sorting order is invalid'));
-
-        if (req.params.count && Number.isInteger(req.params.count))
-            limit = req.params.count;
-
-        if (req.params.page && Number.isInteger(req.params.page))
-            page = req.params.page;
 
         let results = await MovieSet.findAll({
             include: [
@@ -100,6 +95,7 @@ export default (server, oblecto) => {
     server.get('/movie/:id/poster', async function (req, res, next) {
         // Get episode data
         let movie;
+
         try {
             movie = await Movie.findByPk(req.params.id);
         } catch(e) {
@@ -237,7 +233,6 @@ export default (server, oblecto) => {
     });
 
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
-        // search for attributes
         let movie = await Movie.findByPk(req.params.id, {
             include: [
                 File,
@@ -268,7 +263,7 @@ export default (server, oblecto) => {
         res.redirect(`/stream/${file.id}`, next);
     });
 
-    server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res) {
         let sets = await Movie.findByPk(req.params.id, {
             attributes: [],
             include: [
@@ -324,19 +319,21 @@ export default (server, oblecto) => {
     server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
         let tracks = await TrackMovie.findAll({
-            include: [{
-                model: Movie,
-                required: true,
-                include: [
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: {
-                            userId: req.authorization.user.id
+            include: [
+                {
+                    model: Movie,
+                    required: true,
+                    include: [
+                        {
+                            model: TrackMovie,
+                            required: false,
+                            where: {
+                                userId: req.authorization.user.id
+                            }
                         }
-                    }
-                ]
-            }],
+                    ]
+                }
+            ],
             where: {
                 userId: req.authorization.user.id,
                 progress: {
@@ -346,9 +343,7 @@ export default (server, oblecto) => {
                     [sequelize.Op.gt]: new Date() - (1000*60*60*24*7)
                 }
             },
-            order: [
-                ['updatedAt', 'DESC'],
-            ],
+            order: [['updatedAt', 'DESC'],],
         });
 
         // We are only interested in the episode objects, so extract all the episode object from

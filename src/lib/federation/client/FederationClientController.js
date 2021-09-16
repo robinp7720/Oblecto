@@ -15,6 +15,7 @@ export default class FederationClientController{
 
     async addSyncMaster (server) {
         let client = new FederationDataClient(this.oblecto, server);
+
         await client.connect();
         await client.requestFullSync();
 

@@ -1,7 +1,7 @@
-import {promises as fs} from 'fs';
-import {File} from '../../models/file';
-import {Movie} from '../../models/movie';
-import {Episode} from '../../models/episode';
+import { promises as fs } from 'fs';
+import { File } from '../../models/file';
+import { Movie } from '../../models/movie';
+import { Episode } from '../../models/episode';
 import logger from '../../submodules/logger';
 
 export default class FileCleaner{
@@ -9,6 +9,11 @@ export default class FileCleaner{
         this.oblecto = oblecto;
     }
 
+    /**
+     * Remove all files which no longer exist on the filesystem from the database
+     *
+     * @returns {Promise<void>}
+     */
     async removedDeletedFiled () {
         logger.log('INFO', 'Removing all non existent files from the database');
         let files = await File.findAll();
@@ -25,6 +30,11 @@ export default class FileCleaner{
 
     }
 
+    /**
+     * Remove all files from the database which no longer have any attached media items
+     *
+     * @returns {Promise<void>}
+     */
     async removeAssoclessFiles () {
         logger.log('INFO', 'Removing files from the database without any attached media items');
         let results = await File.findAll({

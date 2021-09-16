@@ -2,6 +2,9 @@ import logger from '../../submodules/logger';
 import IdentificationError from '../errors/IdentificationError';
 
 export default class AggregateUpdateRetriever {
+    /**
+     * Wrapper class to combine multiple entity updaters and return information as a combined json output
+     */
     constructor() {
         this.retrievers = [];
     }
@@ -17,9 +20,9 @@ export default class AggregateUpdateRetriever {
             try {
                 let currentInformation = await retriever.retrieveInformation(...args);
 
-                information = {...information, ...currentInformation};
+                information = { ...information, ...currentInformation };
             } catch (e) {
-                logger.log(e)
+                logger.log(e);
             }
         }
 

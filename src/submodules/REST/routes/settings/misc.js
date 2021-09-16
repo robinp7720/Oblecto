@@ -1,11 +1,14 @@
 import authMiddleWare from '../../middleware/auth';
 import errors from 'restify-errors';
-import {ConfigManager} from '../../../../config';
+import { ConfigManager } from '../../../../config';
+
+import Oblecto from '../../../../lib/oblecto';
+import Server from 'restify/lib/server';
 
 /**
  *
- * @param server
- * @param {Oblecto} oblecto
+ * @param {Server} server - Restify server object
+ * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
     // API Endpoint to request a re-index of certain library types

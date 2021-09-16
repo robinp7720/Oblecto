@@ -1,10 +1,11 @@
 import socketio from 'socket.io';
 import RealtimeClient from './RealtimeClient';
+import Oblecto from '../oblecto';
 
 export default class RealtimeController {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;

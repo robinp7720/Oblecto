@@ -28,14 +28,13 @@ export default class HLSStreamer extends StreamSession {
         mkdirp.sync(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}`);
 
         this.process = ffmpeg(this.file.path)
-            //.native()
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
             .seekInput(this.offset)
             .outputOptions([
-                //'-hls_time 10',
-                //'-hls_list_size 10',
-                //'-hls_init_time 2',
+                // '-hls_time 10',
+                // '-hls_list_size 10',
+                // '-hls_init_time 2',
                 '-hls_playlist_type event',
                 '-hls_base_url', `/HLS/${this.sessionId}/segment/`,
                 '-hls_segment_filename', `${os.tmpdir()}/oblecto/sessions/${this.sessionId}/%03d.ts`,
@@ -53,7 +52,7 @@ export default class HLSStreamer extends StreamSession {
         super.endSession();
         clearInterval(this.segmentCheckerInterval);
 
-        await pfs.rmdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`, {recursive: true});
+        await pfs.rmdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`, { recursive: true });
     }
 
     segmenterStart(cmd) {

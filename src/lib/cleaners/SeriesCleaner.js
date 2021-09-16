@@ -1,16 +1,23 @@
-import {Episode} from '../../models/episode';
-import {File} from '../../models/file';
-import {Series} from '../../models/series';
+import { Episode } from '../../models/episode';
+import { File } from '../../models/file';
+import { Series } from '../../models/series';
 import logger from '../../submodules/logger';
+import Oblecto from '../oblecto';
 
 export default class SeriesCleaner {
     /**
-     * @param {Oblecto} oblecto
+     *
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
 
+    /**
+     * Remove all episodes from the database without any linked files
+     *
+     * @returns {Promise<void>}
+     */
     async removeFileLessEpisodes() {
         logger.log('INFO', 'Removing all episodes without linked files');
         let results = await Episode.findAll({
@@ -27,6 +34,11 @@ export default class SeriesCleaner {
         }
     }
 
+    /**
+     * Remove all shows from the database without any defined path
+     *
+     * @returns {Promise<void>}
+     */
     async removePathLessShows() {
         logger.log('INFO', 'Removing series without at attached path');
         await Series.destroy({
@@ -36,6 +48,11 @@ export default class SeriesCleaner {
         });
     }
 
+    /**
+     * Remove all shows from the database without any linked episodes
+     *
+     * @returns {Promise<void>}
+     */
     async removeEpisodeslessShows() {
         logger.log('INFO', 'Removing series without attached episodes');
         let results = await Series.findAll({

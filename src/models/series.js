@@ -5,7 +5,6 @@ export class Series extends Model {}
 export const seriesColumns = {
     tvdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
     imdbid: { type: DataTypes.STRING(64), allowNull: true, unique: true },
-    seriesId: { type: DataTypes.INTEGER, allowNull: true, unique: true },
     zap2itId: { type: DataTypes.STRING(64), allowNull: true, unique: true },
     tmdbid: { type: DataTypes.INTEGER, allowNull: true, unique: true },
 

@@ -1,13 +1,14 @@
 import jwt from 'jsonwebtoken';
-import events from 'events';
-import {TrackEpisode} from '../../models/trackEpisode';
-import {TrackMovie} from '../../models/trackMovie';
+import { EventEmitter } from 'events';
+import { TrackEpisode } from '../../models/trackEpisode';
+import { TrackMovie } from '../../models/trackMovie';
 import logger from '../../submodules/logger';
+import Oblecto from '../oblecto';
 
-export default class RealtimeClient extends events.EventEmitter {
+export default class RealtimeClient extends EventEmitter {
     /**
-     * @param {Oblecto} oblecto
-     * @param {*} socket
+     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param {Socket} socket - Realtime socket.io socket
      */
     constructor(oblecto, socket) {
         super();

@@ -1,5 +1,5 @@
-import {v4 as uuidv4} from 'uuid';
-import {promises as fs} from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import { promises as fs } from 'fs';
 import NodeRSA from 'node-rsa';
 import generateAssetDirectories from '../helpers/generateAssetDirectories';
 
@@ -30,9 +30,8 @@ export default async (args) => {
         console.log(e);
     }
 
-
     console.log('Generating federation authentication keys');
-    const key = new NodeRSA({b: 2048});
+    const key = new NodeRSA({ b: 2048 });
 
     await fs.writeFile('/etc/oblecto/id_rsa', key.exportKey('pkcs1-private-pem'));
     await fs.writeFile('/etc/oblecto/id_rsa.pub', key.exportKey('pkcs1-public-pem'));

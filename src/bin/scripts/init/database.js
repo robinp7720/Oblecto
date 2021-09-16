@@ -1,4 +1,4 @@
-import {initDatabase} from '../../../submodules/database';
+import { initDatabase } from '../../../submodules/database';
 
 export default async (args) => {
     const sequelize = initDatabase();
@@ -6,7 +6,7 @@ export default async (args) => {
     let options = {};
 
     if ('--alter' in args)
-        options = {alter: true};
+        options = { alter: true };
 
     await sequelize.authenticate();
     await sequelize.sync(options);

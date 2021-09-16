@@ -6,16 +6,19 @@ import sharp from 'sharp';
 import authMiddleWare from '../middleware/auth';
 import errors from 'restify-errors';
 
-import {Series} from '../../../models/series';
-import {Episode} from '../../../models/episode';
-import {TrackEpisode} from '../../../models/trackEpisode';
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
+import { TrackEpisode } from '../../../models/trackEpisode';
 
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     server.get('/series/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
-        let limit = 20;
-        let page = 0;
+        const limit = parseInt(req.query.count) || 20;
+        const page = parseInt(req.query.page) || 0;
+
+        if (!Number.isInteger(limit) || !Number.isInteger(page))
+            return next(new errors.BadRequestError('Limit or Page must be a number'));
 
         let AllowedOrders = ['desc', 'asc'];
 
@@ -25,16 +28,8 @@ export default (server, oblecto) => {
         if (!(req.params.sorting in Series.rawAttributes))
             return next(new errors.BadRequestError('Sorting method is invalid'));
 
-        if (req.query.count)
-            limit = parseInt(req.query.count);
-
-        if (req.params.page && Number.isInteger(req.params.page))
-            page = parseInt(req.query.page);
-
         let results = await Series.findAll({
-            order: [
-                [req.params.sorting, req.query.order]
-            ],
+            order: [[req.params.sorting, req.query.order]],
             limit,
             offset: limit * page
         });
@@ -42,7 +37,7 @@ export default (server, oblecto) => {
         res.send(results);
     });
 
-    server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         let show = await Series.findByPk(req.params.id);
 
         if (show.genre) show.genre = JSON.parse(show.genre);
@@ -50,9 +45,8 @@ export default (server, oblecto) => {
         res.send(show);
     });
 
-
     // Endpoint to get all episodes within a series
-    server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req, res) {
         let show = await Episode.findAll({
             include: [
                 Series,
@@ -64,7 +58,7 @@ export default (server, oblecto) => {
                     }
                 }
             ],
-            where: {SeriesId: req.params.id},
+            where: { SeriesId: req.params.id },
             order: [
                 ['airedSeason', 'ASC'],
                 ['airedEpisodeNumber', 'ASC']
@@ -103,11 +97,12 @@ export default (server, oblecto) => {
 
         if (oblecto.config.assets.storeWithFile) {
             let showPath = show.directory;
+
             posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
         }
 
         if (req.files.length < 1) {
-            return next(new errors.MissingParameter('Image file is missing'));
+            return next(new errors.MissingParameterError('Image file is missing'));
         }
 
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
@@ -118,11 +113,11 @@ export default (server, oblecto) => {
             let ratio = metadata.height / metadata.width;
 
             if (!(1 <= ratio <= 2)) {
-                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+                return next(new errors.InvalidContentError('Image aspect ratio is incorrect'));
             }
 
         } catch (e) {
-            return next(new errors.InvalidContent('File is not an image'));
+            return next(new errors.InvalidContentError('File is not an image'));
         }
 
         try {
@@ -132,18 +127,14 @@ export default (server, oblecto) => {
                 res.send(['success']);
             });
         } catch (e) {
-            console.log(e);
-
-            return next(new errors.Internal('An error has occured during upload of poster'));
+            return next(new errors.InternalError('An error has occurred during upload of poster'));
         }
 
         next();
     });
 
-
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req, res) {
-        // search for attributes
-        let tvshows = await Series.findAll({
+        let series = await Series.findAll({
             where: {
                 seriesName: {
                     [Op.like]: '%' + req.params.name + '%'
@@ -151,7 +142,7 @@ export default (server, oblecto) => {
             }
         });
 
-        res.send(tvshows);
+        res.send(series);
 
     });
 };

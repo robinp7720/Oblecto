@@ -1,14 +1,18 @@
-import events from 'events';
-import {v4} from 'uuid';
+import { EventEmitter } from 'events';
+import { v4 } from 'uuid';
 import logger from '../../submodules/logger';
 import Stream from 'stream';
 
-export default class StreamSession extends events.EventEmitter{
+import Oblecto from '../oblecto';
+
+import { File } from '../../models/file';
+
+export default class StreamSession extends EventEmitter {
     /**
      *
-     * @param {File} file
-     * @param options
-     * @param {Oblecto} oblecto
+     * @param {File} file - File to stream
+     * @param {*} options - Streamer options
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(file, options, oblecto) {
         super();
@@ -41,7 +45,6 @@ export default class StreamSession extends events.EventEmitter{
             logger.log('INFO', this.sessionId, 'output stream has closed');
             this.endSession();
         });
-
 
         this.httpHeaders = {
             'Content-Type': this.getOutputMimetype(),

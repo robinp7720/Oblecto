@@ -1,4 +1,4 @@
-import {Op} from 'sequelize';
+import { Op } from 'sequelize';
 
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 
@@ -9,15 +9,21 @@ import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
+import { File } from '../../../models/file';
+
 import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';
 import guessit from '../../../submodules/guessit';
 
+import Oblecto from '../../oblecto';
 
+/**
+ * Oblecto module to identify and index series and episodes
+ */
 export default class SeriesIndexer {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -49,6 +55,13 @@ export default class SeriesIndexer {
         this.oblecto.queue.registerJob('indexEpisode', async (job) => await this.indexFile(job.path));
     }
 
+    /**
+     * Identify and index the series of a given file
+     *
+     * @param {File} file - File to be indexed
+     * @param {*} guessitIdentification - Guessit identification Object
+     * @returns {Promise<Series>} - Matched series
+     */
     async indexSeries(file, guessitIdentification) {
         let seriesIdentification;
 
@@ -66,12 +79,12 @@ export default class SeriesIndexer {
 
         for (let identifier of identifiers) {
             if (!seriesIdentification[identifier]) continue;
-            seriesQuery.push({[identifier]: seriesIdentification[identifier]});
+            seriesQuery.push({ [identifier]: seriesIdentification[identifier] });
         }
 
         let [series, seriesCreated] = await Series.findOrCreate(
             {
-                where: {[Op.or] : seriesQuery},
+                where: { [Op.or] : seriesQuery },
                 defaults: seriesIdentification
             });
 
@@ -83,10 +96,22 @@ export default class SeriesIndexer {
         return series;
     }
 
+    /**
+     * Index a specific file and identify it as a series
+     *
+     * @param {string} episodePath - Path to episode to index
+     * @returns {Promise<void>}
+     */
     async indexFile(episodePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
         const guessitIdentification = await guessit.identify(episodePath);
+
+        // Some single season shows usually don't have a season in the title,
+        // therefore whe should set it to 1 by default.
+        if (!guessitIdentification.season) {
+            guessitIdentification.season = 1;
+        }
 
         let series = await this.indexSeries(file, guessitIdentification);
 

@@ -1,5 +1,5 @@
 import FederationServerConnection from './FederationServerConnection';
-import {File} from '../../../models/file';
+import { File } from '../../../models/file';
 import logger from '../../../submodules/logger';
 
 export default class FederationMediaServerConnection extends FederationServerConnection {

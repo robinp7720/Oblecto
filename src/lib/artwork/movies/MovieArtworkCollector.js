@@ -1,10 +1,11 @@
-import {promises as fs} from 'fs';
-import {Movie} from '../../../models/movie';
+import Oblecto from '../../oblecto';
+import { Movie } from '../../../models/movie';
+import { fileExists } from '../../../submodules/utils';
 
 export default class MovieArtworkCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -12,34 +13,22 @@ export default class MovieArtworkCollector {
 
     /**
      *
-     * @param movie - Movie for which to download fanart for
+     * @param {Movie} movie - Movie for which to download fanart for
      * @returns {Promise<void>}
      */
     async collectArtworkMovieFanart(movie) {
-        let stat;
-
-        try {
-            stat = await fs.stat(this.oblecto.artworkUtils.movieFanartPath(movie));
-        } catch (e) {}
-
-        if (stat) return;
+        if (!await fileExists(this.oblecto.artworkUtils.movieFanartPath(movie))) return;
 
         this.oblecto.queue.queueJob('downloadMovieFanart', movie);
     }
 
     /**
      *
-     * @param movie - Movie for which to download poster for
+     * @param {Movie} movie - Movie for which to download poster for
      * @returns {Promise<void>}
      */
     async collectArtworkMoviePoster(movie) {
-        let stat;
-
-        try {
-            stat = await fs.stat(this.oblecto.artworkUtils.moviePosterPath(movie));
-        } catch (e) {}
-
-        if (stat) return;
+        if (!await fileExists(this.oblecto.artworkUtils.moviePosterPath(movie))) return;
 
         this.oblecto.queue.queueJob('downloadMoviePoster', movie);
     }

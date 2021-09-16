@@ -1,13 +1,17 @@
 import errors from 'restify-errors';
 import authMiddleWare from '../middleware/auth';
-import {File} from '../../../models/file';
+import { File } from '../../../models/file';
 import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
 import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer';
 
+import Oblecto from '../../../lib/oblecto';
+import Server from 'restify/lib/server';
+
 /**
+ * Add routes for streaming
  *
- * @param {Server} server
- * @param {Oblecto} oblecto
+ * @param {Server} server - Restify server object
+ * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req, res, next) {
@@ -17,12 +21,12 @@ export default (server, oblecto) => {
 
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
-        // TODO: Send approriate error if session is not a HLS stream session
+        // TODO: Send appropriate error if session is not a HLS stream session
         if (!(streamSession instanceof HLSStreamer)) return next();
 
         let segmentId = parseInt(req.params.id);
 
-        streamSession.streamSegment(req, res, segmentId);
+        await streamSession.streamSegment(req, res, segmentId);
     });
 
     server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
@@ -68,7 +72,7 @@ export default (server, oblecto) => {
         }
 
         return next();
-    }, async function (req, res, next) {
+    }, async function (req, res) {
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
         if (req.params.offset) {

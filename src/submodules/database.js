@@ -2,19 +2,23 @@ import Sequelize from 'sequelize';
 import config from '../config.js';
 import logger from './logger';
 
-import {Episode, episodeColumns} from '../models/episode';
-import {EpisodeFiles, episodeFilesColumns} from '../models/episodeFiles';
-import {File, fileColumns} from '../models/file';
-import {Movie, movieColumns} from '../models/movie';
-import {Series, seriesColumns} from '../models/series';
-import {MovieFiles, movieFileColumns} from '../models/movieFiles';
-import {MovieSet, movieSetColumns} from '../models/movieSet';
-import {SeriesSet, seriesSetColumns} from '../models/seriesSet';
-import {TrackMovie, trackMovieColumns} from '../models/trackMovie';
-import {TrackEpisode, trackEpisodesColumns} from '../models/trackEpisode';
-import {User, userColumns} from '../models/user';
-import {Stream, streamColumns} from '../models/stream';
+import { Episode, episodeColumns } from '../models/episode';
+import { EpisodeFiles, episodeFilesColumns } from '../models/episodeFiles';
+import { File, fileColumns } from '../models/file';
+import { Movie, movieColumns } from '../models/movie';
+import { Series, seriesColumns } from '../models/series';
+import { MovieFiles, movieFileColumns } from '../models/movieFiles';
+import { MovieSet, movieSetColumns } from '../models/movieSet';
+import { SeriesSet, seriesSetColumns } from '../models/seriesSet';
+import { TrackMovie, trackMovieColumns } from '../models/trackMovie';
+import { TrackEpisode, trackEpisodesColumns } from '../models/trackEpisode';
+import { User, userColumns } from '../models/user';
+import { Stream, streamColumns } from '../models/stream';
 
+/**
+ *
+ * @returns {Sequelize} - Connection to database
+ */
 export function initDatabase() {
     let dialect = config.database.dialect || 'sqlite';
     let poolmax = config.queue.concurrency;
@@ -28,7 +32,6 @@ export function initDatabase() {
         dialect,
 
         logging: false,
-        //operatorsAliases: false,
 
         pool: {
             max: poolmax,
@@ -52,39 +55,39 @@ export function initDatabase() {
 
     const sequelize = new Sequelize(config.database.database, config.database.username, config.database.password, options);
 
-    Episode.init(episodeColumns, {sequelize});
-    Movie.init(movieColumns, {sequelize});
-    Series.init(seriesColumns, {sequelize});
+    Episode.init(episodeColumns, { sequelize });
+    Movie.init(movieColumns, { sequelize });
+    Series.init(seriesColumns, { sequelize });
 
-    File.init(fileColumns, {sequelize});
-    Stream.init(streamColumns, {sequelize});
+    File.init(fileColumns, { sequelize });
+    Stream.init(streamColumns, { sequelize });
 
-    EpisodeFiles.init(episodeFilesColumns, {sequelize});
-    MovieFiles.init(movieFileColumns, {sequelize});
+    EpisodeFiles.init(episodeFilesColumns, { sequelize });
+    MovieFiles.init(movieFileColumns, { sequelize });
 
-    MovieSet.init(movieSetColumns, {sequelize});
-    SeriesSet.init(seriesSetColumns, {sequelize});
+    MovieSet.init(movieSetColumns, { sequelize });
+    SeriesSet.init(seriesSetColumns, { sequelize });
 
-    TrackMovie.init(trackMovieColumns, {sequelize});
-    TrackEpisode.init(trackEpisodesColumns, {sequelize});
+    TrackMovie.init(trackMovieColumns, { sequelize });
+    TrackEpisode.init(trackEpisodesColumns, { sequelize });
 
-    User.init(userColumns, {sequelize});
+    User.init(userColumns, { sequelize });
 
     Episode.belongsTo(Series);
     Series.hasMany(Episode);
 
-    MovieSet.belongsToMany(Movie, {through: 'MovieSetAllocations'});
-    MovieSet.belongsToMany(User, {through: 'MovieSetUsers'});
-    Movie.belongsToMany(MovieSet, {through: 'MovieSetAllocations'});
+    MovieSet.belongsToMany(Movie, { through: 'MovieSetAllocations' });
+    MovieSet.belongsToMany(User, { through: 'MovieSetUsers' });
+    Movie.belongsToMany(MovieSet, { through: 'MovieSetAllocations' });
 
-    SeriesSet.belongsToMany(Series, {through: 'SeriesSetAllocations'});
-    Series.belongsToMany(SeriesSet, {through: 'SeriesSetAllocations'});
+    SeriesSet.belongsToMany(Series, { through: 'SeriesSetAllocations' });
+    Series.belongsToMany(SeriesSet, { through: 'SeriesSetAllocations' });
 
-    Episode.belongsToMany(File, {through: EpisodeFiles});
-    Movie.belongsToMany(File, {through: MovieFiles});
+    Episode.belongsToMany(File, { through: EpisodeFiles });
+    Movie.belongsToMany(File, { through: MovieFiles });
 
-    File.belongsToMany(Episode, {through: EpisodeFiles});
-    File.belongsToMany(Movie, {through: MovieFiles});
+    File.belongsToMany(Episode, { through: EpisodeFiles });
+    File.belongsToMany(Movie, { through: MovieFiles });
     Stream.belongsTo(File);
     File.hasMany(Stream);
 

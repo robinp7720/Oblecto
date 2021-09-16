@@ -1,8 +1,14 @@
-import {Series} from '../../models/series';
-import {Episode} from '../../models/episode';
-import {File} from '../../models/file';
+import { Series } from '../../models/series';
+import { Episode } from '../../models/episode';
+import { File } from '../../models/file';
+
+import Oblecto from '../oblecto';
 
 export default class FederationEpisodeIndexer {
+    /**
+     *
+     * @param {Oblecto} oblecto - Oblecto server instance
+     */
     constructor(oblecto) {
         this.oblecto = oblecto;
 
@@ -13,7 +19,7 @@ export default class FederationEpisodeIndexer {
     }
 
     async indexEpisode(file) {
-        let [fileEntity, fileInserted] = await File.findOrCreate({
+        let [fileEntity] = await File.findOrCreate({
             where: {
                 host: file.host,
                 path: file.id
@@ -49,7 +55,6 @@ export default class FederationEpisodeIndexer {
                 airedSeason: file.fileInfo.season
             }
         });
-
 
         if (!episodeInserted) return;
         await episode.addFile(fileEntity);

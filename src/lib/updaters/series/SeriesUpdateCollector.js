@@ -1,10 +1,12 @@
-import {Series} from '../../../models/series';
-import {Episode} from '../../../models/episode';
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
+
+import Oblecto from '../../oblecto';
 
 export default class SeriesUpdateCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;

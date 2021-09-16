@@ -1,6 +1,9 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError';
 import promiseTimeout from '../../../../submodules/promiseTimeout';
 
+import { Episode } from '../../../../models/episode';
+import { Series } from '../../../../models/series';
+
 export default class TmdbSeriesArtworkRetriever {
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -8,8 +11,8 @@ export default class TmdbSeriesArtworkRetriever {
 
     /**
      *
-     * @param {Episode} episode
-     * @returns {Promise<string>}
+     * @param {Episode} episode - Episode for which to retrieve banner URLs for
+     * @returns {Promise<string[]>} - Array of poster urls
      */
     async retrieveEpisodeBanner(episode) {
         if (!episode.tmdbid) throw new DebugExtendableError(`TMDB Episode banner retriever failed for ${episode.episodeName}`);
@@ -22,19 +25,13 @@ export default class TmdbSeriesArtworkRetriever {
             season_number: episode.airedSeason
         }));
 
-        let urls = [];
-
-        for (let image of data.stills) {
-            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
-        }
-
-        return urls;
+        return data.stills.map(image => `https://image.tmdb.org/t/p/original${image['file_path']}`);
     }
 
     /**
      *
-     * @param {Series} series
-     * @returns {Promise<string>}
+     * @param {Series} series - Series for which to retrieve a poster for
+     * @returns {Promise<string[]>} - Array of banner urls
      */
     async retrieveSeriesPoster(series) {
         if (!series.tmdbid) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
@@ -43,12 +40,6 @@ export default class TmdbSeriesArtworkRetriever {
             id: series.tmdbid
         }));
 
-        let urls = [];
-
-        for (let image of data.posters) {
-            urls.push(`https://image.tmdb.org/t/p/original${image['file_path']}`);
-        }
-
-        return urls;
+        return data.posters.map(image => `https://image.tmdb.org/t/p/original${image['file_path']}`);
     }
 }

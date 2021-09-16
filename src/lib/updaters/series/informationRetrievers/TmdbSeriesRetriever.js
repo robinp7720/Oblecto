@@ -1,23 +1,27 @@
 import promiseTimeout from '../../../../submodules/promiseTimeout';
 import DebugExtendableError from '../../../errors/DebugExtendableError';
+import Oblecto from '../../../oblecto';
+
+import { Series } from '../../../../models/series';
 
 export default class TmdbSeriesRetriever {
     /**
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
     }
 
     /**
+     * Get metadata for a series from TMDB
      *
-     * @param {Series} series
-     * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>}
+     * @param {Series} series - Series for which to fetch metadata
+     * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>} - Updated series information
      */
     async retrieveInformation(series) {
         if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
 
-        let seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, {timeout: 5000}));
+        const seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, { timeout: 5000 }));
 
         let data = {
             seriesName: seriesInfo.name,
@@ -26,13 +30,14 @@ export default class TmdbSeriesRetriever {
             overview: seriesInfo.overview,
             popularity: seriesInfo.popularity,
             siteRating: seriesInfo.vote_average,
-            siteRatingCount: seriesInfo.vote_count
+            siteRatingCount: seriesInfo.vote_count,
+            genre: JSON.stringify(seriesInfo.genres.map(i => i.name))
         };
 
         let externalIds = {};
 
         if (!(series.tvdbid && series.imdbid)) {
-            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({id: series.tmdbid}, {timeout: 5000}));
+            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({ id: series.tmdbid }, { timeout: 5000 }));
         }
 
         if (!series.tvdbid) {

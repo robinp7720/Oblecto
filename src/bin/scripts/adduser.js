@@ -1,7 +1,7 @@
-import {promises as fs} from 'fs';
+import { promises as fs } from 'fs';
 import bcrypt from 'bcrypt';
-import {User} from '../../models/user';
-import {initDatabase} from '../../submodules/database';
+import { User } from '../../models/user';
+import { initDatabase } from '../../submodules/database';
 import argumentError from './helpers/argumentError';
 
 export default async (args) => {
@@ -16,7 +16,6 @@ export default async (args) => {
 
     let hash = await bcrypt.hash(args[2], config.authentication.saltRounds);
 
-
     let [user, inserted] = await User.findOrCreate({
         where: {
             username: args[1]
@@ -29,10 +28,10 @@ export default async (args) => {
     });
 
     if (inserted) {
-        console.log('User has been created');
+        console.log(`User with username ${user.username} has been created`);
     } else {
         console.log('A user that with username already exists!');
     }
 
-    sequelize.close();
+    await sequelize.close();
 };

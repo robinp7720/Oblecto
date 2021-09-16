@@ -1,9 +1,10 @@
 {
   "name": "oblecto",
-  "version": "v0.2.6-beta.2",
+  "version": "v0.2.9",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
+  "license": "AGPL-3.0-or-later",
   "private": false,
   "bin": {
     "oblecto": "./dist/bin/oblecto.js"
@@ -21,7 +22,9 @@
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
     "debug": "./node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0",
     "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'",
-    "test": "scripts/test.sh"
+    "test:mocha": "mocha tests/mocha",
+    "test:startup": "scripts/test.sh",
+    "test": "npm run test:mocha; npm run test:startup"
   },
   "dependencies": {
     "async": "^3.2.0",
@@ -39,7 +42,6 @@
     "neo-blessed": "^0.2.0",
     "node-rsa": "^1.1.1",
     "node-tvdb": "^4.1.0",
-    "uuid": "^8.3.1",
     "recursive-readdir": "^2.2.2",
     "restify": "^8.5.1",
     "restify-cors-middleware": "^1.1.1",
@@ -48,6 +50,7 @@
     "sharp": "^0.25.0",
     "socket.io": "^2.3.0",
     "sqlite3": "5.0.0",
+    "uuid": "^8.3.1",
     "which": "^1.3.1"
   },
   "devDependencies": {
@@ -57,8 +60,13 @@
     "@babel/preset-env": "^7.11.5",
     "@types/bcrypt": "^3.0.0",
     "@types/restify-errors": "^4.3.3",
+    "@types/socket.io": "^2.1.13",
+    "chai": "^4.3.3",
     "eslint": "^7.11.0",
+    "eslint-plugin-jsdoc": "^32.2.0",
+    "expect.js": "^0.3.1",
     "jshint": "^2.12.0",
+    "mocha": "^8.3.1",
     "nodemon": "^2.0.5"
   }
 }

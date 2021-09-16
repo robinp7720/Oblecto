@@ -1,10 +1,11 @@
-import databases from '../../../submodules/database';
-import {Movie} from '../../../models/movie';
+import { Movie } from '../../../models/movie';
+
+import Oblecto from '../../oblecto';
 
 export default class MovieUpdateCollector {
     /**
      *
-     * @param {Oblecto} oblecto
+     * @param {Oblecto} oblecto - Oblecto server instance
      */
     constructor(oblecto) {
         this.oblecto = oblecto;
@@ -19,7 +20,6 @@ export default class MovieUpdateCollector {
         this.oblecto.queue.queueJob('updateMovie', movie);
     }
 
-
     /**
      *
      * @returns {Promise<void>}
@@ -28,7 +28,7 @@ export default class MovieUpdateCollector {
         let movies = await Movie.findAll();
 
         for (let movie of movies) {
-            this.collectMovie(movie);
+            await this.collectMovie(movie);
         }
     }
 
