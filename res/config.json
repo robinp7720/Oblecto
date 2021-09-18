@@ -81,12 +81,12 @@
   },
   "fileExtensions": {
     "video": [
-      ".mp4",
-      ".avi",
-      ".iso",
-      ".m4v",
-      ".mkv",
-      ".mk3d"
+      "mp4",
+      "avi",
+      "iso",
+      "m4v",
+      "mkv",
+      "mk3d"
     ]
   },
   "authentication": {

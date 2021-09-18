@@ -41,7 +41,7 @@ export default class SeriesCollector {
      * @returns {Promise<void>}
      */
     async collectFile(file) {
-        let extension = path.parse(file).ext.toLowerCase();
+        let extension = path.parse(file).ext.toLowerCase().replace('.','');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
             this.oblecto.queue.queueJob('indexEpisode',{ path: file });
