@@ -1,11 +1,14 @@
-import { extname } from 'path';
+import { extname, normalize as normalizePath } from 'path';
 import SeedboxImportFTP from './SeedboxImportDrivers/SeedboxImportFTP';
 import WarnExtendableError from '../errors/WarnExtendableError';
+import logger from '../../submodules/logger';
+import index from 'async';
 
 export default class Seedbox {
     constructor(seedboxConfig) {
-        this.moviePath = seedboxConfig.moviePath;
-        this.seriesPath = seedboxConfig.seriesPath;
+        this.moviePath = normalizePath(seedboxConfig.mediaImport.movieDirectory);
+        this.seriesPath = normalizePath(seedboxConfig.mediaImport.seriesDirectory);
+        this.name = seedboxConfig.name;
 
         this.initStorageDriver(seedboxConfig.storageDriver, seedboxConfig.storageDriverOptions);
     }
@@ -21,6 +24,8 @@ export default class Seedbox {
     }
 
     async findAll(indexPath, fileTypes) {
+        logger.log('DEBUG', `Finding files in ${indexPath}`);
+
         const toIndex = [];
         const indexed = [];
 
@@ -35,10 +40,10 @@ export default class Seedbox {
                 switch (entry.type) {
                     case 0: // Type 0 is a file
                         if (fileTypes.indexOf(extname(`${current}/${entry.name}`).replace('.','')) !== -1)
-                            indexed.push(`${current}/${entry.name}`);
+                            indexed.push(normalizePath(`${current}/${entry.name}`));
                         break;
                     case 1: // Type 1 is a directory
-                        toIndex.push(`${current}/${entry.name}`);
+                        toIndex.push(normalizePath(`${current}/${entry.name}`));
                         break;
                 }
             }
