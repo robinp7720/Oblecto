@@ -1,5 +1,6 @@
 import Jsftp from 'jsftp';
 import SeedboxImportDriver from '../SeedboxImportDriver';
+import fs from 'fs';
 
 export default class SeedboxImportFTP extends SeedboxImportDriver {
     constructor(config) {
@@ -24,9 +25,16 @@ export default class SeedboxImportFTP extends SeedboxImportDriver {
 
     async copy(origin, destination) {
         return new Promise((resolve, reject) => {
-            this.ftp.get(origin, destination, err => {
+            this.ftp.get(origin, (err, socket) => {
                 if (err) return reject(err);
-                resolve();
+
+                const writeStream = fs.createWriteStream(destination);
+
+                socket.pipe(writeStream);
+
+                socket.on('close', resolve);
+
+                socket.resume();
             });
         });
     }

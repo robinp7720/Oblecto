@@ -1,8 +1,10 @@
 import Seedbox from './Seedbox';
 import logger from '../../submodules/logger';
-import MovieIndexer from '../indexers/movies/MovieIndexer';
 import guessit from '../../submodules/guessit';
 import { Movie } from '../../models/movie';
+import Queue from '../queue';
+import { basename } from 'path';
+import { rename } from 'fs/promises';
 
 /**
  * @typedef {import('../oblecto').default} Oblecto
@@ -17,6 +19,10 @@ export default class SeedboxController {
         logger.log('DEBUG', 'Starting seedbox subsystem');
         this.oblecto = oblecto;
         this.seedBoxes = [];
+
+        this.importQueue = new Queue(1);
+
+        this.importQueue.registerJob('fileImport', job => this.importFile(job.seedbox, job.origin, job.destination));
     }
 
     loadAllSeedboxes() {
@@ -29,6 +35,24 @@ export default class SeedboxController {
     addSeedbox(seedboxConfig) {
         this.seedBoxes.push(new Seedbox(seedboxConfig));
         logger.log('DEBUG', `Loaded seedbox ${seedboxConfig.name}`);
+    }
+
+    /**
+     *
+     * @param {Seedbox} seedbox
+     * @param {string} origin
+     * @param {string} destination
+     * @returns {Promise<void>}
+     */
+    async importFile(seedbox, origin, destination) {
+        logger.log('INFO', `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
+
+        // Add a suffix to the file while downloading to prevent potential errors while running an import
+        // and also to know if a file was successfully downloaded or not
+        await seedbox.storageDriver.copy(origin, destination+'.oblectoimport');
+        await rename(destination+'.oblectoimport', destination);
+
+        logger.log('INFO', `${origin} successfully downloaded`);
     }
 
     /**
@@ -55,6 +79,14 @@ export default class SeedboxController {
             if (movie !== null) continue;
 
             logger.log('INFO', `Found new movie on ${seedbox.name}: ${match.movieName}`);
+
+            // Download the file to the first movie directory path
+            // TODO: Add config for where imported files should be stored
+            this.importQueue.pushJob('fileImport', {
+                seedbox,
+                origin: file,
+                destination: this.oblecto.config.movies.directories[0].path + '/' + basename(file)
+            });
         }
     }
 
