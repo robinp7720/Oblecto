@@ -2,8 +2,9 @@ import Seedbox from './Seedbox';
 import logger from '../../submodules/logger';
 import guessit from '../../submodules/guessit';
 import { Movie } from '../../models/movie';
+import { File } from '../../models/file';
 import Queue from '../queue';
-import { basename } from 'path';
+import { basename, parse } from 'path';
 import { rename } from 'fs/promises';
 
 /**
@@ -22,14 +23,18 @@ export default class SeedboxController {
 
         this.importQueue = new Queue(1);
 
-        this.importQueue.registerJob('fileImport', job => this.importFile(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importMovie', job => this.importMovie(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importEpisode', job => this.importEpisode(job.seedbox, job.origin, job.destination));
     }
 
-    loadAllSeedboxes() {
+    async loadAllSeedboxes() {
         logger.log('DEBUG', 'Loading all Seedboxes');
         for (const seedbox of this.oblecto.config.seedboxes) {
             this.addSeedbox(seedbox);
         }
+
+        await this.importAllEpisodes();
+        await this.importAllMovies();
     }
 
     addSeedbox(seedboxConfig) {
@@ -55,6 +60,48 @@ export default class SeedboxController {
         logger.log('INFO', `${origin} successfully downloaded`);
     }
 
+    async importMovie(seedbox, origin, destination) {
+        await this.importFile(seedbox, origin, destination);
+        await this.oblecto.movieCollector.collectFile(destination);
+    }
+
+    async importEpisode(seedbox, origin, destination) {
+        await this.importFile(seedbox, origin, destination);
+        await this.oblecto.seriesCollector.collectFile(destination);
+    }
+
+    async shouldImportMovie(filePath) {
+        const method = 'file';
+
+        if (method === 'movie') {
+            const match = await this.oblecto.movieIndexer.matchFile(filePath, await guessit.identify(filePath));
+            const movie = await Movie.findOne({ where: { tmdbid: match.tmdbid } });
+
+            return movie === null;
+        }
+
+        if (method === 'file') {
+            const file = await File.findOne({ where: { name: parse(filePath).name } });
+
+            return file === null;
+        }
+    }
+
+    async shouldImportEpisode(filePath) {
+        const method = 'file';
+
+        // TODO: Add filter based on if episode exits
+        if (method === 'episode') {
+
+        }
+
+        if (method === 'file') {
+            const file = await File.findOne({ where: { name: parse(filePath).name } });
+
+            return file === null;
+        }
+    }
+
     /**
      *
      * @param {Seedbox} seedbox
@@ -67,22 +114,13 @@ export default class SeedboxController {
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
 
-            const match = await this.oblecto.movieIndexer.matchFile(file, await guessit.identify(file));
+            if (!await this.shouldImportMovie(file)) continue;
 
-            const movie = await Movie.findOne({ where: { tmdbid: match.tmdbid } });
-
-            // If the movie doesn't exist in the database,
-            // movie will be equal to null.
-            // We don't want to download movies that we already have in our library
-            // TODO: Add other criteria for choosing which files to download
-            //       EG: Matching quality, bitrate, etc
-            if (movie !== null) continue;
-
-            logger.log('INFO', `Found new movie on ${seedbox.name}: ${match.movieName}`);
+            logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
 
             // Download the file to the first movie directory path
             // TODO: Add config for where imported files should be stored
-            this.importQueue.pushJob('fileImport', {
+            this.importQueue.pushJob('importMovie', {
                 seedbox,
                 origin: file,
                 destination: this.oblecto.config.movies.directories[0].path + '/' + basename(file)
@@ -94,11 +132,33 @@ export default class SeedboxController {
      *
      * @param {Seedbox} seedbox
      */
-    importSeries(seedbox) {
-        seedbox.findAll(seedbox.seriesPath, ['mkv']);
+    async importEpisodes(seedbox) {
+        const files = await seedbox.findAll(seedbox.seriesPath, this.oblecto.config.fileExtensions.video);
+
+        for (const file of files) {
+            // Many packs include sample files.
+            // We don't want to import these
+            if (file.toLowerCase().includes('sample')) continue;
+
+            if (!await this.shouldImportEpisode(file)) continue;
+
+            logger.log('INFO', `Found new episode on ${seedbox.name}: ${basename(file)}`);
+
+            // Download the file to the first movie directory path
+            // TODO: Add config for where imported files should be stored
+            this.importQueue.pushJob('importEpisode', {
+                seedbox,
+                origin: file,
+                destination: this.oblecto.config.tvshows.directories[0].path + '/' + basename(file)
+            });
+        }
     }
 
-    importAllMovies() {
-        for (const seedbox of this.seedBoxes) this.importMovies(seedbox);
+    async importAllMovies() {
+        for (const seedbox of this.seedBoxes) await this.importMovies(seedbox);
+    }
+
+    async importAllEpisodes() {
+        for (const seedbox of this.seedBoxes) await this.importEpisodes(seedbox);
     }
 }
