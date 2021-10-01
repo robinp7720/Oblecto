@@ -4,7 +4,7 @@ import which from 'which';
 
 import logger from './logger';
 
-let useBinary = false;
+let useBinary = true;
 
 /**
  * @typedef {object} GuessitIdentification
@@ -32,14 +32,13 @@ which('guessit', function (err, resolvedPath) {
         logger.log('INFO', 'Using the web based identifier');
         logger.log('INFO', 'This may significantly reduce indexing speeds');
         logger.log('INFO', 'Please install guessit from your package manager');
+        useBinary = false;
 
         return;
     }
 
     logger.log('INFO', 'Guessit binary has been found');
     logger.log('INFO', 'Using local guessit binary');
-
-    useBinary = true;
 });
 
 export default {
