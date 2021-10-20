@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import {Op} from 'sequelize';
 
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 
@@ -7,9 +7,9 @@ import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
 import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 
-import { Series } from '../../../models/series';
-import { Episode } from '../../../models/episode';
-import { File } from '../../../models/file';
+import {Series} from '../../../models/series';
+import {Episode} from '../../../models/episode';
+import {File} from '../../../models/file';
 
 import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';
@@ -97,6 +97,14 @@ export default class SeriesIndexer {
         }
 
         return series;
+    }
+
+    async identify(episodePath) {
+        const guessitIdentification = await guessit.identify(episodePath);
+        const seriesIdentification = await this.seriesIdentifier.identify(episodePath, guessitIdentification);
+        const episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, seriesIdentification);
+
+        return { ...seriesIdentification, ...episodeIdentification };
     }
 
     /**

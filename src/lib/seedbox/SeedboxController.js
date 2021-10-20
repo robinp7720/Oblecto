@@ -4,8 +4,9 @@ import guessit from '../../submodules/guessit';
 import { Movie } from '../../models/movie';
 import { File } from '../../models/file';
 import Queue from '../queue';
-import { basename, parse } from 'path';
+import { basename, parse, dirname } from 'path';
 import { rename } from 'fs/promises';
+import mkdirp from 'mkdirp';
 
 /**
  * @typedef {import('../oblecto').default} Oblecto
@@ -51,6 +52,8 @@ export default class SeedboxController {
      */
     async importFile(seedbox, origin, destination) {
         logger.log('INFO', `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
+
+        mkdirp(dirname(destination));
 
         // Add a suffix to the file while downloading to prevent potential errors while running an import
         // and also to know if a file was successfully downloaded or not
@@ -140,6 +143,14 @@ export default class SeedboxController {
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
 
+            let identification;
+
+            try {
+                identification = await this.oblecto.seriesIndexer.identify(file);
+            } catch (e) {
+                continue;
+            }
+
             if (!await this.shouldImportEpisode(file)) continue;
 
             logger.log('INFO', `Found new episode on ${seedbox.name}: ${basename(file)}`);
@@ -149,7 +160,7 @@ export default class SeedboxController {
             this.importQueue.pushJob('importEpisode', {
                 seedbox,
                 origin: file,
-                destination: this.oblecto.config.tvshows.directories[0].path + '/' + basename(file)
+                destination: this.oblecto.config.tvshows.directories[0].path + '/' + identification.seriesName + '/' + basename(file)
             });
         }
     }
