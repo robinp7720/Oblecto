@@ -50,6 +50,11 @@ export default class DirectHttpStreamSession extends StreamSession {
         });
     }
 
+    onTimeOut() {
+        super.onTimeOut();
+        this.endSession();
+    }
+
     async startStream() {
         await super.startStream();
 
