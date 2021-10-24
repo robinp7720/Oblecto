@@ -127,13 +127,11 @@ export default class RecodeStreamSession extends StreamSession {
 
     outputPause() {
         super.outputPause();
-
-        this.process.kill('SIGSTOP');
+        if (this.process) this.process.kill('SIGSTOP');
     }
 
     outputResume() {
         super.outputResume();
-
-        this.process.kill('SIGCONT');
+        if (this.process) this.process.kill('SIGCONT');
     }
 }

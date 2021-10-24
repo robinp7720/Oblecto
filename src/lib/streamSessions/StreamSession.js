@@ -36,9 +36,10 @@ export default class StreamSession extends EventEmitter {
 
         this.process = null;
         this.offset = options.offset || 0;
+        this.paused = true;
 
-        this.inputStream = new Stream.PassThrough;
-        this.outputStream = new Stream.PassThrough;
+        this.inputStream = new Stream.PassThrough();
+        this.outputStream = new Stream.PassThrough();
 
         this.outputStream.on('pause', () => this.outputPause());
         this.outputStream.on('resume', () => this.outputResume());
@@ -59,8 +60,14 @@ export default class StreamSession extends EventEmitter {
         this.startTimeout();
     }
 
-    outputPause() {}
-    outputResume() {}
+    outputPause() {
+        this.paused = true;
+        logger.log('INFO', 'Pausing stream session');
+    }
+    outputResume() {
+        this.paused = false;
+        logger.log('INFO', 'Resuming stream session');
+    }
 
     endSession() {
         if (this.process) {
@@ -73,16 +80,18 @@ export default class StreamSession extends EventEmitter {
     startTimeout() {
         if (this.timeout) this.clearTimeout();
 
-        this.timeout = setTimeout(() => {
-            // Some video clients start a new connection before closing the old one.
-            // we don't want to kill the session if a client is still connected
-            for (const session of this.destinations) {
-                if (session) return;
-            }
+        this.timeout = setTimeout(() => this.onTimeOut(), this.timeoutTime);
+    }
 
-            logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
-            this.outputStream.destroy();
-        }, this.timeoutTime);
+    onTimeOut() {
+        // Some video clients start a new connection before closing the old one.
+        // we don't want to kill the session if a client is still connected
+        for (const session of this.destinations) {
+            if (session) return;
+        }
+
+        logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
+        this.outputStream.destroy();
     }
 
     async addDestination(destination) {
