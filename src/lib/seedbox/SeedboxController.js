@@ -31,6 +31,8 @@ export default class SeedboxController {
     async loadAllSeedboxes() {
         logger.log('DEBUG', 'Loading all Seedboxes');
         for (const seedbox of this.oblecto.config.seedboxes) {
+            if (!seedbox.enabled) continue;
+
             this.addSeedbox(seedbox);
         }
 
