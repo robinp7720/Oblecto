@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import {Op} from 'sequelize';
 
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 
@@ -7,9 +7,9 @@ import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
 import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 
-import { Series } from '../../../models/series';
-import { Episode } from '../../../models/episode';
-import { File } from '../../../models/file';
+import {Series} from '../../../models/series';
+import {Episode} from '../../../models/episode';
+import {File} from '../../../models/file';
 
 import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';
@@ -17,6 +17,7 @@ import guessit from '../../../submodules/guessit';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import('../../../submodules/guessit').GuessitIdentification} GuessitIdentification
  */
 
 /**
@@ -98,6 +99,14 @@ export default class SeriesIndexer {
         return series;
     }
 
+    async identify(episodePath) {
+        const guessitIdentification = await guessit.identify(episodePath);
+        const seriesIdentification = await this.seriesIdentifier.identify(episodePath, guessitIdentification);
+        const episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, seriesIdentification);
+
+        return { ...seriesIdentification, ...episodeIdentification };
+    }
+
     /**
      * Index a specific file and identify it as a series
      *
@@ -111,8 +120,6 @@ export default class SeriesIndexer {
          * @type {GuessitIdentification}
          */
         const guessitIdentification = await guessit.identify(episodePath);
-
-        console.log(guessitIdentification.source);
 
         // Some single season shows usually don't have a season in the title,
         // therefore whe should set it to 1 by default.

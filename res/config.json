@@ -81,12 +81,12 @@
   },
   "fileExtensions": {
     "video": [
-      ".mp4",
-      ".avi",
-      ".iso",
-      ".m4v",
-      ".mkv",
-      ".mk3d"
+      "mp4",
+      "avi",
+      "iso",
+      "m4v",
+      "mkv",
+      "mk3d"
     ]
   },
   "authentication": {
@@ -126,5 +126,24 @@
         "key": "/etc/oblecto/keys/tria.pub"
       }
     }
-  }
+  },
+  "seedboxes": [
+    {
+      "name": "Main seedbox",
+      "storageDriver": "ftp",
+      "storageDriverOptions": {
+        "host": "",
+        "port": 21,
+        "username": "username",
+        "password": "password"
+      },
+      "mediaImport": {
+        "movieDirectory": "/downloads/finished/movie/",
+        "seriesDirectory": "/downloads/finished/series/"
+      },
+      "automaticImport": true,
+      "deleteOnImport": false,
+      "enabled": false
+    }
+  ]
 }

@@ -13,7 +13,7 @@ export default class Queue {
             if (!this.jobs[job.id]) return callback();
 
             let jobTimeout = setTimeout(() => {
-                logger.log('WARN', `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
+                logger.log('DEBUG', `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
             this.jobs[job.id](job.attr)

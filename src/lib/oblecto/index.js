@@ -42,6 +42,7 @@ import FileIndexer from '../indexers/files/FileIndexer';
 
 import { initDatabase } from '../../submodules/database';
 import StreamSessionController from '../streamSessions/StreamSessionController';
+import SeedboxController from '../seedbox/SeedboxController';
 
 export default class Oblecto {
     constructor(config) {
@@ -87,6 +88,9 @@ export default class Oblecto {
         this.seriesCleaner = new SeriesCleaner(this);
 
         this.streamSessionController = new StreamSessionController(this);
+
+        this.seedboxController = new SeedboxController(this);
+        this.seedboxController.loadAllSeedboxes();
 
         if (config.federation.enable) {
             this.fedartionController = new FederationController(this);

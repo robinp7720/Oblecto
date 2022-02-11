@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import ExtendableError from '../../lib/errors/ExtendableError';
+import FileExistsError from '../../lib/errors/FileExistsError';
 
 class Logger extends EventEmitter{
     constructor() {
@@ -9,6 +10,7 @@ class Logger extends EventEmitter{
 
         this.on('log', (log) => {
             if(this.silent) return;
+            if (log instanceof FileExistsError) return;
             if (log.level === 'DEBUG') return;
 
             if (log instanceof ExtendableError) {
