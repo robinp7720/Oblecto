@@ -6,7 +6,6 @@ RUN pip3 install guessit
 COPY . .
 RUN npm install --legacy-peer-deps
 RUN npm i sqlite3
-RUN npm run prepare
 RUN mkdir /etc/oblecto
 EXPOSE 8080 9131 9132
 CMD [ "node", "dist/bin/oblecto", "start" ]
