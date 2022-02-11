@@ -1,5 +1,6 @@
 import { Movie } from '../../../models/movie';
 import { fileExists } from '../../../submodules/utils';
+import logger from '../../../submodules/logger';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
@@ -20,7 +21,7 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkMovieFanart(movie) {
-        if (!await fileExists(this.oblecto.artworkUtils.movieFanartPath(movie))) return;
+        if (await fileExists(this.oblecto.artworkUtils.movieFanartPath(movie))) return;
 
         this.oblecto.queue.queueJob('downloadMovieFanart', movie);
     }
@@ -31,7 +32,7 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectArtworkMoviePoster(movie) {
-        if (!await fileExists(this.oblecto.artworkUtils.moviePosterPath(movie))) return;
+        if (await fileExists(this.oblecto.artworkUtils.moviePosterPath(movie))) return;
 
         this.oblecto.queue.queueJob('downloadMoviePoster', movie);
     }
@@ -41,6 +42,8 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMovieFanart() {
+        logger.log('DEBUG', 'Collecting Movie fanart to download');
+
         let movies = await Movie.findAll();
 
         for (let movie of movies) {
@@ -53,6 +56,8 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMoviePosters() {
+        logger.log('DEBUG', 'Collecting Movie posters to download');
+
         let movies = await Movie.findAll();
 
         for (let movie of movies) {

@@ -17,6 +17,7 @@ import guessit from '../../../submodules/guessit';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
+ * @typedef {import('../../../submodules/guessit').GuessitIdentification} GuessitIdentification
  */
 
 /**
@@ -111,8 +112,6 @@ export default class SeriesIndexer {
          * @type {GuessitIdentification}
          */
         const guessitIdentification = await guessit.identify(episodePath);
-
-        console.log(guessitIdentification.source);
 
         // Some single season shows usually don't have a season in the title,
         // therefore whe should set it to 1 by default.

@@ -20,6 +20,11 @@ export default class FileIndexer {
         this.oblecto.queue.registerJob('indexFileStreams', this.indexVideoFileStreams);
     }
 
+    /**
+     *
+     * @param videoPath
+     * @return {File}
+     */
     async indexVideoFile(videoPath) {
         let parsedPath = Path.parse(videoPath);
 

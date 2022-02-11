@@ -107,7 +107,6 @@ export default class RecodeStreamSession extends StreamSession {
         }
 
         this.process = ffmpeg(this.file.path)
-            //.native()
             .format(this.format)
             .videoCodec(this.getFfmpegVideoCodec())
             .audioCodec(this.audioCodec)
@@ -127,11 +126,13 @@ export default class RecodeStreamSession extends StreamSession {
 
     outputPause() {
         super.outputPause();
+
         if (this.process) this.process.kill('SIGSTOP');
     }
 
     outputResume() {
         super.outputResume();
+
         if (this.process) this.process.kill('SIGCONT');
     }
 }

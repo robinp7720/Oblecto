@@ -1,5 +1,5 @@
 import recursive from 'recursive-readdir';
-import path from 'path';
+import { extname } from 'path';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
@@ -41,7 +41,7 @@ export default class SeriesCollector {
      * @returns {Promise<void>}
      */
     async collectFile(file) {
-        let extension = path.parse(file).ext.toLowerCase().replace('.','');
+        let extension = extname(file).toLowerCase().replace('.','');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
             this.oblecto.queue.queueJob('indexEpisode',{ path: file });
