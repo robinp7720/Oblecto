@@ -1,5 +1,5 @@
 interface IConfig {
-    'ffmpeg': unknown
+    'ffmpeg': {},
     'indexer': {
         'runAtBoot': boolean
     },

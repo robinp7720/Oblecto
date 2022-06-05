@@ -4,6 +4,7 @@ module.exports = {
         'es6': true
     },
     'extends': [
+        'eslint:recommended',
         'plugin:jsdoc/recommended',
         'plugin:@typescript-eslint/recommended',
     ],
@@ -26,6 +27,7 @@ module.exports = {
         'lines-around-directive': ['error', 'never'],
         'spaced-comment': ['error', 'always'],
         'no-multiple-empty-lines': ['error', { 'max': 1 }],
+        'no-unused-vars': ['error', { 'args': 'none' }],
 
         'array-bracket-newline': ['error', { 'multiline': true }],
         'array-bracket-spacing': ['error', 'never'],
