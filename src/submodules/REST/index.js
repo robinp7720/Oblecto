@@ -1,6 +1,5 @@
 import restify from 'restify';
 import routes from './routes';
-import corsMiddleware from 'restify-cors-middleware';
 import logger from '../logger';
 
 /**
@@ -14,21 +13,10 @@ export default class OblectoAPI {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
+
         // Initialize REST based server
-        this.server = restify.createServer({
-            'name': 'Oblecto'
-        });
+        this.server = restify.createServer({ 'name': 'Oblecto' });
 
-        // Allow remote clients to connect to the backend
-        const cors = corsMiddleware({
-            preflightMaxAge: 5, // Optional
-            origins: ['*'],
-            allowHeaders: ['API-Token', 'authorization'],
-            exposeHeaders: ['API-Token-Expiry']
-        });
-
-        this.server.pre(cors.preflight);
-        this.server.use(cors.actual);
         this.server.use(restify.plugins.authorizationParser());
         this.server.use(restify.plugins.queryParser({ mapParams: true }));
         this.server.use(restify.plugins.bodyParser({ mapParams: true }));

@@ -16,7 +16,7 @@ import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStrea
  * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
-    server.get('/HLS/:sessionId/segment/:id', async function (req, res, next) {
+    server.get('/HLS/:sessionId/segment/:id', async function (req, res) {
         if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
             return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
         }
@@ -24,23 +24,23 @@ export default (server, oblecto) => {
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
         // TODO: Send appropriate error if session is not a HLS stream session
-        if (!(streamSession instanceof HLSStreamer)) return next();
+        if (!(streamSession instanceof HLSStreamer)) return;
 
         let segmentId = parseInt(req.params.id);
 
         await streamSession.streamSegment(req, res, segmentId);
     });
 
-    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res) {
         let file;
 
         try {
             file = await File.findByPk(req.params.id);
         } catch (ex) {
-            return next(new errors.NotFoundError('File does not exist'));
+            return new errors.NotFoundError('File does not exist');
         }
 
-        if (!file) return next(new errors.NotFoundError('File does not exist'));
+        if (!file) return new errors.NotFoundError('File does not exist');
 
         let streamType = 'recode';
 
@@ -68,12 +68,10 @@ export default (server, oblecto) => {
         });
     });
 
-    server.get('/session/stream/:sessionId', async function (req, res, next) {
+    server.get('/session/stream/:sessionId', async function (req, res) {
         if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
-            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
+            return new errors.InvalidCredentialsError('Stream session token does not exist');
         }
-
-        return next();
     }, async function (req, res) {
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 

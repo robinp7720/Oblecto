@@ -8,22 +8,23 @@ import { Episode } from '../../../models/episode';
 import { Series } from '../../../models/series';
 import { TrackEpisode } from '../../../models/trackEpisode';
 import { File } from '../../../models/file';
+import logger from '../../logger';
 
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     // Endpoint to get a list of episodes from all series
-    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req, res) {
         let limit = 20;
         let page = 0;
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
-            return next(new errors.BadRequestError('Sorting order is invalid'));
+            return new errors.BadRequestError('Sorting order is invalid');
 
         if (!(req.params.sorting in Episode.rawAttributes))
-            return next(new errors.BadRequestError('Sorting method is invalid'));
+            return new errors.BadRequestError('Sorting method is invalid');
 
         if (req.params.count && Number.isInteger(req.params.count))
             limit = parseInt(req.params.count);
@@ -49,27 +50,27 @@ export default (server, oblecto) => {
     });
 
     // Endpoint to get a banner image for an episode based on the local episode ID
-    server.get('/episode/:id/banner', async function (req, res, next) {
+    server.get('/episode/:id/banner', async function (req, res) {
         // Get episode data
         let episode;
 
         try {
             episode = await Episode.findByPk(req.params.id, { include: [File] });
         } catch (e) {
-            return next(new errors.NotFoundError('Episode not found'));
+            return new errors.NotFoundError('Episode not found');
         }
 
         let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.params.size || 'medium');
 
         fs.createReadStream(imagePath)
             .on('error', ()  => {
-                return next(new errors.NotFoundError('No banner found'));
+                return new errors.NotFoundError('No banner found');
             })
             .pipe(res);
 
     });
 
-    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res) {
         let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         if (!episode) {
@@ -90,11 +91,11 @@ export default (server, oblecto) => {
             let ratio = metadata.height / metadata.width;
 
             if ( !(1 <= ratio <= 2)) {
-                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+                return new errors.InvalidContent('Image aspect ratio is incorrect');
             }
 
         } catch (e) {
-            return next(new errors.InvalidContent('File is not an image'));
+            return new errors.InvalidContent('File is not an image');
         }
 
         try {
@@ -114,10 +115,8 @@ export default (server, oblecto) => {
         } catch (e) {
             console.log(e);
 
-            return next(new errors.Internal('An error has occured during upload of banner'));
+            return new errors.Internal('An error has occured during upload of banner');
         }
-
-        next();
     });
 
     // Endpoint to list all stored files for the specific episode
@@ -129,19 +128,20 @@ export default (server, oblecto) => {
 
     // Endpoint to send episode video file to the client
     // TODO: move this to the file route and use file id to play, abstracting this from episodes
-    server.get('/episode/:id/play', async function (req, res, next) {
+    server.get('/episode/:id/play', async function (req, res) {
         // search for attributes
         let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         let file = episode.files[0];
 
-        res.redirect(`/stream/${file.id}`, next);
+        res.redirect(`/stream/${file.id}`);
 
     });
 
     // Endpoint to retrieve episode details based on the local episode ID
     server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
         // search for attributes
+
         let episode = await Episode.findByPk(req.params.id, {
             include: [
                 File,
@@ -149,13 +149,12 @@ export default (server, oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization.user.id },
                 }
             ]
         });
 
         res.send(episode);
-
     });
 
     // Endpoint to retrieve the episode next in series based on the local episode ID
@@ -228,11 +227,11 @@ export default (server, oblecto) => {
         res.send(watching);
     });
 
-    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req, res) {
         // Next episodes currently doesn't work on sqlite as the LPAD function doesn't exist
         // Todo: Fix next episodes endpoint to support sqlite
         if (oblecto.config.database.dialect === 'sqlite')
-            return next(new errors.NotImplementedError('Next episode is not supported when using sqlite (yet)'));
+            return new errors.NotImplementedError('Next episode is not supported when using sqlite (yet)');
 
         // search for attributes
         let latestWatched = await Episode.findAll({

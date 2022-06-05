@@ -6,9 +6,9 @@ import { MovieSet } from '../../../models/movieSet';
 
 export default (server) => {
 
-    server.post('/set/movie', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.post('/set/movie', authMiddleWare.requiresAuth, async function (req, res) {
         if (typeof req.params.public !== 'boolean') {
-            return next(new errors.InvalidArgumentError('Argument public is not a boolean'));
+            return new errors.InvalidArgumentError('Argument public is not a boolean');
         }
 
         let [set] = await MovieSet

@@ -2,6 +2,7 @@ import authMiddleWare from '../middleware/auth';
 import { File } from '../../../models/file';
 import { Episode } from '../../../models/episode';
 import { Movie } from '../../../models/movie';
+import sequelize from 'sequelize';
 
 /**
  * @typedef {import('../../../lib/oblecto').default} Oblecto
@@ -14,7 +15,7 @@ import { Movie } from '../../../models/movie';
  * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
-    server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req, res) {
         const fileHashCounts = await File.findAll({
             attributes: [
                 'hash',
@@ -35,9 +36,7 @@ export default (server, oblecto) => {
 
             duplicates.push(
                 (await File.findAll({
-                    where: {
-                        hash: fileHashCount.hash
-                    },
+                    where: { hash: fileHashCount.hash },
                     include: [Episode, Movie]
 
                 }))

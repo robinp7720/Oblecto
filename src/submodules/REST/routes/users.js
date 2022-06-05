@@ -7,25 +7,22 @@ import authMiddleWare from '../middleware/auth';
 import { User } from '../../../models/user';
 
 export default (server, oblecto) => {
-    server.get('/users', async function (req, res, next) {
+    server.get('/users', async function (req, res) {
         let users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
 
         res.send(users);
-        next();
     });
 
-    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res) {
         let user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
 
         res.send(user);
-
-        next();
     });
 
-    server.del('/user/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.del('/user/:id', authMiddleWare.requiresAuth, async function (req, res) {
         let user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
@@ -35,17 +32,15 @@ export default (server, oblecto) => {
         res.send(user);
 
         // Now delete the user
-        user.destroy();
-
-        next();
+        await user.destroy();
     });
 
     // Endpoint to update the entries of a certain user
-    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res, next) {
+    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res) {
         let user = await User.findByPk(req.params.id);
 
         if (!user) {
-            return next(new errors.BadRequestError('User with id does not exist'));
+            return new errors.BadRequestError('User with id does not exist');
         }
 
         if (req.params.username) {
@@ -63,21 +58,18 @@ export default (server, oblecto) => {
         if (req.params.name) {
             user.update({ name: req.params.name });
         }
-
-        next();
-
     });
 
-    server.post('/user', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.post('/user', authMiddleWare.requiresAuth, async function (req, res) {
         // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
 
         if (!req.params.username)
-            return next(new errors.BadRequestError('Username is missing'));
+            return new errors.BadRequestError('Username is missing');
 
         if (!req.params.email)
-            return next(new errors.BadRequestError('E-Mail is missing'));
+            return new errors.BadRequestError('E-Mail is missing');
         if (!req.params.name)
-            return next(new errors.BadRequestError('Name is missing'));
+            return new errors.BadRequestError('Name is missing');
 
         let passwordHash;
 
@@ -94,9 +86,6 @@ export default (server, oblecto) => {
         });
 
         res.send(user);
-
-        next();
-
     });
 
 };
