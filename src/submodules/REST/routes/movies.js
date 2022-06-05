@@ -13,17 +13,17 @@ import { MovieSet } from '../../../models/movieSet';
 const Op = sequelize.Op;
 
 export default (server, oblecto) => {
-    server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req, res) {
         let limit = 20;
         let page = 0;
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
-            return next(new errors.BadRequestError('Sorting order is invalid'));
+            return new errors.BadRequestError('Sorting order is invalid');
 
         if (!(req.params.sorting in Movie.rawAttributes))
-            return next(new errors.BadRequestError('Sorting method is invalid'));
+            return new errors.BadRequestError('Sorting method is invalid');
 
         if (req.params.count && Number.isInteger(req.params.count))
             limit = parseInt(req.params.count);
@@ -53,17 +53,17 @@ export default (server, oblecto) => {
         res.send(results);
     });
 
-    server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req, res) {
         let limit = req.params.count || 20;
         let page = req.params.page || 0;
 
         if (!Number.isInteger(limit) || !Number.isInteger(page))
-            return next(new errors.BadRequestError('Limit or Page must be a number'));
+            return new errors.BadRequestError('Limit or Page must be a number');
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
-            return next(new errors.BadRequestError('Sorting order is invalid'));
+            return new errors.BadRequestError('Sorting order is invalid');
 
         let results = await MovieSet.findAll({
             include: [
@@ -86,37 +86,37 @@ export default (server, oblecto) => {
         res.send(results);
     });
 
-    server.get('/movie/:id/poster', async function (req, res, next) {
+    server.get('/movie/:id/poster', async function (req, res) {
         // Get episode data
         let movie;
 
         try {
             movie = await Movie.findByPk(req.params.id);
         } catch(e) {
-            return next(new errors.NotFoundError('Movie not found'));
+            return new errors.NotFoundError('Movie not found');
         }
 
         let posterPath = oblecto.artworkUtils.moviePosterPath(movie, req.params.size || 'medium');
 
         fs.createReadStream(posterPath)
             .on('error', () => {
-                return next(new errors.NotFoundError('Poster for movie does not exist'));
+                return new errors.NotFoundError('Poster for movie does not exist');
             })
             .pipe(res);
 
     });
 
-    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res) {
         let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
         if (!movie) {
-            return next(new errors.NotFoundError('Movie does not exist'));
+            return new errors.NotFoundError('Movie does not exist');
         }
 
         let posterPath = oblecto.artworkUtils.moviePosterPath(movie);
 
         if (req.files.length < 1) {
-            return next(new errors.MissingParameter('Image file is missing'));
+            return new errors.MissingParameter('Image file is missing');
         }
 
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
@@ -127,36 +127,29 @@ export default (server, oblecto) => {
             let ratio = metadata.height / metadata.width;
 
             if ( !(1 <= ratio <= 2)) {
-                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+                return new errors.InvalidContent('Image aspect ratio is incorrect');
             }
         } catch (e) {
-            return next(new errors.InvalidContent('File is not an image'));
+            return new errors.InvalidContent('File is not an image');
         }
 
-        try {
-            fs.copyFile(uploadPath, posterPath, (err) => {
-                if (err) throw err;
+        fs.copyFile(uploadPath, posterPath, (err) => {
+            if (err) throw err;
 
-                for (let size of Object.keys(oblecto.config.artwork.poster)) {
-                    oblecto.queue.pushJob('rescaleImage', {
-                        from: oblecto.artworkUtils.moviePosterPath(movie),
-                        to: oblecto.artworkUtils.moviePosterPath(movie, size),
-                        width: oblecto.config.artwork.poster[size]
-                    });
-                }
+            for (let size of Object.keys(oblecto.config.artwork.poster)) {
+                oblecto.queue.pushJob('rescaleImage', {
+                    from: oblecto.artworkUtils.moviePosterPath(movie),
+                    to: oblecto.artworkUtils.moviePosterPath(movie, size),
+                    width: oblecto.config.artwork.poster[size]
+                });
+            }
 
-                res.send(['success']);
-            });
-        } catch (e) {
-            console.log(e);
+            res.send(['success']);
+        });
 
-            return next(new errors.Internal('An error has occured during upload of poster'));
-        }
-
-        next();
     });
 
-    server.get('/movie/:id/fanart', async function (req, res, next) {
+    server.get('/movie/:id/fanart', async function (req, res) {
         // Get episode data
         let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
@@ -164,22 +157,22 @@ export default (server, oblecto) => {
 
         fs.createReadStream(fanartPath)
             .on('error', () => {
-                return next(new errors.NotFoundError('Fanart for movie does not exist'));
+                return new errors.NotFoundError('Fanart for movie does not exist');
             })
             .pipe(res);
     });
 
-    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res) {
         let movie = await Movie.findByPk(req.params.id, { include: [File] });
 
         if (!movie) {
-            return next(new errors.NotFoundError('Movie does not exist'));
+            return new errors.NotFoundError('Movie does not exist');
         }
 
         let fanartPath = oblecto.artworkUtils.movieFanartPath(movie);
 
         if (req.files.length < 1) {
-            return next(new errors.MissingParameter('Image file is missing'));
+            return new errors.MissingParameter('Image file is missing');
         }
 
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
@@ -190,34 +183,27 @@ export default (server, oblecto) => {
             let ratio = metadata.height / metadata.width;
 
             if ( !(1 <= ratio <= 2)) {
-                return next(new errors.InvalidContent('Image aspect ratio is incorrect'));
+                return new errors.InvalidContent('Image aspect ratio is incorrect');
             }
 
         } catch (e) {
-            return next(new errors.InvalidContent('File is not an image'));
+            return new errors.InvalidContent('File is not an image');
         }
 
-        try {
-            fs.copyFile(uploadPath, fanartPath, (err) => {
-                if (err) throw err;
+        fs.copyFile(uploadPath, fanartPath, (err) => {
+            if (err) throw err;
 
-                for (let size of Object.keys(oblecto.config.artwork.poster)) {
-                    oblecto.queue.pushJob('rescaleImage', {
-                        from: oblecto.artworkUtils.movieFanartPath(movie),
-                        to: oblecto.artworkUtils.movieFanartPath(movie, size),
-                        width: oblecto.config.artwork.poster[size]
-                    });
-                }
+            for (let size of Object.keys(oblecto.config.artwork.poster)) {
+                oblecto.queue.pushJob('rescaleImage', {
+                    from: oblecto.artworkUtils.movieFanartPath(movie),
+                    to: oblecto.artworkUtils.movieFanartPath(movie, size),
+                    width: oblecto.config.artwork.poster[size]
+                });
+            }
 
-                res.send(['success']);
-            });
-        } catch (e) {
-            console.log(e);
+            res.send(['success']);
+        });
 
-            return next(new errors.Internal('An error has occured during upload of fanart'));
-        }
-
-        next();
     });
 
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req, res) {
@@ -225,6 +211,7 @@ export default (server, oblecto) => {
             include: [
                 File,
                 {
+                    as: 'track',
                     model: TrackMovie,
                     required: false,
                     where: { userId: req.authorization.user.id }
@@ -235,12 +222,12 @@ export default (server, oblecto) => {
         res.send(movie);
     });
 
-    server.get('/movie/:id/play', async function (req, res, next) {
+    server.get('/movie/:id/play', async function (req, res) {
         let movie = await Movie.findByPk(req.params.id, { include: [{ model: File }] });
 
         let file = movie.files[0];
 
-        res.redirect(`/stream/${file.id}`, next);
+        res.redirect(`/stream/${file.id}`);
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res) {
@@ -268,14 +255,14 @@ export default (server, oblecto) => {
         res.send(sets.movieSets);
     });
 
-    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res) {
         try {
             let [movie] = await Movie.findByPk(req.params.id);
             let [set] = await MovieSet.findByPk(req.params.setId);
 
             set.addMovie(movie);
         } catch (e) {
-            return next(new errors.NotFoundError('Movie or set could not be found'));
+            return new errors.NotFoundError('Movie or set could not be found');
         }
     });
 

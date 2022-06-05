@@ -4,12 +4,12 @@ import bcrypt from 'bcrypt';
 import { User } from '../../../models/user';
 
 export default (server, oblecto) => {
-    server.post('/auth/login', async function (req, res, next) {
+    server.post('/auth/login', async function (req, res) {
         if (!req.params.username)
-            return next(new errors.BadRequestError('Username is missing'));
+            return new errors.BadRequestError('Username is missing');
         if (!req.params.password && !oblecto.config.authentication.allowPasswordlessLogin)
 
-            return next(new errors.BadRequestError('Password is missing'));
+            return new errors.BadRequestError('Password is missing');
 
         let user = await User.findOne({
             where: { username: req.params.username },
@@ -18,7 +18,7 @@ export default (server, oblecto) => {
 
         // Don't send a token if the user doesn't exist
         if (!user)
-            return next(new errors.UnauthorizedError('Username is incorrect'));
+            return new errors.UnauthorizedError('Username is incorrect');
 
         let allowLogin = oblecto.config.authentication.allowPasswordlessLogin;
 
@@ -26,7 +26,7 @@ export default (server, oblecto) => {
             allowLogin = await bcrypt.compare(req.params.password, user.password);
 
         if (!allowLogin)
-            return next(new errors.UnauthorizedError('Password is incorrect'));
+            return new errors.UnauthorizedError('Password is incorrect');
 
         let tokenPayload = {
             id: user.id,

@@ -11,7 +11,7 @@ import authMiddleWare from '../middleware/auth';
  * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
-    server.get('/clients', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/clients', authMiddleWare.requiresAuth, async function (req, res) {
         let clients = [];
 
         for (let clientId in oblecto.realTimeController.clients) {
@@ -26,11 +26,9 @@ export default (server, oblecto) => {
         }
 
         res.send(clients);
-
-        return next();
     });
 
-    server.post('/client/:clientId/playback', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.post('/client/:clientId/playback', authMiddleWare.requiresAuth, async function (req, res) {
         let type = req.params.type;
         let client = oblecto.realTimeController.clients[req.params.clientId];
 
@@ -43,7 +41,5 @@ export default (server, oblecto) => {
                 break;
         }
         res.send();
-
-        return next();
     });
 };
