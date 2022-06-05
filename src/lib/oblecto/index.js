@@ -45,6 +45,9 @@ import StreamSessionController from '../streamSessions/StreamSessionController';
 import SeedboxController from '../seedbox/SeedboxController';
 
 export default class Oblecto {
+    /**
+     * @param {IConfig} config
+     */
     constructor(config) {
         this.config = config;
 

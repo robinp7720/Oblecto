@@ -5,14 +5,15 @@ module.exports = {
     },
     'extends': [
         'eslint:recommended',
-        'plugin:jsdoc/recommended'
+        'plugin:jsdoc/recommended',
+        'plugin:@typescript-eslint/recommended',
     ],
     'parserOptions': {
         'sourceType': 'module',
         'ecmaVersion': 2020,
     },
     'settings': { 'jsdoc': { 'mode': 'typescript' } },
-    'plugins': ['jsdoc'],
+    'plugins': ['jsdoc', '@typescript-eslint'],
     'rules': {
         'indent': ['error', 4, { 'SwitchCase': 1 }],
         'linebreak-style': ['error', 'unix'],

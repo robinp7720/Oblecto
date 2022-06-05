@@ -18,7 +18,7 @@ import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStrea
 export default (server, oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req, res) {
         if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
-            return next(new errors.InvalidCredentialsError('Stream session token does not exist'));
+            return new errors.InvalidCredentialsError('Stream session token does not exist');
         }
 
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
@@ -33,6 +33,9 @@ export default (server, oblecto) => {
 
     server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res) {
         let file;
+        let formats = (req.params.formats || 'mp4').split(',');
+        let videoCodecs = (req.params.videoCodecs || 'h264').split(',');
+        let audioCodecs = (req.params.audioCodec || 'aac').split(',');
 
         try {
             file = await File.findByPk(req.params.id);
@@ -54,9 +57,7 @@ export default (server, oblecto) => {
             streamType,
 
             target: {
-                formats: (req.params.format || 'mp4').split(','),
-                videoCodecs: (req.params.videoCodec || 'h264').split(','),
-                audioCodecs: (req.params.audioCodec || 'aac').split(',')
+                formats, videoCodecs, audioCodecs
             },
 
             offset: req.params.offset || 0

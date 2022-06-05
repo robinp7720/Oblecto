@@ -23,7 +23,7 @@ export default class FileIndexer {
     /**
      *
      * @param videoPath
-     * @return {File}
+     * @returns {File}
      */
     async indexVideoFile(videoPath) {
         let parsedPath = Path.parse(videoPath);

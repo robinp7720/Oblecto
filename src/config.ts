@@ -1,12 +1,12 @@
 import fs from 'fs';
 
-let config = {};
+let config: IConfig;
 
 const ConfigManager = {
-    loadFile: function loadFile (file) {
+    loadFile: function loadFile (file: string) {
         try {
             return JSON.parse(fs.readFileSync(file, 'utf8'));
-        } catch (ex) {
+        } catch (ex: any) {
             if (ex.code === 'ENOENT') {
                 console.log(`No config file at ${file}, continuing to next file`);
 
@@ -17,19 +17,17 @@ const ConfigManager = {
             return {};
         }
     },
-    loadConfigFiles: function loadConfigs () {
-        config = { ...this.loadFile('/etc/oblecto/config.json') };
+    loadConfigFiles: function loadConfigs (): IConfig {
+        return { ...this.loadFile('/etc/oblecto/config.json') };
     },
     saveConfig: function saveConfig () {
-        fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4), (stat, err) => {
-            if (err) {
-                console.log('An error has occurred while writing the config file: ', err);
-            }
+        fs.writeFile('/etc/oblecto/config.json', JSON.stringify(config, null, 4), () => {
+
         });
     }
 };
 
-ConfigManager.loadConfigFiles();
+config = ConfigManager.loadConfigFiles();
 
 export default config;
 

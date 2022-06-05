@@ -13,7 +13,6 @@ export default class OblectoAPI {
     constructor(oblecto) {
         this.oblecto = oblecto;
 
-
         // Initialize REST based server
         this.server = restify.createServer({ 'name': 'Oblecto' });
 
