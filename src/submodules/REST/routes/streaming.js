@@ -73,7 +73,7 @@ export default (server, oblecto) => {
         if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
             return new errors.InvalidCredentialsError('Stream session token does not exist');
         }
-    }, async function (req, res) {
+
         let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
         if (req.params.offset) {

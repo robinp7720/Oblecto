@@ -38,6 +38,13 @@ export default class SeedboxController {
 
         await this.importAllEpisodes();
         await this.importAllMovies();
+
+        setInterval(async () => {
+            await this.importAllEpisodes();
+            await this.importAllMovies();
+        },
+        30*60*1000
+        );
     }
 
     addSeedbox(seedboxConfig) {

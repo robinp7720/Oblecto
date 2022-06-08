@@ -1,5 +1,5 @@
 import sequelize from 'sequelize';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import errors from 'restify-errors';
 import sharp from 'sharp';
 
@@ -8,7 +8,6 @@ import { Episode } from '../../../models/episode';
 import { Series } from '../../../models/series';
 import { TrackEpisode } from '../../../models/trackEpisode';
 import { File } from '../../../models/file';
-import logger from '../../logger';
 
 const Op = sequelize.Op;
 
@@ -51,36 +50,24 @@ export default (server, oblecto) => {
 
     // Endpoint to get a banner image for an episode based on the local episode ID
     server.get('/episode/:id/banner', async function (req, res) {
-        // Get episode data
-        let episode;
-
-        try {
-            episode = await Episode.findByPk(req.params.id, { include: [File] });
-        } catch (e) {
-            return new errors.NotFoundError('Episode not found');
-        }
+        let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.params.size || 'medium');
 
-        fs.createReadStream(imagePath)
-            .on('error', ()  => {
-                return new errors.NotFoundError('No banner found');
-            })
-            .pipe(res);
-
+        res.sendRaw(await fs.readFile(imagePath));
     });
 
     server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res) {
         let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         if (!episode) {
-            return next(new errors.NotFoundError('Episode does not exist'));
+            return new errors.NotFoundError('Episode does not exist');
         }
 
         let thumbnailPath = this.oblecto.artworkUtils.episodeBannerPath(episode);
 
         if (req.files.length < 1) {
-            return next(new errors.MissingParameter('Image file is missing'));
+            return new errors.MissingParameter('Image file is missing');
         }
 
         let uploadPath = req.files[Object.keys(req.files)[0]].path;

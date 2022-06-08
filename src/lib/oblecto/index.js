@@ -58,9 +58,6 @@ export default class Oblecto {
 
         this.queue = new Queue(this.config.queue.concurrency);
 
-        this.oblectoAPI = new OblectoAPI(this);
-        this.realTimeController = new RealtimeController(this);
-
         this.downloader = new Downloader(this);
 
         this.fileIndexer = new FileIndexer(this);
@@ -104,6 +101,9 @@ export default class Oblecto {
 
             this.federationClientController.addAllSyncMasters();
         }
+
+        this.oblectoAPI = new OblectoAPI(this);
+        this.realTimeController = new RealtimeController(this);
     }
 
     close() {
