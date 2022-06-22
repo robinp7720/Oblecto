@@ -44,20 +44,28 @@ export default (server, oblecto) => {
         }
 
         if (req.params.username) {
-            user.update({ username: req.params.username, });
+            user.username = req.params.username;
         }
 
         if (req.params.password) {
-            user.update({ password: await bcrypt.hash(req.params.password, config.authentication.saltRounds) });
+            user.password = await bcrypt.hash(req.params.password, config.authentication.saltRounds);
         }
 
         if (req.params.email) {
-            user.update({ email: req.params.email });
+            user.email = req.params.email;
         }
 
         if (req.params.name) {
-            user.update({ name: req.params.name });
+            user.name = req.params.name;
         }
+
+        await user.save();
+
+        res.send({
+            username: user.username,
+            email: user.email,
+            name: user.name
+        });
     });
 
     server.post('/user', authMiddleWare.requiresAuth, async function (req, res) {
