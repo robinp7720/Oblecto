@@ -33,6 +33,6 @@ export default (server, oblecto) => {
     });
 
     server.get('/', async (req, res) => {
-        res.redirect('/web');
+        res.redirect('/web', (v) => v);
     });
 };
