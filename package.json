@@ -24,7 +24,7 @@
     "nodemon": "nodemon src --exec './node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0'",
     "test:mocha": "mocha tests/mocha",
     "test:startup": "scripts/test.sh",
-    "test": "npm run test:mocha; npm run test:startup"
+    "test": "npm run test:mocha"
   },
   "dependencies": {
     "async": "^3.2.0",
