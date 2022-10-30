@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import errors from 'restify-errors';
 import sequelize from 'sequelize';
 import sharp from 'sharp';
@@ -12,6 +12,10 @@ import { MovieSet } from '../../../models/movieSet';
 
 const Op = sequelize.Op;
 
+/**
+ * @param {Server} server
+ * @param {Oblecto} oblecto
+ */
 export default (server, oblecto) => {
     server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req, res) {
         let limit = 20;
@@ -87,23 +91,11 @@ export default (server, oblecto) => {
     });
 
     server.get('/movie/:id/poster', async function (req, res) {
-        // Get episode data
-        let movie;
+        let movie = await Movie.findByPk(req.params.id);
 
-        try {
-            movie = await Movie.findByPk(req.params.id);
-        } catch(e) {
-            return new errors.NotFoundError('Movie not found');
-        }
+        const path = oblecto.artworkUtils.moviePosterPath(movie, req.params.size || 'medium');
 
-        let posterPath = oblecto.artworkUtils.moviePosterPath(movie, req.params.size || 'medium');
-
-        fs.createReadStream(posterPath)
-            .on('error', () => {
-                return new errors.NotFoundError('Poster for movie does not exist');
-            })
-            .pipe(res);
-
+        res.sendRaw(await fs.readFile(path));
     });
 
     server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res) {
@@ -150,16 +142,11 @@ export default (server, oblecto) => {
     });
 
     server.get('/movie/:id/fanart', async function (req, res) {
-        // Get episode data
-        let movie = await Movie.findByPk(req.params.id, { include: [File] });
+        let movie = await Movie.findByPk(req.params.id);
 
-        let fanartPath = oblecto.artworkUtils.movieFanartPath(movie, 'large');
+        const path = oblecto.artworkUtils.movieFanartPath(movie, req.params.size || 'large');
 
-        fs.createReadStream(fanartPath)
-            .on('error', () => {
-                return new errors.NotFoundError('Fanart for movie does not exist');
-            })
-            .pipe(res);
+        res.sendRaw(await fs.readFile(path));
     });
 
     server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res) {
@@ -211,7 +198,6 @@ export default (server, oblecto) => {
             include: [
                 File,
                 {
-                    as: 'track',
                     model: TrackMovie,
                     required: false,
                     where: { userId: req.authorization.user.id }

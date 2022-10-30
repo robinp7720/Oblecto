@@ -10,6 +10,10 @@ import sets from './sets';
 import clients from './clients';
 import files from './files';
 
+/**
+ * @param {Server} server
+ * @param {Oblecto} oblecto
+ */
 export default (server, oblecto) => {
     if (oblecto.config.web.enabled) {
         web(server, oblecto);

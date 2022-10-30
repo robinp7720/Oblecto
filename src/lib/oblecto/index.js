@@ -45,6 +45,9 @@ import StreamSessionController from '../streamSessions/StreamSessionController';
 import SeedboxController from '../seedbox/SeedboxController';
 
 export default class Oblecto {
+    /**
+     * @param {IConfig} config
+     */
     constructor(config) {
         this.config = config;
 
@@ -54,9 +57,6 @@ export default class Oblecto {
         this.tmdb = new MovieDb(this.config.themoviedb.key);
 
         this.queue = new Queue(this.config.queue.concurrency);
-
-        this.oblectoAPI = new OblectoAPI(this);
-        this.realTimeController = new RealtimeController(this);
 
         this.downloader = new Downloader(this);
 
@@ -101,6 +101,9 @@ export default class Oblecto {
 
             this.federationClientController.addAllSyncMasters();
         }
+
+        this.oblectoAPI = new OblectoAPI(this);
+        this.realTimeController = new RealtimeController(this);
     }
 
     close() {

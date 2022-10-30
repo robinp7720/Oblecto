@@ -1,5 +1,5 @@
 import path from 'path';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import sequelize from 'sequelize';
 import sharp from 'sharp';
 
@@ -67,21 +67,11 @@ export default (server, oblecto) => {
     });
 
     server.get('/series/:id/poster', async function (req, res) {
-        let show;
-
-        try {
-            show = await Series.findByPk(req.params.id);
-        } catch(e) {
-            return new errors.NotFoundError('Series does not exist');
-        }
+        let show = await Series.findByPk(req.params.id);
 
         let imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.params.size || 'medium');
 
-        fs.createReadStream(imagePath)
-            .on('error', ()  => {
-                return new errors.NotFoundError('No poster found');
-            })
-            .pipe(res);
+        res.sendRaw(await fs.readFile(imagePath));
     });
 
     server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req, res) {

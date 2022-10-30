@@ -42,7 +42,13 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
      * @returns {Promise<{overview, tmdbid, seriesName}|*>} - Matched identification object
      */
     async identify(path, guessitIdentification) {
-        let cacheId = guessitIdentification.title;
+        let title = guessitIdentification.title;
+
+        if (Array.isArray(title)) {
+            title = title.join(' ');
+        }
+
+        let cacheId = title;
 
         if (guessitIdentification.year) {
             cacheId += guessitIdentification.year;
@@ -52,7 +58,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: guessitIdentification.title }, { timeout: 5000 }))).results;
+        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: title }, { timeout: 5000 }))).results;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError('Search result from TMDB returned empty');

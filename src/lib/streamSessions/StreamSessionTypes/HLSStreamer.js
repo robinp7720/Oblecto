@@ -24,11 +24,11 @@ export default class HLSStreamer extends StreamSession {
         this.paused = true;
         this.maxGenCount = 10;
 
-        if (this.videoCodec === this.file.videoCodec || this.file.videoCodec in this.targetVideoCodecs) {
+        if (this.videoCodec === this.file.videoCodec in this.targetVideoCodecs) {
             this.videoCodec = 'copy';
         }
 
-        if (this.audioCodec === this.file.audioCodec || this.file.audioCodec in this.targetAudioCodecs) {
+        if (this.audioCodec === this.file.audioCodec in this.targetAudioCodecs) {
             this.audioCodec = 'copy';
         }
 

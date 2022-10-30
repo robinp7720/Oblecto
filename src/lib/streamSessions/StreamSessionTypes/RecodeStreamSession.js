@@ -27,12 +27,12 @@ export default class RecodeStreamSession extends StreamSession {
         // Therefore, copy streams should be used if the target codecs are the same as the source codecs
 
         // Copy the video stream if the target format is the same
-        if (this.videoCodec === this.file.videoCodec || this.file.videoCodec in this.targetVideoCodecs) {
+        if (this.videoCodec === this.file.videoCodec in this.targetVideoCodecs) {
             this.videoCodec = 'copy';
         }
 
         // Copy the audio stream if the target format is the same
-        if (this.audioCodec === this.file.audioCodec || this.file.audioCodec in this.targetAudioCodecs) {
+        if (this.audioCodec === this.file.audioCodec in this.targetAudioCodecs) {
             this.audioCodec = 'copy';
         }
     }

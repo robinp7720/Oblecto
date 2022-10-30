@@ -4,15 +4,15 @@ module.exports = {
         'es6': true
     },
     'extends': [
-        'eslint:recommended',
-        'plugin:jsdoc/recommended'
+        'plugin:jsdoc/recommended',
+        'plugin:@typescript-eslint/recommended',
     ],
     'parserOptions': {
         'sourceType': 'module',
         'ecmaVersion': 2020,
     },
     'settings': { 'jsdoc': { 'mode': 'typescript' } },
-    'plugins': ['jsdoc'],
+    'plugins': ['jsdoc', '@typescript-eslint'],
     'rules': {
         'indent': ['error', 4, { 'SwitchCase': 1 }],
         'linebreak-style': ['error', 'unix'],
@@ -26,7 +26,6 @@ module.exports = {
         'lines-around-directive': ['error', 'never'],
         'spaced-comment': ['error', 'always'],
         'no-multiple-empty-lines': ['error', { 'max': 1 }],
-        'no-unused-vars': ['error', { 'args': 'none' }],
 
         'array-bracket-newline': ['error', { 'multiline': true }],
         'array-bracket-spacing': ['error', 'never'],

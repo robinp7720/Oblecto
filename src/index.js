@@ -1,4 +1,4 @@
-import core from './core/graphical';
+import core from './core';
 
 (async () => {
     core.start();

@@ -1,4 +1,4 @@
-import {Op} from 'sequelize';
+import { Op } from 'sequelize';
 
 import AggregateIdentifier from '../../common/AggregateIdentifier';
 
@@ -7,9 +7,9 @@ import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
 import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
 import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
 
-import {Series} from '../../../models/series';
-import {Episode} from '../../../models/episode';
-import {File} from '../../../models/file';
+import { Series } from '../../../models/series';
+import { Episode } from '../../../models/episode';
+import { File } from '../../../models/file';
 
 import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';

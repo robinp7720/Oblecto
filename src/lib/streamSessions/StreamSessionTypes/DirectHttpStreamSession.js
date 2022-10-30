@@ -46,7 +46,9 @@ export default class DirectHttpStreamSession extends StreamSession {
         this.destinations[0] = destination;
 
         destination.stream.on('close', () => {
-            this.startTimeout();
+            if (this.destinations.length === 0) {
+                this.startTimeout();
+            }
         });
     }
 
