@@ -47,7 +47,7 @@
     "restify": "^9.0.0-rc.3",
     "restify-errors": "^8.0.2",
     "sequelize": "^6.6.2",
-    "sharp": "^0.29.1",
+    "sharp": "^0.30.5",
     "socket.io": "^2.3.0",
     "sqlite3": "^5.0.2",
     "uuid": "^8.3.2",
