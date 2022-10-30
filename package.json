@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms; npm run build; cd ..;",
-    "build": "./node_modules/@babel/cli/bin/babel.js src -d dist",
+    "build": "npx tsc --build",
     "prepare": "npm run build && npm run build:web",
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
     "debug": "./node_modules/@babel/node/bin/babel-node.js src --inspect=0.0.0.0",

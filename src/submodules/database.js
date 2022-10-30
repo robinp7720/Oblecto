@@ -1,5 +1,5 @@
 import Sequelize from 'sequelize';
-import config from '../config.ts';
+import config from '../config';
 import logger from './logger';
 
 import { Episode, episodeColumns } from '../models/episode';
