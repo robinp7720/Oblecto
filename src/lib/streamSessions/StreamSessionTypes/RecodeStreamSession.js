@@ -118,7 +118,7 @@ export default class RecodeStreamSession extends StreamSession {
             });
 
         this.process.on('error', (err) => {
-            if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
+            logger.log('DEBUG', this.sessionId, err);
         });
 
         this.process.pipe(this.destinations[0].stream, { end: true });
