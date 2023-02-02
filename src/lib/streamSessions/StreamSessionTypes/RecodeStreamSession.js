@@ -27,13 +27,13 @@ export default class RecodeStreamSession extends StreamSession {
         // Therefore, copy streams should be used if the target codecs are the same as the source codecs
 
         // Copy the video stream if the target format is the same
-        if (this.videoCodec === this.file.videoCodec in this.targetVideoCodecs) {
+        if (this.videoCodec === this.file.videoCodec || this.targetVideoCodecs.includes(this.videoCodec)) {
             this.videoCodec = 'copy';
         }
 
         // Copy the audio stream if the target format is the same
-        if (this.audioCodec === this.file.audioCodec in this.targetAudioCodecs) {
-            this.audioCodec = 'copy';
+        if (this.audioCodec === this.file.audioCodec || this.targetAudioCodecs.includes(this.audioCodec)) {
+            // this.audioCodec = 'copy';
         }
     }
 
@@ -118,7 +118,7 @@ export default class RecodeStreamSession extends StreamSession {
             });
 
         this.process.on('error', (err) => {
-            logger.log('DEBUG', this.sessionId, err);
+            logger.log('ERROR', this.sessionId, err);
         });
 
         this.process.pipe(this.destinations[0].stream, { end: true });
