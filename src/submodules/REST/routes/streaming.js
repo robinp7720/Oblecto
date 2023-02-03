@@ -65,7 +65,12 @@ export default (server, oblecto) => {
 
         res.send({
             sessionId: streamSession.sessionId,
-            seeking: streamSession instanceof DirectHttpStreamSession ? 'client' : 'server'
+            seeking: streamSession instanceof DirectHttpStreamSession ? 'client' : 'server',
+            outputCodec: {
+                video: streamSession.videoCodec,
+                audio: streamSession.audioCodec
+            },
+            inputCodec: { video: streamSession.file.videoCodec, audio: streamSession.file.audioCodec }
         });
     });
 
