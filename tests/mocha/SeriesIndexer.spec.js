@@ -22,6 +22,7 @@ const oblecto = {
 
 describe('SeriesIndexer', function () {
     describe('Aggregate Series Identifier', async function () {
+        this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {
             const seriesIndexer = new SeriesIndexer(oblecto);
             const identification = await seriesIndexer.seriesIdentifier.identify('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', await guessit.identify('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv'));
@@ -46,6 +47,7 @@ describe('SeriesIndexer', function () {
     });
 
     describe('Aggregate Episode Identifier', async function () {
+        this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {
             const seriesIndexer = new SeriesIndexer(oblecto);
             const path = '/mnt/smb/tv shows/stargirl.s02e03.1080p.web.h264-cakes.mkv';

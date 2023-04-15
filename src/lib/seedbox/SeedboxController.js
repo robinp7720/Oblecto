@@ -64,12 +64,16 @@ export default class SeedboxController {
 
         mkdirp(dirname(destination));
 
-        // Add a suffix to the file while downloading to prevent potential errors while running an import
-        // and also to know if a file was successfully downloaded or not
-        await seedbox.storageDriver.copy(origin, destination+'.oblectoimport');
-        await rename(destination+'.oblectoimport', destination);
+        try {
+            // Add a suffix to the file while downloading to prevent potential errors while running an import
+            // and also to know if a file was successfully downloaded or not
+            await seedbox.storageDriver.copy(origin, destination+'.oblectoimport');
+            await rename(destination+'.oblectoimport', destination);
 
-        logger.log('INFO', `${origin} successfully downloaded`);
+            logger.log('INFO', `${origin} successfully downloaded`);
+        } catch (e) {
+            logger.log('ERROR', `Could not download ${origin}:`, e);
+        }
     }
 
     async importMovie(seedbox, origin, destination) {
@@ -175,7 +179,9 @@ export default class SeedboxController {
     }
 
     async importAllMovies() {
-        for (const seedbox of this.seedBoxes) await this.importMovies(seedbox);
+        for (const seedbox of this.seedBoxes) {
+            await this.importMovies(seedbox);
+        }
     }
 
     async importAllEpisodes() {

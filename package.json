@@ -16,7 +16,7 @@
     "images/"
   ],
   "scripts": {
-    "build:web": "cd Oblecto-Web; npm install --unsafe-perms; npm run build; cd ..;",
+    "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
     "build": "npx tsc --build; chmod +x ./dist/bin/oblecto.js",
     "prepare": "npm run build && npm run build:web",
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
@@ -45,6 +45,7 @@
     "node-tvdb": "^4.1.0",
     "recursive-readdir": "^2.2.2",
     "restify": "^9.0.0-rc.3",
+    "restify-cors-middleware2": "^2.2.0",
     "restify-errors": "^8.0.2",
     "sequelize": "^6.6.2",
     "sharp": "^0.29.1",

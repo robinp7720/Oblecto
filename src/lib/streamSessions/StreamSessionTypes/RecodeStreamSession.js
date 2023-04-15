@@ -27,12 +27,12 @@ export default class RecodeStreamSession extends StreamSession {
         // Therefore, copy streams should be used if the target codecs are the same as the source codecs
 
         // Copy the video stream if the target format is the same
-        if (this.videoCodec === this.file.videoCodec in this.targetVideoCodecs) {
+        if (this.targetVideoCodecs.includes(this.file.videoCodec)) {
             this.videoCodec = 'copy';
         }
 
         // Copy the audio stream if the target format is the same
-        if (this.audioCodec === this.file.audioCodec in this.targetAudioCodecs) {
+        if (this.targetAudioCodecs.includes(this.file.audioCodec)) {
             this.audioCodec = 'copy';
         }
     }
@@ -66,6 +66,10 @@ export default class RecodeStreamSession extends StreamSession {
 
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
                 outputOptions.push('-pix_fmt yuv420p');
+            }
+
+            if (this.oblecto.config.transcoding.hardwareAccelerator === 'vaapi') {
+                outputOptions.push('-hwaccel_output_format vaapi');
             }
         }
 
@@ -118,7 +122,7 @@ export default class RecodeStreamSession extends StreamSession {
             });
 
         this.process.on('error', (err) => {
-            if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
+            logger.log('ERROR', this.sessionId, err);
         });
 
         this.process.pipe(this.destinations[0].stream, { end: true });
