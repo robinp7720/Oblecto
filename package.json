@@ -16,7 +16,7 @@
     "images/"
   ],
   "scripts": {
-    "build:web": "cd Oblecto-Web; npm install --unsafe-perms; npm run build; cd ..;",
+    "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
     "build": "npx tsc --build; chmod +x ./dist/bin/oblecto.js",
     "prepare": "npm run build && npm run build:web",
     "start": "./node_modules/@babel/node/bin/babel-node.js src",
