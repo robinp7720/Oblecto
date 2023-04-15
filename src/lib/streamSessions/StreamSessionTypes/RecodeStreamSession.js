@@ -69,7 +69,7 @@ export default class RecodeStreamSession extends StreamSession {
             }
 
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'vaapi') {
-                outputOptions.push('-hwaccel_output_format vaapi');
+                inputOptions.push('-hwaccel_output_format vaapi');
             }
         }
 
