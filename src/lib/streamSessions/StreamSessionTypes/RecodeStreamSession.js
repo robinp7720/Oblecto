@@ -67,6 +67,10 @@ export default class RecodeStreamSession extends StreamSession {
             if (this.oblecto.config.transcoding.hardwareAccelerator === 'cuda') {
                 outputOptions.push('-pix_fmt yuv420p');
             }
+
+            if (this.oblecto.config.transcoding.hardwareAccelerator === 'vaapi') {
+                outputOptions.push('-hwaccel_output_format vaapi');
+            }
         }
 
         let streams = await this.file.getStreams();
