@@ -44,6 +44,13 @@ describe('SeriesIndexer', function () {
             expect(identification.seriesName).to.be('The Flash (2014)');
             expect(identification.tvdbid).to.be(279121);
         });
+
+        it('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', async function () {
+            const seriesIndexer = new SeriesIndexer(oblecto);
+            const identification = await seriesIndexer.seriesIdentifier.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', await guessit.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv'));
+
+            console.log(identification);
+        });
     });
 
     describe('Aggregate Episode Identifier', async function () {
@@ -81,5 +88,15 @@ describe('SeriesIndexer', function () {
             expect(identification.tvdbid).to.be(6885898);
             expect(identification.imdbid).to.be('tt8312898');
         });
+        it('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', async function () {
+            const seriesIndexer = new SeriesIndexer(oblecto);
+            const path = '/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv';
+
+            const identification = await seriesIndexer.identify(path);
+
+            console.log(identification);
+
+        });
     });
+
 });
