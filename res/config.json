@@ -127,6 +127,9 @@
       }
     }
   },
+  "seedboxImport": {
+    "concurrency": 1
+  },
   "seedboxes": [
     {
       "name": "Main seedbox",
