@@ -1,20 +1,18 @@
-import {Movie} from '../../../../../models/movie';
-import {TrackMovie} from '../../../../../models/trackMovie';
-import {File} from '../../../../../models/file';
-import {User} from '../../../../../models/user';
+import { Movie } from '../../../../../models/movie';
+import { TrackMovie } from '../../../../../models/trackMovie';
+import { File } from '../../../../../models/file';
+import { User } from '../../../../../models/user';
 
 /**
  * @param {*} server
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
-    server.get('/users/public', async (req, res, next) => {
+    server.get('/users/public', async (req, res) => {
         res.send([]);
-
-        next();
     });
 
-    server.post('/users/authenticatebyname', async (req, res, next) => {
+    server.post('/users/authenticatebyname', async (req, res) => {
         let sessionId = await embyEmulation.handleLogin(req.params.Username, req.params.Pw);
 
         res.send({
@@ -23,11 +21,9 @@ export default (server, embyEmulation) => {
             AccessToken: sessionId,
             ServerId: embyEmulation.serverId
         });
-
-        next();
     });
 
-    server.get('/users/:userid', async (req, res, next) => {
+    server.get('/users/:userid', async (req, res) => {
         let user = await User.findByPk(req.params.userid);
 
         let HasPassword = user.password !== '';
@@ -98,107 +94,107 @@ export default (server, embyEmulation) => {
                 'EnableNextEpisodeAutoPlay': true
             }
         });
-
-        next();
     });
 
-    server.get('/users/:userid/views', async (req, res, next) => {
+    server.get('/users/:userid/views', async (req, res) => {
         res.send({
-            'Items': [{
-                'Name': 'Movies',
-                'ServerId': embyEmulation.serverId,
-                'Id': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                'Etag': 'cf36c1cd9bcd03c80bd92c9570ec620b',
-                'DateCreated': '2020-08-31T16:25:53.2124461Z',
-                'CanDelete': false,
-                'CanDownload': false,
-                'SortName': 'movies',
-                'ExternalUrls': [],
-                'Path': '/config/data/root/default/Movies',
-                'EnableMediaSourceDisplay': true,
-                'Taglines': [],
-                'Genres': [],
-                'PlayAccess': 'Full',
-                'RemoteTrailers': [],
-                'ProviderIds': {},
-                'IsFolder': true,
-                'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                'Type': 'CollectionFolder',
-                'People': [],
-                'Studios': [],
-                'GenreItems': [],
-                'LocalTrailerCount': 0,
-                'UserData': {
-                    'PlaybackPositionTicks': 0,
-                    'PlayCount': 0,
-                    'IsFavorite': false,
-                    'Played': false,
-                    'Key': 'f137a2dd-21bb-c1b9-9aa5-c0f6bf02a805'
-                },
-                'ChildCount': 2,
-                'SpecialFeatureCount': 0,
-                'DisplayPreferencesId': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                'Tags': [],
-                'PrimaryImageAspectRatio': 1,
-                'CollectionType': 'movies',
-                //'ImageTags': {'Primary': '8d5abf60711bc8af6ef4063baf6b67e4'},
-                'BackdropImageTags': [],
-                'ScreenshotImageTags': [],
-                //'ImageBlurHashes': {'Primary': {'8d5abf60711bc8af6ef4063baf6b67e4': 'WvIE5t05-gs,RVt6a%s,axa#fRodETt0WGa#fha$Rot3WBj[oLaf'}},
-                'LocationType': 'FileSystem',
-                'LockedFields': [],
-                'LockData': false
-            }, {
-                'Name': 'TV Shows',
-                'ServerId': embyEmulation.serverId,
-                'Id': '767bffe4f11c93ef34b805451a696a4e',
-                'Etag': '838cbe93f5d829a9df3df680e4d14065',
-                'DateCreated': '2020-08-31T04:36:37.8321784Z',
-                'CanDelete': false,
-                'CanDownload': false,
-                'SortName': 'tv shows',
-                'ExternalUrls': [],
-                'Path': '/config/data/root/default/TV Shows',
-                'EnableMediaSourceDisplay': true,
-                'Taglines': [],
-                'Genres': [],
-                'PlayAccess': 'Full',
-                'RemoteTrailers': [],
-                'ProviderIds': {},
-                'IsFolder': true,
-                'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                'Type': 'CollectionFolder',
-                'People': [],
-                'Studios': [],
-                'GenreItems': [],
-                'LocalTrailerCount': 0,
-                'UserData': {
-                    'PlaybackPositionTicks': 0,
-                    'PlayCount': 0,
-                    'IsFavorite': false,
-                    'Played': false,
-                    'Key': '767bffe4-f11c-93ef-34b8-05451a696a4e'
-                },
-                'ChildCount': 9,
-                'SpecialFeatureCount': 0,
-                'DisplayPreferencesId': '767bffe4f11c93ef34b805451a696a4e',
-                'Tags': [],
-                'PrimaryImageAspectRatio': 1,
-                'CollectionType': 'tvshows',
-                //'ImageTags': {'Primary': '12c129f756f9ae7ca28c3d87ac4aa3b5'},
-                'BackdropImageTags': [],
-                'ScreenshotImageTags': [],
-                //'ImageBlurHashes': {'Primary': {'12c129f756f9ae7ca28c3d87ac4aa3b5': 'WrHeF9~X%gt7e-Rjs.WBoft7xutRR,t7s:aebHofoft7WBWBRjRj'}},
-                'LocationType': 'FileSystem',
-                'LockedFields': [],
-                'LockData': false
-            }], 'TotalRecordCount': 2, 'StartIndex': 0
+            'Items': [
+                {
+                    'Name': 'Movies',
+                    'ServerId': embyEmulation.serverId,
+                    'Id': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
+                    'Etag': 'cf36c1cd9bcd03c80bd92c9570ec620b',
+                    'DateCreated': '2020-08-31T16:25:53.2124461Z',
+                    'CanDelete': false,
+                    'CanDownload': false,
+                    'SortName': 'movies',
+                    'ExternalUrls': [],
+                    'Path': '/config/data/root/default/Movies',
+                    'EnableMediaSourceDisplay': true,
+                    'Taglines': [],
+                    'Genres': [],
+                    'PlayAccess': 'Full',
+                    'RemoteTrailers': [],
+                    'ProviderIds': {},
+                    'IsFolder': true,
+                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
+                    'Type': 'CollectionFolder',
+                    'People': [],
+                    'Studios': [],
+                    'GenreItems': [],
+                    'LocalTrailerCount': 0,
+                    'UserData': {
+                        'PlaybackPositionTicks': 0,
+                        'PlayCount': 0,
+                        'IsFavorite': false,
+                        'Played': false,
+                        'Key': 'f137a2dd-21bb-c1b9-9aa5-c0f6bf02a805'
+                    },
+                    'ChildCount': 2,
+                    'SpecialFeatureCount': 0,
+                    'DisplayPreferencesId': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
+                    'Tags': [],
+                    'PrimaryImageAspectRatio': 1,
+                    'CollectionType': 'movies',
+                    // 'ImageTags': {'Primary': '8d5abf60711bc8af6ef4063baf6b67e4'},
+                    'BackdropImageTags': [],
+                    'ScreenshotImageTags': [],
+                    // 'ImageBlurHashes': {'Primary': {'8d5abf60711bc8af6ef4063baf6b67e4': 'WvIE5t05-gs,RVt6a%s,axa#fRodETt0WGa#fha$Rot3WBj[oLaf'}},
+                    'LocationType': 'FileSystem',
+                    'LockedFields': [],
+                    'LockData': false
+                }, {
+                    'Name': 'TV Shows',
+                    'ServerId': embyEmulation.serverId,
+                    'Id': '767bffe4f11c93ef34b805451a696a4e',
+                    'Etag': '838cbe93f5d829a9df3df680e4d14065',
+                    'DateCreated': '2020-08-31T04:36:37.8321784Z',
+                    'CanDelete': false,
+                    'CanDownload': false,
+                    'SortName': 'tv shows',
+                    'ExternalUrls': [],
+                    'Path': '/config/data/root/default/TV Shows',
+                    'EnableMediaSourceDisplay': true,
+                    'Taglines': [],
+                    'Genres': [],
+                    'PlayAccess': 'Full',
+                    'RemoteTrailers': [],
+                    'ProviderIds': {},
+                    'IsFolder': true,
+                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
+                    'Type': 'CollectionFolder',
+                    'People': [],
+                    'Studios': [],
+                    'GenreItems': [],
+                    'LocalTrailerCount': 0,
+                    'UserData': {
+                        'PlaybackPositionTicks': 0,
+                        'PlayCount': 0,
+                        'IsFavorite': false,
+                        'Played': false,
+                        'Key': '767bffe4-f11c-93ef-34b8-05451a696a4e'
+                    },
+                    'ChildCount': 9,
+                    'SpecialFeatureCount': 0,
+                    'DisplayPreferencesId': '767bffe4f11c93ef34b805451a696a4e',
+                    'Tags': [],
+                    'PrimaryImageAspectRatio': 1,
+                    'CollectionType': 'tvshows',
+                    // 'ImageTags': {'Primary': '12c129f756f9ae7ca28c3d87ac4aa3b5'},
+                    'BackdropImageTags': [],
+                    'ScreenshotImageTags': [],
+                    // 'ImageBlurHashes': {'Primary': {'12c129f756f9ae7ca28c3d87ac4aa3b5': 'WrHeF9~X%gt7e-Rjs.WBoft7xutRR,t7s:aebHofoft7WBWBRjRj'}},
+                    'LocationType': 'FileSystem',
+                    'LockedFields': [],
+                    'LockData': false
+                }
+            ],
+            'TotalRecordCount': 2,
+            'StartIndex': 0
         });
-
-        next();
     });
 
-    server.get('/users/:userid/items', async (req, res, next) => {
+    server.get('/users/:userid/items', async (req, res) => {
         if (req.params.includeitemtypes === 'movie') {
             let count = await Movie.count();
 
@@ -237,9 +233,7 @@ export default (server, embyEmulation) => {
                         'Played': false,
                         'Key': '337401'
                     },
-                    'ImageTags': {
-                        'Primary': 'WhyIsThisEvenNeeded'
-                    }
+                    'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
 
                 });
             }
@@ -254,17 +248,11 @@ export default (server, embyEmulation) => {
                 StartIndex: 0
             });
         }
-
-        next();
     });
 
-    server.get('/users/:userid/items/:mediaid', async (req, res, next) => {
+    server.get('/users/:userid/items/:mediaid', async (req, res) => {
         if (req.params.mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), {
-                include: [
-                    File
-                ]
-            });
+            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), { include: [File] });
 
             let MediaSources = [];
 
@@ -809,9 +797,10 @@ export default (server, embyEmulation) => {
                 'SortName': movie.movieName,
                 'PremiereDate': movie.releaseDate,
                 'ExternalUrls': [
-                    {'Name': 'IMDb', 'Url': 'https://www.imdb.com/title/tt4566758'},
-                    {'Name': 'TheMovieDb', 'Url': 'https://www.themoviedb.org/movie/337401'},
-                    {'Name': 'Trakt', 'Url': 'https://trakt.tv/movies/tt4566758'}],
+                    { 'Name': 'IMDb', 'Url': 'https://www.imdb.com/title/tt4566758' },
+                    { 'Name': 'TheMovieDb', 'Url': 'https://www.themoviedb.org/movie/337401' },
+                    { 'Name': 'Trakt', 'Url': 'https://trakt.tv/movies/tt4566758' }
+                ],
                 'MediaSources': MediaSources,
                 'CriticRating': 82,
                 'ProductionLocations': ['China', 'United States of America'],
@@ -826,9 +815,7 @@ export default (server, embyEmulation) => {
                 'PlayAccess': 'Full',
                 'ProductionYear': movie.releaseDate.substring(0, 4),
                 'RemoteTrailers': [],
-                'ProviderIds': {
-                    'Tmdb': movie.tmdbid, 'Imdb': movie.imdbid
-                },
+                'ProviderIds': { 'Tmdb': movie.tmdbid, 'Imdb': movie.imdbid },
                 'IsHD': true,
                 'IsFolder': false,
                 'ParentId': 'e675012a1892a87530d2c0b0d14a9026',
@@ -847,20 +834,16 @@ export default (server, embyEmulation) => {
                 'DisplayPreferencesId': 'dbf7709c41faaa746463d67978eb863d',
                 'Tags': [],
                 'PrimaryImageAspectRatio': 0.6666666666666666,
-                'ImageTags': {
-                    'Primary': 'ThisIDisfairlyuseless'
-                },
-                'BackdropImageTags': [
-                    'be04a5eac7bc48ea3f5834aa816a03f0'
-                ],
+                'ImageTags': { 'Primary': 'ThisIDisfairlyuseless' },
+                'BackdropImageTags': ['be04a5eac7bc48ea3f5834aa816a03f0'],
                 'VideoType': 'VideoFile',
-                //'ImageTags': {'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'},
-                //'BackdropImageTags': ['be04a5eac7bc48ea3f5834aa816a03f0'],
+                // 'ImageTags': {'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'},
+                // 'BackdropImageTags': ['be04a5eac7bc48ea3f5834aa816a03f0'],
                 'ScreenshotImageTags': [],
-                //'ImageBlurHashes': {
+                // 'ImageBlurHashes': {
                 //    'Backdrop': {'be04a5eac7bc48ea3f5834aa816a03f0': 'W7D78hkBL};OCl}E}G,rI:65KOSxITWVx^K39tjG+]sBs;Sgadwd'},
                 //    'Primary': {'eaaa9ab0189f4166db1012ec5230c7db': 'ddHoON-V.S%g~qxuxuniRPRjMxM{-;M{Rjoz%#Nasoxa'}
-                //},
+                // },
                 'Chapters': [
                     {
                         'StartPositionTicks': 0,
@@ -992,22 +975,23 @@ export default (server, embyEmulation) => {
                 StartIndex: 0
             });
         }
-
-        next();
     });
 
-    server.get('/users/:userid/items/:mediaid/intros', async (req, res, next) => {
-        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
-        next();
+    server.get('/users/:userid/items/:mediaid/intros', async (req, res) => {
+        res.send({
+            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+        });
     });
 
-    server.get('/users/:userid/items/resume', async (req, res, next) => {
-        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
-        next();
+    server.get('/users/:userid/items/resume', async (req, res) => {
+        res.send({
+            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+        });
     });
 
-    server.get('/users/:userid/items/latest', async (req, res, next) => {
-        res.send({'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0});
-        next();
+    server.get('/users/:userid/items/latest', async (req, res) => {
+        res.send({
+            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+        });
     });
 };

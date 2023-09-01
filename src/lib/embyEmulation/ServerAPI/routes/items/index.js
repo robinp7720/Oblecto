@@ -1,5 +1,5 @@
-import {Movie} from '../../../../../models/movie';
-import {File} from '../../../../../models/file';
+import { Movie } from '../../../../../models/movie';
+import { File } from '../../../../../models/file';
 import fs from 'fs';
 import errors from 'restify-errors';
 
@@ -9,7 +9,7 @@ import errors from 'restify-errors';
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
-    server.get('/items', async (req, res, next) => {
+    server.get('/items', async (req, res) => {
         if (req.params.includeitemtypes === 'movie') {
             let count = await Movie.count();
 
@@ -48,9 +48,7 @@ export default (server, embyEmulation) => {
                         'Played': false,
                         'Key': '337401'
                     },
-                    'ImageTags': {
-                        'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'
-                    }
+                    'ImageTags': { 'Primary': 'eaaa9ab0189f4166db1012ec5230c7db' }
                 });
             }
 
@@ -64,92 +62,77 @@ export default (server, embyEmulation) => {
                 StartIndex: 0
             });
         }
-
-        next();
     });
 
-
-    server.get('/items/:mediaid/similar', async (req, res, next) => {
+    server.get('/items/:mediaid/similar', async (req, res) => {
         res.send({
             Items: [],
             TotalRecordCount: 0,
             StartIndex: 0
         });
-
-        next();
     });
 
-    server.get('/items/:mediaid/thememedia', async (req, res, next) => {
+    server.get('/items/:mediaid/thememedia', async (req, res) => {
         res.send({
             'ThemeVideosResult': {
-                //'OwnerId': 'f27caa37e5142225cceded48f6553502',
+                // 'OwnerId': 'f27caa37e5142225cceded48f6553502',
                 'Items': [],
                 'TotalRecordCount': 0,
                 'StartIndex': 0
             },
             'ThemeSongsResult': {
-                //'OwnerId': 'f27caa37e5142225cceded48f6553502',
+                // 'OwnerId': 'f27caa37e5142225cceded48f6553502',
                 'Items': [],
                 'TotalRecordCount': 0,
                 'StartIndex': 0
             },
-            'SoundtrackSongsResult': {'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0}
+            'SoundtrackSongsResult': {
+                'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+            }
         });
-
-        next();
     });
 
-    server.get('/items/:mediaid/images/primary', async (req, res, next) => {
+    server.get('/items/:mediaid/images/primary', async (req, res) => {
         let mediaid = req.params.mediaid;
 
         if (mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(mediaid.replace('movie', ''), {
-                include: [File]
-            });
+            let movie = await Movie.findByPk(mediaid.replace('movie', ''), { include: [File] });
 
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
 
             fs.createReadStream(posterPath)
                 .on('error', () => {
-                    return next(new errors.NotFoundError('Poster for movie does not exist'));
+                    return new errors.NotFoundError('Poster for movie does not exist');
                 })
                 .pipe(res);
 
         }
-
-        next();
     });
 
-    server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res, next) => {
+    server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
         let mediaid = req.params.mediaid;
 
         if (mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(mediaid.replace('movie', ''), {
-                include: [File]
-            });
+            let movie = await Movie.findByPk(mediaid.replace('movie', ''), { include: [File] });
 
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
             fs.createReadStream(posterPath)
                 .on('error', () => {
-                    return next(new errors.NotFoundError('Poster for movie does not exist'));
+                    return new errors.NotFoundError('Poster for movie does not exist');
                 })
                 .pipe(res);
 
         }
-
-        next();
     });
 
-    server.post('/items/:mediaid/playbackinfo', async (req, res, next) => {
+    server.post('/items/:mediaid/playbackinfo', async (req, res) => {
         let mediaid = req.params.mediaid;
 
         let files = [];
 
         if (mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(mediaid.replace('movie', ''), {
-                include: [File]
-            });
+            let movie = await Movie.findByPk(mediaid.replace('movie', ''), { include: [File] });
 
             files = movie.Files;
 
@@ -182,72 +165,70 @@ export default (server, embyEmulation) => {
                 'RequiresLooping': false,
                 'SupportsProbing': true,
                 'VideoType': 'VideoFile',
-                'MediaStreams': [{
-                    'Codec': 'h264',
-                    'Language': 'eng',
-                    'ColorTransfer': 'bt709',
-                    'ColorPrimaries': 'bt709',
-                    'TimeBase': '1/1000',
-                    'CodecTimeBase': '1001/48000',
-                    'VideoRange': 'SDR',
-                    'DisplayTitle': '1080p H264',
-                    'NalLengthSize': '0',
-                    'IsInterlaced': false,
-                    'IsAVC': false,
-                    'BitRate': 9253220,
-                    'BitDepth': 8,
-                    'RefFrames': 1,
-                    'IsDefault': true,
-                    'IsForced': false,
-                    'Height': 1080,
-                    'Width': 1920,
-                    'AverageFrameRate': 23.976025,
-                    'RealFrameRate': 23.976025,
-                    'Profile': 'High',
-                    'Type': 'Video',
-                    'AspectRatio': '16:9',
-                    'Index': 0,
-                    'IsExternal': false,
-                    'IsTextSubtitleStream': false,
-                    'SupportsExternalStream': false,
-                    'PixelFormat': 'yuv420p',
-                    'Level': 40
-                }, {
-                    'Codec': 'aac',
-                    'Language': 'eng',
-                    'TimeBase': '1/1000',
-                    'CodecTimeBase': '1/48000',
-                    'Title': 'English',
-                    'DisplayTitle': 'Eng Dolby Digital+ 6 ch Default',
-                    'IsInterlaced': false,
-                    'Channels': 6,
-                    'SampleRate': 48000,
-                    'IsDefault': true,
-                    'IsForced': false,
-                    'Type': 'Audio',
-                    'Index': 1,
-                    'IsExternal': false,
-                    'IsTextSubtitleStream': false,
-                    'SupportsExternalStream': false,
-                    'Level': 0
-                }],
+                'MediaStreams': [
+                    {
+                        'Codec': 'h264',
+                        'Language': 'eng',
+                        'ColorTransfer': 'bt709',
+                        'ColorPrimaries': 'bt709',
+                        'TimeBase': '1/1000',
+                        'CodecTimeBase': '1001/48000',
+                        'VideoRange': 'SDR',
+                        'DisplayTitle': '1080p H264',
+                        'NalLengthSize': '0',
+                        'IsInterlaced': false,
+                        'IsAVC': false,
+                        'BitRate': 9253220,
+                        'BitDepth': 8,
+                        'RefFrames': 1,
+                        'IsDefault': true,
+                        'IsForced': false,
+                        'Height': 1080,
+                        'Width': 1920,
+                        'AverageFrameRate': 23.976025,
+                        'RealFrameRate': 23.976025,
+                        'Profile': 'High',
+                        'Type': 'Video',
+                        'AspectRatio': '16:9',
+                        'Index': 0,
+                        'IsExternal': false,
+                        'IsTextSubtitleStream': false,
+                        'SupportsExternalStream': false,
+                        'PixelFormat': 'yuv420p',
+                        'Level': 40
+                    }, {
+                        'Codec': 'aac',
+                        'Language': 'eng',
+                        'TimeBase': '1/1000',
+                        'CodecTimeBase': '1/48000',
+                        'Title': 'English',
+                        'DisplayTitle': 'Eng Dolby Digital+ 6 ch Default',
+                        'IsInterlaced': false,
+                        'Channels': 6,
+                        'SampleRate': 48000,
+                        'IsDefault': true,
+                        'IsForced': false,
+                        'Type': 'Audio',
+                        'Index': 1,
+                        'IsExternal': false,
+                        'IsTextSubtitleStream': false,
+                        'SupportsExternalStream': false,
+                        'Level': 0
+                    }
+                ],
                 'MediaAttachments': [],
                 'Formats': [],
                 'Bitrate': 9253220,
                 'RequiredHttpHeaders': {},
-                //'TranscodingUrl': '/videos/c042cd5e-c05a-5397-5b85-3b127bea567b/master.m3u8?DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0OyBydjo4Mi4wKSBHZWNrby8yMDEwMDEwMSBGaXJlZm94LzgyLjB8MTU5OTg2NDM5ODY2Mg11&MediaSourceId=c042cd5ec05a53975b853b127bea567b&VideoCodec=h264&AudioCodec=mp3,aac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&PlaySessionId=c89d3c1e027b4463b59bcd06e183679f&api_key=28eece16e48a4bb997e2137297d36321&TranscodingMaxAudioChannels=2&RequireAvc=false&Tag=313f5f26c5f6636a77c630468b6920f7&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=True&h264-profile=high,main,baseline,constrainedbaseline&h264-level=51&h264-deinterlace=true&TranscodeReasons=VideoCodecNotSupported',
-                //'TranscodingSubProtocol': 'hls',
-                //'TranscodingContainer': 'ts',
+                // 'TranscodingUrl': '/videos/c042cd5e-c05a-5397-5b85-3b127bea567b/master.m3u8?DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0OyBydjo4Mi4wKSBHZWNrby8yMDEwMDEwMSBGaXJlZm94LzgyLjB8MTU5OTg2NDM5ODY2Mg11&MediaSourceId=c042cd5ec05a53975b853b127bea567b&VideoCodec=h264&AudioCodec=mp3,aac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&PlaySessionId=c89d3c1e027b4463b59bcd06e183679f&api_key=28eece16e48a4bb997e2137297d36321&TranscodingMaxAudioChannels=2&RequireAvc=false&Tag=313f5f26c5f6636a77c630468b6920f7&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=True&h264-profile=high,main,baseline,constrainedbaseline&h264-level=51&h264-deinterlace=true&TranscodeReasons=VideoCodecNotSupported',
+                // 'TranscodingSubProtocol': 'hls',
+                // 'TranscodingContainer': 'ts',
                 'DefaultAudioStreamIndex': 1,
                 'DefaultSubtitleStreamIndex': 2
             });
         }
 
-        res.send({
-            MediaSources, 'PlaySessionId': req.headers.emby.Token
-        });
-
-        next();
+        res.send({ MediaSources, 'PlaySessionId': req.headers.emby.Token });
     });
 
 };

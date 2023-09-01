@@ -1,6 +1,6 @@
 import restify from 'restify';
 import routes from './routes';
-import corsMiddleware from 'restify-cors-middleware';
+import corsMiddleware from 'restify-cors-middleware2';
 
 export default class EmbyServerAPI {
     /**
@@ -14,14 +14,15 @@ export default class EmbyServerAPI {
 
         // Allow remote clients to connect to the backend
         const cors = corsMiddleware({
-            preflightMaxAge: 5, //Optional
+            preflightMaxAge: 5, // Optional
             origins: ['*'],
-            allowHeaders: ['API-Token', 'authorization'],
+            allowHeaders: ['API-Token'],
             exposeHeaders: ['API-Token-Expiry']
         });
 
         this.server.pre(cors.preflight);
         this.server.use(cors.actual);
+
         this.server.use(restify.plugins.authorizationParser());
         this.server.use(restify.plugins.queryParser({ mapParams: true }));
         this.server.use(restify.plugins.bodyParser({ mapParams: true }));
@@ -40,6 +41,7 @@ export default class EmbyServerAPI {
 
             for (let i in req.headers['emby']) {
                 let item = req.headers['emby'][i].split('=');
+
                 auth[item[0]] = item[1].replace(/"/g, '');
             }
 
@@ -48,9 +50,8 @@ export default class EmbyServerAPI {
             next();
         });
 
-        this.server.pre(function (request, response, next) {
+        this.server.pre(async function (request, response) {
             console.log(request.url, request.params, request.method);
-            next();
         });
 
         // Add routes routes

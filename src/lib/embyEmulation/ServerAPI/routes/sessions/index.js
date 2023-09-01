@@ -3,15 +3,13 @@
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
-    server.post('/sessions/capabilities/:type', async (req, res, next) => {
+    server.post('/sessions/capabilities/:type', async (req, res) => {
         embyEmulation.sessions[req.headers.emby.Token] = req.params;
 
         res.send();
-
-        next();
     });
 
-    server.post('/sessions/playing', async (req, res, next) => {
+    server.post('/sessions/playing', async (req, res) => {
         embyEmulation.sessions[req.headers.emby.Token].playSession = req.params;
 
         console.log(req.params);
@@ -22,7 +20,5 @@ export default (server, embyEmulation) => {
         });
 
         res.send();
-
-        next();
     });
 };

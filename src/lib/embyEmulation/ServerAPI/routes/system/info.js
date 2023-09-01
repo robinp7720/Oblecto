@@ -1,18 +1,16 @@
 export default (server, embyEmulation) => {
-    server.get('/system/info/public', async (req, res, next) => {
+    server.get('/system/info/public', async (req, res) => {
         res.send({
-            'LocalAddress': 'http://oblecto:8096',
+            'LocalAddress': 'http://pegasus:9096',
             'ServerName': embyEmulation.serverName,
-            'Version': '10.6.4',
+            'Version': '10.8.10',
             'ProductName': 'Oblecto Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId
         });
-
-        next();
     });
 
-    server.get('/system/info', async (req, res, next) => {
+    server.get('/system/info', async (req, res) => {
         res.send({
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,
@@ -38,7 +36,5 @@ export default (server, embyEmulation) => {
             'OperatingSystem': 'Linux',
             'Id': '79d44cdaf63d4e0ab91fca60b8e4b6d6'
         });
-
-        next();
     });
 };

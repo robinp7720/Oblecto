@@ -1,13 +1,9 @@
 export default (server, embyEmulation) => {
-    server.get('/system/ping', async (req, res, next) => {
+    server.get('/system/ping', async (req, res) => {
         res.send();
-
-        next();
     });
 
-    server.post('/system/ping', async (req, res, next) => {
+    server.post('/system/ping', async (req, res) => {
         res.send();
-
-        next();
     });
 };

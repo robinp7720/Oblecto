@@ -3,9 +3,9 @@
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
-    server.get('/displaypreferences/usersettings', async (req, res, next) => {
+    server.get('/displaypreferences/usersettings', async (req, res) => {
         res.send({
-            //'Id': '3ce5b65de116d73165d1efc4a30ec35c',
+            // 'Id': '3ce5b65de116d73165d1efc4a30ec35c',
             'RememberIndexing': false,
             'PrimaryImageHeight': 250,
             'PrimaryImageWidth': 250,
@@ -16,7 +16,5 @@ export default (server, embyEmulation) => {
             'ShowSidebar': false,
             'Client': 'emby'
         });
-
-        next();
     });
 };
