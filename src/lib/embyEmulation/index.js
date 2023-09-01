@@ -1,11 +1,11 @@
 import EmbyServerAPI from './ServerAPI';
 
 import { v4 as uuidv4 } from 'uuid';
-import {User} from '../../models/user';
+import { User } from '../../models/user';
 import errors from 'restify-errors';
 import bcrypt from 'bcrypt';
 import Primus from 'primus';
-import {timeout} from 'async';
+import { timeout } from 'async';
 
 export default class EmbyEmulation {
     /**
@@ -47,7 +47,7 @@ export default class EmbyEmulation {
 
             this.websocketSessions[req.query.api_key] = spark;
 
-            console.log('test');
+            console.log('jellyfin ws client connected');
 
             timeout(() => {
                 console.log('sending');
@@ -71,24 +71,21 @@ export default class EmbyEmulation {
                         MediaSourceId: 2725,
                         CanSeek: true,
                         ItemId: 'movie16',
-                        NowPlayingQueue: [ { Id: 'movie16', PlaylistItemId: 'playlistItem1' } ]
+                        NowPlayingQueue: [{ Id: 'movie16', PlaylistItemId: 'playlistItem1' }]
                     }
                 });
             }, 2000);
 
-
             spark.on('data', function message(data) {
 
-                console.log(data);
+                console.log('jellyfin ws recevied:', data);
             });
         });
     }
 
     async handleLogin(username, password) {
         let user = await User.findOne({
-            where: {
-                username: username
-            },
+            where: { username: username },
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
 

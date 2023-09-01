@@ -5,6 +5,7 @@ import displaypreferences from './displaypreferences';
 import branding from './branding';
 import shows from './shows';
 import items from './items';
+import videos from './videos';
 
 /**
  *
@@ -19,5 +20,5 @@ export default (server, embyEmulation) => {
     branding(server, embyEmulation);
     shows(server, embyEmulation);
     items(server, embyEmulation);
-
+    videos(server, embyEmulation);
 };

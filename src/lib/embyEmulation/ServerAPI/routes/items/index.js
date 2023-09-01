@@ -1,7 +1,9 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import errors from 'restify-errors';
+import { createStreamsList } from '../../../helpers';
+import { Stream } from '../../../../../models/stream';
 
 /**
  *
@@ -27,13 +29,13 @@ export default (server, embyEmulation) => {
                     'Name': movie.movieName,
                     'ServerId': embyEmulation.serverId,
                     'Id': 'movie' + movie.id,
-                    'HasSubtitles': true,
+                    'HasSubtitles': false,
                     'Container': 'mkv,webm',
                     'PremiereDate': movie.releaseDate,
                     'CriticRating': 82,
                     'OfficialRating': 'PG-13',
                     'CommunityRating': 2.6,
-                    'RunTimeTicks': 69087043584,
+                    'RunTimeTicks': movie.runtime,
                     'ProductionYear': movie.releaseDate.substring(0, 4),
                     'IsFolder': false,
                     'Type': 'Movie',
@@ -53,7 +55,9 @@ export default (server, embyEmulation) => {
             }
 
             res.send({
-                'Items': items, 'TotalRecordCount': count, 'StartIndex': offset
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': offset
             });
         } else {
             res.send({
@@ -87,7 +91,9 @@ export default (server, embyEmulation) => {
                 'StartIndex': 0
             },
             'SoundtrackSongsResult': {
-                'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+                'Items': [],
+                'TotalRecordCount': 0,
+                'StartIndex': 0
             }
         });
     });
@@ -100,12 +106,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
 
-            fs.createReadStream(posterPath)
-                .on('error', () => {
-                    return new errors.NotFoundError('Poster for movie does not exist');
-                })
-                .pipe(res);
-
+            res.sendRaw(await fs.readFile(posterPath));
         }
     });
 
@@ -117,12 +118,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
-            fs.createReadStream(posterPath)
-                .on('error', () => {
-                    return new errors.NotFoundError('Poster for movie does not exist');
-                })
-                .pipe(res);
-
+            res.sendRaw(await fs.readFile(posterPath));
         }
     });
 
@@ -132,7 +128,14 @@ export default (server, embyEmulation) => {
         let files = [];
 
         if (mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(mediaid.replace('movie', ''), { include: [File] });
+            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), {
+                include: [
+                    {
+                        model: File,
+                        include: [{ model: Stream }]
+                    }
+                ]
+            });
 
             files = movie.Files;
 
@@ -146,8 +149,8 @@ export default (server, embyEmulation) => {
                 'Id': file.id,
                 'Path': file.path,
                 'Type': 'Default',
-                'Container': 'mp4',
-                'Size': 7990969856,
+                'Container': file.container,
+                'Size': file.size,
                 'Name': file.name,
                 'IsRemote': false,
                 'ETag': '313f5f26c5f6636a77c630468b6920f7',
@@ -158,67 +161,18 @@ export default (server, embyEmulation) => {
                 'GenPtsInput': false,
                 'SupportsTranscoding': false,
                 'SupportsDirectStream': true,
-                'SupportsDirectPlay': true,
+                'SupportsDirectPlay': false,
+                'autoOpenLiveStream': false,
                 'IsInfiniteStream': false,
                 'RequiresOpening': false,
                 'RequiresClosing': false,
                 'RequiresLooping': false,
                 'SupportsProbing': true,
                 'VideoType': 'VideoFile',
-                'MediaStreams': [
-                    {
-                        'Codec': 'h264',
-                        'Language': 'eng',
-                        'ColorTransfer': 'bt709',
-                        'ColorPrimaries': 'bt709',
-                        'TimeBase': '1/1000',
-                        'CodecTimeBase': '1001/48000',
-                        'VideoRange': 'SDR',
-                        'DisplayTitle': '1080p H264',
-                        'NalLengthSize': '0',
-                        'IsInterlaced': false,
-                        'IsAVC': false,
-                        'BitRate': 9253220,
-                        'BitDepth': 8,
-                        'RefFrames': 1,
-                        'IsDefault': true,
-                        'IsForced': false,
-                        'Height': 1080,
-                        'Width': 1920,
-                        'AverageFrameRate': 23.976025,
-                        'RealFrameRate': 23.976025,
-                        'Profile': 'High',
-                        'Type': 'Video',
-                        'AspectRatio': '16:9',
-                        'Index': 0,
-                        'IsExternal': false,
-                        'IsTextSubtitleStream': false,
-                        'SupportsExternalStream': false,
-                        'PixelFormat': 'yuv420p',
-                        'Level': 40
-                    }, {
-                        'Codec': 'aac',
-                        'Language': 'eng',
-                        'TimeBase': '1/1000',
-                        'CodecTimeBase': '1/48000',
-                        'Title': 'English',
-                        'DisplayTitle': 'Eng Dolby Digital+ 6 ch Default',
-                        'IsInterlaced': false,
-                        'Channels': 6,
-                        'SampleRate': 48000,
-                        'IsDefault': true,
-                        'IsForced': false,
-                        'Type': 'Audio',
-                        'Index': 1,
-                        'IsExternal': false,
-                        'IsTextSubtitleStream': false,
-                        'SupportsExternalStream': false,
-                        'Level': 0
-                    }
-                ],
+                'MediaStreams': createStreamsList(files.Streams),
                 'MediaAttachments': [],
                 'Formats': [],
-                'Bitrate': 9253220,
+                'Bitrate': file.size / file.duration,
                 'RequiredHttpHeaders': {},
                 // 'TranscodingUrl': '/videos/c042cd5e-c05a-5397-5b85-3b127bea567b/master.m3u8?DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0OyBydjo4Mi4wKSBHZWNrby8yMDEwMDEwMSBGaXJlZm94LzgyLjB8MTU5OTg2NDM5ODY2Mg11&MediaSourceId=c042cd5ec05a53975b853b127bea567b&VideoCodec=h264&AudioCodec=mp3,aac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&PlaySessionId=c89d3c1e027b4463b59bcd06e183679f&api_key=28eece16e48a4bb997e2137297d36321&TranscodingMaxAudioChannels=2&RequireAvc=false&Tag=313f5f26c5f6636a77c630468b6920f7&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=True&h264-profile=high,main,baseline,constrainedbaseline&h264-level=51&h264-deinterlace=true&TranscodeReasons=VideoCodecNotSupported',
                 // 'TranscodingSubProtocol': 'hls',
@@ -228,7 +182,95 @@ export default (server, embyEmulation) => {
             });
         }
 
-        res.send({ MediaSources, 'PlaySessionId': req.headers.emby.Token });
+        res.send({
+            'UserId': '08ba1929-681e-4b24-929b-9245852f65c0',
+            'MaxStreamingBitrate': 0,
+            'StartTimeTicks': 0,
+            'AudioStreamIndex': 0,
+            'SubtitleStreamIndex': 0,
+            'MaxAudioChannels': 0,
+            'MediaSourceId': 'string',
+            'LiveStreamId': 'string',
+            'DeviceProfile':
+                {
+                    'Name': 'string',
+                    'Id': 'string',
+                    'Identification': {},
+                    'FriendlyName': 'string',
+                    'Manufacturer': 'string',
+                    'ManufacturerUrl': 'string',
+                    'ModelName': 'string',
+                    'ModelDescription': 'string',
+                    'ModelNumber': 'string',
+                    'ModelUrl': 'string',
+                    'SerialNumber': 'string',
+                    'EnableAlbumArtInDidl': false,
+                    'EnableSingleAlbumArtLimit': false,
+                    'EnableSingleSubtitleLimit': false,
+                    'SupportedMediaTypes': 'string',
+                    'UserId': 'string',
+                    'AlbumArtPn': 'string',
+                    'MaxAlbumArtWidth': 0,
+                    'MaxAlbumArtHeight': 0,
+                    'MaxIconWidth': 0,
+                    'MaxIconHeight': 0,
+                    'MaxStreamingBitrate': 0,
+                    'MaxStaticBitrate': 0,
+                    'MusicStreamingTranscodingBitrate': 0,
+                    'MaxStaticMusicBitrate': 0,
+                    'SonyAggregationFlags': 'string',
+                    'ProtocolInfo': 'string',
+                    'TimelineOffsetSeconds': 0,
+                    'RequiresPlainVideoItems': false,
+                    'RequiresPlainFolders': false,
+                    'EnableMSMediaReceiverRegistrar': false,
+                    'IgnoreTranscodeByteRangeRequests': false,
+                    'XmlRootAttributes':
+                        [],
+                    'DirectPlayProfiles':
+                        [
+                            {
+
+                                'Container': 'mp4',
+                                'Type': 'Video',
+                                'VideoCodec': 'h264',
+                                'AudioCodec': 'aac',
+                                'Protocol': 'Http',
+                                'EstimateContentLength': false,
+                                'EnableMpegtsM2TsMode': false,
+                                'TranscodeSeekInfo': 'Auto',
+                                'CopyTimestamps': false,
+                                'Context': 'Streaming',
+                                'EnableSubtitlesInManifest': false,
+                                'MaxAudioChannels': 'string',
+                                'MinSegments': 0,
+                                'SegmentLength': 0,
+                                'BreakOnNonKeyFrames': false,
+                                'Conditions':
+
+                                    []
+                            }
+                        ],
+                    'TranscodingProfiles':
+                        [],
+                    'ContainerProfiles':
+                        [],
+                    'CodecProfiles':
+                        [],
+                    'ResponseProfiles':
+                        [],
+                    'SubtitleProfiles':
+
+                        []
+                },
+            'EnableDirectPlay': true,
+            'EnableDirectStream': true,
+            'EnableTranscoding': false,
+            'AllowVideoStreamCopy': true,
+            'AllowAudioStreamCopy': true,
+            'AutoOpenLiveStream': false
+
+        });
     });
 
 };
