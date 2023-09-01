@@ -123,6 +123,9 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req, res) => {
+        console.log('Not case sensitive');
+        console.log(req.body);
+
         let mediaid = req.params.mediaid;
 
         let files = [];
@@ -132,145 +135,73 @@ export default (server, embyEmulation) => {
                 include: [
                     {
                         model: File,
-                        include: [{ model: Stream }]
+                        include: [{ model: Stream }],
                     }
                 ]
             });
 
             files = movie.Files;
-
         }
 
-        let MediaSources = [];
+        let file = files[0];
 
-        for (let file of files) {
-            MediaSources.push({
-                'Protocol': 'File',
-                'Id': file.id,
-                'Path': file.path,
-                'Type': 'Default',
-                'Container': file.container,
-                'Size': file.size,
-                'Name': file.name,
-                'IsRemote': false,
-                'ETag': '313f5f26c5f6636a77c630468b6920f7',
-                'RunTimeTicks': file.duration * 10000000,
-                'ReadAtNativeFramerate': true,
-                'IgnoreDts': false,
-                'IgnoreIndex': false,
-                'GenPtsInput': false,
-                'SupportsTranscoding': false,
-                'SupportsDirectStream': true,
-                'SupportsDirectPlay': false,
-                'autoOpenLiveStream': false,
-                'IsInfiniteStream': false,
-                'RequiresOpening': false,
-                'RequiresClosing': false,
-                'RequiresLooping': false,
-                'SupportsProbing': true,
-                'VideoType': 'VideoFile',
-                'MediaStreams': createStreamsList(files.Streams),
-                'MediaAttachments': [],
-                'Formats': [],
-                'Bitrate': file.size / file.duration,
-                'RequiredHttpHeaders': {},
-                // 'TranscodingUrl': '/videos/c042cd5e-c05a-5397-5b85-3b127bea567b/master.m3u8?DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0OyBydjo4Mi4wKSBHZWNrby8yMDEwMDEwMSBGaXJlZm94LzgyLjB8MTU5OTg2NDM5ODY2Mg11&MediaSourceId=c042cd5ec05a53975b853b127bea567b&VideoCodec=h264&AudioCodec=mp3,aac&AudioStreamIndex=1&VideoBitrate=139616000&AudioBitrate=384000&PlaySessionId=c89d3c1e027b4463b59bcd06e183679f&api_key=28eece16e48a4bb997e2137297d36321&TranscodingMaxAudioChannels=2&RequireAvc=false&Tag=313f5f26c5f6636a77c630468b6920f7&SegmentContainer=ts&MinSegments=1&BreakOnNonKeyFrames=True&h264-profile=high,main,baseline,constrainedbaseline&h264-level=51&h264-deinterlace=true&TranscodeReasons=VideoCodecNotSupported',
-                // 'TranscodingSubProtocol': 'hls',
-                // 'TranscodingContainer': 'ts',
-                'DefaultAudioStreamIndex': 1,
-                'DefaultSubtitleStreamIndex': 2
+        if (req.params.MediaSourceId) {
+            for (file of files) {
+                if (file.id === req.params.MediaSourceId) {
+                    break;
+                }
+            }
+        }
+
+        console.log('Streaming file:', file);
+
+        const streamSession = embyEmulation.oblecto.streamSessionController.newSession(file,
+            {
+                streamType: 'directhttp',
+                target: {
+                    formats: ['mp4, mkv'], videoCodecs: ['h264', 'hevc'], audioCodecs: []
+                }
             });
-        }
 
         res.send({
-            'UserId': '08ba1929-681e-4b24-929b-9245852f65c0',
-            'MaxStreamingBitrate': 0,
-            'StartTimeTicks': 0,
-            'AudioStreamIndex': 0,
-            'SubtitleStreamIndex': 0,
-            'MaxAudioChannels': 0,
-            'MediaSourceId': 'string',
-            'LiveStreamId': 'string',
-            'DeviceProfile':
+            'MediaSources':[
                 {
-                    'Name': 'string',
-                    'Id': 'string',
-                    'Identification': {},
-                    'FriendlyName': 'string',
-                    'Manufacturer': 'string',
-                    'ManufacturerUrl': 'string',
-                    'ModelName': 'string',
-                    'ModelDescription': 'string',
-                    'ModelNumber': 'string',
-                    'ModelUrl': 'string',
-                    'SerialNumber': 'string',
-                    'EnableAlbumArtInDidl': false,
-                    'EnableSingleAlbumArtLimit': false,
-                    'EnableSingleSubtitleLimit': false,
-                    'SupportedMediaTypes': 'string',
-                    'UserId': 'string',
-                    'AlbumArtPn': 'string',
-                    'MaxAlbumArtWidth': 0,
-                    'MaxAlbumArtHeight': 0,
-                    'MaxIconWidth': 0,
-                    'MaxIconHeight': 0,
-                    'MaxStreamingBitrate': 0,
-                    'MaxStaticBitrate': 0,
-                    'MusicStreamingTranscodingBitrate': 0,
-                    'MaxStaticMusicBitrate': 0,
-                    'SonyAggregationFlags': 'string',
-                    'ProtocolInfo': 'string',
-                    'TimelineOffsetSeconds': 0,
-                    'RequiresPlainVideoItems': false,
-                    'RequiresPlainFolders': false,
-                    'EnableMSMediaReceiverRegistrar': false,
-                    'IgnoreTranscodeByteRangeRequests': false,
-                    'XmlRootAttributes':
-                        [],
-                    'DirectPlayProfiles':
-                        [
-                            {
-
-                                'Container': 'mp4',
-                                'Type': 'Video',
-                                'VideoCodec': 'h264',
-                                'AudioCodec': 'aac',
-                                'Protocol': 'Http',
-                                'EstimateContentLength': false,
-                                'EnableMpegtsM2TsMode': false,
-                                'TranscodeSeekInfo': 'Auto',
-                                'CopyTimestamps': false,
-                                'Context': 'Streaming',
-                                'EnableSubtitlesInManifest': false,
-                                'MaxAudioChannels': 'string',
-                                'MinSegments': 0,
-                                'SegmentLength': 0,
-                                'BreakOnNonKeyFrames': false,
-                                'Conditions':
-
-                                    []
-                            }
-                        ],
-                    'TranscodingProfiles':
-                        [],
-                    'ContainerProfiles':
-                        [],
-                    'CodecProfiles':
-                        [],
-                    'ResponseProfiles':
-                        [],
-                    'SubtitleProfiles':
-
-                        []
-                },
-            'EnableDirectPlay': true,
-            'EnableDirectStream': true,
-            'EnableTranscoding': false,
-            'AllowVideoStreamCopy': true,
-            'AllowAudioStreamCopy': true,
-            'AutoOpenLiveStream': false
-
+                    'Protocol':'File',
+                    'Id':streamSession.sessionId,
+                    'Path':file.path,
+                    'Type':'Default',
+                    'Container':'mkv',
+                    'Size':file.size,
+                    'Name':file.name,
+                    'IsRemote':false,
+                    'ETag':'3670b404eb5adec1d6cd73868ad1801c',
+                    'RunTimeTicks':file.duration*10000000,
+                    'ReadAtNativeFramerate':false,
+                    'IgnoreDts':false,
+                    'IgnoreIndex':false,
+                    'GenPtsInput':false,
+                    'SupportsTranscoding':true,
+                    'SupportsDirectStream':true,
+                    'SupportsDirectPlay':true,
+                    'IsInfiniteStream':false,
+                    'RequiresOpening':false,
+                    'RequiresClosing':false,
+                    'RequiresLooping':false,
+                    'SupportsProbing':true,
+                    'VideoType':'VideoFile',
+                    'MediaStreams':createStreamsList(file.Streams),
+                    'MediaAttachments':[],
+                    'Formats':[],
+                    'Bitrate':file.size/file.duration,
+                    'RequiredHttpHeaders':{},
+                    'DefaultAudioStreamIndex':1,
+                    'DefaultSubtitleStreamIndex':2
+                }
+            ],
+            'PlaySessionId':streamSession.sessionId
         });
+
+        console.log('playback info complete');
     });
 
 };

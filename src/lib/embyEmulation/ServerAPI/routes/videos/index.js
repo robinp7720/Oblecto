@@ -1,13 +1,20 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
 import { Stream } from '../../../../../models/stream';
+import errors from 'restify-errors';
 
 export default (server, embyEmulation) => {
-    server.get('/videos/:mediaid/stream.mp4', async (req, res) => {
-        let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), { include: [{ model: File, include: [{ model: Stream }] }] });
+    server.get('/videos/:mediaid/stream.:ext', async (req, res) => {
+        console.log('We get to here');
 
-        const streamSession = embyEmulation.oblecto.streamSessionController.newSession(movie.Files[0],
-            { streamType: 'directhttp' });
+        if (!embyEmulation.oblecto.streamSessionController.sessionExists(req.params.mediasourceid)) {
+            console.log('The stream session doesn\'t exist');
+            return new errors.InvalidCredentialsError('Stream session token does not exist');
+        }
+
+        console.log(req.params.mediasourceid);
+
+        let streamSession = embyEmulation.oblecto.streamSessionController.sessions[req.params.mediasourceid];
 
         await streamSession.addDestination({
             request: req,
@@ -15,6 +22,8 @@ export default (server, embyEmulation) => {
 
             type: 'http'
         });
+
+        console.log('Starting stream');
 
         await streamSession.startStream();
     });
