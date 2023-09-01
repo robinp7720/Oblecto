@@ -44,6 +44,8 @@
     "neo-blessed": "^0.2.0",
     "node-rsa": "^1.1.1",
     "node-tvdb": "^4.1.0",
+    "node-uuid": "^1.4.8",
+    "primus": "^7.3.5",
     "recursive-readdir": "^2.2.2",
     "restify": "^9.0.0-rc.3",
     "restify-cors-middleware2": "^2.2.0",

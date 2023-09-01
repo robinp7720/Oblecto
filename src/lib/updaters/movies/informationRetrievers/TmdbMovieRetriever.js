@@ -22,7 +22,7 @@ export default class TmdbMovieRetriever {
      * @returns {Promise<{originalName: string, overview: *, revenue: *, releaseDate: string, imdbid: string, genres: string, popularity: *, tagline: *, runtime: *, originalLanguage: string, movieName: *, budget: *}>} - Movie metadata
      */
     async retrieveInformation(movie) {
-        let movieInfo = await promiseTimeout(this.oblecto.tmdb.movieInfo({ id: movie.tmdbid }, { timeout: 5000 }));
+        let movieInfo = await this.oblecto.tmdb.movieInfo({ id: movie.tmdbid });
 
         let data = {
             imdbid: movieInfo.imdb_id,
