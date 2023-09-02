@@ -4,6 +4,8 @@ import { promises as fs } from 'fs';
 import errors from 'restify-errors';
 import { createStreamsList } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
+import { Op } from 'sequelize';
+import { Series } from '../../../../../models/series';
 
 /**
  *
@@ -12,17 +14,24 @@ import { Stream } from '../../../../../models/stream';
  */
 export default (server, embyEmulation) => {
     server.get('/items', async (req, res) => {
+        let items = [];
+
         if (req.params.includeitemtypes === 'movie') {
             let count = await Movie.count();
 
             let offset = parseInt(req.params.startindex) | 0;
 
+            let where = null;
+
+            if (req.params.searchterm) {
+                where = { movieName: { [Op.like]: `%${req.params.searchterm}%` } };
+            }
+
             let results = await Movie.findAll({
+                where,
                 limit: parseInt(req.params.limit) || 100,
                 offset
             });
-
-            let items = [];
 
             for (let movie of results) {
                 items.push({
@@ -35,7 +44,7 @@ export default (server, embyEmulation) => {
                     'CriticRating': 82,
                     'OfficialRating': 'PG-13',
                     'CommunityRating': 2.6,
-                    'RunTimeTicks': movie.runtime,
+                    'RunTimeTicks': movie.runtime*100000000,
                     'ProductionYear': movie.releaseDate.substring(0, 4),
                     'IsFolder': false,
                     'Type': 'Movie',
@@ -51,6 +60,55 @@ export default (server, embyEmulation) => {
                         'Key': '337401'
                     },
                     'ImageTags': { 'Primary': 'eaaa9ab0189f4166db1012ec5230c7db' }
+                });
+            }
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': offset
+            });
+        } else if (req.params.includeitemtypes === 'series') {
+            let count = await Series.count();
+
+            let offset = parseInt(req.params.startindex) | 0;
+
+            let where = null;
+
+            if (req.params.searchterm) {
+                where = { seriesName: { [Op.like]: `%${req.params.searchterm}%` } };
+            }
+
+            let results = await Series.findAll({
+                where,
+                limit: parseInt(req.params.limit) || 100,
+                offset
+            });
+
+            for (let series of results) {
+                items.push({
+                    'Name': series.seriesName,
+                    'ServerId':'70301c9fe99e4304bd5c8922b0e2fd90',
+                    'Id': `series${series.id}`,
+                    'PremiereDate': series.firstAired,
+                    'OfficialRating':'TV-14',
+                    'ChannelId':null,
+                    'CommunityRating':series.popularity,
+                    'RunTimeTicks': series.runtime * 100000000,
+                    'ProductionYear': series.firstAired.substring(0, 4),
+                    'IsFolder':true,
+                    'Type':'Series',
+                    'UserData':{
+                        'UnplayedItemCount':13,'PlaybackPositionTicks':0,'PlayCount':0,'IsFavorite':false,'Played':false,'Key':'272644'
+                    },
+                    'Status': series.status,
+                    'AirDays':[series.airsDayOfWeek],
+                    'PrimaryImageAspectRatio':0.6666666666666666,
+                    'ImageTags':{ 'Primary':'d4ded7fd31f038b434148a4e162e031d' },
+                    'BackdropImageTags':['64e8f381684663b6a7f0d2c1cac61d08'],
+                    'ImageBlurHashes':{ 'Backdrop':{ '64e8f381684663b6a7f0d2c1cac61d08':'WU7xLXWARPt8V?f,%jRhROt7V?fmx_RiRiogackCtTaxaykCackC' },'Primary':{ 'd4ded7fd31f038b434148a4e162e031d':'d23[JJxG9rW=;LbHS$sT*^n%Tfn$TfW:aIniX:bIRhbb' } },
+                    'LocationType':'FileSystem',
+                    'EndDate':null
                 });
             }
 
@@ -108,6 +166,14 @@ export default (server, embyEmulation) => {
 
             res.sendRaw(await fs.readFile(posterPath));
         }
+
+        if (mediaid.includes('series')) {
+            let series = await Series.findByPk(mediaid.replace('series', ''), { include: [File] });
+
+            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(series, 'medium');
+
+            res.sendRaw(await fs.readFile(posterPath));
+        }
     });
 
     server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
@@ -120,12 +186,17 @@ export default (server, embyEmulation) => {
 
             res.sendRaw(await fs.readFile(posterPath));
         }
+
+        if (mediaid.includes('series')) {
+            let series = await Movie.findByPk(mediaid.replace('series', ''), { include: [File] });
+
+            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(series, 'large');
+
+            res.sendRaw(await fs.readFile(posterPath));
+        }
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req, res) => {
-        console.log('Not case sensitive');
-        console.log(req.body);
-
         let mediaid = req.params.mediaid;
 
         let files = [];
@@ -142,6 +213,18 @@ export default (server, embyEmulation) => {
 
             files = movie.Files;
         }
+        else if (mediaid.includes('series')) {
+            let series = await Series.findByPk(req.params.mediaid.replace('series', ''), {
+                include: [
+                    {
+                        model: File,
+                        include: [{ model: Stream }],
+                    }
+                ]
+            });
+
+            files = series.Files;
+        }
 
         let file = files[0];
 
@@ -153,8 +236,6 @@ export default (server, embyEmulation) => {
             }
         }
 
-        console.log('Streaming file:', file);
-
         const streamSession = embyEmulation.oblecto.streamSessionController.newSession(file,
             {
                 streamType: 'directhttp',
@@ -164,10 +245,10 @@ export default (server, embyEmulation) => {
             });
 
         res.send({
-            'MediaSources':[
-                {
+            'MediaSources': files.map((file) => {
+                return {
                     'Protocol':'File',
-                    'Id':streamSession.sessionId,
+                    'Id': file.id,
                     'Path':file.path,
                     'Type':'Default',
                     'Container':'mkv',
@@ -196,8 +277,8 @@ export default (server, embyEmulation) => {
                     'RequiredHttpHeaders':{},
                     'DefaultAudioStreamIndex':1,
                     'DefaultSubtitleStreamIndex':2
-                }
-            ],
+                };
+            }),
             'PlaySessionId':streamSession.sessionId
         });
 

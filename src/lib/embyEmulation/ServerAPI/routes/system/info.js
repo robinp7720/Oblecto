@@ -4,9 +4,10 @@ export default (server, embyEmulation) => {
             'LocalAddress': 'http://pegasus:9096',
             'ServerName': embyEmulation.serverName,
             'Version': '10.8.10',
-            'ProductName': 'Oblecto Server',
+            'ProductName': 'Jellyfin Server',
             'OperatingSystem': 'Linux',
-            'Id': embyEmulation.serverId
+            'Id': embyEmulation.serverId,
+            'StartupWizardCompleted':	true
         });
     });
 
@@ -30,7 +31,7 @@ export default (server, embyEmulation) => {
             'HasUpdateAvailable': false,
             'EncoderLocation': 'Custom',
             'SystemArchitecture': 'X64',
-            'LocalAddress': 'http://192.168.178.84:9096',
+            'LocalAddress': 'http://pegasus:9096',
             'ServerName': embyEmulation.serverName,
             'Version': embyEmulation.version,
             'OperatingSystem': 'Linux',

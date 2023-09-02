@@ -40,45 +40,6 @@ export default (server, embyEmulation) => {
             EnableAutoLogin: false,
             LastLoginDate: '2020-09-11T23:37:27.3042432Z',
             LastActivityDate: '2020-09-11T23:37:27.3042432Z',
-            'Policy': {
-                'IsAdministrator': false,
-                'IsHidden': true,
-                'IsDisabled': false,
-                'BlockedTags': [],
-                'EnableUserPreferenceAccess': true,
-                'AccessSchedules': [],
-                'BlockUnratedItems': [],
-                'EnableRemoteControlOfOtherUsers': false,
-                'EnableSharedDeviceControl': true,
-                'EnableRemoteAccess': true,
-                'EnableLiveTvManagement': true,
-                'EnableLiveTvAccess': true,
-                'EnableMediaPlayback': true,
-                'EnableAudioPlaybackTranscoding': true,
-                'EnableVideoPlaybackTranscoding': true,
-                'EnablePlaybackRemuxing': true,
-                'ForceRemoteSourceTranscoding': false,
-                'EnableContentDeletion': false,
-                'EnableContentDeletionFromFolders': [],
-                'EnableContentDownloading': true,
-                'EnableSyncTranscoding': true,
-                'EnableMediaConversion': true,
-                'EnabledDevices': [],
-                'EnableAllDevices': true,
-                'EnabledChannels': [],
-                'EnableAllChannels': false,
-                'EnabledFolders': [],
-                'EnableAllFolders': true,
-                'InvalidLoginAttemptCount': 0,
-                'LoginAttemptsBeforeLockout': -1,
-                'EnablePublicSharing': true,
-                'BlockedMediaFolders': [],
-                'BlockedChannels': [],
-                'RemoteClientBitrateLimit': 0,
-                'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider',
-                'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider',
-                'SyncPlayAccess': 'CreateAndJoinGroups'
-            },
             'Configuration': {
                 'PlayDefaultAudioTrack': true,
                 'SubtitleLanguagePreference': '',
@@ -94,6 +55,46 @@ export default (server, embyEmulation) => {
                 'RememberAudioSelections': true,
                 'RememberSubtitleSelections': true,
                 'EnableNextEpisodeAutoPlay': true
+            },
+            'Policy': {
+                'IsAdministrator': true,
+                'IsHidden': true,
+                'IsDisabled': false,
+                'BlockedTags': [],
+                'EnableUserPreferenceAccess': true,
+                'AccessSchedules': [],
+                'BlockUnratedItems': [],
+                'EnableRemoteControlOfOtherUsers': false,
+                'EnableSharedDeviceControl': false,
+                'EnableRemoteAccess': false,
+                'EnableLiveTvManagement': false,
+                'EnableLiveTvAccess': false,
+                'EnableMediaPlayback': true,
+                'EnableAudioPlaybackTranscoding': false,
+                'EnableVideoPlaybackTranscoding': false,
+                'EnablePlaybackRemuxing': true,
+                'ForceRemoteSourceTranscoding': false,
+                'EnableContentDeletion': true,
+                'EnableContentDeletionFromFolders': [],
+                'EnableContentDownloading': true,
+                'EnableSyncTranscoding': false,
+                'EnableMediaConversion': false,
+                'EnabledDevices': [],
+                'EnableAllDevices': true,
+                'EnabledChannels': [],
+                'EnableAllChannels': true,
+                'EnabledFolders': [],
+                'EnableAllFolders': true,
+                'InvalidLoginAttemptCount': 0,
+                'LoginAttemptsBeforeLockout': -1,
+                'MaxActiveSessions': 0,
+                'EnablePublicSharing': true,
+                'BlockedMediaFolders': [],
+                'BlockedChannels': [],
+                'RemoteClientBitrateLimit': 0,
+                'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider',
+                'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider',
+                'SyncPlayAccess': 'CreateAndJoinGroups'
             }
         });
     });
@@ -220,7 +221,7 @@ export default (server, embyEmulation) => {
                     'CriticRating': 82,
                     'OfficialRating': 'PG-13',
                     'CommunityRating': 2.6,
-                    'RunTimeTicks': 69087043584,
+                    'RunTimeTicks': movie.runtime * 10000000,
                     'ProductionYear': movie.releaseDate.substring(0, 4),
                     'IsFolder': false,
                     'Type': 'Movie',
@@ -266,7 +267,7 @@ export default (server, embyEmulation) => {
                     'Path': file.path,
                     'Type': 'Default',
                     'Container': file.container,
-                    'Size': 7990969856,
+                    'Size': file.size,
                     'Name': file.name,
                     'IsRemote': false,
                     'ETag': '313f5f26c5f6636a77c630468b6920f7',
@@ -308,9 +309,9 @@ export default (server, embyEmulation) => {
                 'SortName': movie.movieName,
                 'PremiereDate': movie.releaseDate,
                 'ExternalUrls': [
-                    { 'Name': 'IMDb', 'Url': 'https://www.imdb.com/title/tt4566758' },
-                    { 'Name': 'TheMovieDb', 'Url': 'https://www.themoviedb.org/movie/337401' },
-                    { 'Name': 'Trakt', 'Url': 'https://trakt.tv/movies/tt4566758' }
+                    { 'Name': 'IMDb', 'Url': `https://www.imdb.com/title/${movie.imdbid}` },
+                    { 'Name': 'TheMovieDb', 'Url': `https://www.themoviedb.org/movie/${movie.tmdbid}` },
+                    { 'Name': 'Trakt', 'Url': `https://trakt.tv/movies/${movie.imdbid}` }
                 ],
                 'MediaSources': MediaSources,
                 'CriticRating': 82,
@@ -320,9 +321,9 @@ export default (server, embyEmulation) => {
                 'OfficialRating': 'PG-13',
                 'Overview': movie.overview,
                 'Taglines': [movie.tagline],
-                'Genres': ['Drama', 'Action', 'War', 'Fantasy', 'Adventure'],
+                'Genres': movie.genres,
                 'CommunityRating': 2.6,
-                'RunTimeTicks': movie.Files[0].duration * 10000000,
+                'RunTimeTicks': movie.runtime * 10000000,
                 'PlayAccess': 'Full',
                 'ProductionYear': movie.releaseDate.substring(0, 4),
                 'RemoteTrailers': [],
@@ -501,8 +502,53 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid/items/latest', async (req, res) => {
-        res.send({
-            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+        console.log(req.headers);
+        console.log(embyEmulation.sessions);
+
+        let results = await Movie.findAll({
+            include: [
+                {
+                    model: TrackMovie,
+                    required: false,
+                    where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
+                }
+            ],
+            order: [['releaseDate', 'DESC']],
+            limit: 50,
+            offset: 0
         });
+
+        let movies = results.map((movie) => {
+            return {
+                'Name': movie.movieName,
+                'ServerId': embyEmulation.serverId,
+                'Id': 'movie' + movie.id,
+                'HasSubtitles': true,
+                'Container': 'mkv,webm',
+                'PremiereDate': movie.releaseDate,
+                'CriticRating': 82,
+                'OfficialRating': 'PG-13',
+                'CommunityRating': 2.6,
+                'RunTimeTicks': movie.runtime * 10000000,
+                'ProductionYear': movie.releaseDate.substring(0, 4),
+                'IsFolder': false,
+                'Type': 'Movie',
+                'PrimaryImageAspectRatio': 0.6666666666666666,
+                'VideoType': 'VideoFile',
+                'LocationType': 'FileSystem',
+                'MediaType': 'Video',
+                'UserData': {
+                    'PlaybackPositionTicks': 0,
+                    'PlayCount': 0,
+                    'IsFavorite': true,
+                    'Played': false,
+                    'Key': '337401'
+                },
+                'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
+
+            };
+        });
+
+        res.send(movies);
     });
 };

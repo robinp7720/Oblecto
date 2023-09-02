@@ -4,7 +4,7 @@
  */
 export default (server, embyEmulation) => {
     server.post('/sessions/capabilities/:type', async (req, res) => {
-        embyEmulation.sessions[req.headers.emby.Token] = req.params;
+        embyEmulation.sessions[req.headers.emby.Token].capabilities = req.params;
 
         res.send();
     });

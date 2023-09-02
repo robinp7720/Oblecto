@@ -107,7 +107,8 @@ export default class EmbyEmulation {
             HasConfiguredEasyPassword: false,
             EnableAutoLogin: false,
             LastLoginDate: '2020-09-11T23:37:27.3042432Z',
-            LastActivityDate: '2020-09-11T23:37:27.3042432Z'
+            LastActivityDate: '2020-09-11T23:37:27.3042432Z',
+            capabilities: {}
         };
 
         return sessionId;

@@ -50,7 +50,7 @@ export default class EmbyServerAPI {
             next();
         });
 
-        this.server.pre(async function (request, response) {
+        this.server.use(async function (request, response) {
             console.log(request.url, request.params, request.method);
         });
 
