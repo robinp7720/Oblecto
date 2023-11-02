@@ -11,7 +11,7 @@ class Logger extends EventEmitter{
         this.on('log', (log) => {
             if(this.silent) return;
             if (log instanceof FileExistsError) return;
-            if (log.level === 'DEBUG') return;
+            // if (log.level === 'DEBUG') return;
 
             if (log instanceof ExtendableError) {
                 console.log(log.level, log);

@@ -2,7 +2,7 @@ import { extname, normalize as normalizePath } from 'path';
 import SeedboxImportFTP from './SeedboxImportDrivers/SeedboxImportFTP';
 import WarnExtendableError from '../errors/WarnExtendableError';
 import logger from '../../submodules/logger';
-import index from 'async';
+import SeedboxImportFTPS from './SeedboxImportDrivers/SeedboxImportFTPS';
 
 export default class Seedbox {
     constructor(seedboxConfig) {
@@ -18,9 +18,16 @@ export default class Seedbox {
             case 'ftp':
                 this.storageDriver = new SeedboxImportFTP(seedboxStorageDriverOptions);
                 return;
+            case 'ftps':
+                this.storageDriver = new SeedboxImportFTPS(seedboxStorageDriverOptions);
+                return;
         }
 
         return new WarnExtendableError('Invalid seedbox storage driver');
+    }
+
+    async setupDriver() {
+        await this.storageDriver.setup();
     }
 
     async findAll(indexPath, fileTypes) {

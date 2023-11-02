@@ -5,6 +5,7 @@ import { Movie } from '../../models/movie';
 import { File } from '../../models/file';
 import Queue from '../queue';
 import { basename, parse, dirname } from 'path';
+import path from 'path';
 import { rename } from 'fs/promises';
 import mkdirp from 'mkdirp';
 
@@ -22,7 +23,7 @@ export default class SeedboxController {
         this.oblecto = oblecto;
         this.seedBoxes = [];
 
-        this.importQueue = new Queue(1);
+        this.importQueue = new Queue(oblecto.config.seedboxImport.concurrency);
 
         this.importQueue.registerJob('importMovie', job => this.importMovie(job.seedbox, job.origin, job.destination));
         this.importQueue.registerJob('importEpisode', job => this.importEpisode(job.seedbox, job.origin, job.destination));
@@ -33,7 +34,7 @@ export default class SeedboxController {
         for (const seedbox of this.oblecto.config.seedboxes) {
             if (!seedbox.enabled) continue;
 
-            this.addSeedbox(seedbox);
+            await this.addSeedbox(seedbox);
         }
 
         await this.importAllEpisodes();
@@ -47,8 +48,12 @@ export default class SeedboxController {
         );
     }
 
-    addSeedbox(seedboxConfig) {
-        this.seedBoxes.push(new Seedbox(seedboxConfig));
+    async addSeedbox(seedboxConfig) {
+        const newSeedbox = new Seedbox(seedboxConfig);
+
+        await newSeedbox.setupDriver();
+
+        this.seedBoxes.push(newSeedbox);
         logger.log('DEBUG', `Loaded seedbox ${seedboxConfig.name}`);
     }
 
@@ -139,7 +144,7 @@ export default class SeedboxController {
             this.importQueue.pushJob('importMovie', {
                 seedbox,
                 origin: file,
-                destination: this.oblecto.config.movies.directories[0].path + '/' + basename(file)
+                destination: path.join(this.oblecto.config.movies.directories[0].path, basename(file))
             });
         }
     }
@@ -173,7 +178,7 @@ export default class SeedboxController {
             this.importQueue.pushJob('importEpisode', {
                 seedbox,
                 origin: file,
-                destination: this.oblecto.config.tvshows.directories[0].path + '/' + identification.seriesName + '/' + basename(file)
+                destination: path.join(this.oblecto.config.tvshows.directories[0].path, identification.series.seriesName, basename(file))
             });
         }
     }

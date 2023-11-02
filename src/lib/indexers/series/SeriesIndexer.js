@@ -14,6 +14,7 @@ import { File } from '../../../models/file';
 import IdentificationError from '../../errors/IdentificationError';
 import logger from '../../../submodules/logger';
 import guessit from '../../../submodules/guessit';
+import path from 'path';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
@@ -63,19 +64,10 @@ export default class SeriesIndexer {
      *
      * @param {File} file - File to be indexed
      * @param {GuessitIdentification} guessitIdentification - Guessit identification Object
+     * @param seriesIdentification
      * @returns {Promise<Series>} - Matched series
      */
-    async indexSeries(file, guessitIdentification) {
-        let seriesIdentification;
-
-        try {
-            seriesIdentification = await this.seriesIdentifier.identify(file.path, guessitIdentification);
-        } catch (e) {
-            throw new IdentificationError(`Could not identify series of ${file.path}`);
-        }
-
-        logger.log('DEBUG', `${file.path} series identified: ${seriesIdentification.seriesName}`);
-
+    async indexSeries(seriesIdentification) {
         const identifiers = ['tvdbid', 'tmdbid'];
 
         let seriesQuery = [];
@@ -100,11 +92,40 @@ export default class SeriesIndexer {
     }
 
     async identify(episodePath) {
-        const guessitIdentification = await guessit.identify(episodePath);
-        const seriesIdentification = await this.seriesIdentifier.identify(episodePath, guessitIdentification);
+        const identificationNames = [path.basename(episodePath), episodePath];
+
+        let guessitIdentification;
+        let seriesIdentification;
+
+        let seriesIdentified = false;
+
+        for (const name of identificationNames) {
+            try {
+                guessitIdentification = await guessit.identify(name);
+
+                // Some single season shows usually don't have a season in the title,
+                // therefore whe should set it to 1 by default.
+                if (!guessitIdentification.season) {
+                    guessitIdentification.season = 1;
+                }
+
+                seriesIdentification = await this.seriesIdentifier.identify(name, guessitIdentification);
+
+                seriesIdentified = true;
+
+                break;
+            } catch (e) {
+                logger.log('DEBUG', 'Using for path for identifying', episodePath);
+            }
+        }
+
+        if (seriesIdentified === false) {
+            throw new IdentificationError('Could not identify series');
+        }
+
         const episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, seriesIdentification);
 
-        return { ...seriesIdentification, ...episodeIdentification };
+        return { series: seriesIdentification, episode: episodeIdentification };
     }
 
     /**
@@ -116,26 +137,9 @@ export default class SeriesIndexer {
     async indexFile(episodePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
-        /**
-         * @type {GuessitIdentification}
-         */
-        const guessitIdentification = await guessit.identify(episodePath);
+        let { series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath);
 
-        // Some single season shows usually don't have a season in the title,
-        // therefore whe should set it to 1 by default.
-        if (!guessitIdentification.season) {
-            guessitIdentification.season = 1;
-        }
-
-        let series = await this.indexSeries(file, guessitIdentification);
-
-        let episodeIdentification;
-
-        try {
-            episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, series);
-        } catch (e) {
-            throw new IdentificationError(`Could not identify episode ${episodePath}`);
-        }
+        const series = await this.indexSeries(seriesIdentification);
 
         logger.log('DEBUG', `${file.path} episode identified ${episodeIdentification.episodeName}`);
 
