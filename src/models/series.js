@@ -15,7 +15,10 @@ export const seriesColumns = {
     tmdbid: {
         type: DataTypes.INTEGER, allowNull: true, unique: true 
     },
-
+    anidbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
+    
     seriesName: DataTypes.STRING,
     alias: DataTypes.STRING,
     genre: DataTypes.STRING,
