@@ -1,4 +1,4 @@
-import socketio from 'socket.io';
+import { Server } from 'socket.io';
 import RealtimeClient from './RealtimeClient';
 
 /**
@@ -14,7 +14,7 @@ export default class RealtimeController {
         this.oblecto = oblecto;
         this.clients = {};
 
-        this.server = socketio.listen(oblecto.oblectoAPI.server.server, {
+        this.server = new Server(oblecto.oblectoAPI.server.server, {
             log: false,
             agent: false,
             origins: '*:*',
