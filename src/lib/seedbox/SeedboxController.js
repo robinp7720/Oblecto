@@ -7,7 +7,7 @@ import Queue from '../queue';
 import { basename, parse, dirname } from 'path';
 import path from 'path';
 import { rename } from 'fs/promises';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 
 /**
  * @typedef {import('../oblecto').default} Oblecto
