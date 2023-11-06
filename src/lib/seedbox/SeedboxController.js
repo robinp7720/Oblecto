@@ -25,8 +25,8 @@ export default class SeedboxController {
 
         this.importQueue = new Queue(oblecto.config.seedboxImport.concurrency);
 
-        this.importQueue.registerJob('importMovie', job => this.importMovie(job.seedbox, job.origin, job.destination));
-        this.importQueue.registerJob('importEpisode', job => this.importEpisode(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importMovie', async job => await this.importMovie(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importEpisode', async job => await this.importEpisode(job.seedbox, job.origin, job.destination));
     }
 
     async loadAllSeedboxes() {
