@@ -43,7 +43,6 @@ import FileIndexer from '../indexers/files/FileIndexer';
 import { initDatabase } from '../../submodules/database';
 import StreamSessionController from '../streamSessions/StreamSessionController';
 import SeedboxController from '../seedbox/SeedboxController';
-import {initDatabes} from '../../submodules/database';
 import EmbyEmulation from '../embyEmulation';
 
 export default class Oblecto {
@@ -105,7 +104,7 @@ export default class Oblecto {
         }
 
         this.oblectoAPI = new OblectoAPI(this);
-        this.realTimeController = new RealtimeController(this);
+        //this.realTimeController = new RealtimeController(this);
 
         // Emby Server emulation
         this.embyServer = new EmbyEmulation(this);
