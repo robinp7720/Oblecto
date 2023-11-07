@@ -90,6 +90,15 @@ export default class SeedboxController {
         await this.importFile(seedbox, origin, destination);
         await this.oblecto.seriesCollector.collectFile(destination);
     }
+    alreadyImportingFile(filePath) {
+        for (let i of this.importQueue.queue._tasks) {
+            if (i.attr.origin === filePath) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     async shouldImportMovie(filePath) {
         const method = 'file';
@@ -135,6 +144,7 @@ export default class SeedboxController {
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
 
+            if (this.alreadyImportingFile(file)) continue;
             if (!await this.shouldImportMovie(file)) continue;
 
             logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
@@ -160,6 +170,8 @@ export default class SeedboxController {
             // Many packs include sample files.
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
+
+            if (this.alreadyImportingFile(file)) continue;
 
             let identification;
 
