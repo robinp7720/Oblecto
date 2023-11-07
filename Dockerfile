@@ -1,8 +1,7 @@
 FROM node:20
 WORKDIR /build
 RUN apt update
-RUN apt install ffmpeg libavahi-compat-libdnssd-dev python3-pip -y
-RUN pip3 install guessit
+RUN apt install ffmpeg libavahi-compat-libdnssd-dev python3 python3-guessit -y
 COPY . .
 RUN npm install --legacy-peer-deps
 RUN npm i sqlite3
