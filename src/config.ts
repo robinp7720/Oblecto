@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { IConfig } from './interfaces/config';
 
 let config: IConfig;
 

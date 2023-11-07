@@ -1,4 +1,4 @@
-FROM node:16
+FROM node:20
 WORKDIR /build
 RUN apt update
 RUN apt install ffmpeg libavahi-compat-libdnssd-dev python3-pip -y
