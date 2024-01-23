@@ -93,6 +93,11 @@ export default class Oblecto {
         this.seedboxController = new SeedboxController(this);
         this.seedboxController.loadAllSeedboxes();
 
+        this.seriesCollector.collectAll();
+        this.movieCollector.collectAll();
+
+        this.fileUpdateCollector.collectAllFiles();
+
         if (config.federation.enable) {
             this.fedartionController = new FederationController(this);
             this.federationClientController = new FederationClientController(this);
