@@ -46,7 +46,14 @@ export default class Seedbox {
         while (toIndex.length > 0) {
             let current = toIndex.pop();
 
-            const entries = await this.storageDriver.list(current);
+            let entries;
+
+            try {
+                entries = await this.storageDriver.list(current);
+            } catch (e) {
+                console.log(`Failed to list files from remote: ${this.name}`, e);
+                continue;
+            }
 
             for (const entry of entries) {
                 switch (entry.type) {
