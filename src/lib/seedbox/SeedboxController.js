@@ -67,7 +67,7 @@ export default class SeedboxController {
     async importFile(seedbox, origin, destination) {
         logger.log('INFO', `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
 
-        mkdirp(dirname(destination));
+        mkdirp.sync(dirname(destination));
 
         try {
             // Add a suffix to the file while downloading to prevent potential errors while running an import
@@ -149,12 +149,17 @@ export default class SeedboxController {
 
             logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
 
+            const destination = path.join(
+                this.oblecto.config.movies.directories[0].path,
+                basename(file)
+            );
+
             // Download the file to the first movie directory path
             // TODO: Add config for where imported files should be stored
             this.importQueue.pushJob('importMovie', {
                 seedbox,
                 origin: file,
-                destination: path.join(this.oblecto.config.movies.directories[0].path, basename(file))
+                destination
             });
         }
     }
@@ -185,12 +190,18 @@ export default class SeedboxController {
 
             logger.log('INFO', `Found new episode on ${seedbox.name}: ${basename(file)}`);
 
+            const destination = path.join(
+                this.oblecto.config.tvshows.directories[0].path,
+                identification.series.seriesName,
+                basename(file)
+            );
+
             // Download the file to the first movie directory path
             // TODO: Add config for where imported files should be stored
             this.importQueue.pushJob('importEpisode', {
                 seedbox,
                 origin: file,
-                destination: path.join(this.oblecto.config.tvshows.directories[0].path, identification.series.seriesName, basename(file))
+                destination
             });
         }
     }
