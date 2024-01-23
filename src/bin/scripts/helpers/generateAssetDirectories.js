@@ -2,7 +2,7 @@ import { mkdirp } from 'mkdirp';
 
 let createDirectory = function (dir) {
     console.log(`Creating directory ${dir}`);
-    mkdirp(dir);
+    mkdirp.sync(dir);
 };
 
 /**
