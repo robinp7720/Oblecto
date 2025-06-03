@@ -41,10 +41,10 @@ export default class SeedboxController {
         await this.importAllMovies();
 
         setInterval(async () => {
-            await this.importAllEpisodes();
-            await this.importAllMovies();
-        },
-        30*60*1000
+                await this.importAllEpisodes();
+                await this.importAllMovies();
+            },
+            30 * 60 * 1000
         );
     }
 
@@ -72,8 +72,8 @@ export default class SeedboxController {
         try {
             // Add a suffix to the file while downloading to prevent potential errors while running an import
             // and also to know if a file was successfully downloaded or not
-            await seedbox.storageDriver.copy(origin, destination+'.oblectoimport');
-            await rename(destination+'.oblectoimport', destination);
+            await seedbox.storageDriver.copy(origin, destination + '.oblectoimport');
+            await rename(destination + '.oblectoimport', destination);
 
             logger.log('INFO', `${origin} successfully downloaded`);
         } catch (e) {
@@ -90,6 +90,7 @@ export default class SeedboxController {
         await this.importFile(seedbox, origin, destination);
         await this.oblecto.seriesCollector.collectFile(destination);
     }
+
     alreadyImportingFile(filePath) {
         for (let i of this.importQueue.queue._tasks) {
             if (i.attr.origin === filePath) {
