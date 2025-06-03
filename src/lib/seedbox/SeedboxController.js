@@ -100,20 +100,23 @@ export default class SeedboxController {
         return false;
     }
 
-    async shouldImportMovie(filePath) {
+    async fileAlreadyImported(filePath) {
+        const file = await File.findOne({ where: { name: parse(filePath).name } });
+
+        return file !== null;
+    }
+
+    async shouldImportMovie(filePath, movie_match) {
         const method = 'file';
 
         if (method === 'movie') {
-            const match = await this.oblecto.movieIndexer.matchFile(filePath, await guessit.identify(filePath));
-            const movie = await Movie.findOne({ where: { tmdbid: match.tmdbid } });
+            const movie = await Movie.findOne({ where: { tmdbid: movie_match.tmdbid } });
 
             return movie === null;
         }
 
         if (method === 'file') {
-            const file = await File.findOne({ where: { name: parse(filePath).name } });
-
-            return file === null;
+            return !await this.fileAlreadyImported(filePath);
         }
     }
 
@@ -126,9 +129,7 @@ export default class SeedboxController {
         }
 
         if (method === 'file') {
-            const file = await File.findOne({ where: { name: parse(filePath).name } });
-
-            return file === null;
+            return !await this.fileAlreadyImported(filePath);
         }
     }
 
