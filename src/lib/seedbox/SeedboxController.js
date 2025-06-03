@@ -146,12 +146,30 @@ export default class SeedboxController {
             if (file.toLowerCase().includes('sample')) continue;
 
             if (this.alreadyImportingFile(file)) continue;
-            if (!await this.shouldImportMovie(file)) continue;
+            if (await this.fileAlreadyImported(file)) continue;
+
+
+            let movie_match = null;
+
+            try {
+                movie_match = await this.oblecto.movieIndexer.matchFile(file);
+            } catch (e) {
+                logger.log('INFO', `Could not identify ${file}`);
+                continue;
+            }
+
+            if (!await this.shouldImportMovie(file, movie_match)) {
+                logger.log('INFO', `Not importing ${movie_match.movieName}`);
+                continue;
+            }
 
             logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
 
+            const movie_data = await this.oblecto.movieUpdater.aggregateMovieUpdateRetriever.retrieveInformation(movie_match);
+
             const destination = path.join(
                 this.oblecto.config.movies.directories[0].path,
+                `${movie_match.movieName} (${movie_data.releaseDate.substr(0, 4)})`,
                 basename(file)
             );
 
