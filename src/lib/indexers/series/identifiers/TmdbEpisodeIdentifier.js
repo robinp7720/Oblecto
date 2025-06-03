@@ -16,11 +16,17 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
     async identify(path, guessitIdentification, series) {
         if (!series.tmdbid) throw new IdentificationError();
 
-        let episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
-            id: series.tmdbid,
-            season_number: guessitIdentification.season || 1,
-            episode_number: guessitIdentification.episode
-        }, { timeout: 5000 }));
+        let episode;
+
+        try {
+            episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
+                id: series.tmdbid,
+                season_number: guessitIdentification.season || 1,
+                episode_number: guessitIdentification.episode
+            }, { timeout: 5000 }));
+        } catch (e) {
+            throw new IdentificationError("Could not find episode");
+        }
 
         return {
             tmdbid: episode.id,

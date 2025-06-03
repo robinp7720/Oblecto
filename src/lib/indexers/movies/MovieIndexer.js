@@ -30,7 +30,10 @@ export default class MovieIndexer {
         this.oblecto.queue.registerJob('indexMovie', async (job) => await this.indexFile(job.path, job.doReIndex));
     }
 
-    async matchFile(moviePath, guessitIdentification) {
+    async matchFile(moviePath) {
+        const guessitIdentification = await guessit.identify(moviePath);
+
+
         try {
             return await this.movieIdentifier.identify(moviePath, guessitIdentification);
         } catch (e) {
@@ -57,13 +60,7 @@ export default class MovieIndexer {
     async indexFile(moviePath, doReindex) {
         const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
-        const guessitIdentification = await guessit.identify(moviePath);
-
-        if (!guessitIdentification.title) {
-            throw new IdentificationError('Title extraction was unsuccessful');
-        }
-
-        const movieIdentification = await this.matchFile(moviePath, guessitIdentification);
+        const movieIdentification = await this.matchFile(moviePath);
 
         let [movie, movieCreated] = await Movie.findOrCreate(
             {

@@ -7,7 +7,7 @@ import Queue from '../queue';
 import { basename, parse, dirname } from 'path';
 import path from 'path';
 import { rename } from 'fs/promises';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 
 /**
  * @typedef {import('../oblecto').default} Oblecto
@@ -25,8 +25,8 @@ export default class SeedboxController {
 
         this.importQueue = new Queue(oblecto.config.seedboxImport.concurrency);
 
-        this.importQueue.registerJob('importMovie', job => this.importMovie(job.seedbox, job.origin, job.destination));
-        this.importQueue.registerJob('importEpisode', job => this.importEpisode(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importMovie', async job => await this.importMovie(job.seedbox, job.origin, job.destination));
+        this.importQueue.registerJob('importEpisode', async job => await this.importEpisode(job.seedbox, job.origin, job.destination));
     }
 
     async loadAllSeedboxes() {
@@ -41,10 +41,10 @@ export default class SeedboxController {
         await this.importAllMovies();
 
         setInterval(async () => {
-            await this.importAllEpisodes();
-            await this.importAllMovies();
-        },
-        30*60*1000
+                await this.importAllEpisodes();
+                await this.importAllMovies();
+            },
+            30 * 60 * 1000
         );
     }
 
@@ -67,13 +67,13 @@ export default class SeedboxController {
     async importFile(seedbox, origin, destination) {
         logger.log('INFO', `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
 
-        mkdirp(dirname(destination));
+        mkdirp.sync(dirname(destination));
 
         try {
             // Add a suffix to the file while downloading to prevent potential errors while running an import
             // and also to know if a file was successfully downloaded or not
-            await seedbox.storageDriver.copy(origin, destination+'.oblectoimport');
-            await rename(destination+'.oblectoimport', destination);
+            await seedbox.storageDriver.copy(origin, destination + '.oblectoimport');
+            await rename(destination + '.oblectoimport', destination);
 
             logger.log('INFO', `${origin} successfully downloaded`);
         } catch (e) {
@@ -91,20 +91,33 @@ export default class SeedboxController {
         await this.oblecto.seriesCollector.collectFile(destination);
     }
 
-    async shouldImportMovie(filePath) {
+    alreadyImportingFile(filePath) {
+        for (let i of this.importQueue.queue._tasks) {
+            if (i.attr.origin === filePath) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    async fileAlreadyImported(filePath) {
+        const file = await File.findOne({ where: { name: parse(filePath).name } });
+
+        return file !== null;
+    }
+
+    async shouldImportMovie(filePath, movie_match) {
         const method = 'file';
 
         if (method === 'movie') {
-            const match = await this.oblecto.movieIndexer.matchFile(filePath, await guessit.identify(filePath));
-            const movie = await Movie.findOne({ where: { tmdbid: match.tmdbid } });
+            const movie = await Movie.findOne({ where: { tmdbid: movie_match.tmdbid } });
 
             return movie === null;
         }
 
         if (method === 'file') {
-            const file = await File.findOne({ where: { name: parse(filePath).name } });
-
-            return file === null;
+            return !await this.fileAlreadyImported(filePath);
         }
     }
 
@@ -117,9 +130,7 @@ export default class SeedboxController {
         }
 
         if (method === 'file') {
-            const file = await File.findOne({ where: { name: parse(filePath).name } });
-
-            return file === null;
+            return !await this.fileAlreadyImported(filePath);
         }
     }
 
@@ -135,16 +146,40 @@ export default class SeedboxController {
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
 
-            if (!await this.shouldImportMovie(file)) continue;
+            if (this.alreadyImportingFile(file)) continue;
+            if (await this.fileAlreadyImported(file)) continue;
+
+
+            let movie_match = null;
+
+            try {
+                movie_match = await this.oblecto.movieIndexer.matchFile(file);
+            } catch (e) {
+                logger.log('INFO', `Could not identify ${file}`);
+                continue;
+            }
+
+            if (!await this.shouldImportMovie(file, movie_match)) {
+                logger.log('INFO', `Not importing ${movie_match.movieName}`);
+                continue;
+            }
 
             logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
+
+            const movie_data = await this.oblecto.movieUpdater.aggregateMovieUpdateRetriever.retrieveInformation(movie_match);
+
+            const destination = path.join(
+                this.oblecto.config.movies.directories[0].path,
+                `${movie_match.movieName} (${movie_data.releaseDate.substr(0, 4)})`,
+                basename(file)
+            );
 
             // Download the file to the first movie directory path
             // TODO: Add config for where imported files should be stored
             this.importQueue.pushJob('importMovie', {
                 seedbox,
                 origin: file,
-                destination: path.join(this.oblecto.config.movies.directories[0].path, basename(file))
+                destination
             });
         }
     }
@@ -161,6 +196,8 @@ export default class SeedboxController {
             // We don't want to import these
             if (file.toLowerCase().includes('sample')) continue;
 
+            if (this.alreadyImportingFile(file)) continue;
+
             let identification;
 
             try {
@@ -173,12 +210,18 @@ export default class SeedboxController {
 
             logger.log('INFO', `Found new episode on ${seedbox.name}: ${basename(file)}`);
 
+            const destination = path.join(
+                this.oblecto.config.tvshows.directories[0].path,
+                identification.series.seriesName,
+                basename(file)
+            );
+
             // Download the file to the first movie directory path
             // TODO: Add config for where imported files should be stored
             this.importQueue.pushJob('importEpisode', {
                 seedbox,
                 origin: file,
-                destination: path.join(this.oblecto.config.tvshows.directories[0].path, identification.series.seriesName, basename(file))
+                destination
             });
         }
     }

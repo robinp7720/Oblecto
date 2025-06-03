@@ -1,5 +1,5 @@
 import StreamSession from '../StreamSession';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 import * as os from 'os';
 import ffmpeg from '../../../submodules/ffmpeg';
 import * as fs from 'fs';

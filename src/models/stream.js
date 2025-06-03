@@ -91,5 +91,30 @@ export const streamColumns = {
     divx_packed: DataTypes.BOOLEAN,
 
     side_data_type: DataTypes.STRING,
-    closed_captions: DataTypes.BOOLEAN
+    closed_captions: DataTypes.BOOLEAN,
+
+    extradata_size: DataTypes.INTEGER,
+    film_grain: DataTypes.STRING,
+
+    dv_version_major: DataTypes.STRING,
+    dv_version_minor: DataTypes.STRING,
+    dv_profile: DataTypes.STRING,
+    dv_level: DataTypes.STRING,
+    rpu_present_flag: DataTypes.STRING,
+    el_present_flag: DataTypes.STRING,
+    bl_present_flag: DataTypes.STRING,
+    dv_bl_signal_compatibility_id: DataTypes.STRING,
+
+    max_content: DataTypes.STRING,
+    max_average: DataTypes.STRING,
+    red_x: DataTypes.STRING,
+    red_y: DataTypes.STRING,
+    green_x: DataTypes.STRING,
+    green_y: DataTypes.STRING,
+    blue_x: DataTypes.STRING,
+    blue_y: DataTypes.STRING,
+    white_point_y: DataTypes.STRING,
+    white_point_x: DataTypes.STRING,
+    min_luminance: DataTypes.STRING,
+    max_luminance: DataTypes.STRING
 };

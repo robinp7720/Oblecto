@@ -4,13 +4,13 @@ export class Episode extends Model {}
 
 export const episodeColumns = {
     tvdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     tmdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     imdbid: {
-        type: DataTypes.STRING, allowNull: true, unique: true 
+        type: DataTypes.STRING, allowNull: true, unique: true
     },
 
     episodeName: { type: DataTypes.STRING, allowNull: true },
@@ -22,5 +22,5 @@ export const episodeColumns = {
     dvdSeason: { type: DataTypes.STRING, allowNull: true },
 
     firstAired: { type: DataTypes.DATEONLY, allowNull: true },
-    overview: { type: DataTypes.STRING, allowNull: true },
+    overview: { type: DataTypes.TEXT, allowNull: true },
 };

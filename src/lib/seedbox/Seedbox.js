@@ -3,6 +3,7 @@ import SeedboxImportFTP from './SeedboxImportDrivers/SeedboxImportFTP';
 import WarnExtendableError from '../errors/WarnExtendableError';
 import logger from '../../submodules/logger';
 import SeedboxImportFTPS from './SeedboxImportDrivers/SeedboxImportFTPS';
+import SeedboxImportSSH from './SeedboxImportDrivers/SeedboxImportSSH';
 
 export default class Seedbox {
     constructor(seedboxConfig) {
@@ -20,6 +21,10 @@ export default class Seedbox {
                 return;
             case 'ftps':
                 this.storageDriver = new SeedboxImportFTPS(seedboxStorageDriverOptions);
+                return;
+            case'sftp':
+            case 'ssh':
+                this.storageDriver = new SeedboxImportSSH(seedboxStorageDriverOptions);
                 return;
         }
 
@@ -41,7 +46,14 @@ export default class Seedbox {
         while (toIndex.length > 0) {
             let current = toIndex.pop();
 
-            const entries = await this.storageDriver.list(current);
+            let entries;
+
+            try {
+                entries = await this.storageDriver.list(current);
+            } catch (e) {
+                console.log(`Failed to list files from remote: ${this.name}`, e);
+                continue;
+            }
 
             for (const entry of entries) {
                 switch (entry.type) {

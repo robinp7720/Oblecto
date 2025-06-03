@@ -1,4 +1,4 @@
-interface IConfig {
+export interface IConfig {
     'ffmpeg': unknown
     'indexer': {
         'runAtBoot': boolean
