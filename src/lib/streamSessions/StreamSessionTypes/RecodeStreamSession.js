@@ -134,7 +134,7 @@ export default class RecodeStreamSession extends StreamSession {
         // Pipe the transcoded output to the session output stream instead of
         // directly to the first destination. This prevents the ffmpeg process
         // from being terminated when a client disconnects prematurely.
-        this.process.pipe(this.outputStream, { end: true });
+        this.process.pipe(this.destinations[0].stream, { end: true });
     }
 
     outputPause() {
