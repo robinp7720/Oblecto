@@ -1,5 +1,5 @@
 /**
- * @param {*} server
+ * @param {rest} server
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
