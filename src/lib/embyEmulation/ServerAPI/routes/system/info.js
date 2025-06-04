@@ -1,9 +1,9 @@
 export default (server, embyEmulation) => {
     server.get('/system/info/public', async (req, res) => {
         res.send({
-            'LocalAddress': 'http://pegasus:9096',
+            'LocalAddress': 'http://oblecto:9096',
             'ServerName': embyEmulation.serverName,
-            'Version': '10.8.10',
+            'Version': '10.10.7',
             'ProductName': 'Jellyfin Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId,

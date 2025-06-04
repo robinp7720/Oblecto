@@ -6,6 +6,8 @@ import branding from './branding';
 import shows from './shows';
 import items from './items';
 import videos from './videos';
+import quickconnect from './quickconnect';
+import web from './web';
 
 /**
  *
@@ -21,4 +23,10 @@ export default (server, embyEmulation) => {
     shows(server, embyEmulation);
     items(server, embyEmulation);
     videos(server, embyEmulation);
+    quickconnect(server, embyEmulation);
+    web(server, embyEmulation);
+
+    server.get('/scheduledtasks', async (req, res) => {
+        res.send({});
+    });
 };
