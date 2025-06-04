@@ -43,10 +43,11 @@ export default class FileUpdater {
         let primaryStream = { duration: 0 };
 
         for (const stream of streams) {
-            if (stream.duration || 1 >= primaryStream.duration) {
-                if (stream['codec_type'] !=='video')
-                    continue;
+            if (stream['codec_type'] !== 'video')
+                continue;
 
+            if (stream.duration !== undefined &&
+                stream.duration >= primaryStream.duration) {
                 primaryStream = stream;
             }
         }
@@ -59,10 +60,11 @@ export default class FileUpdater {
         let primaryStream = { duration: 0 };
 
         for (const stream of streams) {
-            if (stream.duration || 1 >= primaryStream.duration) {
-                if (stream['codec_type'] !=='audio')
-                    continue;
+            if (stream['codec_type'] !== 'audio')
+                continue;
 
+            if (stream.duration !== undefined &&
+                stream.duration >= primaryStream.duration) {
                 primaryStream = stream;
             }
         }
