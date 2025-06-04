@@ -102,22 +102,20 @@ export default class StreamSession extends EventEmitter {
             destination.stream.writeHead(this.httpStatusCode, this.httpHeaders);
         }
 
-        let _this = this;
-
         destination.stream
             .on('error', (err) => {
                 logger.log('ERROR', this.sessionId, err);
             })
-            .on('close', function () {
-                for (let i in _this.destinations) {
-                    if (_this.destinations[i].stream === this) {
-                        _this.destinations.splice(i, 1);
-                    }
+            .on('close', () => {
+                // Remove destination by reference rather than finding index
+                const destinationIndex = this.destinations.indexOf(destination);
+                if (destinationIndex > -1) {
+                    this.destinations.splice(destinationIndex, 1);
                 }
 
-                if (_this.destinations.length === 0) {
-                    logger.log('INFO', _this.sessionId, 'last client has disconnected. Setting timeout output stream');
-                    _this.startTimeout();
+                if (!this.destinations.length) {
+                    logger.log('INFO', this.sessionId, 'last client has disconnected. Setting timeout output stream');
+                    this.startTimeout();
                 }
             });
     }
