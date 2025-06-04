@@ -31,7 +31,7 @@ export default class OblectoAPI {
         this.server.use(restify.plugins.queryParser({ mapParams: true }));
         this.server.use(restify.plugins.bodyParser({ mapParams: true }));
 
-        // Add routes routes
+        // Add routes
         routes(this.server, this.oblecto);
 
         // Start restify server

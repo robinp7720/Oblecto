@@ -54,7 +54,7 @@ export default class EmbyServerAPI {
             console.log(request.url, request.params, request.method);
         });
 
-        // Add routes routes
+        // Add routes
         routes(this.server, this.embyEmulation);
 
         // Start restify server
