@@ -3,8 +3,7 @@ import binary from 'guessit-exec';
 import which from 'which';
 
 import logger from './logger';
-
-let useBinary = true;
+import { exit } from 'jshint/src/cli';
 
 /**
  * @typedef {object} GuessitIdentification
@@ -29,12 +28,8 @@ let useBinary = true;
 which('guessit', function (err, resolvedPath) {
     if (err) {
         logger.log('INFO', 'Guessit binary has not been found');
-        logger.log('INFO', 'Using the web based identifier');
-        logger.log('INFO', 'This may significantly reduce indexing speeds');
         logger.log('INFO', 'Please install guessit from your package manager');
-        useBinary = false;
-
-        return;
+        exit(1);
     }
 
     logger.log('INFO', 'Guessit binary has been found');
@@ -48,10 +43,6 @@ export default {
      * @returns {GuessitIdentification} - Guessit Identification object
      */
     async identify(search) {
-        if (useBinary) {
-            return binary(search);
-        }
-
-        return web.parseName(search);
+        return binary(search);
     }
 };
