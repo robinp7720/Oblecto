@@ -47,7 +47,13 @@ export default class RecodeStreamSession extends StreamSession {
         let inputOptions = ['-noaccurate_seek',];
 
         let outputOptions = [
-            '-movflags empty_moov',
+            // create an init-segment (ftyp+moov) and then a moof/mdat pair
+            // every time a key-frame is written
+            '-movflags +frag_keyframe+empty_moov+default_base_moof',
+
+            // don’t copy the original time-stamps – large / non-zero DTS values
+            // confuse some browsers; start at zero instead
+            '-reset_timestamps 1',
             '-copyts',
             '-preset ultrafast',
             '-tune zerolatency'
