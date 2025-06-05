@@ -44,7 +44,10 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.started = true;
 
-        let inputOptions = ['-noaccurate_seek',];
+        let inputOptions = [
+            '-re',
+            '-noaccurate_seek',
+        ];
 
         let outputOptions = [
             // create an init-segment (ftyp+moov) and then a moof/mdat pair

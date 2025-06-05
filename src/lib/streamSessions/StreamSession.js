@@ -52,6 +52,7 @@ export default class StreamSession extends EventEmitter {
         this.httpHeaders = {
             'Content-Type': this.getOutputMimetype(),
             'Accept-Ranges': 'none',
+            'Connection': 'keep-alive',
         };
 
         this.httpStatusCode = 200;
