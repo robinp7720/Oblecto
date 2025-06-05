@@ -100,6 +100,10 @@ export default class StreamSession extends EventEmitter {
 
         if (destination.type === 'http') {
             destination.stream.writeHead(this.httpStatusCode, this.httpHeaders);
+            // Disable the socket timeout for long-lived streaming connections
+            if (typeof destination.stream.setTimeout === 'function') {
+                destination.stream.setTimeout(0);
+            }
         }
 
         destination.stream
