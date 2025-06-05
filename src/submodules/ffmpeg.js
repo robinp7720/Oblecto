@@ -106,7 +106,15 @@ class FfmpegCommand extends EventEmitter {
 
         this.process = child;
         this.emit('start', `${ffmpegPath} ${args.join(' ')}`);
+
+        // Drain stderr to avoid blocking if ffmpeg writes extensive logs
+        if (child.stderr) {
+            child.stderr.on('data', (data) => this.emit('stderr', data.toString()));
+        }
+
+        child.on('close', (code, signal) => this.emit('end', code, signal));
         child.on('error', (err) => this.emit('error', err));
+
         return child;
     }
 
