@@ -53,6 +53,9 @@ export default class StreamSession extends EventEmitter {
             'Content-Type': this.getOutputMimetype(),
             'Accept-Ranges': 'none',
             'Connection': 'keep-alive',
+            // Explicitly extend the keep-alive timeout so browsers do not close
+            // the connection during long running streams.
+            'Keep-Alive': 'timeout=600',
         };
 
         this.httpStatusCode = 200;
