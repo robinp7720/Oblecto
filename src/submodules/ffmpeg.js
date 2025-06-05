@@ -74,13 +74,13 @@ class FfmpegCommand extends EventEmitter {
             args.push('-ss', String(this.seekInputValue));
         }
 
+        args.push(...this.inputOpts);
+
         if (this.input instanceof stream.Stream) {
             args.push('-i', 'pipe:0');
         } else {
             args.push('-i', this.input);
         }
-
-        args.push(...this.inputOpts);
 
         if (this.videoCodecValue) {
             args.push('-vcodec', this.videoCodecValue);
