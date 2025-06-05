@@ -37,7 +37,10 @@ export default class RecodeFederationStreamSession extends StreamSession {
 
         await this.initFederationStream();
 
-        let inputOptions = ['-noaccurate_seek',];
+        let inputOptions = [
+            '-re',
+            '-noaccurate_seek',
+        ];
 
         let outputOptions = [
             '-movflags', 'empty_moov',

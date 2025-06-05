@@ -52,6 +52,10 @@ export default class StreamSession extends EventEmitter {
         this.httpHeaders = {
             'Content-Type': this.getOutputMimetype(),
             'Accept-Ranges': 'none',
+            'Connection': 'keep-alive',
+            // Explicitly extend the keep-alive timeout so browsers do not close
+            // the connection during long running streams.
+            'Keep-Alive': 'timeout=600',
         };
 
         this.httpStatusCode = 200;
@@ -100,6 +104,10 @@ export default class StreamSession extends EventEmitter {
 
         if (destination.type === 'http') {
             destination.stream.writeHead(this.httpStatusCode, this.httpHeaders);
+            // Disable the socket timeout for long-lived streaming connections
+            if (typeof destination.stream.setTimeout === 'function') {
+                destination.stream.setTimeout(0);
+            }
         }
 
         destination.stream

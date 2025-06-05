@@ -7,13 +7,5 @@ import ffmpeg from './ffmpeg';
  * @returns {Promise<any>} - JSON object containing file information
  */
 export default function ffprobe(path) {
-    return new Promise(function(resolve, reject) {
-        ffmpeg.ffprobe(path, function (err, metadata) {
-            if (err) {
-                return reject(err);
-            }
-
-            return resolve(metadata);
-        });
-    });
+    return ffmpeg.ffprobe(path);
 }

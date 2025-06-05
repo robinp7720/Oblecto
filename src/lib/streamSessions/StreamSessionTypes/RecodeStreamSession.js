@@ -44,7 +44,10 @@ export default class RecodeStreamSession extends StreamSession {
 
         this.started = true;
 
-        let inputOptions = ['-noaccurate_seek',];
+        let inputOptions = [
+            '-re',
+            '-noaccurate_seek',
+        ];
 
         let outputOptions = [
             // create an init-segment (ftyp+moov) and then a moof/mdat pair
@@ -131,9 +134,9 @@ export default class RecodeStreamSession extends StreamSession {
             logger.log('ERROR', this.sessionId, err);
         });
 
-        // Pipe the transcoded output to the session output stream instead of
-        // directly to the first destination. This prevents the ffmpeg process
-        // from being terminated when a client disconnects prematurely.
+        // Send the transcoded output directly to the initial destination.
+        // Using the first HTTP stream avoids unnecessary buffering and
+        // prevents browsers from prematurely timing out when pausing.
         this.process.pipe(this.destinations[0].stream, { end: true });
     }
 
