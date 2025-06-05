@@ -37,13 +37,34 @@ class FfmpegCommand extends EventEmitter {
         return this;
     }
 
+    _parseOptions(options) {
+        if (!Array.isArray(options)) {
+            options = [options];
+        }
+
+        const result = [];
+
+        for (const opt of options) {
+            if (typeof opt === 'string') {
+                const matches = opt.match(/(?:[^\s"]+|"[^"]*")+/g);
+                if (matches) {
+                    result.push(...matches);
+                }
+            } else {
+                result.push(String(opt));
+            }
+        }
+
+        return result;
+    }
+
     inputOptions(options) {
-        this.inputOpts.push(...options);
+        this.inputOpts.push(...this._parseOptions(options));
         return this;
     }
 
     outputOptions(options) {
-        this.outputOpts.push(...options);
+        this.outputOpts.push(...this._parseOptions(options));
         return this;
     }
 
