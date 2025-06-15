@@ -4,7 +4,7 @@ import sequelize from 'sequelize';
 import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
-import errors from 'restify-errors';
+import errors from '../errors';
 
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
@@ -69,9 +69,9 @@ export default (server, oblecto) => {
     server.get('/series/:id/poster', async function (req, res) {
         let show = await Series.findByPk(req.params.id);
 
-        let imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.params.size || 'medium');
+        let imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.combined_params.size || 'medium');
 
-        res.sendRaw(await fs.readFile(imagePath));
+        res.sendFile(imagePath);
     });
 
     server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req, res) {

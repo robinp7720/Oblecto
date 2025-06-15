@@ -1,38 +1,34 @@
-import restify from 'restify';
-import { promises as fs } from 'fs';
+import express from 'express';
+import path from 'path';
+/**
+ * @typedef {import('express').Express} Server
+ * @typedef {import('../../../lib/oblecto').default} Oblecto
+ */
+
+
+const webDir = path.join(__dirname, '../../../../Oblecto-Web/dist/web/');
 
 /**
  * @param {Server} server
  * @param {Oblecto} oblecto
  */
 export default (server, oblecto) => {
-    server.get('/web/static/*', restify.plugins.serveStatic({ directory: __dirname + '/../../../../Oblecto-Web/dist/', }));
+    server.use('/web', express.static(webDir));
 
-    server.get('/web/logo.png', async (req, res) => {
-        const body = await fs.readFile(__dirname + '/../../../../images/logomark.png');
-
-        res.writeHead(200, {
-            'Content-Length': Buffer.byteLength(body),
-            'Content-Type': 'image/png'
-        });
-
-        res.write(body);
-        res.end();
+    server.get('/web/logo.png', (req, res) => {
+        try {
+            const logoPath = path.join(__dirname, '../../../../images/logomark.png');
+            res.sendFile(logoPath);
+        } catch (error) {
+            res.status(500).send('Error serving logo image');
+        }
     });
 
-    server.get('/web*', async (req, res) => {
-        let body = await fs.readFile(__dirname + '/../../../../Oblecto-Web/dist/web/index.html', 'utf8');
-
-        res.writeHead(200, {
-            'Content-Length': Buffer.byteLength(body),
-            'Content-Type': 'text/html'
-        });
-
-        res.write(body);
-        res.end();
+    server.use('/web/*route', (req, res) => {
+        res.sendFile(path.join(webDir, 'index.html'));
     });
 
     server.get('/', async (req, res) => {
-        res.redirect('/web', (v) => v);
+        //res.redirect('/web', (v) => v);
     });
 };
