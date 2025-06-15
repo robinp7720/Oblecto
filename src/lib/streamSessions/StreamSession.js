@@ -99,7 +99,8 @@ export default class StreamSession extends EventEmitter {
         this.outputStream.pipe(destination.stream);
 
         if (destination.type === 'http') {
-            destination.stream.writeHead(this.httpStatusCode, this.httpHeaders);
+            destination.stream.setHeader('Content-Type', this.getOutputMimetype());
+            destination.stream.status(this.httpStatusCode);
         }
 
         destination.stream

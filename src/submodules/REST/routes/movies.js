@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-import errors from 'restify-errors';
+import errors from '../errors';
 import sequelize from 'sequelize';
 import sharp from 'sharp';
 
@@ -23,17 +23,17 @@ export default (server, oblecto) => {
 
         let AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
+        if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return new errors.BadRequestError('Sorting order is invalid');
 
         if (!(req.params.sorting in Movie.rawAttributes))
             return new errors.BadRequestError('Sorting method is invalid');
 
-        if (req.params.count && Number.isInteger(req.params.count))
-            limit = parseInt(req.params.count);
+        if (req.combined_params.count && Number.isInteger(req.combined_params.count))
+            limit = parseInt(req.combined_params.count);
 
-        if (req.params.page && Number.isInteger(req.params.page))
-            page = parseInt(req.params.page);
+        if (req.combined_params.page && Number.isInteger(req.combined_params.page))
+            page = parseInt(req.combined_params.page);
 
         let results = await Movie.findAll({
             include: [
@@ -43,7 +43,7 @@ export default (server, oblecto) => {
                     where: { userId: req.authorization.user.id }
                 }
             ],
-            order: [[req.params.sorting, req.params.order]],
+            order: [[req.params.sorting, req.combined_params.order]],
             limit,
             offset: limit * page
         });
@@ -58,15 +58,15 @@ export default (server, oblecto) => {
     });
 
     server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req, res) {
-        let limit = req.params.count || 20;
-        let page = req.params.page || 0;
+        let limit = req.combined_params.count || 20;
+        let page = req.combined_params.page || 0;
 
         if (!Number.isInteger(limit) || !Number.isInteger(page))
             return new errors.BadRequestError('Limit or Page must be a number');
 
         let AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
+        if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return new errors.BadRequestError('Sorting order is invalid');
 
         let results = await MovieSet.findAll({
@@ -93,9 +93,9 @@ export default (server, oblecto) => {
     server.get('/movie/:id/poster', async function (req, res) {
         let movie = await Movie.findByPk(req.params.id);
 
-        const path = oblecto.artworkUtils.moviePosterPath(movie, req.params.size || 'medium');
+        const path = oblecto.artworkUtils.moviePosterPath(movie, req.combined_params.size || 'medium');
 
-        res.sendRaw(await fs.readFile(path));
+        res.sendFile(path);
     });
 
     server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req, res) {
@@ -144,9 +144,9 @@ export default (server, oblecto) => {
     server.get('/movie/:id/fanart', async function (req, res) {
         let movie = await Movie.findByPk(req.params.id);
 
-        const path = oblecto.artworkUtils.movieFanartPath(movie, req.params.size || 'large');
+        const path = oblecto.artworkUtils.movieFanartPath(movie, req.combined_params.size || 'large');
 
-        res.sendRaw(await fs.readFile(path));
+        res.sendFile(path);
     });
 
     server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req, res) {
@@ -244,7 +244,7 @@ export default (server, oblecto) => {
     server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res) {
         try {
             let [movie] = await Movie.findByPk(req.params.id);
-            let [set] = await MovieSet.findByPk(req.params.setId);
+            let [set] = await MovieSet.findByPk(req.combined_params.setId);
 
             set.addMovie(movie);
         } catch (e) {

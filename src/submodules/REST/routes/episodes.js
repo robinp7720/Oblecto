@@ -1,6 +1,6 @@
 import sequelize from 'sequelize';
 import { promises as fs } from 'fs';
-import errors from 'restify-errors';
+import errors from '../errors';
 import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
@@ -19,17 +19,17 @@ export default (server, oblecto) => {
 
         let AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf(req.params.order.toLowerCase()) === -1)
+        if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return new errors.BadRequestError('Sorting order is invalid');
 
         if (!(req.params.sorting in Episode.rawAttributes))
             return new errors.BadRequestError('Sorting method is invalid');
 
-        if (req.params.count && Number.isInteger(req.params.count))
-            limit = parseInt(req.params.count);
+        if (req.combined_params.count && Number.isInteger(req.combined_params.count))
+            limit = parseInt(req.combined_params.count);
 
-        if (req.params.page && Number.isInteger(req.params.page))
-            page = parseInt(req.params.page);
+        if (req.combined_params.page && Number.isInteger(req.combined_params.page))
+            page = parseInt(req.combined_params.page);
 
         let results = await Episode.findAll({
             include: [
@@ -40,7 +40,7 @@ export default (server, oblecto) => {
                     where: { userId: req.authorization.user.id }
                 }
             ],
-            order: [[req.params.sorting, req.params.order]],
+            order: [[req.params.sorting, req.combined_params.order]],
             limit,
             offset: limit * page
         });
@@ -52,9 +52,9 @@ export default (server, oblecto) => {
     server.get('/episode/:id/banner', async function (req, res) {
         let episode = await Episode.findByPk(req.params.id, { include: [File] });
 
-        let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.params.size || 'medium');
+        let imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.combined_params.size || 'medium');
 
-        res.sendRaw(await fs.readFile(imagePath));
+        res.sendFile(imagePath);
     });
 
     server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req, res) {

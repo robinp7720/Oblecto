@@ -6,8 +6,8 @@ import logger from '../../../submodules/logger';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
- * @typedef {import('restify/lib/response')} Response
- * @typedef {import('restify/lib/request')} Request
+ * @typedef {import('express').Response} Response
+ * @typedef {import('express').Request} Request
  */
 
 export default class DirectHttpStreamSession extends StreamSession {

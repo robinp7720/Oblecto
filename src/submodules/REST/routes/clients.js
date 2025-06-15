@@ -2,12 +2,12 @@ import authMiddleWare from '../middleware/auth';
 
 /**
  * @typedef {import('../../../lib/oblecto').default} Oblecto
- * @typedef {import('restify/lib/server')} Server
+ * @typedef {import('express').Express} Server
  */
 
 /**
  *
- * @param {Server} server - Restify server object
+ * @param {Server} server - Express server object
  * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {
@@ -29,7 +29,7 @@ export default (server, oblecto) => {
     });
 
     server.post('/client/:clientId/playback', authMiddleWare.requiresAuth, async function (req, res) {
-        let type = req.params.type;
+        let type = req.combined_params.type;
         let client = oblecto.realTimeController.clients[req.params.clientId];
 
         switch (type) {

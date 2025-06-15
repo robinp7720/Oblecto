@@ -14,7 +14,7 @@ export default class RealtimeController {
         this.oblecto = oblecto;
         this.clients = {};
 
-        this.server = new Server(oblecto.oblectoAPI.server.server, {
+        this.server = new Server(oblecto.oblectoAPI.server, {
             log: false,
             agent: false,
             origins: '*:*',

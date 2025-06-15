@@ -6,12 +6,12 @@ import sequelize from 'sequelize';
 
 /**
  * @typedef {import('../../../lib/oblecto').default} Oblecto
- * @typedef {import('restify/lib/server')} Server
+ * @typedef {import('express').Express} Server
  */
 
 /**
  *
- * @param {Server} server - Restify server object
+ * @param {Server} server - Express server object
  * @param {Oblecto} oblecto - Oblecto server instance
  */
 export default (server, oblecto) => {

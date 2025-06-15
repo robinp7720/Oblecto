@@ -1,7 +1,7 @@
-import restify from 'restify';
+import express from 'express';
 import routes from './routes';
 import logger from '../logger';
-import corsMiddleware from 'restify-cors-middleware2';
+import cors from 'cors';
 
 /**
  * @typedef {import('../../lib/oblecto').default} Oblecto
@@ -15,32 +15,78 @@ export default class OblectoAPI {
         this.oblecto = oblecto;
 
         // Initialize REST based server
-        this.server = restify.createServer({ 'name': 'Oblecto' });
+        const app = express();
+        this.server = app;
+        //this.server.name = 'Oblecto';
 
-        const cors = corsMiddleware({
-            preflightMaxAge: 5, // Optional
-            origins: ['*'],
-            allowHeaders: ['API-Token'],
-            exposeHeaders: ['API-Token-Expiry']
+        // Configure CORS
+        app.use(cors({
+            origin: '*',
+            maxAge: 5,
+            allowedHeaders: ['API-Token'],
+            exposedHeaders: ['API-Token-Expiry']
+        }));
+
+        // Parse Authorization header
+        app.use((req, res, next) => {
+            if (req.headers.authorization) {
+                const parts = req.headers.authorization.split(' ');
+                if (parts.length === 2) {
+                    const scheme = parts[0];
+                    const credentials = parts[1];
+                    req.authorization = { scheme, credentials };
+                }
+            }
+            next();
         });
 
-        this.server.pre(cors.preflight);
-        this.server.use(cors.actual);
+        // Parse query parameters and body
+        app.use(express.urlencoded({ extended: true }));
+        app.use(express.json());
 
-        this.server.use(restify.plugins.authorizationParser());
-        this.server.use(restify.plugins.queryParser({ mapParams: true }));
-        this.server.use(restify.plugins.bodyParser({ mapParams: true }));
+        // Map query and body params to req.combined_params for compatibility with existing code
+        app.use((req, res, next) => {
+            req.combined_params = { ...req.query, ...req.body};
+            next();
+        });
 
-        // Add routes
-        routes(this.server, this.oblecto);
+        // Initialize routes
+        routes(app, this.oblecto);
 
-        // Start restify server
-        this.server.listen(this.oblecto.config.server.port,  () => {
-            logger.log('INFO', this.server.name, 'REST API Listening at', this.server.url);
+        // Error handling middleware
+        app.use((err, req, res, next) => {
+            if (!err) return next();
+
+            const statusCode = err.statusCode || 500;
+            const message = err.message || 'Internal Server Error';
+
+            logger.log('ERROR', `HTTP ${statusCode} - ${message}`, err);
+
+            res.status(statusCode).json({
+                code: statusCode,
+                message: message
+            });
+        });
+
+        // Start express server
+        this.server = app.listen(this.oblecto.config.server.port, () => {
+            logger.log('INFO', 'REST API Listening at', `http://localhost:${this.oblecto.config.server.port}`);
         });
     }
 
     close() {
-        this.server.close();
+        if (this.server && this.server.listening) {
+            return new Promise((resolve, reject) => {
+                this.server.close(err => {
+                    if (err) {
+                        logger.log('ERROR', 'Error closing REST server:', err);
+                        return reject(err);
+                    }
+                    logger.log('INFO', 'REST server closed successfully');
+                    resolve();
+                });
+            });
+        }
+        return Promise.resolve();
     }
 }
