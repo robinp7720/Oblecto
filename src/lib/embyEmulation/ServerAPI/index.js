@@ -1,6 +1,6 @@
-import restify from 'restify';
+import express from 'express';
 import routes from './routes';
-import corsMiddleware from 'restify-cors-middleware2';
+import cors from 'cors';
 
 /**
  * Parses a header/string of the form:
@@ -45,29 +45,47 @@ export default class EmbyServerAPI {
         this.embyEmulation = embyEmulation;
 
         // Initialize REST based server
-        this.server = restify.createServer();
+        this.server = express();
 
         // Allow remote clients to connect to the backend
-        const cors = corsMiddleware({
-            preflightMaxAge: 5, // Optional
-            origins: ['*'],
-            allowHeaders: ['API-Token'],
-            exposeHeaders: ['API-Token-Expiry']
+        this.server.use(cors({
+            origin: '*',
+            maxAge: 5,
+            allowedHeaders: ['API-Token'],
+            exposedHeaders: ['API-Token-Expiry']
+        }));
+
+        // Parse Authorization header
+        this.server.use((req, res, next) => {
+            if (req.headers.authorization) {
+                const parts = req.headers.authorization.split(' ');
+                if (parts.length === 2) {
+                    const scheme = parts[0];
+                    const credentials = parts[1];
+                    req.authorization = { scheme, credentials };
+                }
+            }
+            next();
         });
 
-        this.server.pre(cors.preflight);
-        this.server.use(cors.actual);
+        // Parse query parameters and body
+        this.server.use(express.urlencoded({ extended: true }));
+        this.server.use(express.json());
 
-        this.server.use(restify.plugins.authorizationParser());
-        this.server.use(restify.plugins.queryParser({ mapParams: true }));
-        this.server.use(restify.plugins.bodyParser({ mapParams: true }));
+        // Map query and body params to req.params for compatibility with existing code
+        this.server.use((req, res, next) => {
+            req.params = { ...req.query, ...req.body, ...req.params };
+            next();
+        });
 
-        this.server.pre(function(req, res, next) {
+        // Convert URL to lowercase
+        this.server.use((req, res, next) => {
             req.url = req.url.toLowerCase();
             next();
         });
 
-        this.server.pre(function(req, res, next) {
+        // Parse Emby headers
+        this.server.use((req, res, next) => {
             if (!req.headers.authorization) return next();
 
             req.headers.emby = parseMediaBrowserHeader(req.headers.authorization);
@@ -75,22 +93,39 @@ export default class EmbyServerAPI {
             next();
         });
 
-        this.server.use(async function (request, response) {
-            //console.log(request.url, request.params, request.method);
+        // Log requests
+        this.server.use((req, res, next) => {
+            console.log(req.url, req.params, req.method);
+            next();
         });
 
         // Add routes
         routes(this.server, this.embyEmulation);
 
-        this.server.on('after', function(req, resp, route, error) {
-            if (route) return;
-
-            console.log(req.url, resp._data);
+        // Log unmatched routes
+        this.server.use((req, res, next) => {
+            console.log(req.url, res.locals._data);
+            next();
         });
 
-        // Start restify server
-        this.server.listen(8096,  () => {
-            console.log('Jellyfin emulation server listening at %s', this.server.url);
+        // Error handling middleware
+        this.server.use((err, req, res, next) => {
+            if (!err) return next();
+
+            const statusCode = err.statusCode || 500;
+            const message = err.message || 'Internal Server Error';
+
+            console.error(`HTTP ${statusCode} - ${message}`);
+
+            res.status(statusCode).json({
+                code: statusCode,
+                message: message
+            });
+        });
+
+        // Start express server
+        this.server = this.server.listen(8096, () => {
+            console.log('Jellyfin emulation server listening at http://localhost:8096');
         });
     }
 }

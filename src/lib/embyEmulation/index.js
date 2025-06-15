@@ -2,7 +2,7 @@ import EmbyServerAPI from './ServerAPI';
 
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../models/user';
-import errors from 'restify-errors';
+import errors from './ServerAPI/errors';
 import bcrypt from 'bcrypt';
 import Primus from 'primus';
 import { timeout } from 'async';

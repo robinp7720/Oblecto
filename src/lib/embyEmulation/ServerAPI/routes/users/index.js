@@ -4,6 +4,7 @@ import { File } from '../../../../../models/file';
 import { User } from '../../../../../models/user';
 import { Stream } from '../../../../../models/stream';
 import { createStreamsList } from '../../../helpers';
+import { Series } from '../../../../../models/series';
 
 /**
  * @param {*} server
@@ -242,7 +243,9 @@ export default (server, embyEmulation) => {
             }
 
             res.send({
-                'Items': items, 'TotalRecordCount': count, 'StartIndex': offset
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': offset
             });
         } else {
             res.send({
@@ -255,7 +258,12 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid/items/:mediaid', async (req, res) => {
         if (req.params.mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), { include: [{ model: File, include: [{ model: Stream }] }] });
+            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), {
+                include: [{
+                    model: File,
+                    include: [{ model: Stream }]
+                }]
+            });
 
             let MediaSources = [];
 
@@ -288,10 +296,10 @@ export default (server, embyEmulation) => {
                     'MediaStreams': createStreamsList(file.Streams),
                     'MediaAttachments': [],
                     'Formats': [],
-                    'Bitrate': file.size/file.duration,
+                    'Bitrate': file.size / file.duration,
                     'RequiredHttpHeaders': {},
                     'DefaultAudioStreamIndex': 1,
-                    'DefaultSubtitleStreamIndex': 2,
+                    'DefaultSubtitleStreamIndex': 2
                 });
             }
 
@@ -309,9 +317,18 @@ export default (server, embyEmulation) => {
                 'SortName': movie.movieName,
                 'PremiereDate': movie.releaseDate,
                 'ExternalUrls': [
-                    { 'Name': 'IMDb', 'Url': `https://www.imdb.com/title/${movie.imdbid}` },
-                    { 'Name': 'TheMovieDb', 'Url': `https://www.themoviedb.org/movie/${movie.tmdbid}` },
-                    { 'Name': 'Trakt', 'Url': `https://trakt.tv/movies/${movie.imdbid}` }
+                    {
+                        'Name': 'IMDb',
+                        'Url': `https://www.imdb.com/title/${movie.imdbid}`
+                    },
+                    {
+                        'Name': 'TheMovieDb',
+                        'Url': `https://www.themoviedb.org/movie/${movie.tmdbid}`
+                    },
+                    {
+                        'Name': 'Trakt',
+                        'Url': `https://trakt.tv/movies/${movie.imdbid}`
+                    }
                 ],
                 'MediaSources': MediaSources,
                 'CriticRating': 82,
@@ -327,7 +344,10 @@ export default (server, embyEmulation) => {
                 'PlayAccess': 'Full',
                 'ProductionYear': movie.releaseDate.substring(0, 4),
                 'RemoteTrailers': [],
-                'ProviderIds': { 'Tmdb': movie.tmdbid, 'Imdb': movie.imdbid },
+                'ProviderIds': {
+                    'Tmdb': movie.tmdbid,
+                    'Imdb': movie.imdbid
+                },
                 'IsHD': true,
                 'IsFolder': false,
                 'ParentId': 'e675012a1892a87530d2c0b0d14a9026',
@@ -478,7 +498,7 @@ export default (server, embyEmulation) => {
                 'LockedFields': [],
                 'LockData': false,
                 'Width': 1920,
-                'Height': 1080,
+                'Height': 1080
             });
         } else {
             res.send({
@@ -491,64 +511,135 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid/items/:mediaid/intros', async (req, res) => {
         res.send({
-            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+            'Items': [],
+            'TotalRecordCount': 0,
+            'StartIndex': 0
         });
     });
 
     server.get('/users/:userid/items/resume', async (req, res) => {
         res.send({
-            'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
+            'Items': [],
+            'TotalRecordCount': 0,
+            'StartIndex': 0
         });
     });
 
     server.get('/users/:userid/items/latest', async (req, res) => {
-        console.log(req.headers);
-        console.log(embyEmulation.sessions);
+        if (req.params.parentid === 'movies') {
+            let results = await Movie.findAll({
+                include: [
+                    {
+                        model: TrackMovie,
+                        required: false,
+                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
+                    }
+                ],
+                order: [['releaseDate', 'DESC']],
+                limit: 50,
+                offset: 0
+            });
 
-        let results = await Movie.findAll({
-            include: [
-                {
-                    model: TrackMovie,
-                    required: false,
-                    where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
-                }
-            ],
-            order: [['releaseDate', 'DESC']],
-            limit: 50,
-            offset: 0
-        });
+            let movies = results.map((movie) => {
+                return {
+                    'Name': movie.movieName,
+                    'ServerId': embyEmulation.serverId,
+                    'Id': 'movie' + movie.id,
+                    'HasSubtitles': true,
+                    'Container': 'mkv,webm',
+                    'PremiereDate': movie.releaseDate,
+                    'CriticRating': 82,
+                    'OfficialRating': 'PG-13',
+                    'CommunityRating': 2.6,
+                    'RunTimeTicks': movie.runtime * 10000000,
+                    'ProductionYear': movie.releaseDate.substring(0, 4),
+                    'IsFolder': false,
+                    'Type': 'Movie',
+                    'PrimaryImageAspectRatio': 0.6666666666666666,
+                    'VideoType': 'VideoFile',
+                    'LocationType': 'FileSystem',
+                    'MediaType': 'Video',
+                    'UserData': {
+                        'PlaybackPositionTicks': 0,
+                        'PlayCount': 0,
+                        'IsFavorite': true,
+                        'Played': false,
+                        'Key': '337401'
+                    },
+                    'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
 
-        let movies = results.map((movie) => {
-            return {
-                'Name': movie.movieName,
-                'ServerId': embyEmulation.serverId,
-                'Id': 'movie' + movie.id,
-                'HasSubtitles': true,
-                'Container': 'mkv,webm',
-                'PremiereDate': movie.releaseDate,
-                'CriticRating': 82,
-                'OfficialRating': 'PG-13',
-                'CommunityRating': 2.6,
-                'RunTimeTicks': movie.runtime * 10000000,
-                'ProductionYear': movie.releaseDate.substring(0, 4),
-                'IsFolder': false,
-                'Type': 'Movie',
-                'PrimaryImageAspectRatio': 0.6666666666666666,
-                'VideoType': 'VideoFile',
-                'LocationType': 'FileSystem',
-                'MediaType': 'Video',
-                'UserData': {
-                    'PlaybackPositionTicks': 0,
-                    'PlayCount': 0,
-                    'IsFavorite': true,
-                    'Played': false,
-                    'Key': '337401'
-                },
-                'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
+                };
+            });
 
-            };
-        });
+            res.send(movies);
+        }
 
-        res.send(movies);
+        if (req.params.parentid === 'shows') {
+            let results = await Series.findAll({
+                include: [
+                    {
+                        model: TrackMovie,
+                        required: false,
+                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
+                    }
+                ],
+                order: [['firstAired', 'DESC']],
+                limit: 50,
+                offset: 0
+            });
+
+            let series = results.map((show) => {
+                return {
+                    'Name': show.seriesName,
+                    'ServerId': embyEmulation.serverId,
+                    'Id': 'series' + show.id,
+                    'PremiereDate': show.firstAired,
+                    //'Path': '/family_series/WeCrashed',
+                    'OfficialRating': show.rating,
+                    'ChannelId': null,
+                    'CommunityRating': show.siteRating,
+                    'RunTimeTicks': 0,
+                    'ProductionYear': 2022,
+                    'IsFolder': true,
+                    'Type': 'Series',
+                    'UserData': {
+                        'UnplayedItemCount': 4,
+                        'PlaybackPositionTicks': 0,
+                        'PlayCount': 0,
+                        'IsFavorite': false,
+                        'Played': false,
+                        'Key': '393499',
+                        'ItemId': '00000000000000000000000000000000'
+                    },
+                    'ChildCount': 8,
+                    'Status': show.status,
+                    'AirDays': [],
+                    'PrimaryImageAspectRatio': 0.6666666666666666,
+                    'ImageTags': {
+                        'Primary': '687b9e86c50b8d8ee6e3ade59f98f679',
+                        'Thumb': '89f4741c490314f9e9cbee489c61067c'
+                    },
+                    'BackdropImageTags': [
+                        '5dc42ac73670938f5fc63cc6ad6b5b81'
+                    ],
+                    'ImageBlurHashes': {
+                        'Backdrop': {
+                            '5dc42ac73670938f5fc63cc6ad6b5b81': 'WH8;=O4mtSxbE1-;%hS%oJWBWXx]IU.8M_Rk%NMxOZxvM{oft8M|'
+                        },
+                        'Primary': {
+                            '687b9e86c50b8d8ee6e3ade59f98f679': 'd77B$VRjwcD%$jxCacS3yFoeR4Ri*0IVn$ofVsIAozxu'
+                        },
+                        'Thumb': {
+                            '89f4741c490314f9e9cbee489c61067c': 'WcI4;OWBo|xZD%xZ~qs.I:ozROsm-;nhR*W?M{WE?aRPf+oyM{t7'
+                        }
+                    },
+                    'LocationType': 'FileSystem',
+                    'MediaType': 'Unknown',
+                    'EndDate': '2022-04-22T00:00:00.0000000Z'
+                };
+            });
+
+            res.send(series);
+        }
     });
 };
