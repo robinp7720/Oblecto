@@ -12,6 +12,9 @@ export const episodeColumns = {
     imdbid: {
         type: DataTypes.STRING, allowNull: true, unique: true
     },
+    anidbid: {
+        type: DataTypes.INTEGER, allowNull: true, unique: true 
+    },
 
     episodeName: { type: DataTypes.STRING, allowNull: true },
 
