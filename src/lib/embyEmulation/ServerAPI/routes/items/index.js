@@ -172,7 +172,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
 
-            res.sendRaw(await fs.readFile(posterPath));
+            res.sendFile(posterPath);
         }
 
         if (mediaid.includes('series')) {
@@ -180,7 +180,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(series, 'medium');
 
-            res.sendRaw(await fs.readFile(posterPath));
+            res.sendFile(posterPath);
         }
     });
 
@@ -192,7 +192,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
 
-            res.sendRaw(await fs.readFile(posterPath));
+            res.sendFile(posterPath);
         }
 
         if (mediaid.includes('series')) {
@@ -200,7 +200,7 @@ export default (server, embyEmulation) => {
 
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(series, 'large');
 
-            res.sendRaw(await fs.readFile(posterPath));
+            res.sendFile(posterPath);
         }
     });
 

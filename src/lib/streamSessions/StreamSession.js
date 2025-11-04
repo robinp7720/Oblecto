@@ -100,6 +100,7 @@ export default class StreamSession extends EventEmitter {
 
         if (destination.type === 'http') {
             destination.stream.setHeader('Content-Type', this.getOutputMimetype());
+            destination.stream.setHeader('Transfer-Encoding', 'chunked');
             destination.stream.status(this.httpStatusCode);
         }
 

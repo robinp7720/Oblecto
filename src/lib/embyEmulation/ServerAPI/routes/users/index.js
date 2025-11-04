@@ -16,7 +16,7 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/users/authenticatebyname', async (req, res) => {
-        let sessionId = await embyEmulation.handleLogin(req.params.Username, req.params.Pw);
+        let sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
 
         res.send({
             User: embyEmulation.sessions[sessionId],
