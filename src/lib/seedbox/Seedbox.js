@@ -1,5 +1,4 @@
 import { extname, normalize as normalizePath } from 'path';
-import SeedboxImportFTP from './SeedboxImportDrivers/SeedboxImportFTP';
 import WarnExtendableError from '../errors/WarnExtendableError';
 import logger from '../../submodules/logger';
 import SeedboxImportFTPS from './SeedboxImportDrivers/SeedboxImportFTPS';
@@ -17,8 +16,6 @@ export default class Seedbox {
     initStorageDriver(seedboxStorageDriver, seedboxStorageDriverOptions) {
         switch (seedboxStorageDriver.toLowerCase()) {
             case 'ftp':
-                this.storageDriver = new SeedboxImportFTP(seedboxStorageDriverOptions);
-                return;
             case 'ftps':
                 this.storageDriver = new SeedboxImportFTPS(seedboxStorageDriverOptions);
                 return;

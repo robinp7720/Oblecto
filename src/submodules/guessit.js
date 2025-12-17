@@ -3,7 +3,6 @@ import binary from 'guessit-exec';
 import which from 'which';
 
 import logger from './logger';
-import { exit } from 'jshint/src/cli';
 
 /**
  * @typedef {object} GuessitIdentification
@@ -29,7 +28,7 @@ which('guessit', function (err, resolvedPath) {
     if (err) {
         logger.log('INFO', 'Guessit binary has not been found');
         logger.log('INFO', 'Please install guessit from your package manager');
-        exit(1);
+        process.exit(1);
     }
 
     logger.log('INFO', 'Guessit binary has been found');
