@@ -5,6 +5,7 @@ import fs from 'fs';
 
 // Ensure logs directory exists
 const logDir = path.join(process.cwd(), 'logs');
+
 if (!fs.existsSync(logDir)) {
     try {
         fs.mkdirSync(logDir);
@@ -16,7 +17,7 @@ if (!fs.existsSync(logDir)) {
 class Logger extends EventEmitter {
     constructor() {
         super();
-        
+
         this._silent = false;
 
         // Custom format for console that mimics/improves the old one
@@ -38,19 +39,15 @@ class Logger extends EventEmitter {
             level: 'debug', // Capture everything, filtering happens in transports/logic
             format: fileFormat,
             transports: [
-                new winston.transports.File({ 
-                    filename: path.join(logDir, 'error.log'), 
-                    level: 'error' 
+                new winston.transports.File({
+                    filename: path.join(logDir, 'error.log'),
+                    level: 'error'
                 }),
-                new winston.transports.File({ 
-                    filename: path.join(logDir, 'combined.log') 
-                })
+                new winston.transports.File({ filename: path.join(logDir, 'combined.log') })
             ]
         });
 
-        this.consoleTransport = new winston.transports.Console({
-            format: consoleFormat
-        });
+        this.consoleTransport = new winston.transports.Console({ format: consoleFormat });
 
         this.winston.add(this.consoleTransport);
     }
@@ -87,53 +84,105 @@ class Logger extends EventEmitter {
         this.log('DEBUG', ...messages);
     }
 
-    log(level, ...messages) {
-        // Handle case where level is an Error object (old API support)
-        if (level instanceof Error) {
-            const err = level;
-            this.winston.error(err.message, { stack: err.stack });
-            this.emit('log', { level: 'ERROR', messages: [err.message, err.stack] });
-            return;
-        }
+        log(level, ...messages) {
 
-        // Process messages
-        // If messages contain objects, we might want to stringify them for the text message
-        // but keep them as meta for winston if possible. 
-        // For now, let's join them string-wise to mimic old behavior for the 'message' part.
-        const messageText = messages.map(msg => {
-            if (msg instanceof Error) {
-                return `${msg.message} ${msg.stack}`;
+            // Handle case where level is an Error object (old API support)
+
+            if (level instanceof Error) {
+
+                const err = level;
+
+                this.winston.error(err.message, { stack: err.stack });
+
+                this.emit('log', { level: 'ERROR', messages: [err.message] });
+
+                return;
+
             }
-            if (typeof msg === 'object') {
-                try {
-                    return JSON.stringify(msg);
-                } catch(e) {
-                    return '[Circular/Object]';
+
+    
+
+            // Extract potential stack traces for metadata
+
+            const metadata = {};
+
+            const messageParts = messages.map(msg => {
+
+                if (msg instanceof Error) {
+
+                    if (!metadata.stack) {
+
+                        metadata.stack = msg.stack;
+
+                    }
+
+                    return msg.message;
+
                 }
-            }
-            return msg;
-        }).join(' ');
 
-        // Map string levels to winston levels
-        // Default to info if unknown
-        let winstonLevel = 'info';
-        if (typeof level === 'string') {
-            const lowerLevel = level.toLowerCase();
-            if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
-                winstonLevel = lowerLevel;
+                if (typeof msg === 'object') {
+
+                    try {
+
+                        return JSON.stringify(msg);
+
+                    } catch(e) {
+
+                        return '[Circular/Object]';
+
+                    }
+
+                }
+
+                return msg;
+
+            });
+
+    
+
+            const messageText = messageParts.join(' ');
+
+    
+
+            // Map string levels to winston levels
+
+            // Default to info if unknown
+
+            let winstonLevel = 'info';
+
+            if (typeof level === 'string') {
+
+                const lowerLevel = level.toLowerCase();
+
+                if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
+
+                    winstonLevel = lowerLevel;
+
+                }
+
             }
+
+    
+
+            // Log to winston
+
+            this.winston.log({
+
+                level: winstonLevel,
+
+                message: messageText,
+
+                ...metadata
+
+            });
+
+    
+
+            // Emit event for TUI (maintaining old payload structure)
+
+            this.emit('log', { level: level, messages: messageParts });
+
         }
-
-        // Log to winston
-        this.winston.log({
-            level: winstonLevel,
-            message: messageText
-        });
-
-        // Emit event for TUI (maintaining old payload structure)
-        // The old payload was { level, messages } where messages is the array of args
-        this.emit('log', { level: level, messages: messages });
-    }
 }
 
 export default new Logger();
