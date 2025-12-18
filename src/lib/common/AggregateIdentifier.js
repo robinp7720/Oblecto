@@ -15,7 +15,6 @@ export default class AggregateIdentifier {
 
     /**
      * Load another MediaIdentifier to be used
-     *
      * @param {MediaIdentifier} identifier - Identifier object
      */
     loadIdentifier(identifier) {
@@ -31,7 +30,7 @@ export default class AggregateIdentifier {
             try {
                 currentIdentification = await identifier.identify(...args);
             } catch (e) {
-                logger.error(e);
+                logger.debug(e);
                 continue;
             }
 
