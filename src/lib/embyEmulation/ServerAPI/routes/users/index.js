@@ -3,8 +3,9 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
 import { User } from '../../../../../models/user';
 import { Stream } from '../../../../../models/stream';
-import { createStreamsList } from '../../../helpers';
+import { createStreamsList, formatUuid, parseUuid } from '../../../helpers';
 import { Series } from '../../../../../models/series';
+import logger from '../../../../../submodules/logger';
 
 /**
  * @param {*} server
@@ -18,23 +19,71 @@ export default (server, embyEmulation) => {
     server.post('/users/authenticatebyname', async (req, res) => {
         let sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
 
+        logger.debug('Jellyfin Session ID: ' + sessionId);
+        logger.debug(embyEmulation.sessions[sessionId]);
+
         res.send({
-            User: embyEmulation.sessions[sessionId],
-            SessionInfo: {},
-            AccessToken: sessionId,
-            ServerId: embyEmulation.serverId
+            'User':{
+                'Name': 'robin',
+                'ServerId':'e5ea18c5377547a2917f55a080fbb0e8',
+                'Id': formatUuid(embyEmulation.sessions[sessionId].Id),
+                'PrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'HasPassword': true,
+                'HasConfiguredPassword':true,
+                'HasConfiguredEasyPassword':false,
+                'EnableAutoLogin':false,
+                'LastLoginDate':'2025-12-18T14:18:38.0847453Z',
+                'LastActivityDate':'2025-12-18T14:18:38.0847453Z',
+                'Configuration':{
+                    'AudioLanguagePreference':'','PlayDefaultAudioTrack':true,'SubtitleLanguagePreference':'','DisplayMissingEpisodes':false,'GroupedFolders':[],'SubtitleMode':'Default','DisplayCollectionsView':false,'EnableLocalPassword':true,'OrderedViews':['9d7ad6afe9afa2dab1a2f6e00ad28fa6','f137a2dd21bbc1b99aa5c0f6bf02a805','a656b907eb3a73532e40e44b968d0225'],'LatestItemsExcludes':[],'MyMediaExcludes':[],'HidePlayedInLatest':false,'RememberAudioSelections':true,'RememberSubtitleSelections':true,'EnableNextEpisodeAutoPlay':true,'CastReceiverId':'F007D354'
+                },
+                'Policy':{
+                    'IsAdministrator':true,'IsHidden':false,'EnableCollectionManagement':true,'EnableSubtitleManagement':true,'EnableLyricManagement':false,'IsDisabled':false,'BlockedTags':[],'AllowedTags':[],'EnableUserPreferenceAccess':true,'AccessSchedules':[],'BlockUnratedItems':[],'EnableRemoteControlOfOtherUsers':true,'EnableSharedDeviceControl':true,'EnableRemoteAccess':true,'EnableLiveTvManagement':true,'EnableLiveTvAccess':true,'EnableMediaPlayback':true,'EnableAudioPlaybackTranscoding':true,'EnableVideoPlaybackTranscoding':true,'EnablePlaybackRemuxing':true,'ForceRemoteSourceTranscoding':false,'EnableContentDeletion':true,'EnableContentDeletionFromFolders':[],'EnableContentDownloading':true,'EnableSyncTranscoding':true,'EnableMediaConversion':true,'EnabledDevices':[],'EnableAllDevices':true,'EnabledChannels':[],'EnableAllChannels':true,'EnabledFolders':[],'EnableAllFolders':true,'InvalidLoginAttemptCount':0,'LoginAttemptsBeforeLockout':-1,'MaxActiveSessions':0,'EnablePublicSharing':true,'BlockedMediaFolders':[],'BlockedChannels':[],'RemoteClientBitrateLimit':0,'AuthenticationProviderId':'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider','PasswordResetProviderId':'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider','SyncPlayAccess':'CreateAndJoinGroups'
+                }
+            },
+            'SessionInfo':{
+                'PlayState':{
+                    'CanSeek':false,'IsPaused':false,'IsMuted':false,'RepeatMode':'RepeatNone','PlaybackOrder':'Default'
+                },
+                'AdditionalUsers':[],
+                'Capabilities':{
+                    'PlayableMediaTypes':[],'SupportedCommands':[],'SupportsMediaControl':false,'SupportsPersistentIdentifier':true
+                },
+                'RemoteEndPoint':'192.168.176.206',
+                'PlayableMediaTypes':[],
+                'Id':'ee997eb90a1f2ed650ddab0f6d9c8b20',
+                'UserId': formatUuid(embyEmulation.sessions[sessionId].Id),
+                'UserName':'Robin',
+                'Client':'Delfin',
+                'LastActivityDate':'2025-12-18T14:18:38.0871101Z',
+                'LastPlaybackCheckIn':'0001-01-01T00:00:00.0000000Z',
+                'DeviceName':'tria',
+                'DeviceId':'d0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
+                'ApplicationVersion':'0.4.8',
+                'IsActive':true,
+                'SupportsMediaControl':false,
+                'SupportsRemoteControl':false,
+                'NowPlayingQueue':[],
+                'NowPlayingQueueFullItems':[],
+                'HasCustomDeviceName':false,
+                'ServerId':'e5ea18c5377547a2917f55a080fbb0e8',
+                'UserPrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'SupportedCommands':[]
+            },
+            'AccessToken':'13959fd264f64aed9883955f5ca2735b',
+            'ServerId':'e5ea18c5377547a2917f55a080fbb0e8'
         });
     });
 
     server.get('/users/:userid', async (req, res) => {
-        let user = await User.findByPk(req.params.userid);
+        let user = await User.findByPk(parseUuid(req.params.userid));
 
         let HasPassword = user.password !== '';
 
         res.send({
             Name: user.name,
             ServerId: embyEmulation.serverId,
-            Id: user.id,
+            Id: formatUuid(user.id),
             HasPassword,
             HasConfiguredPassword: HasPassword,
             HasConfiguredEasyPassword: false,
@@ -259,10 +308,12 @@ export default (server, embyEmulation) => {
     server.get('/users/:userid/items/:mediaid', async (req, res) => {
         if (req.params.mediaid.includes('movie')) {
             let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), {
-                include: [{
-                    model: File,
-                    include: [{ model: Stream }]
-                }]
+                include: [
+                    {
+                        model: File,
+                        include: [{ model: Stream }]
+                    }
+                ]
             });
 
             let MediaSources = [];
@@ -594,7 +645,7 @@ export default (server, embyEmulation) => {
                     'ServerId': embyEmulation.serverId,
                     'Id': 'series' + show.id,
                     'PremiereDate': show.firstAired,
-                    //'Path': '/family_series/WeCrashed',
+                    // 'Path': '/family_series/WeCrashed',
                     'OfficialRating': show.rating,
                     'ChannelId': null,
                     'CommunityRating': show.siteRating,
@@ -619,19 +670,11 @@ export default (server, embyEmulation) => {
                         'Primary': '687b9e86c50b8d8ee6e3ade59f98f679',
                         'Thumb': '89f4741c490314f9e9cbee489c61067c'
                     },
-                    'BackdropImageTags': [
-                        '5dc42ac73670938f5fc63cc6ad6b5b81'
-                    ],
+                    'BackdropImageTags': ['5dc42ac73670938f5fc63cc6ad6b5b81'],
                     'ImageBlurHashes': {
-                        'Backdrop': {
-                            '5dc42ac73670938f5fc63cc6ad6b5b81': 'WH8;=O4mtSxbE1-;%hS%oJWBWXx]IU.8M_Rk%NMxOZxvM{oft8M|'
-                        },
-                        'Primary': {
-                            '687b9e86c50b8d8ee6e3ade59f98f679': 'd77B$VRjwcD%$jxCacS3yFoeR4Ri*0IVn$ofVsIAozxu'
-                        },
-                        'Thumb': {
-                            '89f4741c490314f9e9cbee489c61067c': 'WcI4;OWBo|xZD%xZ~qs.I:ozROsm-;nhR*W?M{WE?aRPf+oyM{t7'
-                        }
+                        'Backdrop': { '5dc42ac73670938f5fc63cc6ad6b5b81': 'WH8;=O4mtSxbE1-;%hS%oJWBWXx]IU.8M_Rk%NMxOZxvM{oft8M|' },
+                        'Primary': { '687b9e86c50b8d8ee6e3ade59f98f679': 'd77B$VRjwcD%$jxCacS3yFoeR4Ri*0IVn$ofVsIAozxu' },
+                        'Thumb': { '89f4741c490314f9e9cbee489c61067c': 'WcI4;OWBo|xZD%xZ~qs.I:ozROsm-;nhR*W?M{WE?aRPf+oyM{t7' }
                     },
                     'LocationType': 'FileSystem',
                     'MediaType': 'Unknown',
