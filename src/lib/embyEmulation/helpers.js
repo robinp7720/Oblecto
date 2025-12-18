@@ -94,3 +94,94 @@ export const formatUuid = (id) => {
 export const parseUuid = (uuid) => {
     return parseInt(uuid.replace(/-/g, ''), 16);
 };
+
+export const formatId = (id, type) => {
+    let prefix = '0';
+
+    if (type === 'movie') prefix = '1';
+    else if (type === 'series') prefix = '2';
+    else if (type === 'episode') prefix = '3';
+    else if (type === 'season') prefix = '4';
+    else if (type === 'user') prefix = 'f';
+
+    return prefix + Number(id).toString(16).padStart(31, '0');
+};
+
+export const parseId = (id) => {
+    const typeCode = id[0];
+    const numericId = parseInt(id.slice(1), 16);
+    let type = 'unknown';
+
+    if (typeCode === '1') type = 'movie';
+    else if (typeCode === '2') type = 'series';
+    else if (typeCode === '3') type = 'episode';
+    else if (typeCode === '4') type = 'season';
+    else if (typeCode === 'f') type = 'user';
+
+    return { id: numericId, type };
+};
+
+export const formatMediaItem = (item, type, embyEmulation) => {
+    const id = formatId(item.id, type);
+    const res = {
+        'Name': item.movieName || item.seriesName || item.episodeName,
+        'ServerId': embyEmulation.serverId,
+        'Id': id,
+        'HasSubtitles': true,
+        'Container': 'mkv',
+        'PremiereDate': item.releaseDate || item.firstAired,
+        'CriticRating': 82,
+        'OfficialRating': item.rating || 'PG-13',
+        'CommunityRating': item.popularity || 2.6,
+        'RunTimeTicks': (item.runtime || 0) * 60 * 10000000,
+        'ProductionYear': (item.releaseDate || item.firstAired || '').substring(0, 4),
+        'IsFolder': type === 'series' || type === 'season',
+        'Type': type.charAt(0).toUpperCase() + type.slice(1),
+        'PrimaryImageAspectRatio': 0.6666666666666666,
+        'VideoType': 'VideoFile',
+        'LocationType': 'FileSystem',
+        'MediaType': 'Video',
+        'UserData': {
+            'PlaybackPositionTicks': 0,
+            'PlayCount': 0,
+            'IsFavorite': false,
+            'Played': false,
+            'Key': item.id.toString(),
+            'ItemId': id
+        },
+        'ImageTags': { 'Primary': 'primary' },
+        'BackdropImageTags': ['backdrop'],
+        'ImageBlurHashes': {
+            'Primary': { 'primary': 'WZE2te~q.8?b-;-;-p%2t8tQt6W.s.sSayNaR%NGxtt7t7t7X8oz' },
+            'Backdrop': { 'backdrop': 'WeEx-RE0IUxuR*%1~WE1M{t7S1t7-;IoRjt7bbae-pRjRQt7ofRj' }
+        }
+    };
+
+    if (type === 'episode') {
+        res.IndexNumber = parseInt(item.airedEpisodeNumber);
+        res.ParentIndexNumber = parseInt(item.airedSeason);
+        res.SeriesName = item.Series ? item.Series.seriesName : '';
+        res.SeriesId = item.Series ? formatId(item.Series.id, 'series') : '';
+        res.SeasonName = 'Season ' + item.airedSeason;
+        res.PrimaryImageAspectRatio = 1.7777777777777777;
+    }
+
+    if (item.Files && item.Files.length > 0) {
+        res.Path = item.Files[0].path;
+        res.Container = item.Files[0].container;
+        res.RunTimeTicks = item.Files[0].duration * 10000000;
+    }
+
+    const track = item.TrackMovies ? item.TrackMovies[0] : (item.TrackEpisodes ? item.TrackEpisodes[0] : null);
+
+    if (track) {
+        res.UserData.PlaybackPositionTicks = (track.time || 0) * 10000000;
+        res.UserData.Played = track.progress >= 1;
+        res.UserData.PlayCount = res.UserData.Played ? 1 : 0;
+        if (track.updatedAt) {
+            res.UserData.LastPlayedDate = track.updatedAt.toISOString();
+        }
+    }
+
+    return res;
+};

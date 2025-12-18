@@ -3,7 +3,7 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
 import { User } from '../../../../../models/user';
 import { Stream } from '../../../../../models/stream';
-import { createStreamsList, formatUuid, parseUuid } from '../../../helpers';
+import { createStreamsList, formatUuid, parseUuid, parseId, formatMediaItem } from '../../../helpers';
 import { Series } from '../../../../../models/series';
 import logger from '../../../../../submodules/logger';
 
@@ -254,42 +254,19 @@ export default (server, embyEmulation) => {
             let offset = parseInt(req.params.startindex) | 0;
 
             let results = await Movie.findAll({
+                include: [
+                    {
+                        model: TrackMovie,
+                        required: false,
+                        where: { userId: parseUuid(req.params.userid) }
+                    },
+                    { model: File }
+                ],
                 limit: parseInt(req.params.limit) || 100,
                 offset
             });
 
-            let items = [];
-
-            for (let movie of results) {
-                items.push({
-                    'Name': movie.movieName,
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'movie' + movie.id,
-                    'HasSubtitles': true,
-                    'Container': 'mkv,webm',
-                    'PremiereDate': movie.releaseDate,
-                    'CriticRating': 82,
-                    'OfficialRating': 'PG-13',
-                    'CommunityRating': 2.6,
-                    'RunTimeTicks': movie.runtime * 10000000,
-                    'ProductionYear': movie.releaseDate.substring(0, 4),
-                    'IsFolder': false,
-                    'Type': 'Movie',
-                    'PrimaryImageAspectRatio': 0.6666666666666666,
-                    'VideoType': 'VideoFile',
-                    'LocationType': 'FileSystem',
-                    'MediaType': 'Video',
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': true,
-                        'Played': false,
-                        'Key': '337401'
-                    },
-                    'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
-
-                });
-            }
+            let items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
 
             res.send({
                 'Items': items,
@@ -306,12 +283,19 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid/items/:mediaid', async (req, res) => {
-        if (req.params.mediaid.includes('movie')) {
-            let movie = await Movie.findByPk(req.params.mediaid.replace('movie', ''), {
+        const { id, type } = parseId(req.params.mediaid);
+
+        if (type === 'movie') {
+            let movie = await Movie.findByPk(id, {
                 include: [
                     {
                         model: File,
                         include: [{ model: Stream }]
+                    },
+                    {
+                        model: TrackMovie,
+                        required: false,
+                        where: { userId: parseUuid(req.params.userid) }
                     }
                 ]
             });
@@ -354,203 +338,61 @@ export default (server, embyEmulation) => {
                 });
             }
 
-            res.send({
-                'Name': movie.movieName,
-                'OriginalTitle': movie.originalName,
-                'ServerId': embyEmulation.serverId,
-                'Id': 'movie' + movie.id,
-                'Etag': '6448f9c5d2678db5ffa4de1c283f6e6a',
-                'DateCreated': movie.createdAt,
-                'CanDelete': false,
-                'CanDownload': true,
-                'HasSubtitles': true,
-                'Container': 'mkv,webm',
-                'SortName': movie.movieName,
-                'PremiereDate': movie.releaseDate,
-                'ExternalUrls': [
-                    {
-                        'Name': 'IMDb',
-                        'Url': `https://www.imdb.com/title/${movie.imdbid}`
-                    },
-                    {
-                        'Name': 'TheMovieDb',
-                        'Url': `https://www.themoviedb.org/movie/${movie.tmdbid}`
-                    },
-                    {
-                        'Name': 'Trakt',
-                        'Url': `https://trakt.tv/movies/${movie.imdbid}`
-                    }
-                ],
-                'MediaSources': MediaSources,
-                'CriticRating': 82,
-                'ProductionLocations': ['China', 'United States of America'],
-                'Path': movie.Files[0].path,
-                'EnableMediaSourceDisplay': true,
-                'OfficialRating': 'PG-13',
-                'Overview': movie.overview,
-                'Taglines': [movie.tagline],
-                'Genres': movie.genres,
-                'CommunityRating': 2.6,
-                'RunTimeTicks': movie.runtime * 10000000,
-                'PlayAccess': 'Full',
-                'ProductionYear': movie.releaseDate.substring(0, 4),
-                'RemoteTrailers': [],
-                'ProviderIds': {
-                    'Tmdb': movie.tmdbid,
-                    'Imdb': movie.imdbid
+            const item = formatMediaItem(movie, 'movie', embyEmulation);
+
+            item.OriginalTitle = movie.originalName;
+            item.Etag = '6448f9c5d2678db5ffa4de1c283f6e6a';
+            item.DateCreated = movie.createdAt;
+            item.CanDelete = false;
+            item.CanDownload = true;
+            item.SortName = movie.movieName;
+            item.ExternalUrls = [
+                {
+                    'Name': 'IMDb',
+                    'Url': `https://www.imdb.com/title/${movie.imdbid}`
                 },
-                'IsHD': true,
-                'IsFolder': false,
-                'ParentId': 'e675012a1892a87530d2c0b0d14a9026',
-                'Type': 'Movie',
-                'People': [],
-                'Studios': [],
-                'LocalTrailerCount': 0,
-                'UserData': {
-                    'PlaybackPositionTicks': 0,
-                    'PlayCount': 0,
-                    'IsFavorite': true,
-                    'Played': false,
-                    'Key': '337401'
+                {
+                    'Name': 'TheMovieDb',
+                    'Url': `https://www.themoviedb.org/movie/${movie.tmdbid}`
                 },
-                'SpecialFeatureCount': 0,
-                'DisplayPreferencesId': 'dbf7709c41faaa746463d67978eb863d',
-                'Tags': [],
-                'PrimaryImageAspectRatio': 0.6666666666666666,
-                'ImageTags': { 'Primary': 'ThisIDisfairlyuseless' },
-                'BackdropImageTags': ['be04a5eac7bc48ea3f5834aa816a03f0'],
-                'VideoType': 'VideoFile',
-                // 'ImageTags': {'Primary': 'eaaa9ab0189f4166db1012ec5230c7db'},
-                // 'BackdropImageTags': ['be04a5eac7bc48ea3f5834aa816a03f0'],
-                'ScreenshotImageTags': [],
-                // 'ImageBlurHashes': {
-                //    'Backdrop': {'be04a5eac7bc48ea3f5834aa816a03f0': 'W7D78hkBL};OCl}E}G,rI:65KOSxITWVx^K39tjG+]sBs;Sgadwd'},
-                //    'Primary': {'eaaa9ab0189f4166db1012ec5230c7db': 'ddHoON-V.S%g~qxuxuniRPRjMxM{-;M{Rjoz%#Nasoxa'}
-                // },
-                'Chapters': [
-                    {
-                        'StartPositionTicks': 0,
-                        'Name': 'Chapter 1',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 3000000000,
-                        'Name': 'Chapter 2',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 6000000000,
-                        'Name': 'Chapter 3',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 9000000000,
-                        'Name': 'Chapter 4',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 12000000000,
-                        'Name': 'Chapter 5',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 15000000000,
-                        'Name': 'Chapter 6',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 18000000000,
-                        'Name': 'Chapter 7',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 21000000000,
-                        'Name': 'Chapter 8',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 24000000000,
-                        'Name': 'Chapter 9',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 27000000000,
-                        'Name': 'Chapter 10',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 30000000000,
-                        'Name': 'Chapter 11',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 33000000000,
-                        'Name': 'Chapter 12',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 36000000000,
-                        'Name': 'Chapter 13',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 39000000000,
-                        'Name': 'Chapter 14',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 42000000000,
-                        'Name': 'Chapter 15',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 45000000000,
-                        'Name': 'Chapter 16',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 48000000000,
-                        'Name': 'Chapter 17',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 51000000000,
-                        'Name': 'Chapter 18',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 54000000000,
-                        'Name': 'Chapter 19',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 57000000000,
-                        'Name': 'Chapter 20',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 60000000000,
-                        'Name': 'Chapter 21',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 63000000000,
-                        'Name': 'Chapter 22',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    },
-                    {
-                        'StartPositionTicks': 66000000000,
-                        'Name': 'Chapter 23',
-                        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
-                    }
-                ],
-                'LocationType': 'FileSystem',
-                'MediaType': 'Video',
-                'LockedFields': [],
-                'LockData': false,
-                'Width': 1920,
-                'Height': 1080
-            });
+                {
+                    'Name': 'Trakt',
+                    'Url': `https://trakt.tv/movies/${movie.imdbid}`
+                }
+            ];
+            item.MediaSources = MediaSources;
+            item.ProductionLocations = ['China', 'United States of America'];
+            item.EnableMediaSourceDisplay = true;
+            item.Overview = movie.overview;
+            item.Taglines = [movie.tagline];
+            item.Genres = movie.genres;
+            item.PlayAccess = 'Full';
+            item.RemoteTrailers = [];
+            item.ProviderIds = {
+                'Tmdb': movie.tmdbid,
+                'Imdb': movie.imdbid
+            };
+            item.IsHD = true;
+            item.ParentId = 'e675012a1892a87530d2c0b0d14a9026';
+            item.People = [];
+            item.Studios = [];
+            item.LocalTrailerCount = 0;
+            item.SpecialFeatureCount = 0;
+            item.DisplayPreferencesId = 'dbf7709c41faaa746463d67978eb863d';
+            item.Tags = [];
+            item.Chapters = [
+                {
+                    'StartPositionTicks': 0,
+                    'Name': 'Chapter 1',
+                    'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
+                }
+            ];
+            item.LockedFields = [];
+            item.LockData = false;
+            item.Width = 1920;
+            item.Height = 1080;
+
+            res.send(item);
         } else {
             res.send({
                 Items: [],
