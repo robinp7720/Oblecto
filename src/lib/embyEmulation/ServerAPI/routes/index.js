@@ -26,6 +26,10 @@ export default (server, embyEmulation) => {
     quickconnect(server, embyEmulation);
     web(server, embyEmulation);
 
+    server.get('/', (req, res) => {
+        res.redirect('web/');
+    });
+
     server.get('/scheduledtasks', async (req, res) => {
         res.send({});
     });
