@@ -167,6 +167,7 @@ export default class FileUpdater {
         } catch (e) {
             const lines = e.message.split('\n');
             const lastLine = lines[lines.length - 1];
+
             throw new VideoAnalysisError(`Failed to ffprobe ${file.path}: ${lastLine}`);
         }
 

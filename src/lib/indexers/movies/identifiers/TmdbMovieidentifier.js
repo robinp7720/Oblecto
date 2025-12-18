@@ -5,7 +5,6 @@ import promiseTimeout from '../../../../submodules/promiseTimeout';
 export default class TmdbMovieIdentifier extends MovieIdentifier {
     /**
      * Identify a Movie based a file path
-     *
      * @param {string} moviePath File path to the Movie
      * @param {*} guessitIdentification - Guessit identification object
      * @returns {Promise<*>} - Movie identification object
@@ -22,7 +21,9 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
         let identifiedMovie = res.results[0];
 
         if (!identifiedMovie) {
-            throw new IdentificationError();
+            throw new IdentificationError(
+                `Could not identify movie "${guessitIdentification.title}"${guessitIdentification.year ? ` (${guessitIdentification.year})` : ''} using TMDB`
+            );
         }
 
         return {

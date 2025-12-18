@@ -33,7 +33,6 @@ export default class MovieIndexer {
     async matchFile(moviePath) {
         const guessitIdentification = await guessit.identify(moviePath);
 
-
         try {
             return await this.movieIdentifier.identify(moviePath, guessitIdentification);
         } catch (e) {
@@ -47,12 +46,11 @@ export default class MovieIndexer {
             }
         }
 
-        throw new IdentificationError();
+        throw new IdentificationError(`Could not identify ${moviePath}`);
     }
 
     /**
      * Index file based on file path
-     *
      * @param {string} moviePath - Path to Movie to be indexed
      * @param {boolean} doReindex - Whether or not to reindex a file if it has already been indexed
      * @returns {Promise<void>}

@@ -13,7 +13,6 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
 
     /**
      * Get all episodes from TVDB from a given TVDB series id
-     *
      * @param {number} tvdbId - TVDBID for the series to get episodes for
      * @returns {Promise<*>} - Object containing all episodes of a series
      */
@@ -32,10 +31,8 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
 
     /**
      * Match an episode to given guessit identification
-     *
      * @param {Series} series - series to a match a guessit identification to
      * @param {*} guessitIdentification - Guessit identification of a file
-     *
      * @returns {Promise<*>} - Match an episode to a guessit Identification
      */
     async retrieveEpisode(series, guessitIdentification) {
@@ -50,12 +47,16 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
             return episode;
         }
 
-        throw new IdentificationError();
+        throw new IdentificationError(
+            `No matching episode found for series "${series.seriesName || series.tvdbid}". ` +
+            `Looking for: ${guessitIdentification.episode_name ? `episode name "${guessitIdentification.episode_name}"` : ''} ` +
+            `${guessitIdentification.season ? `S${guessitIdentification.season}` : ''}` +
+            `${guessitIdentification.episode ? `E${guessitIdentification.episode}` : ''}`
+        );
     }
 
     /**
      *  Identify an episode using TVDB
-     *
      * @param {string} path - Path to the episode to be identified
      * @param {*} guessitIdentification - Guessit identification object
      * @param {Series} series - Series to which the episode should belong

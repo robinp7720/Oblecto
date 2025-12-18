@@ -62,7 +62,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             candidates.push(series);
         }
 
-        if (candidates.length === 0) throw new IdentificationError();
+        if (candidates.length === 0) throw new IdentificationError(`No series found matching "${title}" with year ${guessitIdentification.year}`);
 
         return this.findMatch(candidates, guessitIdentification);
     }

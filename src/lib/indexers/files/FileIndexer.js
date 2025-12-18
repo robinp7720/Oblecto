@@ -50,12 +50,13 @@ export default class FileIndexer {
 
     async indexVideoFileStreams(file) {
         let metadata;
-        
+
         try {
             metadata = await ffprobe(file.path);
         } catch (e) {
             const lines = e.message.split('\n');
             const lastLine = lines[lines.length - 1];
+
             throw new VideoAnalysisError(`Failed to probe ${file.path}: ${lastLine}`);
         }
 

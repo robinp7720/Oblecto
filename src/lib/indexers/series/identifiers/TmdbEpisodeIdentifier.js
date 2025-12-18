@@ -7,14 +7,13 @@ import { Series } from '../../../../models/series';
 export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
     /**
      *  Identify an episode using TMDB
-     *
      * @param {string} path - Path to the episode to be identified
      * @param {*} guessitIdentification - Guessit identification object
      * @param {Series} series - Series to which the episode should belong
      * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Identification object
      */
     async identify(path, guessitIdentification, series) {
-        if (!series.tmdbid) throw new IdentificationError();
+        if (!series.tmdbid) throw new IdentificationError('Series does not have a TMDB ID');
 
         let episode;
 
@@ -25,7 +24,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
                 episode_number: guessitIdentification.episode
             }, { timeout: 5000 }));
         } catch (e) {
-            throw new IdentificationError("Could not find episode");
+            throw new IdentificationError('Could not find episode');
         }
 
         return {
