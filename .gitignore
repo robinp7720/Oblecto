@@ -7,3 +7,5 @@ dist/
 build/
 .vscode/launch.json
 Oblecto-Web/
+logs/
+*.tsbuildinfo
