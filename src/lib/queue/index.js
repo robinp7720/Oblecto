@@ -49,7 +49,7 @@ export default class Queue {
             return;
         }
 
-        logger.info( 'New queue item has been registered:', id);
+        logger.debug( 'New queue item has been registered:', id);
 
         this.jobs[id] = job;
     }
