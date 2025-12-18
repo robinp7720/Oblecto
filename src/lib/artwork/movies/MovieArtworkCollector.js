@@ -42,7 +42,7 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMovieFanart() {
-        logger.log('DEBUG', 'Collecting Movie fanart to download');
+        logger.debug( 'Collecting Movie fanart to download');
 
         let movies = await Movie.findAll();
 
@@ -56,7 +56,7 @@ export default class MovieArtworkCollector {
      * @returns {Promise<void>}
      */
     async collectAllMoviePosters() {
-        logger.log('DEBUG', 'Collecting Movie posters to download');
+        logger.debug( 'Collecting Movie posters to download');
 
         let movies = await Movie.findAll();
 

@@ -19,7 +19,7 @@ export default class SeedboxController {
      * @param {Oblecto} oblecto
      */
     constructor(oblecto) {
-        logger.log('DEBUG', 'Starting seedbox subsystem');
+        logger.debug( 'Starting seedbox subsystem');
         this.oblecto = oblecto;
         this.seedBoxes = [];
 
@@ -30,7 +30,7 @@ export default class SeedboxController {
     }
 
     async loadAllSeedboxes() {
-        logger.log('DEBUG', 'Loading all Seedboxes');
+        logger.debug( 'Loading all Seedboxes');
         for (const seedbox of this.oblecto.config.seedboxes) {
             if (!seedbox.enabled) continue;
 
@@ -54,7 +54,7 @@ export default class SeedboxController {
         await newSeedbox.setupDriver();
 
         this.seedBoxes.push(newSeedbox);
-        logger.log('DEBUG', `Loaded seedbox ${seedboxConfig.name}`);
+        logger.debug( `Loaded seedbox ${seedboxConfig.name}`);
     }
 
     /**
@@ -65,7 +65,7 @@ export default class SeedboxController {
      * @returns {Promise<void>}
      */
     async importFile(seedbox, origin, destination) {
-        logger.log('INFO', `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
+        logger.info( `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
 
         mkdirp.sync(dirname(destination));
 
@@ -75,9 +75,9 @@ export default class SeedboxController {
             await seedbox.storageDriver.copy(origin, destination + '.oblectoimport');
             await rename(destination + '.oblectoimport', destination);
 
-            logger.log('INFO', `${origin} successfully downloaded`);
+            logger.info( `${origin} successfully downloaded`);
         } catch (e) {
-            logger.log('ERROR', `Could not download ${origin}:`, e);
+            logger.error( `Could not download ${origin}:`, e);
         }
     }
 
@@ -155,16 +155,16 @@ export default class SeedboxController {
             try {
                 movie_match = await this.oblecto.movieIndexer.matchFile(file);
             } catch (e) {
-                logger.log('INFO', `Could not identify ${file}`);
+                logger.info( `Could not identify ${file}`);
                 continue;
             }
 
             if (!await this.shouldImportMovie(file, movie_match)) {
-                logger.log('INFO', `Not importing ${movie_match.movieName}`);
+                logger.info( `Not importing ${movie_match.movieName}`);
                 continue;
             }
 
-            logger.log('INFO', `Found new movie on ${seedbox.name}: ${basename(file)}`);
+            logger.info( `Found new movie on ${seedbox.name}: ${basename(file)}`);
 
             const movie_data = await this.oblecto.movieUpdater.aggregateMovieUpdateRetriever.retrieveInformation(movie_match);
 
@@ -208,7 +208,7 @@ export default class SeedboxController {
 
             if (!await this.shouldImportEpisode(file)) continue;
 
-            logger.log('INFO', `Found new episode on ${seedbox.name}: ${basename(file)}`);
+            logger.info( `Found new episode on ${seedbox.name}: ${basename(file)}`);
 
             const destination = path.join(
                 this.oblecto.config.tvshows.directories[0].path,

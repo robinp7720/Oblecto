@@ -32,7 +32,7 @@ export default class DirectStreamSession extends StreamSession {
         try {
             fs.createReadStream(this.file.path).pipe(this.outputStream);
         } catch (e) {
-            logger.log(e);
+            logger.error(e);
         }
     }
 }

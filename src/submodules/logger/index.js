@@ -71,6 +71,22 @@ class Logger extends EventEmitter {
         }
     }
 
+    info(...messages) {
+        this.log('INFO', ...messages);
+    }
+
+    warn(...messages) {
+        this.log('WARN', ...messages);
+    }
+
+    error(...messages) {
+        this.log('ERROR', ...messages);
+    }
+
+    debug(...messages) {
+        this.log('DEBUG', ...messages);
+    }
+
     log(level, ...messages) {
         // Handle case where level is an Error object (old API support)
         if (level instanceof Error) {

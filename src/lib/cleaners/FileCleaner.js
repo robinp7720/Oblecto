@@ -15,14 +15,14 @@ export default class FileCleaner{
      * @returns {Promise<void>}
      */
     async removedDeletedFiled () {
-        logger.log('INFO', 'Removing all non existent files from the database');
+        logger.info( 'Removing all non existent files from the database');
         let files = await File.findAll();
 
         for (let file of files) {
             try {
                 await fs.stat(file.path);
             } catch (e) {
-                logger.log('INFO', file.path, 'not found. Removing from database');
+                logger.info( file.path, 'not found. Removing from database');
 
                 await file.destroy();
             }
@@ -36,7 +36,7 @@ export default class FileCleaner{
      * @returns {Promise<void>}
      */
     async removeAssoclessFiles () {
-        logger.log('INFO', 'Removing files from the database without any attached media items');
+        logger.info( 'Removing files from the database without any attached media items');
         let results = await File.findAll({ include: [Movie, Episode] });
 
         results.forEach((item) => {

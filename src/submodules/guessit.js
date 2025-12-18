@@ -26,13 +26,13 @@ import logger from './logger';
 
 which('guessit', function (err, resolvedPath) {
     if (err) {
-        logger.log('INFO', 'Guessit binary has not been found');
-        logger.log('INFO', 'Please install guessit from your package manager');
+        logger.info( 'Guessit binary has not been found');
+        logger.info( 'Please install guessit from your package manager');
         process.exit(1);
     }
 
-    logger.log('INFO', 'Guessit binary has been found');
-    logger.log('INFO', 'Using local guessit binary');
+    logger.info( 'Guessit binary has been found');
+    logger.info( 'Using local guessit binary');
 });
 
 export default {

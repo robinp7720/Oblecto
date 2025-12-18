@@ -24,7 +24,7 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
             });
 
         } catch (e) {
-            logger.log('INFO', e);
+            logger.info( e);
         }
     }
 

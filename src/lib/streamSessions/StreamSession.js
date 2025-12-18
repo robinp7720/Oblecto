@@ -18,7 +18,7 @@ export default class StreamSession extends EventEmitter {
     constructor(file, options, oblecto) {
         super();
 
-        logger.log('INFO', 'New StreamSession initiating');
+        logger.info( 'New StreamSession initiating');
 
         this.oblecto = oblecto;
 
@@ -45,7 +45,7 @@ export default class StreamSession extends EventEmitter {
         this.outputStream.on('resume', () => this.outputResume());
 
         this.outputStream.on('close', () => {
-            logger.log('INFO', this.sessionId, 'output stream has closed');
+            logger.info( this.sessionId, 'output stream has closed');
             this.endSession();
         });
 
@@ -62,11 +62,11 @@ export default class StreamSession extends EventEmitter {
 
     outputPause() {
         this.paused = true;
-        logger.log('INFO', 'Pausing stream session');
+        logger.info( 'Pausing stream session');
     }
     outputResume() {
         this.paused = false;
-        logger.log('INFO', 'Resuming stream session');
+        logger.info( 'Resuming stream session');
     }
 
     endSession() {
@@ -90,7 +90,7 @@ export default class StreamSession extends EventEmitter {
             if (session) return;
         }
 
-        logger.log('INFO', 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
+        logger.info( 'StreamSession', this.sessionId, 'has timed out. Destroying output stream');
         this.outputStream.destroy();
     }
 
@@ -106,7 +106,7 @@ export default class StreamSession extends EventEmitter {
 
         destination.stream
             .on('error', (err) => {
-                logger.log('ERROR', this.sessionId, err);
+                logger.error( this.sessionId, err);
             })
             .on('close', () => {
                 // Remove destination by reference rather than finding index
@@ -116,7 +116,7 @@ export default class StreamSession extends EventEmitter {
                 }
 
                 if (!this.destinations.length) {
-                    logger.log('INFO', this.sessionId, 'last client has disconnected. Setting timeout output stream');
+                    logger.info( this.sessionId, 'last client has disconnected. Setting timeout output stream');
                     this.startTimeout();
                 }
             });

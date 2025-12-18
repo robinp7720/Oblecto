@@ -22,7 +22,7 @@ export default class MovieIndexer {
         const movieIdentifiers = { 'tmdb': TmdbMovieIdentifier };
 
         for (let identifier of this.oblecto.config.movies.movieIdentifiers) {
-            logger.log('DEBUG', `Loading ${identifier} movie identifier`);
+            logger.debug( `Loading ${identifier} movie identifier`);
             this.movieIdentifier.loadIdentifier(new movieIdentifiers[identifier](this.oblecto));
         }
 
@@ -38,8 +38,8 @@ export default class MovieIndexer {
             return await this.movieIdentifier.identify(moviePath, guessitIdentification);
         } catch (e) {
             if (guessitIdentification.year) {
-                logger.log('INFO', `Could not identify ${moviePath}. Maybe the specified year is wrong?`);
-                logger.log('INFO', 'Attempting to identify without year');
+                logger.info( `Could not identify ${moviePath}. Maybe the specified year is wrong?`);
+                logger.info( 'Attempting to identify without year');
 
                 delete guessitIdentification.year;
 

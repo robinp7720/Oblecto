@@ -36,12 +36,12 @@ export default class SeriesUpdater {
         };
 
         for (let updater of this.oblecto.config.tvshows.seriesUpdaters) {
-            logger.log('DEBUG', `Loading ${updater} series updater`);
+            logger.debug( `Loading ${updater} series updater`);
             this.aggregateSeriesUpdateRetriever.loadRetriever(new seriesUpdateRetrievers[updater](this.oblecto));
         }
 
         for (let updater of this.oblecto.config.tvshows.episodeUpdaters) {
-            logger.log('DEBUG', `Loading ${updater} episode updater`);
+            logger.debug( `Loading ${updater} episode updater`);
             this.aggregateEpisodeUpdaterRetriever.loadRetriever(new episodeUpdateRetrievers[updater](this.oblecto));
         }
 

@@ -63,7 +63,7 @@ export default class Downloader {
 
                 return;
             } catch (err) {
-                logger.log('DEBUG', `Error while downloading ${url}. Continuing to next url`);
+                logger.debug( `Error while downloading ${url}. Continuing to next url`);
             }
         }
 

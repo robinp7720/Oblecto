@@ -41,8 +41,8 @@ export default class RealtimeClient extends EventEmitter {
         try {
             this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret);
         } catch (e) {
-            logger.log('WARN', 'An unauthorized user attempted connection to realtime server');
-            logger.log('WARN', 'Disconnecting client...');
+            logger.warn( 'An unauthorized user attempted connection to realtime server');
+            logger.warn( 'Disconnecting client...');
 
             this.socket.disconnect();
         }

@@ -24,7 +24,7 @@ export function initDatabase() {
     let poolmax = config.queue.concurrency;
 
     if (dialect === 'sqlite') {
-        logger.log('INFO', 'Using SQLITE, setting poolmax to 1');
+        logger.info( 'Using SQLITE, setting poolmax to 1');
         poolmax = 1;
     }
 

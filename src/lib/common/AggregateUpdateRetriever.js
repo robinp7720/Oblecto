@@ -22,7 +22,7 @@ export default class AggregateUpdateRetriever {
 
                 information = { ...information, ...currentInformation };
             } catch (e) {
-                logger.log(e);
+                logger.error(e);
             }
         }
 

@@ -32,7 +32,7 @@ export default class DirectHttpStreamSession extends StreamSession {
         // Logically we only support http destinations
         // Therefore, throw an error if the type is not http
         if (destination.type !== 'http') {
-            logger.log('ERROR', 'DirectHttpStreamer only supports http stream types');
+            logger.error( 'DirectHttpStreamer only supports http stream types');
             throw new Error('HTTP Streamer only supports HTTP stream types');
         }
 

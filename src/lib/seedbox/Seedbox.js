@@ -33,7 +33,7 @@ export default class Seedbox {
     }
 
     async findAll(indexPath, fileTypes) {
-        logger.log('DEBUG', `Finding files in ${indexPath}`);
+        logger.debug( `Finding files in ${indexPath}`);
 
         const toIndex = [];
         const indexed = [];

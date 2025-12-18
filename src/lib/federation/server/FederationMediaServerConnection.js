@@ -67,6 +67,6 @@ export default class FederationMediaServerConnection extends FederationServerCon
     }
 
     async closeHandler() {
-        logger.log('INFO', 'Federation media stream has closed');
+        logger.info( 'Federation media stream has closed');
     }
 }

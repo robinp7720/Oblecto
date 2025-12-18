@@ -62,11 +62,11 @@ export default class RecodeFederationStreamSession extends StreamSession {
             .inputOptions(inputOptions)
             .outputOptions(outputOptions)
             .on('start', (cmd) => {
-                logger.log('INFO', this.sessionId, cmd);
+                logger.info( this.sessionId, cmd);
             });
 
         this.process.on('error', (err) => {
-            if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.log('ERROR', this.sessionId, err);
+            if (err.message !== 'ffmpeg was killed with signal SIGKILL') logger.error( this.sessionId, err);
         });
 
         this.process.pipe(this.outputStream, { end: true });

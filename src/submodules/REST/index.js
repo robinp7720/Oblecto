@@ -60,7 +60,7 @@ export default class OblectoAPI {
             const statusCode = err.statusCode || 500;
             const message = err.message || 'Internal Server Error';
 
-            logger.log('ERROR', `HTTP ${statusCode} - ${message}`, err);
+            logger.error( `HTTP ${statusCode} - ${message}`, err);
 
             res.status(statusCode).json({
                 code: statusCode,
@@ -70,7 +70,7 @@ export default class OblectoAPI {
 
         // Start express server
         this.server = app.listen(this.oblecto.config.server.port, () => {
-            logger.log('INFO', 'REST API Listening at', `http://localhost:${this.oblecto.config.server.port}`);
+            logger.info( 'REST API Listening at', `http://localhost:${this.oblecto.config.server.port}`);
         });
     }
 
@@ -79,10 +79,10 @@ export default class OblectoAPI {
             return new Promise((resolve, reject) => {
                 this.server.close(err => {
                     if (err) {
-                        logger.log('ERROR', 'Error closing REST server:', err);
+                        logger.error( 'Error closing REST server:', err);
                         return reject(err);
                     }
-                    logger.log('INFO', 'REST server closed successfully');
+                    logger.info( 'REST server closed successfully');
                     resolve();
                 });
             });

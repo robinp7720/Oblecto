@@ -31,7 +31,7 @@ export default class AggregateIdentifier {
             try {
                 currentIdentification = await identifier.identify(...args);
             } catch (e) {
-                logger.log(e);
+                logger.error(e);
                 continue;
             }
 

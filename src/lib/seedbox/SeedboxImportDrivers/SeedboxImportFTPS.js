@@ -25,7 +25,7 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
             });
 
         } catch (e) {
-            logger.log('INFO', e);
+            logger.info( e);
         }
     }
 

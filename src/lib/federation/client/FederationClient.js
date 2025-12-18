@@ -29,7 +29,7 @@ export default class FederationClient{
     }
 
     async connect() {
-        logger.log('INFO', 'Connecting to federation master:', this.serverName);
+        logger.info( 'Connecting to federation master:', this.serverName);
 
         this.socket = tls.connect({
             host: this.host,

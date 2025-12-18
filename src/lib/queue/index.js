@@ -13,7 +13,7 @@ export default class Queue {
             if (!this.jobs[job.id]) return callback();
 
             let jobTimeout = setTimeout(() => {
-                //logger.log('DEBUG', `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
+                //logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
             this.jobs[job.id](job.attr)
@@ -25,7 +25,7 @@ export default class Queue {
                 .catch((err) => {
                     clearTimeout(jobTimeout);
 
-                    logger.log(err);
+                    logger.error(err);
 
                     callback();
                 });
@@ -40,13 +40,13 @@ export default class Queue {
      */
     registerJob(id, job) {
         if (this.jobs[id]) {
-            logger.log('ERROR', `A job has been registered which was already registered: ${id}`);
-            logger.log('ERROR', 'This should not happen');
+            logger.error( `A job has been registered which was already registered: ${id}`);
+            logger.error( 'This should not happen');
 
             return;
         }
 
-        logger.log('INFO', 'New queue item has been registered:', id);
+        logger.info( 'New queue item has been registered:', id);
 
         this.jobs[id] = job;
     }

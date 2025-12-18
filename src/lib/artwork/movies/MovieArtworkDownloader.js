@@ -24,7 +24,7 @@ export default class MovieArtworkDownloader {
     async downloadMoviePoster(movie) {
         await this.movieArtworkRetriever.retrievePoster(movie);
 
-        logger.log('DEBUG', `Poster for ${movie.movieName} downloaded`);
+        logger.debug( `Poster for ${movie.movieName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {
@@ -38,7 +38,7 @@ export default class MovieArtworkDownloader {
     async downloadMovieFanart(movie) {
         await this.movieArtworkRetriever.retrieveFanart(movie);
 
-        logger.log('DEBUG', `Fanart for ${movie.movieName} downloaded`);
+        logger.debug( `Fanart for ${movie.movieName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.fanart)) {
             this.oblecto.queue.pushJob('rescaleImage', {

@@ -29,7 +29,7 @@ export default class SeriesArtworkDownloader {
     async downloadEpisodeBanner(episode) {
         await this.seriesArtworkRetriever.retrieveEpisodeBanner(episode);
 
-        logger.log('DEBUG', `Banner for ${episode.episodeName} downloaded`);
+        logger.debug( `Banner for ${episode.episodeName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.banner)) {
             this.oblecto.queue.pushJob('rescaleImage', {
@@ -48,7 +48,7 @@ export default class SeriesArtworkDownloader {
     async downloadSeriesPoster(series) {
         await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
 
-        logger.log('DEBUG', `Poster for ${series.seriesName} downloaded`);
+        logger.debug( `Poster for ${series.seriesName} downloaded`);
 
         for (let size of Object.keys(this.oblecto.config.artwork.poster)) {
             this.oblecto.queue.pushJob('rescaleImage', {

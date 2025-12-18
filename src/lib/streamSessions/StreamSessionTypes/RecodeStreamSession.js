@@ -124,11 +124,11 @@ export default class RecodeStreamSession extends StreamSession {
             .inputOptions(inputOptions)
             .outputOptions(outputOptions)
             .on('start', (cmd) => {
-                logger.log('INFO', this.sessionId, cmd);
+                logger.info( this.sessionId, cmd);
             });
 
         this.process.on('error', (err) => {
-            logger.log('ERROR', this.sessionId, err);
+            logger.error( this.sessionId, err);
         });
 
         this.process.pipe(this.destinations[0].stream, { end: true });

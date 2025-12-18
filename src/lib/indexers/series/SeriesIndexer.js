@@ -46,12 +46,12 @@ export default class SeriesIndexer {
         };
 
         for (let identifier of this.oblecto.config.tvshows.seriesIdentifiers) {
-            logger.log('DEBUG', `Loading ${identifier} series identifier`);
+            logger.debug( `Loading ${identifier} series identifier`);
             this.seriesIdentifier.loadIdentifier(new seriesIdentifiers[identifier](this.oblecto));
         }
 
         for (let identifier of this.oblecto.config.tvshows.episodeIdentifiers) {
-            logger.log('DEBUG', `Loading ${identifier} episode identifier`);
+            logger.debug( `Loading ${identifier} episode identifier`);
             this.episodeIdentifer.loadIdentifier(new episodeIdentifiers[identifier](this.oblecto));
         }
 
@@ -115,7 +115,7 @@ export default class SeriesIndexer {
 
                 break;
             } catch (e) {
-                logger.log('DEBUG', 'Using for path for identifying', episodePath);
+                logger.debug( 'Using for path for identifying', episodePath);
             }
         }
 
@@ -141,7 +141,7 @@ export default class SeriesIndexer {
 
         const series = await this.indexSeries(seriesIdentification);
 
-        logger.log('DEBUG', `${file.path} episode identified ${episodeIdentification.episodeName}`);
+        logger.debug( `${file.path} episode identified ${episodeIdentification.episodeName}`);
 
         let [episode, episodeCreated] = await Episode.findOrCreate(
             {
