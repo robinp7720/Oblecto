@@ -2,6 +2,7 @@ import { File } from '../../../models/file';
 
 import Path from 'path';
 import FileExistsError from '../../errors/FileExistsError';
+import VideoAnalysisError from '../../errors/VideoAnalysisError';
 import ffprobe from '../../../submodules/ffprobe';
 import { Stream } from '../../../models/stream';
 
@@ -48,7 +49,15 @@ export default class FileIndexer {
     }
 
     async indexVideoFileStreams(file) {
-        let metadata = await ffprobe(file.path);
+        let metadata;
+        
+        try {
+            metadata = await ffprobe(file.path);
+        } catch (e) {
+            const lines = e.message.split('\n');
+            const lastLine = lines[lines.length - 1];
+            throw new VideoAnalysisError(`Failed to probe ${file.path}: ${lastLine}`);
+        }
 
         for (let stream_base of metadata.streams) {
             for (let i in stream_base) {

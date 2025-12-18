@@ -165,7 +165,9 @@ export default class FileUpdater {
         try {
             metadata = await ffprobe(file.path);
         } catch (e) {
-            throw new VideoAnalysisError(`Failed to ffprobe ${file.path}`);
+            const lines = e.message.split('\n');
+            const lastLine = lines[lines.length - 1];
+            throw new VideoAnalysisError(`Failed to ffprobe ${file.path}: ${lastLine}`);
         }
 
         let primaryVideoStream = await FileUpdater.getPrimaryVideoStream(metadata);
