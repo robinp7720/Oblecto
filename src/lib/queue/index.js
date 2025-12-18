@@ -13,7 +13,7 @@ export default class Queue {
             if (!this.jobs[job.id]) return callback();
 
             let jobTimeout = setTimeout(() => {
-                //logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
+                // logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
             this.jobs[job.id](job.attr)
@@ -25,7 +25,11 @@ export default class Queue {
                 .catch((err) => {
                     clearTimeout(jobTimeout);
 
-                    logger.error(err);
+                    if (err.level) {
+                        logger.log(err.level, err);
+                    } else {
+                        logger.error(err);
+                    }
 
                     callback();
                 });
@@ -34,7 +38,6 @@ export default class Queue {
 
     /**
      *  Define a new job
-     *
      * @param {string} id - ID/Name for job
      * @param {Function} job - Function used for Queue item
      */
@@ -53,7 +56,6 @@ export default class Queue {
 
     /**
      *  Add a job to the end of the queue
-     *
      * @param {string} id - Id for the job to be called
      * @param {object} attr - Attributes to be passed to the job
      * @param {number} priority - Priority for the job
@@ -64,7 +66,6 @@ export default class Queue {
 
     /**
      *  Adds a queue which should be completed as soon as possible
-     *
      * @param {string} id - Id for the job to be called
      * @param {object} attr - Attributes to be passed to the job
      */
@@ -74,7 +75,6 @@ export default class Queue {
 
     /**
      *  Add a job to the front of the queue
-     *
      * @param {string} id - Id for the job to be called
      * @param {object} attr - Attributes to be passed the job
      */
