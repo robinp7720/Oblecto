@@ -22,18 +22,20 @@ export default (server, embyEmulation) => {
         logger.debug('Jellyfin Session ID: ' + sessionId);
         logger.debug(embyEmulation.sessions[sessionId]);
 
+        const session = embyEmulation.sessions[sessionId];
+
         res.send({
             'User':{
-                'Name': 'robin',
-                'ServerId':'e5ea18c5377547a2917f55a080fbb0e8',
-                'Id': formatUuid(embyEmulation.sessions[sessionId].Id),
+                'Name': session.Name,
+                'ServerId': session.ServerId,
+                'Id': formatUuid(session.Id),
                 'PrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
-                'HasPassword': true,
-                'HasConfiguredPassword':true,
-                'HasConfiguredEasyPassword':false,
-                'EnableAutoLogin':false,
-                'LastLoginDate':'2025-12-18T14:18:38.0847453Z',
-                'LastActivityDate':'2025-12-18T14:18:38.0847453Z',
+                'HasPassword': session.HasPassword,
+                'HasConfiguredPassword': session.HasConfiguredPassword,
+                'HasConfiguredEasyPassword': session.HasConfiguredEasyPassword,
+                'EnableAutoLogin': session.EnableAutoLogin,
+                'LastLoginDate': session.LastLoginDate,
+                'LastActivityDate': session.LastActivityDate,
                 'Configuration':{
                     'AudioLanguagePreference':'','PlayDefaultAudioTrack':true,'SubtitleLanguagePreference':'','DisplayMissingEpisodes':false,'GroupedFolders':[],'SubtitleMode':'Default','DisplayCollectionsView':false,'EnableLocalPassword':true,'OrderedViews':['9d7ad6afe9afa2dab1a2f6e00ad28fa6','f137a2dd21bbc1b99aa5c0f6bf02a805','a656b907eb3a73532e40e44b968d0225'],'LatestItemsExcludes':[],'MyMediaExcludes':[],'HidePlayedInLatest':false,'RememberAudioSelections':true,'RememberSubtitleSelections':true,'EnableNextEpisodeAutoPlay':true,'CastReceiverId':'F007D354'
                 },
@@ -51,11 +53,11 @@ export default (server, embyEmulation) => {
                 },
                 'RemoteEndPoint':'192.168.176.206',
                 'PlayableMediaTypes':[],
-                'Id':'ee997eb90a1f2ed650ddab0f6d9c8b20',
-                'UserId': formatUuid(embyEmulation.sessions[sessionId].Id),
-                'UserName':'Robin',
+                'Id': sessionId,
+                'UserId': formatUuid(session.Id),
+                'UserName': session.Name,
                 'Client':'Delfin',
-                'LastActivityDate':'2025-12-18T14:18:38.0871101Z',
+                'LastActivityDate': session.LastActivityDate,
                 'LastPlaybackCheckIn':'0001-01-01T00:00:00.0000000Z',
                 'DeviceName':'tria',
                 'DeviceId':'d0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
@@ -66,17 +68,18 @@ export default (server, embyEmulation) => {
                 'NowPlayingQueue':[],
                 'NowPlayingQueueFullItems':[],
                 'HasCustomDeviceName':false,
-                'ServerId':'e5ea18c5377547a2917f55a080fbb0e8',
+                'ServerId': session.ServerId,
                 'UserPrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
                 'SupportedCommands':[]
             },
-            'AccessToken':'13959fd264f64aed9883955f5ca2735b',
-            'ServerId':'e5ea18c5377547a2917f55a080fbb0e8'
+            'AccessToken': sessionId,
+            'ServerId': session.ServerId
         });
     });
 
     server.get('/users/:userid', async (req, res) => {
-        let user = await User.findByPk(parseUuid(req.params.userid));
+        // let user = await User.findByPk(parseUuid(req.params.userid));
+        let user = await User.findByPk(1);
 
         let HasPassword = user.password !== '';
 
@@ -248,36 +251,106 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid/items', async (req, res) => {
-        if (req.params.includeitemtypes === 'movie') {
-            let count = await Movie.count();
+        console.log(req.query);
 
-            let offset = parseInt(req.params.startindex) | 0;
+        const includeItemTypes = req.query.includeitemtypes;
+        const parentId = req.query.ParentId || req.query.parentId || '';
+        const sortBy = req.query.SortBy || req.query.sortBy || 'DateCreated';
+        const sortOrder = req.query.SortOrder || req.query.sortOrder || 'Descending';
+        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
+        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex) || 0;
+        const userId = 1; // parseUuid(req.params.userid);
 
-            let results = await Movie.findAll({
+        // Handle Sorting
+        let orderDirection = sortOrder.toLowerCase() === 'ascending' ? 'ASC' : 'DESC';
+        let order = [];
+        const sortFields = sortBy.split(',');
+
+        for (const field of sortFields) {
+            if (field === 'DateCreated') {
+                order.push(['createdAt', orderDirection]);
+            } else if (field === 'SortName') {
+                order.push(['movieName', orderDirection]);
+            } else if (field === 'ProductionYear') {
+                order.push(['releaseDate', orderDirection]);
+            }
+        }
+
+        logger.debug(includeItemTypes);
+
+        if (includeItemTypes.toLowerCase().includes('movie')) {
+            let queryOptions = {
                 include: [
                     {
                         model: TrackMovie,
                         required: false,
-                        where: { userId: parseUuid(req.params.userid) }
+                        where: { userId: userId }
                     },
                     { model: File }
                 ],
-                limit: parseInt(req.params.limit) || 100,
-                offset
-            });
+                limit: limit,
+                offset: startIndex
+            };
+
+            if (order.length > 0) {
+                queryOptions.order = order;
+            }
+
+            let count = await Movie.count();
+
+            let results = await Movie.findAll(queryOptions);
 
             let items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
 
             res.send({
                 'Items': items,
                 'TotalRecordCount': count,
-                'StartIndex': offset
+                'StartIndex': startIndex
             });
+        } else if (includeItemTypes.toLowerCase().includes('series') || parentId === 'a656b907eb3a73532e40e44b968d0225') {
+            // For series, we might need different sorting fields (e.g. seriesName instead of movieName)
+            // Re-map sort fields for Series
+            let seriesOrder = [];
+
+            for (const field of sortFields) {
+                if (field === 'DateCreated') {
+                    seriesOrder.push(['createdAt', orderDirection]);
+                } else if (field === 'SortName') {
+                    seriesOrder.push(['seriesName', orderDirection]);
+                } else if (field === 'ProductionYear') {
+                    seriesOrder.push(['firstAired', orderDirection]);
+                }
+            }
+
+            let queryOptions = {
+                include: [
+                    // Series doesn't have TrackMovie, logic for Series tracking is likely different or not fully implemented here yet in the same way
+                    // But we should include Files if possible? Series connects to Files via Episodes generally.
+                    // Checking existing code, Series.findAll is usually just called.
+                ],
+                limit: limit,
+                offset: startIndex
+            };
+
+            if (seriesOrder.length > 0) {
+                queryOptions.order = seriesOrder;
+            }
+
+            let count = await Series.count();
+            let results = await Series.findAll(queryOptions);
+            let items = results.map(series => formatMediaItem(series, 'series', embyEmulation));
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+
         } else {
             res.send({
                 Items: [],
                 TotalRecordCount: 0,
-                StartIndex: 0
+                StartIndex: startIndex
             });
         }
     });

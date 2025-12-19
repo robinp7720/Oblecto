@@ -1,9 +1,9 @@
 export default (server, embyEmulation) => {
     server.get('/system/info/public', async (req, res) => {
         res.send({
-            'LocalAddress': 'http://oblecto:9096',
+            'LocalAddress': 'http://oblecto:8096',
             'ServerName': embyEmulation.serverName,
-            'Version': '10.10.7',
+            'Version': '10.11.5',
             'ProductName': 'Jellyfin Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId,
@@ -12,6 +12,7 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/system/info', async (req, res) => {
+        console.log('Getting system info');
         res.send({
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,

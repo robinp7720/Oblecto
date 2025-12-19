@@ -124,7 +124,7 @@ export const parseId = (id) => {
 export const formatMediaItem = (item, type, embyEmulation) => {
     const id = formatId(item.id, type);
     const res = {
-        'Name': item.movieName || item.seriesName || item.episodeName,
+        'Name': item.movieName || item.seriesName || item.episodeName || item.seasonName,
         'ServerId': embyEmulation.serverId,
         'Id': id,
         'HasSubtitles': true,
@@ -164,6 +164,12 @@ export const formatMediaItem = (item, type, embyEmulation) => {
         res.SeriesId = item.Series ? formatId(item.Series.id, 'series') : '';
         res.SeasonName = 'Season ' + item.airedSeason;
         res.PrimaryImageAspectRatio = 1.7777777777777777;
+    }
+
+    if (type === 'season') {
+        res.SeriesId = item.SeriesId ? formatId(item.SeriesId, 'series') : '';
+        res.SeasonName = item.seasonName;
+        res.IndexNumber = parseInt(item.indexNumber);
     }
 
     if (item.Files && item.Files.length > 0) {

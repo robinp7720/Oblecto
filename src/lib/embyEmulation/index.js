@@ -6,6 +6,7 @@ import errors from './ServerAPI/errors';
 import bcrypt from 'bcrypt';
 import Primus from 'primus';
 import { timeout } from 'async';
+import { Sequelize } from 'sequelize';
 
 export default class EmbyEmulation {
     /**
@@ -85,7 +86,7 @@ export default class EmbyEmulation {
 
     async handleLogin(username, password) {
         let user = await User.findOne({
-            where: { username: username },
+            where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('username')), username.toLowerCase()),
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
 

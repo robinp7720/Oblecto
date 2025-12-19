@@ -13,23 +13,25 @@ import { Series } from '../../../../../models/series';
 export default (server, embyEmulation) => {
     server.get('/items', async (req, res) => {
         let items = [];
+        const includeItemTypes = req.query.IncludeItemTypes || req.query.includeItemTypes || '';
+        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
+        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex) || 0;
+        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
 
-        if (req.params.includeitemtypes === 'movie') {
+        if (includeItemTypes.toLowerCase().includes('movie')) {
             let count = await Movie.count();
-
-            let offset = parseInt(req.params.startindex) | 0;
 
             let where = null;
 
-            if (req.params.searchterm) {
-                where = { movieName: { [Op.like]: `%${req.params.searchterm}%` } };
+            if (searchTerm) {
+                where = { movieName: { [Op.like]: `%${searchTerm}%` } };
             }
 
             let results = await Movie.findAll({
                 where,
                 include: [File],
-                limit: parseInt(req.params.limit) || 100,
-                offset
+                limit: limit,
+                offset: startIndex
             });
 
             items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
@@ -37,23 +39,44 @@ export default (server, embyEmulation) => {
             res.send({
                 'Items': items,
                 'TotalRecordCount': count,
-                'StartIndex': offset
+                'StartIndex': startIndex
             });
-        } else if (req.params.includeitemtypes === 'series') {
+        } else if (includeItemTypes.toLowerCase().includes('series')) {
             let count = await Series.count();
-
-            let offset = parseInt(req.params.startindex) | 0;
 
             let where = null;
 
-            if (req.params.searchterm) {
-                where = { seriesName: { [Op.like]: `%${req.params.searchterm}%` } };
+            if (searchTerm) {
+                where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+            }
+
+            const sortBy = req.query.SortBy || req.query.sortBy || '';
+            const sortOrder = req.query.SortOrder || req.query.sortOrder || 'Ascending';
+            const order = [];
+
+            if (sortBy) {
+                const parts = sortBy.split(',');
+                for (const part of parts) {
+                    const direction = sortOrder.toLowerCase().startsWith('desc') ? 'DESC' : 'ASC';
+                    if (part === 'SortName') {
+                        order.push(['seriesName', direction]);
+                    } else if (part === 'PremiereDate' || part === 'ProductionYear') {
+                        order.push(['firstAired', direction]);
+                    } else if (part === 'DateCreated') {
+                        order.push(['createdAt', direction]);
+                    }
+                }
+            }
+
+            if (order.length === 0) {
+                order.push(['seriesName', 'ASC']);
             }
 
             let results = await Series.findAll({
                 where,
-                limit: parseInt(req.params.limit) || 100,
-                offset
+                limit: limit,
+                offset: startIndex,
+                order: order
             });
 
             items = results.map(series => formatMediaItem(series, 'series', embyEmulation));
@@ -61,7 +84,7 @@ export default (server, embyEmulation) => {
             res.send({
                 'Items': items,
                 'TotalRecordCount': count,
-                'StartIndex': offset
+                'StartIndex': startIndex
             });
         } else {
             res.send({
@@ -109,8 +132,8 @@ export default (server, embyEmulation) => {
 
             res.sendFile(posterPath);
         } else if (type === 'series') {
-            let series = await Series.findByPk(id, { include: [File] });
-            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(series, 'medium');
+            let series = await Series.findByPk(id);
+            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'medium');
 
             res.sendFile(posterPath);
         } else {

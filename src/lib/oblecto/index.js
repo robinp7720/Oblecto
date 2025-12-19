@@ -93,10 +93,10 @@ export default class Oblecto {
         this.seedboxController = new SeedboxController(this);
         this.seedboxController.loadAllSeedboxes();
 
-        this.seriesCollector.collectAll();
-        this.movieCollector.collectAll();
+        // this.seriesCollector.collectAll();
+        // this.movieCollector.collectAll();
 
-        this.fileUpdateCollector.collectAllFiles();
+        // this.fileUpdateCollector.collectAllFiles();
 
         if (config.federation.enable) {
             this.fedartionController = new FederationController(this);
@@ -109,7 +109,7 @@ export default class Oblecto {
         }
 
         this.oblectoAPI = new OblectoAPI(this);
-        //this.realTimeController = new RealtimeController(this);
+        // this.realTimeController = new RealtimeController(this);
 
         // Emby Server emulation
         this.embyServer = new EmbyEmulation(this);

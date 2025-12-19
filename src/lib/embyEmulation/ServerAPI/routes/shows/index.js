@@ -2,7 +2,7 @@ import { Episode } from '../../../../../models/episode';
 import { Series } from '../../../../../models/series';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { File } from '../../../../../models/file';
-import { parseUuid, formatMediaItem, parseId } from '../../../helpers';
+import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers';
 import { Op } from 'sequelize';
 
 /**
@@ -11,7 +11,7 @@ import { Op } from 'sequelize';
  */
 export default (server, embyEmulation) => {
     server.get('/shows/nextup', async (req, res) => {
-        const userId = parseUuid(req.params.userid);
+        const userId = parseUuid(req.query.UserId || req.query.userId);
 
         if (!userId) {
             return res.send({
@@ -76,15 +76,58 @@ export default (server, embyEmulation) => {
         });
     });
 
+    server.get('/shows/:seriesid/seasons', async (req, res) => {
+        const { id: seriesId } = parseId(req.params.seriesid);
+        
+        const episodes = await Episode.findAll({
+            where: { SeriesId: seriesId },
+            attributes: ['airedSeason'],
+            order: [['airedSeason', 'ASC']]
+        });
+
+        const distinctSeasons = new Set();
+        episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
+
+        const items = [];
+        const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+
+        for (const seasonNum of sortedSeasons) {
+            const pseudoId = seriesId * 1000 + seasonNum;
+            const seasonObj = {
+                id: pseudoId,
+                seasonName: 'Season ' + seasonNum,
+                SeriesId: seriesId,
+                indexNumber: seasonNum
+            };
+            items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
+        }
+
+        res.send({
+            'Items': items,
+            'TotalRecordCount': items.length,
+            'StartIndex': 0
+        });
+    });
+
     server.get('/shows/:seriesid/episodes', async (req, res) => {
         const { id } = parseId(req.params.seriesid);
+        const where = { SeriesId: id };
+
+        if (req.query.SeasonId) {
+            const parsed = parseId(req.query.SeasonId);
+            if (parsed.type === 'season') {
+                const seasonNum = parsed.id % 1000;
+                where.airedSeason = seasonNum;
+            }
+        }
+
         const episodes = await Episode.findAll({
-            where: { SeriesId: id },
+            where,
             include: [
                 Series, File, {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: parseUuid(req.params.userid) }
+                    where: { userId: parseUuid(req.params.userid || req.query.UserId || req.query.userId) }
                 }
             ],
             order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]

@@ -13,28 +13,29 @@ import cors from 'cors';
  *     Version: "1.12.0",
  *     Token: "…"
  *   }
- *
  * @param {string} headerStr
  * @returns {Object<string,string>}
  */
 function parseMediaBrowserHeader(headerStr) {
-  // 1) Remove the leading "MediaBrowser " (everything up to the first space)
-  //    so we're left with: Client="…", Device="…", …
-  const kvPart = headerStr.replace(/^[^ ]+\s*/, '');
+    // 1) Remove the leading "MediaBrowser " (everything up to the first space)
+    //    so we're left with: Client="…", Device="…", …
+    const kvPart = headerStr.replace(/^[^ ]+\s*/, '');
 
-  // 2) Use a regex to capture Key="Value" pairs
-  //    (\w+) matches the key (alphanumeric/underscore)
-  //    ="([^"]*)"  matches an equals sign, a double-quote, then any non-quote chars, then a closing quote
-  const re = /(\w+)="([^"]*)"/g;
+    // 2) Use a regex to capture Key="Value" pairs
+    //    (\w+) matches the key (alphanumeric/underscore)
+    //    ="([^"]*)"  matches an equals sign, a double-quote, then any non-quote chars, then a closing quote
+    const re = /(\w+)="([^"]*)"/g;
 
-  const result = {};
-  let match;
-  while ((match = re.exec(kvPart)) !== null) {
-    const key = match[1];
-    const value = match[2];
-    result[key] = value;
-  }
-  return result;
+    const result = {};
+    let match;
+
+    while ((match = re.exec(kvPart)) !== null) {
+        const key = match[1];
+        const value = match[2];
+
+        result[key] = value;
+    }
+    return result;
 }
 
 export default class EmbyServerAPI {
@@ -47,11 +48,17 @@ export default class EmbyServerAPI {
         // Initialize REST based server
         this.server = express();
 
+        // Log requests
+        this.server.use((req, res, next) => {
+            console.log(req.url, req.params, req.method);
+            next();
+        });
+
         // Allow remote clients to connect to the backend
         this.server.use(cors({
             origin: '*',
             maxAge: 5,
-            allowedHeaders: ['API-Token'],
+            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type'],
             exposedHeaders: ['API-Token-Expiry']
         }));
 
@@ -59,9 +66,11 @@ export default class EmbyServerAPI {
         this.server.use((req, res, next) => {
             if (req.headers.authorization) {
                 const parts = req.headers.authorization.split(' ');
+
                 if (parts.length === 2) {
                     const scheme = parts[0];
                     const credentials = parts[1];
+
                     req.authorization = { scheme, credentials };
                 }
             }
@@ -74,7 +83,9 @@ export default class EmbyServerAPI {
 
         // Map query and body params to req.params for compatibility with existing code
         this.server.use((req, res, next) => {
-            req.params = { ...req.query, ...req.body, ...req.params };
+            req.params = {
+                ...req.query, ...req.body, ...req.params
+            };
             next();
         });
 
@@ -93,18 +104,12 @@ export default class EmbyServerAPI {
             next();
         });
 
-        // Log requests
-        this.server.use((req, res, next) => {
-            console.log(req.url, req.params, req.method);
-            next();
-        });
-
         // Add routes
         routes(this.server, this.embyEmulation);
 
         // Log unmatched routes
         this.server.use((req, res, next) => {
-            console.log(req.url, res.locals._data);
+            console.log('Route remained unmatched:', req.url, res.locals._data);
             next();
         });
 

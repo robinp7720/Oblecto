@@ -16,8 +16,9 @@ export default class OblectoAPI {
 
         // Initialize REST based server
         const app = express();
+
         this.server = app;
-        //this.server.name = 'Oblecto';
+        // this.server.name = 'Oblecto';
 
         // Configure CORS
         app.use(cors({
@@ -31,9 +32,11 @@ export default class OblectoAPI {
         app.use((req, res, next) => {
             if (req.headers.authorization) {
                 const parts = req.headers.authorization.split(' ');
+
                 if (parts.length === 2) {
                     const scheme = parts[0];
                     const credentials = parts[1];
+
                     req.authorization = { scheme, credentials };
                 }
             }
@@ -46,7 +49,7 @@ export default class OblectoAPI {
 
         // Map query and body params to req.combined_params for compatibility with existing code
         app.use((req, res, next) => {
-            req.combined_params = { ...req.query, ...req.body};
+            req.combined_params = { ...req.query, ...req.body };
             next();
         });
 
