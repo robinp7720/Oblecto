@@ -141,6 +141,7 @@ export const formatMediaItem = (item, type, embyEmulation) => {
         'VideoType': 'VideoFile',
         'LocationType': 'FileSystem',
         'MediaType': 'Video',
+        'Overview': item.overview,
         'UserData': {
             'PlaybackPositionTicks': 0,
             'PlayCount': 0,
