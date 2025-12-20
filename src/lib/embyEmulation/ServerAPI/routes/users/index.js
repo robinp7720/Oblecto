@@ -20,7 +20,7 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/users/authenticatebyname', async (req, res) => {
-        let sessionId = await embyEmulation.handleLogin(req.query.Username, req.query.Pw);
+        let sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
         logger.debug(embyEmulation.sessions[sessionId]);
