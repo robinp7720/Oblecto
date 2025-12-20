@@ -11,7 +11,8 @@ import { Op } from 'sequelize';
  */
 export default (server, embyEmulation) => {
     server.get('/shows/nextup', async (req, res) => {
-        const userId = parseUuid(req.query.UserId || req.query.userId);
+        const userIdParam = req.params.UserId || req.params.userId || req.params.userid;
+        const userId = userIdParam ? parseUuid(userIdParam) : null;
 
         if (!userId) {
             return res.send({
@@ -113,8 +114,10 @@ export default (server, embyEmulation) => {
         const { id } = parseId(req.params.seriesid);
         const where = { SeriesId: id };
 
-        if (req.query.SeasonId) {
-            const parsed = parseId(req.query.SeasonId);
+        if (req.params.season) {
+            where.airedSeason = parseInt(req.params.season);
+        } else if (req.params.SeasonId || req.params.seasonid) {
+            const parsed = parseId(req.params.SeasonId || req.params.seasonid);
             if (parsed.type === 'season') {
                 const seasonNum = parsed.id % 1000;
                 where.airedSeason = seasonNum;
@@ -127,7 +130,7 @@ export default (server, embyEmulation) => {
                 Series, File, {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: parseUuid(req.params.userid || req.query.UserId || req.query.userId) }
+                    where: { userId: parseUuid(req.params.userid || req.params.UserId || req.params.userId) }
                 }
             ],
             order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]

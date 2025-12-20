@@ -1,9 +1,12 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import { createStreamsList, formatMediaItem, parseId } from '../../../helpers';
+import { createStreamsList, formatMediaItem, parseId, parseUuid } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
 import { Op } from 'sequelize';
 import { Series } from '../../../../../models/series';
+import { Episode } from '../../../../../models/episode';
+import { TrackEpisode } from '../../../../../models/trackEpisode';
+import { TrackMovie } from '../../../../../models/trackMovie';
 
 /**
  *
@@ -11,12 +14,68 @@ import { Series } from '../../../../../models/series';
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
+    server.get('/items/:mediaid', async (req, res) => {
+        const { id, type } = parseId(req.params.mediaid);
+        const userId = req.params.userId || req.params.UserId || req.params.userid;
+        const parsedUserId = userId ? parseUuid(userId) : null;
+
+        let item = null;
+
+        if (type === 'movie') {
+            const include = [File];
+            if (parsedUserId) {
+                include.push({
+                    model: TrackMovie,
+                    required: false,
+                    where: { userId: parsedUserId }
+                });
+            }
+            item = await Movie.findByPk(id, { include });
+        } else if (type === 'series') {
+            // Series usually don't have direct tracking in this model, handled via episodes
+            // But we can just return the series info
+            item = await Series.findByPk(id);
+        } else if (type === 'episode') {
+            const include = [Series, File];
+            if (parsedUserId) {
+                include.push({
+                    model: TrackEpisode,
+                    required: false,
+                    where: { userId: parsedUserId }
+                });
+            }
+            item = await Episode.findByPk(id, { include });
+        } else if (type === 'season') {
+            // Reconstruct season from pseudo-ID
+            // id = seriesId * 1000 + seasonNum
+            const seriesId = Math.floor(id / 1000);
+            const seasonNum = id % 1000;
+            
+            // Verify series exists? Optional, but good practice.
+            // For now, just construct the object as expected by formatMediaItem
+            item = {
+                id: id,
+                seasonName: 'Season ' + seasonNum,
+                SeriesId: seriesId,
+                indexNumber: seasonNum,
+                // We might need to fetch series to get SeriesName if formatMediaItem needs it?
+                // formatMediaItem for season just sets SeriesId.
+            };
+        }
+
+        if (item) {
+            res.send(formatMediaItem(item, type, embyEmulation));
+        } else {
+            res.status(404).send('Item not found');
+        }
+    });
+
     server.get('/items', async (req, res) => {
         let items = [];
-        const includeItemTypes = req.query.IncludeItemTypes || req.query.includeItemTypes || '';
-        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
-        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex) || 0;
-        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
+        const includeItemTypes = req.params.IncludeItemTypes || req.params.includeItemTypes || req.params.includeitemtypes || '';
+        const searchTerm = req.params.SearchTerm || req.params.searchTerm || req.params.searchterm;
+        const startIndex = parseInt(req.params.StartIndex || req.params.startIndex || req.params.startindex) || 0;
+        const limit = parseInt(req.params.Limit || req.params.limit) || 100;
 
         if (includeItemTypes.toLowerCase().includes('movie')) {
             let count = await Movie.count();
@@ -50,8 +109,8 @@ export default (server, embyEmulation) => {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const sortBy = req.query.SortBy || req.query.sortBy || '';
-            const sortOrder = req.query.SortOrder || req.query.sortOrder || 'Ascending';
+            const sortBy = req.params.SortBy || req.params.sortBy || req.params.sortby || '';
+            const sortOrder = req.params.SortOrder || req.params.sortOrder || req.params.sortorder || 'Ascending';
             const order = [];
 
             if (sortBy) {
@@ -84,6 +143,99 @@ export default (server, embyEmulation) => {
             res.send({
                 'Items': items,
                 'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+        } else if (includeItemTypes.toLowerCase().includes('episode')) {
+            const parentId = req.params.ParentId || req.params.parentId || req.params.parentid;
+            const userId = req.params.userId || req.params.UserId || req.params.userid;
+            const parsedUserId = userId ? parseUuid(userId) : null;
+            let where = {};
+
+            if (parentId) {
+                const parsed = parseId(parentId);
+                if (parsed.type === 'series') {
+                    where.SeriesId = parsed.id;
+                } else if (parsed.type === 'season') {
+                    where.SeriesId = Math.floor(parsed.id / 1000);
+                    where.airedSeason = parsed.id % 1000;
+                }
+            }
+            
+            if (searchTerm) {
+                where.episodeName = { [Op.like]: `%${searchTerm}%` };
+            }
+
+            let count = await Episode.count({ where });
+
+            const include = [Series, File];
+            if (parsedUserId) {
+                include.push({
+                    model: TrackEpisode,
+                    required: false,
+                    where: { userId: parsedUserId }
+                });
+            }
+
+            let results = await Episode.findAll({
+                where,
+                include,
+                limit: limit,
+                offset: startIndex,
+                order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
+            });
+
+            items = results.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+        } else if (includeItemTypes.toLowerCase().includes('season')) {
+             const parentId = req.params.ParentId || req.params.parentId || req.params.parentid;
+             let seriesId = null;
+
+             if (parentId) {
+                 const parsed = parseId(parentId);
+                 if (parsed.type === 'series') {
+                     seriesId = parsed.id;
+                 }
+             }
+
+             if (!seriesId) {
+                 // Return empty or all seasons? Usually seasons are fetched contextually.
+                 return res.send({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
+             }
+
+            const episodes = await Episode.findAll({
+                where: { SeriesId: seriesId },
+                attributes: ['airedSeason'],
+                order: [['airedSeason', 'ASC']]
+            });
+
+            const distinctSeasons = new Set();
+            episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
+
+            items = [];
+            const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+
+            // Apply limit/offset to seasons list
+            const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
+
+            for (const seasonNum of pagedSeasons) {
+                const pseudoId = seriesId * 1000 + seasonNum;
+                const seasonObj = {
+                    id: pseudoId,
+                    seasonName: 'Season ' + seasonNum,
+                    SeriesId: seriesId,
+                    indexNumber: seasonNum
+                };
+                items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
+            }
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': sortedSeasons.length,
                 'StartIndex': startIndex
             });
         } else {
@@ -174,8 +326,8 @@ export default (server, embyEmulation) => {
             });
 
             files = movie.Files;
-        } else if (type === 'series') {
-            let series = await Series.findByPk(id, {
+        } else if (type === 'episode') {
+            let episode = await Episode.findByPk(id, {
                 include: [
                     {
                         model: File,
@@ -184,7 +336,7 @@ export default (server, embyEmulation) => {
                 ]
             });
 
-            files = series.Files;
+            files = episode.Files;
         }
 
         if (files.length === 0) {
