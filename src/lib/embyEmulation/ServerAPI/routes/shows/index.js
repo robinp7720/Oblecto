@@ -11,12 +11,12 @@ import { Op } from 'sequelize';
  */
 export default (server, embyEmulation) => {
     server.get('/shows/nextup', async (req, res) => {
-        const userIdParam = req.params.UserId || req.params.userId || req.params.userid;
+        const userIdParam = req.query.UserId || req.query.userId || req.query.userid;
         const userId = userIdParam ? parseUuid(userIdParam) : null;
 
         if (!userId) {
             return res.send({
-                'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0 
+                'Items': [], 'TotalRecordCount': 0, 'StartIndex': 0
             });
         }
 
@@ -79,7 +79,7 @@ export default (server, embyEmulation) => {
 
     server.get('/shows/:seriesid/seasons', async (req, res) => {
         const { id: seriesId } = parseId(req.params.seriesid);
-        
+
         const episodes = await Episode.findAll({
             where: { SeriesId: seriesId },
             attributes: ['airedSeason'],
@@ -87,6 +87,7 @@ export default (server, embyEmulation) => {
         });
 
         const distinctSeasons = new Set();
+
         episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
 
         const items = [];
@@ -100,6 +101,7 @@ export default (server, embyEmulation) => {
                 SeriesId: seriesId,
                 indexNumber: seasonNum
             };
+
             items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
         }
 
@@ -114,12 +116,14 @@ export default (server, embyEmulation) => {
         const { id } = parseId(req.params.seriesid);
         const where = { SeriesId: id };
 
-        if (req.params.season) {
-            where.airedSeason = parseInt(req.params.season);
-        } else if (req.params.SeasonId || req.params.seasonid) {
-            const parsed = parseId(req.params.SeasonId || req.params.seasonid);
+        if (req.query.season) {
+            where.airedSeason = parseInt(req.query.season);
+        } else if (req.query.SeasonId || req.query.seasonid) {
+            const parsed = parseId(req.query.SeasonId || req.query.seasonid);
+
             if (parsed.type === 'season') {
                 const seasonNum = parsed.id % 1000;
+
                 where.airedSeason = seasonNum;
             }
         }
@@ -130,7 +134,7 @@ export default (server, embyEmulation) => {
                 Series, File, {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: parseUuid(req.params.userid || req.params.UserId || req.params.userId) }
+                    where: { userId: parseUuid(req.query.userid || req.query.UserId || req.query.userId) }
                 }
             ],
             order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]

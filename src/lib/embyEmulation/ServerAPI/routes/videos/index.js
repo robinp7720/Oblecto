@@ -6,12 +6,12 @@ import DirectHttpStreamSession from '../../../../streamSessions/StreamSessionTyp
 
 export default (server, embyEmulation) => {
     server.get('/videos/:mediaid/stream/:ext', async (req, res) => {
-        // if (!embyEmulation.oblecto.streamSessionController.sessionExists(req.params.mediasourceid)) {
+        // if (!embyEmulation.oblecto.streamSessionController.sessionExists(req.query.mediasourceid)) {
         //    console.log('The stream session doesn\'t exist');
         //    return new errors.InvalidCredentialsError('Stream session token does not exist');
         // }
 
-        const file = await File.findByPk(req.params.mediasourceid);
+        const file = await File.findByPk(req.query.mediasourceid);
 
         await DirectHttpStreamSession.httpStreamHandler(req, res, file);
     });

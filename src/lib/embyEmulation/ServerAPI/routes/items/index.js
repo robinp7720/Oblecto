@@ -16,13 +16,14 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 export default (server, embyEmulation) => {
     server.get('/items/:mediaid', async (req, res) => {
         const { id, type } = parseId(req.params.mediaid);
-        const userId = req.params.userId || req.params.UserId || req.params.userid;
+        const userId = req.query.userId || req.query.UserId || req.query.userid;
         const parsedUserId = userId ? parseUuid(userId) : null;
 
         let item = null;
 
         if (type === 'movie') {
             const include = [File];
+
             if (parsedUserId) {
                 include.push({
                     model: TrackMovie,
@@ -37,6 +38,7 @@ export default (server, embyEmulation) => {
             item = await Series.findByPk(id);
         } else if (type === 'episode') {
             const include = [Series, File];
+
             if (parsedUserId) {
                 include.push({
                     model: TrackEpisode,
@@ -50,7 +52,7 @@ export default (server, embyEmulation) => {
             // id = seriesId * 1000 + seasonNum
             const seriesId = Math.floor(id / 1000);
             const seasonNum = id % 1000;
-            
+
             // Verify series exists? Optional, but good practice.
             // For now, just construct the object as expected by formatMediaItem
             item = {
@@ -72,10 +74,10 @@ export default (server, embyEmulation) => {
 
     server.get('/items', async (req, res) => {
         let items = [];
-        const includeItemTypes = req.params.IncludeItemTypes || req.params.includeItemTypes || req.params.includeitemtypes || '';
-        const searchTerm = req.params.SearchTerm || req.params.searchTerm || req.params.searchterm;
-        const startIndex = parseInt(req.params.StartIndex || req.params.startIndex || req.params.startindex) || 0;
-        const limit = parseInt(req.params.Limit || req.params.limit) || 100;
+        const includeItemTypes = req.query.IncludeItemTypes || req.query.includeItemTypes || req.query.includeitemtypes || '';
+        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
+        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
+        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
 
         if (includeItemTypes.toLowerCase().includes('movie')) {
             let count = await Movie.count();
@@ -109,14 +111,16 @@ export default (server, embyEmulation) => {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const sortBy = req.params.SortBy || req.params.sortBy || req.params.sortby || '';
-            const sortOrder = req.params.SortOrder || req.params.sortOrder || req.params.sortorder || 'Ascending';
+            const sortBy = req.query.SortBy || req.query.sortBy || req.query.sortby || '';
+            const sortOrder = req.query.SortOrder || req.query.sortOrder || req.query.sortorder || 'Ascending';
             const order = [];
 
             if (sortBy) {
                 const parts = sortBy.split(',');
+
                 for (const part of parts) {
                     const direction = sortOrder.toLowerCase().startsWith('desc') ? 'DESC' : 'ASC';
+
                     if (part === 'SortName') {
                         order.push(['seriesName', direction]);
                     } else if (part === 'PremiereDate' || part === 'ProductionYear') {
@@ -146,13 +150,14 @@ export default (server, embyEmulation) => {
                 'StartIndex': startIndex
             });
         } else if (includeItemTypes.toLowerCase().includes('episode')) {
-            const parentId = req.params.ParentId || req.params.parentId || req.params.parentid;
-            const userId = req.params.userId || req.params.UserId || req.params.userid;
+            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+            const userId = req.query.userId || req.query.UserId || req.query.userid;
             const parsedUserId = userId ? parseUuid(userId) : null;
             let where = {};
 
             if (parentId) {
                 const parsed = parseId(parentId);
+
                 if (parsed.type === 'series') {
                     where.SeriesId = parsed.id;
                 } else if (parsed.type === 'season') {
@@ -160,7 +165,7 @@ export default (server, embyEmulation) => {
                     where.airedSeason = parsed.id % 1000;
                 }
             }
-            
+
             if (searchTerm) {
                 where.episodeName = { [Op.like]: `%${searchTerm}%` };
             }
@@ -168,6 +173,7 @@ export default (server, embyEmulation) => {
             let count = await Episode.count({ where });
 
             const include = [Series, File];
+
             if (parsedUserId) {
                 include.push({
                     model: TrackEpisode,
@@ -192,20 +198,23 @@ export default (server, embyEmulation) => {
                 'StartIndex': startIndex
             });
         } else if (includeItemTypes.toLowerCase().includes('season')) {
-             const parentId = req.params.ParentId || req.params.parentId || req.params.parentid;
-             let seriesId = null;
+            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+            let seriesId = null;
 
-             if (parentId) {
-                 const parsed = parseId(parentId);
-                 if (parsed.type === 'series') {
-                     seriesId = parsed.id;
-                 }
-             }
+            if (parentId) {
+                const parsed = parseId(parentId);
 
-             if (!seriesId) {
-                 // Return empty or all seasons? Usually seasons are fetched contextually.
-                 return res.send({ Items: [], TotalRecordCount: 0, StartIndex: 0 });
-             }
+                if (parsed.type === 'series') {
+                    seriesId = parsed.id;
+                }
+            }
+
+            if (!seriesId) {
+                // Return empty or all seasons? Usually seasons are fetched contextually.
+                return res.send({
+                    Items: [], TotalRecordCount: 0, StartIndex: 0
+                });
+            }
 
             const episodes = await Episode.findAll({
                 where: { SeriesId: seriesId },
@@ -214,6 +223,7 @@ export default (server, embyEmulation) => {
             });
 
             const distinctSeasons = new Set();
+
             episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
 
             items = [];
@@ -230,6 +240,7 @@ export default (server, embyEmulation) => {
                     SeriesId: seriesId,
                     indexNumber: seasonNum
                 };
+
                 items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
             }
 
@@ -345,9 +356,9 @@ export default (server, embyEmulation) => {
 
         let file = files[0];
 
-        if (req.params.MediaSourceId) {
+        if (req.query.MediaSourceId) {
             for (let f of files) {
-                if (f.id === req.params.MediaSourceId) {
+                if (f.id === req.query.MediaSourceId) {
                     file = f;
                     break;
                 }

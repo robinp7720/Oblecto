@@ -8,6 +8,7 @@ import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import logger from '../../../../../submodules/logger';
+import { Op } from 'sequelize';
 
 /**
  * @param {*} server
@@ -19,7 +20,7 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/users/authenticatebyname', async (req, res) => {
-        let sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
+        let sessionId = await embyEmulation.handleLogin(req.query.Username, req.query.Pw);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
         logger.debug(embyEmulation.sessions[sessionId]);
@@ -80,7 +81,7 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid', async (req, res) => {
-        // let user = await User.findByPk(parseUuid(req.params.userid));
+        // let user = await User.findByPk(parseUuid(req.query.userid));
         let user = await User.findByPk(1);
 
         let HasPassword = user.password !== '';
@@ -252,9 +253,189 @@ export default (server, embyEmulation) => {
         });
     });
 
-    // ... (server.get('/users/:userid/views') remains same) ...
+    server.get('/users/:userid/items', async (req, res) => {
+        let items = [];
+        const includeItemTypes = req.query.IncludeItemTypes || req.query.includeItemTypes || req.query.includeitemtypes || '';
+        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
+        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
+        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
 
-    // ... (server.get('/users/:userid/items') remains same) ...
+        if (includeItemTypes.toLowerCase().includes('movie')) {
+            let count = await Movie.count();
+
+            let where = null;
+
+            if (searchTerm) {
+                where = { movieName: { [Op.like]: `%${searchTerm}%` } };
+            }
+
+            let results = await Movie.findAll({
+                where,
+                include: [File],
+                limit: limit,
+                offset: startIndex
+            });
+
+            items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+        } else if (includeItemTypes.toLowerCase().includes('series')) {
+            let count = await Series.count();
+
+            let where = null;
+
+            if (searchTerm) {
+                where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+            }
+
+            const sortBy = req.query.SortBy || req.query.sortBy || req.query.sortby || '';
+            const sortOrder = req.query.SortOrder || req.query.sortOrder || req.query.sortorder || 'Ascending';
+            const order = [];
+
+            if (sortBy) {
+                const parts = sortBy.split(',');
+
+                for (const part of parts) {
+                    const direction = sortOrder.toLowerCase().startsWith('desc') ? 'DESC' : 'ASC';
+
+                    if (part === 'SortName') {
+                        order.push(['seriesName', direction]);
+                    } else if (part === 'PremiereDate' || part === 'ProductionYear') {
+                        order.push(['firstAired', direction]);
+                    } else if (part === 'DateCreated') {
+                        order.push(['createdAt', direction]);
+                    }
+                }
+            }
+
+            if (order.length === 0) {
+                order.push(['seriesName', 'ASC']);
+            }
+
+            let results = await Series.findAll({
+                where,
+                limit: limit,
+                offset: startIndex,
+                order: order
+            });
+
+            items = results.map(series => formatMediaItem(series, 'series', embyEmulation));
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+        } else if (includeItemTypes.toLowerCase().includes('episode')) {
+            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+            const userId = req.query.userid;
+            const parsedUserId = userId ? parseUuid(userId) : null;
+            let where = {};
+
+            if (parentId) {
+                const parsed = parseId(parentId);
+
+                if (parsed.type === 'series') {
+                    where.SeriesId = parsed.id;
+                } else if (parsed.type === 'season') {
+                    where.SeriesId = Math.floor(parsed.id / 1000);
+                    where.airedSeason = parsed.id % 1000;
+                }
+            }
+
+            if (searchTerm) {
+                where.episodeName = { [Op.like]: `%${searchTerm}%` };
+            }
+
+            let count = await Episode.count({ where });
+
+            const include = [Series, File];
+
+            if (parsedUserId) {
+                include.push({
+                    model: TrackEpisode,
+                    required: false,
+                    where: { userId: parsedUserId }
+                });
+            }
+
+            let results = await Episode.findAll({
+                where,
+                include,
+                limit: limit,
+                offset: startIndex,
+                order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
+            });
+
+            items = results.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': count,
+                'StartIndex': startIndex
+            });
+        } else if (includeItemTypes.toLowerCase().includes('season')) {
+            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+            let seriesId = null;
+
+            if (parentId) {
+                const parsed = parseId(parentId);
+
+                if (parsed.type === 'series') {
+                    seriesId = parsed.id;
+                }
+            }
+
+            if (!seriesId) {
+                return res.send({
+                    Items: [], TotalRecordCount: 0, StartIndex: 0
+                });
+            }
+
+            const episodes = await Episode.findAll({
+                where: { SeriesId: seriesId },
+                attributes: ['airedSeason'],
+                order: [['airedSeason', 'ASC']]
+            });
+
+            const distinctSeasons = new Set();
+
+            episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
+
+            items = [];
+            const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+
+            const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
+
+            for (const seasonNum of pagedSeasons) {
+                const pseudoId = seriesId * 1000 + seasonNum;
+                const seasonObj = {
+                    id: pseudoId,
+                    seasonName: 'Season ' + seasonNum,
+                    SeriesId: seriesId,
+                    indexNumber: seasonNum
+                };
+
+                items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
+            }
+
+            res.send({
+                'Items': items,
+                'TotalRecordCount': sortedSeasons.length,
+                'StartIndex': startIndex
+            });
+        } else {
+            res.send({
+                Items: [],
+                TotalRecordCount: 0,
+                StartIndex: 0
+            });
+        }
+    });
 
     server.get('/users/:userid/items/:mediaid', async (req, res) => {
         const { id, type } = parseId(req.params.mediaid);
@@ -343,17 +524,17 @@ export default (server, embyEmulation) => {
     });
 
     const getLatestItems = async (req, res) => {
-        const parentId = req.params.parentId || req.params.parentid;
+        const parentId = req.query.parentId || req.query.parentid;
 
         if (parentId === 'movies') {
             let results = await Movie.findAll({
-                include: [
+                /* include: [
                     {
                         model: TrackMovie,
                         required: false,
                         where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
                     }
-                ],
+                ],*/
                 order: [['releaseDate', 'DESC']],
                 limit: 50,
                 offset: 0
@@ -395,13 +576,13 @@ export default (server, embyEmulation) => {
 
         if (parentId === 'shows') {
             let results = await Series.findAll({
-                include: [
+                /* include: [
                     {
                         model: TrackMovie,
                         required: false,
                         where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
                     }
-                ],
+                ],*/
                 order: [['firstAired', 'DESC']],
                 limit: 50,
                 offset: 0

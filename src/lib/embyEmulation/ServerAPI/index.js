@@ -1,6 +1,7 @@
 import express from 'express';
 import routes from './routes';
 import cors from 'cors';
+import logger from '../../../submodules/logger';
 
 /**
  * Parses a header/string of the form:
@@ -50,7 +51,7 @@ export default class EmbyServerAPI {
 
         // Log requests
         this.server.use((req, res, next) => {
-            console.log(req.url, req.params, req.method);
+            console.log(req.url, req.query, req.method);
             next();
         });
 
@@ -80,14 +81,6 @@ export default class EmbyServerAPI {
         // Parse query parameters and body
         this.server.use(express.urlencoded({ extended: true }));
         this.server.use(express.json());
-
-        // Map query and body params to req.params for compatibility with existing code
-        this.server.use((req, res, next) => {
-            req.params = {
-                ...req.query, ...req.body, ...req.params
-            };
-            next();
-        });
 
         // Convert URL to lowercase
         this.server.use((req, res, next) => {
