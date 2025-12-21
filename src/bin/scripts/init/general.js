@@ -3,8 +3,17 @@ import { promises as fs } from 'fs';
 import NodeRSA from 'node-rsa';
 import generateAssetDirectories from '../helpers/generateAssetDirectories';
 
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export default async (args) => {
-    let config = JSON.parse(await fs.readFile(__dirname + '/../../../../res/config.json'));
+    if (args.length === 1) args[1] = 'oblecto';
+
+    let config = JSON.parse(await fs.readFile(path.join(process.cwd(), 'res/config.json')));
 
     try {
         await fs.mkdir('/etc/oblecto');
