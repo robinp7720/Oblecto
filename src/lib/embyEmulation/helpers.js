@@ -1,3 +1,17 @@
+import path from 'path';
+
+const normalizeBoolean = (value) => value === true || value === 1;
+
+const resolveDefaultStreamIndex = (streams, codecType) => {
+    const matching = streams.filter((stream) => stream.codec_type === codecType);
+
+    if (matching.length === 0) return -1;
+
+    const defaultStream = matching.find((stream) => normalizeBoolean(stream.disposition_default));
+
+    return (defaultStream || matching[0]).index;
+};
+
 export const createStreamsList = (streams) => {
     let mediaStreams = [];
 
@@ -85,6 +99,113 @@ export const createStreamsList = (streams) => {
     return mediaStreams;
 };
 
+export const formatFileId = (value) => {
+    if (value === null || value === undefined) return '';
+
+    const raw = String(value).trim();
+
+    if (!raw) return '';
+
+    const normalized = raw.replace(/-/g, '');
+
+    if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
+        return normalized.toLowerCase();
+    }
+
+    if (/^[0-9a-fA-F]+$/.test(normalized)) {
+        return normalized.toLowerCase().padStart(32, '0');
+    }
+
+    const numeric = Number(raw);
+
+    if (Number.isFinite(numeric)) {
+        return numeric.toString(16).padStart(32, '0');
+    }
+
+    return raw;
+};
+
+export const parseFileId = (value) => {
+    if (value === null || value === undefined) return null;
+
+    if (typeof value === 'number') return value;
+
+    const raw = String(value).trim();
+
+    if (!raw) return null;
+
+    const normalized = raw.replace(/-/g, '');
+
+    if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
+        const parsed = parseInt(normalized, 16);
+
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (/^\d+$/.test(raw)) {
+        return parseInt(raw, 10);
+    }
+
+    return raw;
+};
+
+export const createMediaSources = (files) => {
+    if (!Array.isArray(files)) return [];
+
+    return files.map((file) => {
+        console.log(file);
+        const streams = Array.isArray(file.Streams) ? file.Streams : [];
+        const container = file.container
+            || (file.extension ? file.extension.replace(/^\./, '') : '')
+            || path.extname(file.path || '').replace('.', '')
+            || 'mkv';
+        const name = file.name
+            || (file.path ? path.basename(file.path, path.extname(file.path)) : 'Unknown');
+        const runtimeTicks = Number.isFinite(file.duration) ? file.duration * 10000000 : 0;
+        const bitrate = Number.isFinite(file.size) && Number.isFinite(file.duration) && file.duration > 0
+            ? Math.floor(file.size / file.duration)
+            : 0;
+        const defaultAudioStreamIndex = resolveDefaultStreamIndex(streams, 'audio');
+        const defaultSubtitleStreamIndex = resolveDefaultStreamIndex(streams, 'subtitle');
+
+        return {
+            'Protocol': 'File',
+            'Id': formatFileId(file.id),
+            'Path': file.path,
+            'Type': 'Default',
+            'Container': container,
+            'Size': file.size,
+            'Name': name,
+            'IsRemote': Boolean(file.host),
+            'ETag': file.hash || `${file.id}`,
+            'RunTimeTicks': runtimeTicks,
+            'ReadAtNativeFramerate': false,
+            'IgnoreDts': false,
+            'IgnoreIndex': false,
+            'GenPtsInput': false,
+            'SupportsTranscoding': true,
+            'SupportsDirectStream': true,
+            'SupportsDirectPlay': true,
+            'IsInfiniteStream': false,
+            'UseMostCompatibleTranscodingProfile': false,
+            'RequiresOpening': false,
+            'RequiresClosing': false,
+            'RequiresLooping': false,
+            'SupportsProbing': true,
+            'VideoType': 'VideoFile',
+            'MediaStreams': createStreamsList(streams),
+            'MediaAttachments': [],
+            'Formats': [],
+            'Bitrate': bitrate,
+            'RequiredHttpHeaders': {},
+            'TranscodingSubProtocol': 'http',
+            'DefaultAudioStreamIndex': defaultAudioStreamIndex,
+            'DefaultSubtitleStreamIndex': defaultSubtitleStreamIndex,
+            'HasSegments': false
+        };
+    });
+};
+
 export const formatUuid = (id) => {
     const hex = Number(id).toString(16).padStart(32, '0');
 
@@ -118,11 +239,16 @@ export const parseId = (id) => {
     else if (typeCode === '4') type = 'season';
     else if (typeCode === 'f') type = 'user';
 
-    return { id: numericId, type };
+    return {
+        id: numericId,
+        type
+    };
 };
 
 export const formatMediaItem = (item, type, embyEmulation) => {
     const id = formatId(item.id, type);
+
+    console.log(item);
     const res = {
         'Name': item.movieName || item.seriesName || item.episodeName || item.seasonName,
         'ServerId': embyEmulation.serverId,
@@ -186,8 +312,11 @@ export const formatMediaItem = (item, type, embyEmulation) => {
 
     if (item.Files && item.Files.length > 0) {
         res.Path = item.Files[0].path;
-        res.Container = item.Files[0].container;
-        res.RunTimeTicks = item.Files[0].duration * 10000000;
+        res.Container = item.Files[0].container || res.Container;
+        if (Number.isFinite(item.Files[0].duration)) {
+            res.RunTimeTicks = item.Files[0].duration * 10000000;
+        }
+        res.MediaSources = createMediaSources(item.Files);
     }
 
     const track = item.TrackMovies ? item.TrackMovies[0] : (item.TrackEpisodes ? item.TrackEpisodes[0] : null);

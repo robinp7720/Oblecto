@@ -3,7 +3,7 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
 import { User } from '../../../../../models/user';
 import { Stream } from '../../../../../models/stream';
-import { createStreamsList, formatUuid, parseUuid, parseId, formatMediaItem, formatId } from '../../../helpers';
+import { formatUuid, parseUuid, parseId, formatMediaItem, formatId } from '../../../helpers';
 import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
@@ -289,7 +289,7 @@ export default (server, embyEmulation) => {
 
             let results = await Movie.findAll({
                 where,
-                include: [File],
+                include: [{ model: File, include: [{ model: Stream }] }],
                 limit: limit,
                 offset: startIndex
             });
@@ -368,7 +368,7 @@ export default (server, embyEmulation) => {
 
             let count = await Episode.count({ where });
 
-            const include = [Series, File];
+            const include = [Series, { model: File, include: [{ model: Stream }] }];
 
             if (parsedUserId) {
                 include.push({

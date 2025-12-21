@@ -4,7 +4,7 @@ import errors from '../../errors';
 import { Movie } from '../../../../../models/movie';
 import { Episode } from '../../../../../models/episode';
 import { File } from '../../../../../models/file';
-import { parseId } from '../../../helpers';
+import { parseFileId, parseId } from '../../../helpers';
 import HLSStreamer from '../../../../streamSessions/StreamSessionTypes/HLSStreamer';
 
 const getQueryValue = (req, key) => {
@@ -35,7 +35,9 @@ const resolveFileForItem = async (req, itemId) => {
     const mediaSourceId = getQueryValue(req, 'mediasourceid');
 
     if (mediaSourceId) {
-        return await File.findByPk(mediaSourceId);
+        const parsedMediaSourceId = parseFileId(mediaSourceId);
+
+        return await File.findByPk(parsedMediaSourceId ?? mediaSourceId);
     }
 
     const { id, type } = parseId(itemId);

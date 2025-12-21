@@ -1,6 +1,6 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import { createStreamsList, formatMediaItem, parseId, parseUuid } from '../../../helpers';
+import { createMediaSources, formatMediaItem, parseFileId, parseId, parseUuid } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
 import { Op } from 'sequelize';
 import { Series } from '../../../../../models/series';
@@ -29,7 +29,12 @@ export default (server, embyEmulation) => {
         let item = null;
 
         if (type === 'movie') {
-            const include = [File];
+            const include = [
+                {
+                    model: File,
+                    include: [{ model: Stream }]
+                }
+            ];
 
             if (parsedUserId) {
                 include.push({
@@ -44,7 +49,7 @@ export default (server, embyEmulation) => {
             // But we can just return the series info
             item = await Series.findByPk(id);
         } else if (type === 'episode') {
-            const include = [Series, File];
+            const include = [Series, { model: File, include: [{ model: Stream }] }];
 
             if (parsedUserId) {
                 include.push({
@@ -97,7 +102,7 @@ export default (server, embyEmulation) => {
 
             let results = await Movie.findAll({
                 where,
-                include: [File],
+                include: [{ model: File, include: [{ model: Stream }] }],
                 limit: limit,
                 offset: startIndex
             });
@@ -179,7 +184,7 @@ export default (server, embyEmulation) => {
 
             let count = await Episode.count({ where });
 
-            const include = [Series, File];
+            const include = [Series, { model: File, include: [{ model: Stream }] }];
 
             if (parsedUserId) {
                 include.push({
@@ -389,8 +394,10 @@ export default (server, embyEmulation) => {
         let file = files[0];
 
         if (req.query.MediaSourceId) {
+            const parsedMediaSourceId = parseFileId(req.query.MediaSourceId);
+
             for (let f of files) {
-                if (f.id === req.query.MediaSourceId) {
+                if (parsedMediaSourceId !== null && f.id === parsedMediaSourceId) {
                     file = f;
                     break;
                 }
@@ -408,40 +415,7 @@ export default (server, embyEmulation) => {
             });
 
         res.send({
-            'MediaSources': files.map((f) => {
-                return {
-                    'Protocol': 'File',
-                    'Id': f.id,
-                    'Path': f.path,
-                    'Type': 'Default',
-                    'Container': 'mkv',
-                    'Size': f.size,
-                    'Name': f.name,
-                    'IsRemote': false,
-                    'ETag': '3670b404eb5adec1d6cd73868ad1801c',
-                    'RunTimeTicks': f.duration * 10000000,
-                    'ReadAtNativeFramerate': false,
-                    'IgnoreDts': false,
-                    'IgnoreIndex': false,
-                    'GenPtsInput': false,
-                    'SupportsTranscoding': true,
-                    'SupportsDirectStream': true,
-                    'SupportsDirectPlay': true,
-                    'IsInfiniteStream': false,
-                    'RequiresOpening': false,
-                    'RequiresClosing': false,
-                    'RequiresLooping': false,
-                    'SupportsProbing': true,
-                    'VideoType': 'VideoFile',
-                    'MediaStreams': createStreamsList(f.Streams),
-                    'MediaAttachments': [],
-                    'Formats': [],
-                    'Bitrate': f.size / f.duration,
-                    'RequiredHttpHeaders': {},
-                    'DefaultAudioStreamIndex': 1,
-                    'DefaultSubtitleStreamIndex': 2
-                };
-            }),
+            'MediaSources': createMediaSources(files),
             'PlaySessionId': streamSession.sessionId
         });
     });
@@ -604,10 +578,10 @@ export default (server, embyEmulation) => {
     // server.get('/items/:itemid/images/:imagetype/:imageindex', ...); // Already partially covered?
     server.get('/items/:itemid/images/:imagetype/:imageindex/index', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/instantmix', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/:itemid/externalidinfos', async (req, res) => { res.send([]); });
-    
+
     server.post('/items/remotesearch/apply/:itemid', async (req, res) => { res.status(204).send(); });
     server.post('/items/remotesearch/book', async (req, res) => { res.send([]); });
     server.post('/items/remotesearch/boxset', async (req, res) => { res.send([]); });
@@ -624,60 +598,60 @@ export default (server, embyEmulation) => {
     server.get('/items/:itemid/metadataeditor', async (req, res) => { res.send({}); });
     server.get('/items/:itemid/ancestors', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/criticreviews', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/:itemid/download', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/file', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/themesongs', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/:itemid/themevideos', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/counts', async (req, res) => { res.send({}); });
     server.get('/items/:itemid/remoteimages', async (req, res) => { res.send({
-        Images: [], TotalRecordCount: 0, Providers: [] 
+        Images: [], TotalRecordCount: 0, Providers: []
     }); });
     server.get('/items/:itemid/remoteimages/download', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/remoteimages/providers', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/remotesearch/subtitles/:language', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/remotesearch/subtitles/:subtitleid', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/suggestions', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/:itemid/intros', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/items/:itemid/localtrailers', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/specialfeatures', async (req, res) => { res.send([]); });
     server.get('/items/root', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
 
     // Movies
     server.get('/movies/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/movies/recommendations', async (req, res) => { res.send([]); });
 
     // Shows
     server.get('/shows/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/shows/upcoming', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
 
     // Trailers
     server.get('/trailers', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
     server.get('/trailers/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
 
     // Search
     server.get('/search/hints', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0 
+        Items: [], TotalRecordCount: 0, StartIndex: 0
     }); });
 };

@@ -2,6 +2,7 @@ import { Episode } from '../../../../../models/episode';
 import { Series } from '../../../../../models/series';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { File } from '../../../../../models/file';
+import { Stream } from '../../../../../models/stream';
 import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers';
 import { Op } from 'sequelize';
 
@@ -26,7 +27,7 @@ export default (server, embyEmulation) => {
             include: [
                 {
                     model: Episode,
-                    include: [Series, File]
+                    include: [Series, { model: File, include: [{ model: Stream }] }]
                 }
             ],
             order: [['updatedAt', 'DESC']]
@@ -58,7 +59,7 @@ export default (server, embyEmulation) => {
                             { airedSeason: { [Op.gt]: track.Episode.airedSeason } }
                         ]
                     },
-                    include: [Series, File],
+                    include: [Series, { model: File, include: [{ model: Stream }] }],
                     order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
                 });
 
@@ -131,7 +132,7 @@ export default (server, embyEmulation) => {
         const userIdParam = req.query.userid || req.query.UserId || req.query.userId;
         const parsedUserId = userIdParam ? parseUuid(userIdParam) : null;
 
-        const include = [Series, File];
+        const include = [Series, { model: File, include: [{ model: Stream }] }];
 
         if (parsedUserId) {
             include.push({

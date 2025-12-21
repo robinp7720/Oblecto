@@ -85,10 +85,13 @@ export default class EmbyEmulation {
     }
 
     async handleLogin(username, password) {
+        console.log(username, password);
         let user = await User.findOne({
-            where: Sequelize.where(Sequelize.fn('lower', Sequelize.col('username')), username.toLowerCase()),
+            where: { username },
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
+
+        console.log(user);
 
         if (!user) throw Error('Incorrect username');
 
