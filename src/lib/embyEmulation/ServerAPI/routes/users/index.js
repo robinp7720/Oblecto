@@ -10,6 +10,79 @@ import { TrackEpisode } from '../../../../../models/trackEpisode';
 import logger from '../../../../../submodules/logger';
 import { Op } from 'sequelize';
 
+const buildUserDto = (user, embyEmulation) => {
+    let HasPassword = user.password !== '';
+
+    return {
+        Name: user.name,
+        ServerId: embyEmulation.serverId,
+        Id: formatUuid(user.id),
+        PrimaryImageTag: 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
+        HasPassword,
+        HasConfiguredPassword: HasPassword,
+        HasConfiguredEasyPassword: false,
+        EnableAutoLogin: false,
+        LastLoginDate: '2020-09-11T23:37:27.3042432Z',
+        LastActivityDate: '2020-09-11T23:37:27.3042432Z',
+        Configuration: {
+            PlayDefaultAudioTrack: true,
+            SubtitleLanguagePreference: '',
+            DisplayMissingEpisodes: false,
+            GroupedFolders: [],
+            SubtitleMode: 'Default',
+            DisplayCollectionsView: false,
+            EnableLocalPassword: false,
+            OrderedViews: [],
+            LatestItemsExcludes: [],
+            MyMediaExcludes: [],
+            HidePlayedInLatest: true,
+            RememberAudioSelections: true,
+            RememberSubtitleSelections: true,
+            EnableNextEpisodeAutoPlay: true
+        },
+        Policy: {
+            IsAdministrator: true,
+            IsHidden: false,
+            IsDisabled: false,
+            BlockedTags: [],
+            EnableUserPreferenceAccess: true,
+            AccessSchedules: [],
+            BlockUnratedItems: [],
+            EnableRemoteControlOfOtherUsers: false,
+            EnableSharedDeviceControl: false,
+            EnableRemoteAccess: false,
+            EnableLiveTvManagement: false,
+            EnableLiveTvAccess: false,
+            EnableMediaPlayback: true,
+            EnableAudioPlaybackTranscoding: false,
+            EnableVideoPlaybackTranscoding: false,
+            EnablePlaybackRemuxing: true,
+            ForceRemoteSourceTranscoding: false,
+            EnableContentDeletion: true,
+            EnableContentDeletionFromFolders: [],
+            EnableContentDownloading: true,
+            EnableSyncTranscoding: false,
+            EnableMediaConversion: false,
+            EnabledDevices: [],
+            EnableAllDevices: true,
+            EnabledChannels: [],
+            EnableAllChannels: true,
+            EnabledFolders: [],
+            EnableAllFolders: true,
+            InvalidLoginAttemptCount: 0,
+            LoginAttemptsBeforeLockout: -1,
+            MaxActiveSessions: 0,
+            EnablePublicSharing: true,
+            BlockedMediaFolders: [],
+            BlockedChannels: [],
+            RemoteClientBitrateLimit: 0,
+            AuthenticationProviderId: 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider',
+            PasswordResetProviderId: 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider',
+            SyncPlayAccess: 'CreateAndJoinGroups'
+        }
+    };
+};
+
 /**
  * @param {*} server
  * @param {EmbyEmulation} embyEmulation
@@ -17,6 +90,12 @@ import { Op } from 'sequelize';
 export default (server, embyEmulation) => {
     server.get('/users/public', async (req, res) => {
         res.send([]);
+    });
+
+    server.get('/users', async (req, res) => {
+        const users = await User.findAll();
+
+        res.send(users.map((user) => buildUserDto(user, embyEmulation)));
     });
 
     server.post('/users/authenticatebyname', async (req, res) => {
@@ -84,75 +163,7 @@ export default (server, embyEmulation) => {
         // let user = await User.findByPk(parseUuid(req.query.userid));
         let user = await User.findByPk(1);
 
-        let HasPassword = user.password !== '';
-
-        res.send({
-            Name: user.name,
-            ServerId: embyEmulation.serverId,
-            Id: formatUuid(user.id),
-            HasPassword,
-            HasConfiguredPassword: HasPassword,
-            HasConfiguredEasyPassword: false,
-            EnableAutoLogin: false,
-            LastLoginDate: '2020-09-11T23:37:27.3042432Z',
-            LastActivityDate: '2020-09-11T23:37:27.3042432Z',
-            'Configuration': {
-                'PlayDefaultAudioTrack': true,
-                'SubtitleLanguagePreference': '',
-                'DisplayMissingEpisodes': false,
-                'GroupedFolders': [],
-                'SubtitleMode': 'Default',
-                'DisplayCollectionsView': false,
-                'EnableLocalPassword': false,
-                'OrderedViews': [],
-                'LatestItemsExcludes': [],
-                'MyMediaExcludes': [],
-                'HidePlayedInLatest': true,
-                'RememberAudioSelections': true,
-                'RememberSubtitleSelections': true,
-                'EnableNextEpisodeAutoPlay': true
-            },
-            'Policy': {
-                'IsAdministrator': true,
-                'IsHidden': true,
-                'IsDisabled': false,
-                'BlockedTags': [],
-                'EnableUserPreferenceAccess': true,
-                'AccessSchedules': [],
-                'BlockUnratedItems': [],
-                'EnableRemoteControlOfOtherUsers': false,
-                'EnableSharedDeviceControl': false,
-                'EnableRemoteAccess': false,
-                'EnableLiveTvManagement': false,
-                'EnableLiveTvAccess': false,
-                'EnableMediaPlayback': true,
-                'EnableAudioPlaybackTranscoding': false,
-                'EnableVideoPlaybackTranscoding': false,
-                'EnablePlaybackRemuxing': true,
-                'ForceRemoteSourceTranscoding': false,
-                'EnableContentDeletion': true,
-                'EnableContentDeletionFromFolders': [],
-                'EnableContentDownloading': true,
-                'EnableSyncTranscoding': false,
-                'EnableMediaConversion': false,
-                'EnabledDevices': [],
-                'EnableAllDevices': true,
-                'EnabledChannels': [],
-                'EnableAllChannels': true,
-                'EnabledFolders': [],
-                'EnableAllFolders': true,
-                'InvalidLoginAttemptCount': 0,
-                'LoginAttemptsBeforeLockout': -1,
-                'MaxActiveSessions': 0,
-                'EnablePublicSharing': true,
-                'BlockedMediaFolders': [],
-                'BlockedChannels': [],
-                'RemoteClientBitrateLimit': 0,
-                'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider',
-                'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider',
-                'SyncPlayAccess': 'CreateAndJoinGroups'
-            }
-        });
+        res.send(buildUserDto(user, embyEmulation));
     });
 
     server.get('/users/:userid/views', async (req, res) => {

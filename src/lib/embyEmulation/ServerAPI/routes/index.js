@@ -8,6 +8,8 @@ import items from './items';
 import videos from './videos';
 import quickconnect from './quickconnect';
 import web from './web';
+import localization from './localization';
+import devices from './devices';
 
 /**
  *
@@ -25,6 +27,8 @@ export default (server, embyEmulation) => {
     videos(server, embyEmulation);
     quickconnect(server, embyEmulation);
     web(server, embyEmulation);
+    localization(server, embyEmulation);
+    devices(server, embyEmulation);
 
     server.get('/', (req, res) => {
         res.redirect('web/');

@@ -3,6 +3,10 @@
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
+    server.get('/quickconnect/enabled', async (req, res) => {
+        res.send(false);
+    });
+
     server.post('/quickconnect/enabled', async (req, res) => {
         embyEmulation.sessions[req.headers.emby.Token].capabilities = req.query;
 

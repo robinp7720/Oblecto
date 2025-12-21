@@ -9,4 +9,8 @@ export default (server, embyEmulation) => {
     server.get('/branding/css', async (req, res) => {
         res.send();
     });
+
+    server.get('/branding/splashscreen', async (req, res) => {
+        res.send('');
+    });
 };

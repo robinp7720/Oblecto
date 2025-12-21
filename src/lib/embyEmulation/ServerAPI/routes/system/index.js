@@ -36,4 +36,93 @@ export default (server, embyEmulation) => {
         });
     });
 
+    server.get('/system/configuration', async (req, res) => {
+        res.send({
+            ServerName: embyEmulation.serverName,
+            CachePath: '/config/cache',
+            MetadataPath: '/config/data/metadata',
+            MetadataCountryCode: 'US',
+            PreferredMetadataLanguage: 'en',
+            UICulture: 'en-US',
+            QuickConnectAvailable: false,
+            IsStartupWizardCompleted: true,
+            EnableFolderView: false,
+            EnableGroupingMoviesIntoCollections: true,
+            EnableGroupingShowsIntoCollections: true,
+            DisplaySpecialsWithinSeasons: true,
+            EnableLegacyAuthorization: false,
+            EnableCaseSensitiveItemIds: false,
+            EnableNormalizedItemByNameIds: true,
+            ImageSavingConvention: 'Compatible',
+            ImageExtractionTimeoutMs: 15000,
+            LibraryMonitorDelay: 60,
+            LibraryUpdateDuration: 300,
+            LibraryMetadataRefreshConcurrency: 1,
+            LibraryScanFanoutConcurrency: 1,
+            LogFileRetentionDays: 7,
+            ActivityLogRetentionDays: 7,
+            MinResumePct: 5,
+            MaxResumePct: 90,
+            MinResumeDurationSeconds: 300,
+            MinAudiobookResume: 5,
+            MaxAudiobookResume: 5,
+            InactiveSessionThreshold: 0,
+            DummyChapterDuration: 0,
+            RemoteClientBitrateLimit: 0,
+            SaveMetadataHidden: false,
+            EnableExternalContentInSuggestions: false,
+            EnableSlowResponseWarning: false,
+            SlowResponseThresholdMs: 5000,
+            IsPortAuthorized: true,
+            CastReceiverApplications: [],
+            PathSubstitutions: [],
+            MetadataOptions: [],
+            PluginRepositories: [],
+            CodecsUsed: [],
+            ContentTypes: [],
+            CorsHosts: [],
+            SortRemoveCharacters: [],
+            SortRemoveWords: [],
+            SortReplaceCharacters: []
+        });
+    });
+
+    server.get('/system/configuration/metadata', async (req, res) => {
+        res.send({
+            EnableLocalMetadata: true,
+            EnableEmbeddedTitles: true,
+            EnableEmbeddedOverview: true,
+            EnableEmbeddedRatings: true,
+            EnableImageExtraction: true,
+            UseFileCreationTimeForDateAdded: false,
+            PeopleLimit: 0,
+            MetadataOptions: []
+        });
+    });
+
+    server.get('/system/configuration/xbmcmetadata', async (req, res) => {
+        res.send({
+            EnablePathSubstitution: false,
+            EnableEpisodeTitleString: false,
+            EnableSeriesInfo: true
+        });
+    });
+
+    server.get('/system/configuration/encoding', async (req, res) => {
+        res.send({
+            EncodingThreadCount: 0,
+            EnableFallbackFont: true,
+            FallbackFontPath: '',
+            FontWhitelist: [],
+            EnableHardwareEncoding: false,
+            HardwareAccelerationType: 'none',
+            H264Crf: 23,
+            H265Crf: 28,
+            EncoderPreset: 'veryfast',
+            AllowStreamCopy: true,
+            EnableEnhancedNvdecDecoder: false,
+            EnableTonemapping: false
+        });
+    });
+
 };

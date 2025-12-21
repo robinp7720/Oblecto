@@ -1,4 +1,20 @@
 export default (server, embyEmulation) => {
+    server.get('/web/configurationpages', async (req, res) => {
+        const enableInMainMenu = (req.query?.enableinmainmenu || req.query?.enableInMainMenu || '').toString().toLowerCase();
+        const includeInMenu = enableInMainMenu === '' || enableInMainMenu === 'true';
+
+        res.send([
+            {
+                Name: 'dashboard',
+                EnableInMainMenu: includeInMenu,
+                MenuSection: 'Dashboard',
+                MenuIcon: 'settings',
+                DisplayName: 'Dashboard',
+                PluginId: null
+            }
+        ]);
+    });
+
     server.get('/config.json', async (req, res) => {
         res.send({
             'includeCorsCredentials': false,

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { IConfig } from './interfaces/config';
+import { IConfig } from './interfaces/config.js';
 
 let config: IConfig;
 

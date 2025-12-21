@@ -39,4 +39,45 @@ export default (server, embyEmulation) => {
             'Id': '79d44cdaf63d4e0ab91fca60b8e4b6d6'
         });
     });
+
+    server.get('/system/info/storage', async (req, res) => {
+        const baseStorage = {
+            DeviceId: 'oblecto',
+            StorageType: 'FileSystem',
+            FreeSpace: 0,
+            UsedSpace: 0
+        };
+
+        res.send({
+            ProgramDataFolder: {
+                Path: '/config/data',
+                ...baseStorage
+            },
+            CacheFolder: {
+                Path: '/config/cache',
+                ...baseStorage
+            },
+            LogFolder: {
+                Path: '/config/log',
+                ...baseStorage
+            },
+            InternalMetadataFolder: {
+                Path: '/config/data/metadata',
+                ...baseStorage
+            },
+            TranscodingTempFolder: {
+                Path: '/config/data/transcodes',
+                ...baseStorage
+            },
+            ImageCacheFolder: {
+                Path: '/config/cache/images',
+                ...baseStorage
+            },
+            WebFolder: {
+                Path: '/usr/share/jellyfin/web',
+                ...baseStorage
+            },
+            Libraries: []
+        });
+    });
 };
