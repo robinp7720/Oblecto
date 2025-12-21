@@ -159,18 +159,28 @@ export const formatMediaItem = (item, type, embyEmulation) => {
     };
 
     if (type === 'episode') {
+        const seriesId = item.Series ? item.Series.id : item.SeriesId;
+        const seasonNumber = parseInt(item.airedSeason);
+
         res.IndexNumber = parseInt(item.airedEpisodeNumber);
-        res.ParentIndexNumber = parseInt(item.airedSeason);
+        res.ParentIndexNumber = seasonNumber;
         res.SeriesName = item.Series ? item.Series.seriesName : '';
-        res.SeriesId = item.Series ? formatId(item.Series.id, 'series') : '';
+        res.SeriesId = seriesId ? formatId(seriesId, 'series') : '';
         res.SeasonName = 'Season ' + item.airedSeason;
         res.PrimaryImageAspectRatio = 1.7777777777777777;
+
+        if (seriesId && Number.isFinite(seasonNumber)) {
+            const seasonId = (seriesId * 1000) + seasonNumber;
+            res.SeasonId = formatId(seasonId, 'season');
+            res.ParentId = res.SeasonId;
+        }
     }
 
     if (type === 'season') {
         res.SeriesId = item.SeriesId ? formatId(item.SeriesId, 'series') : '';
         res.SeasonName = item.seasonName;
         res.IndexNumber = parseInt(item.indexNumber);
+        res.ParentId = res.SeriesId;
     }
 
     if (item.Files && item.Files.length > 0) {
