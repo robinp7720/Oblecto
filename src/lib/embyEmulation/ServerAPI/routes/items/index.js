@@ -21,61 +21,87 @@ export default (server, embyEmulation) => {
         return true;
     };
 
-    server.get('/items/:mediaid', async (req, res) => {
-        const { id, type } = parseId(req.params.mediaid);
-        const userId = req.query.userId || req.query.UserId || req.query.userid;
-        const parsedUserId = userId ? parseUuid(userId) : null;
+    const buildMovieInclude = (userId) => {
+        const include = [
+            {
+                model: File,
+                include: [{ model: Stream }]
+            }
+        ];
 
+        if (userId) {
+            include.push({
+                model: TrackMovie,
+                required: false,
+                where: { userId }
+            });
+        }
+
+        return include;
+    };
+
+    const buildEpisodeInclude = (userId) => {
+        const include = [Series, { model: File, include: [{ model: Stream }] }];
+
+        if (userId) {
+            include.push({
+                model: TrackEpisode,
+                required: false,
+                where: { userId }
+            });
+        }
+
+        return include;
+    };
+
+    const resolveItemById = async (mediaId, userId = null) => {
+        const parsed = parseId(mediaId);
+        const numericId = parsed.id;
+        let resolvedType = parsed.type;
         let item = null;
 
-        if (type === 'movie') {
-            const include = [
-                {
-                    model: File,
-                    include: [{ model: Stream }]
-                }
-            ];
+        if (resolvedType === 'movie' && Number.isFinite(numericId)) {
+            item = await Movie.findByPk(numericId, { include: buildMovieInclude(userId) });
+        } else if (resolvedType === 'series' && Number.isFinite(numericId)) {
+            item = await Series.findByPk(numericId);
+        } else if (resolvedType === 'episode' && Number.isFinite(numericId)) {
+            item = await Episode.findByPk(numericId, { include: buildEpisodeInclude(userId) });
+        } else if (resolvedType === 'season' && Number.isFinite(numericId)) {
+            const seriesId = Math.floor(numericId / 1000);
+            const seasonNum = numericId % 1000;
 
-            if (parsedUserId) {
-                include.push({
-                    model: TrackMovie,
-                    required: false,
-                    where: { userId: parsedUserId }
-                });
-            }
-            item = await Movie.findByPk(id, { include });
-        } else if (type === 'series') {
-            // Series usually don't have direct tracking in this model, handled via episodes
-            // But we can just return the series info
-            item = await Series.findByPk(id);
-        } else if (type === 'episode') {
-            const include = [Series, { model: File, include: [{ model: Stream }] }];
-
-            if (parsedUserId) {
-                include.push({
-                    model: TrackEpisode,
-                    required: false,
-                    where: { userId: parsedUserId }
-                });
-            }
-            item = await Episode.findByPk(id, { include });
-        } else if (type === 'season') {
-            // Reconstruct season from pseudo-ID
-            // id = seriesId * 1000 + seasonNum
-            const seriesId = Math.floor(id / 1000);
-            const seasonNum = id % 1000;
-
-            // Verify series exists? Optional, but good practice.
-            // For now, just construct the object as expected by formatMediaItem
             item = {
-                id: id,
+                id: numericId,
                 seasonName: 'Season ' + seasonNum,
                 SeriesId: seriesId,
                 indexNumber: seasonNum,
-                // We might need to fetch series to get SeriesName if formatMediaItem needs it?
-                // formatMediaItem for season just sets SeriesId.
             };
         }
+
+        if (!item && Number.isFinite(numericId)) {
+            item = await Movie.findByPk(numericId, { include: buildMovieInclude(userId) });
+            if (item) {
+                resolvedType = 'movie';
+            } else {
+                item = await Episode.findByPk(numericId, { include: buildEpisodeInclude(userId) });
+                if (item) {
+                    resolvedType = 'episode';
+                } else {
+                    item = await Series.findByPk(numericId);
+                    if (item) {
+                        resolvedType = 'series';
+                    }
+                }
+            }
+        }
+
+        return { item, type: resolvedType };
+    };
+
+    server.get('/items/:mediaid', async (req, res) => {
+        const userId = req.query.userId || req.query.UserId || req.query.userid;
+        const parsedUserId = userId ? parseUuid(userId) : null;
+        const { item, type } = await resolveItemById(req.params.mediaid, parsedUserId);
 
         if (item) {
             res.send(formatMediaItem(item, type, embyEmulation));
@@ -299,31 +325,25 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/items/:mediaid/images/primary', async (req, res) => {
-        const { id, type } = parseId(req.params.mediaid);
+        const { item, type } = await resolveItemById(req.params.mediaid);
 
         if (type === 'movie') {
-            let movie = await Movie.findByPk(id, { include: [File] });
-
-            if (!movie) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
+            if (!item) return res.status(404).send();
+            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(item, 'medium');
 
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
-            let series = await Series.findByPk(id);
-
-            if (!series) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'medium');
+            if (!item) return res.status(404).send();
+            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item, 'medium');
 
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'episode') {
-            let episode = await Episode.findByPk(id, { include: [Series] });
-
-            if (!episode) return res.status(404).send();
-            let bannerPath = embyEmulation.oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
+            if (!item) return res.status(404).send();
+            let bannerPath = embyEmulation.oblecto.artworkUtils.episodeBannerPath(item, 'medium');
 
             if (await sendImageIfExists(res, bannerPath)) return;
-            if (episode.Series) {
-                let seriesPosterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(episode.Series, 'medium');
+            if (item.Series) {
+                let seriesPosterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item.Series, 'medium');
 
                 if (await sendImageIfExists(res, seriesPosterPath)) return;
             }
@@ -335,21 +355,17 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
-        const { id, type } = parseId(req.params.mediaid);
+        const { item, type } = await resolveItemById(req.params.mediaid);
 
         if (type === 'movie') {
-            let movie = await Movie.findByPk(id, { include: [File] });
-
-            if (!movie) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
+            if (!item) return res.status(404).send();
+            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(item, 'large');
 
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
-            let series = await Series.findByPk(id);
-
-            if (!series) return res.status(404).send();
+            if (!item) return res.status(404).send();
             // No dedicated series fanart; fall back to poster so clients at least get an image.
-            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'large');
+            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item, 'large');
 
             if (await sendImageIfExists(res, posterPath)) return;
         } else {
@@ -360,31 +376,13 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req, res) => {
-        const { id, type } = parseId(req.params.mediaid);
+        const { item, type } = await resolveItemById(req.params.mediaid);
         let files = [];
 
-        if (type === 'movie') {
-            let movie = await Movie.findByPk(id, {
-                include: [
-                    {
-                        model: File,
-                        include: [{ model: Stream }]
-                    }
-                ]
-            });
-
-            files = movie.Files;
-        } else if (type === 'episode') {
-            let episode = await Episode.findByPk(id, {
-                include: [
-                    {
-                        model: File,
-                        include: [{ model: Stream }]
-                    }
-                ]
-            });
-
-            files = episode.Files;
+        if (type === 'movie' && item) {
+            files = item.Files;
+        } else if (type === 'episode' && item) {
+            files = item.Files;
         }
 
         if (files.length === 0) {

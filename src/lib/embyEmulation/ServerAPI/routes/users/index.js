@@ -448,52 +448,76 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/users/:userid/items/:mediaid', async (req, res) => {
-        const { id, type } = parseId(req.params.mediaid);
+        const parsed = parseId(req.params.mediaid);
+        const numericId = parsed.id;
         const userId = parseUuid(req.params.userid);
-
+        let resolvedType = parsed.type;
         let item = null;
 
-        if (type === 'movie') {
-            item = await Movie.findByPk(id, {
-                include: [
-                    {
-                        model: File,
-                        include: [{ model: Stream }]
-                    },
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: { userId: userId }
-                    }
-                ]
-            });
-        } else if (type === 'series') {
-            item = await Series.findByPk(id);
-        } else if (type === 'episode') {
-            item = await Episode.findByPk(id, {
-                include: [
-                    { model: Series },
-                    {
-                        model: File,
-                        include: [{ model: Stream }]
-                    },
-                    {
-                        model: TrackEpisode,
-                        required: false,
-                        where: { userId: userId }
-                    }
-                ]
-            });
-        } else if (type === 'season') {
-            const seriesId = Math.floor(id / 1000);
-            const seasonNum = id % 1000;
+        const resolveMovie = async (movieId) => Movie.findByPk(movieId, {
+            include: [
+                {
+                    model: File,
+                    include: [{ model: Stream }]
+                },
+                {
+                    model: TrackMovie,
+                    required: false,
+                    where: { userId: userId }
+                }
+            ]
+        });
+
+        const resolveEpisode = async (episodeId) => Episode.findByPk(episodeId, {
+            include: [
+                { model: Series },
+                {
+                    model: File,
+                    include: [{ model: Stream }]
+                },
+                {
+                    model: TrackEpisode,
+                    required: false,
+                    where: { userId: userId }
+                }
+            ]
+        });
+
+        const resolveSeries = async (seriesId) => Series.findByPk(seriesId);
+
+        if (resolvedType === 'movie' && Number.isFinite(numericId)) {
+            item = await resolveMovie(numericId);
+        } else if (resolvedType === 'series' && Number.isFinite(numericId)) {
+            item = await resolveSeries(numericId);
+        } else if (resolvedType === 'episode' && Number.isFinite(numericId)) {
+            item = await resolveEpisode(numericId);
+        } else if (resolvedType === 'season' && Number.isFinite(numericId)) {
+            const seriesId = Math.floor(numericId / 1000);
+            const seasonNum = numericId % 1000;
 
             item = {
-                id: id,
+                id: numericId,
                 seasonName: 'Season ' + seasonNum,
                 SeriesId: seriesId,
                 indexNumber: seasonNum
             };
+        }
+
+        if (!item && Number.isFinite(numericId)) {
+            item = await resolveMovie(numericId);
+            if (item) {
+                resolvedType = 'movie';
+            } else {
+                item = await resolveEpisode(numericId);
+                if (item) {
+                    resolvedType = 'episode';
+                } else {
+                    item = await resolveSeries(numericId);
+                    if (item) {
+                        resolvedType = 'series';
+                    }
+                }
+            }
         }
 
         if (item) {
@@ -511,7 +535,7 @@ export default (server, embyEmulation) => {
             // For now, I will use formatMediaItem for ALL types to solve the "loading" issue for Series.
             // If Movie details regress, I can revisit.
 
-            res.send(formatMediaItem(item, type, embyEmulation));
+            res.send(formatMediaItem(item, resolvedType, embyEmulation));
         } else {
             res.status(404).send('Item not found');
         }
