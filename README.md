@@ -4,17 +4,53 @@
 ![Oblecto logo](https://github.com/robinp7720/Oblecto/blob/master/images/logotype.png?raw=true)
 # Oblecto
 ## What is it?
-Oblecto is a media server, which streams media you already own, and is designed to be at the heart of your entertainment experience. It runs on your home server to index and analyze your media such as Movies and TV Shows and presents them in an interface tailored for your media consumption needs.
+Oblecto is a self-hosted media server for streaming the media you already own. It indexes Movies and TV Shows, enriches them with metadata and artwork, and serves them through a web interface or compatible clients.
 
-## How do I set this up?
-Oblecto can be installed using NPM or directly from GIT. We recommend you to install from npm if you do not intend to help with development.
+## Features
+- Movie and TV library indexing with background updates.
+- Metadata and artwork from TMDb, TVDB, and Fanart.tv (bring your own API keys).
+- Built-in web UI (Oblecto-Web) served by the backend.
+- Jellyfin/Emby API emulation for compatible clients (port `8096`).
+- Streaming sessions with direct play and recode/HLS support (via FFmpeg).
+- Optional federation and seedbox import support.
+- CLI tools for setup, database init, and user management.
 
-Please follow the setup and installation guide here: https://github.com/robinp7720/Oblecto/wiki/Getting-Started
+## What Oblecto can do
+- Scan folders of Movies/TV, identify items, and keep your library organized.
+- Fetch posters, fanart, episode banners, descriptions, and ratings.
+- Serve your library to the web UI and compatible Jellyfin clients.
+- Track playback progress and provide "Next Up" for TV series.
+- Store assets and metadata in a local database (SQLite by default).
 
-If you have further questions or need help setting up Oblecto, please don't hesitate to ask in the gitter chat! Oblecto should be easy to install for everyone. If it doesn't achieve this, improvements must be made!
+## Setup
+Oblecto can be installed using NPM or directly from Git. We recommend NPM unless you plan to develop.
 
-## I've set this thing up. Now where's the place I actually watch my media?
-Simply go to the oblecto front end at ```localhost:8080```. Oblecto will redirect you to the frontend. The frontend is maintained separately at https://github.com/robinp7720/Oblecto-Web
+### Quick start (npm)
+1. Install: `npm install -g oblecto`
+2. Initialize config and assets: `oblecto init`
+3. Edit `/etc/oblecto/config.json` and set:
+   - `movies.directories` and `tvshows.directories`
+   - API keys: `themoviedb.key`, `tvdb.key`, `fanart.tv.key`
+   - Database settings (SQLite by default)
+4. Initialize the database: `oblecto init database`
+5. Start the server: `oblecto start` (or `oblecto start-tui`)
+6. Open the web UI at `http://localhost:8080/web` (or the port set in `server.port`)
+
+### From source (development)
+1. Install dependencies: `npm install`
+2. Build the web UI: `npm run build:web`
+3. Build or run the backend:
+   - `npm run build` then `npm run start`, or
+   - `npm run dev` for live development
+4. Use the CLI if needed: `npm run oblecto` (or `npm run oblecto:dev`)
+
+### Configuration notes
+- Config path order: `OBLECTO_CONFIG_PATH` -> `./res/config.json` -> `/etc/oblecto/config.json`
+- Default SQLite file: `/etc/oblecto/database.sqlite`
+- Sample config template: `res/config.json`
+
+Need help? Ask in the gitter chat or check the setup guide:
+https://github.com/robinp7720/Oblecto/wiki/Getting-Started
 
 
 ## Powered by
