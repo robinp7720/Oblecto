@@ -15,44 +15,15 @@ import { TrackEpisode, trackEpisodesColumns } from '../models/trackEpisode';
 import { User, userColumns } from '../models/user';
 import { Stream, streamColumns } from '../models/stream';
 
+const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
+
+/** @type {Sequelize | null} */
+let sequelizeInstance = null;
+
 /**
- *
- * @returns {Sequelize} - Connection to database
+ * @param {Sequelize} sequelize
  */
-export function initDatabase() {
-    let dialect = config.database.dialect || 'sqlite';
-    let poolmax = config.queue.concurrency;
-
-    if (dialect === 'sqlite') {
-        logger.info( 'Using SQLITE, setting poolmax to 1');
-        poolmax = 1;
-    }
-
-    let options = {
-        dialect,
-
-        logging: false,
-
-        pool: {
-            max: poolmax,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        },
-
-        retry: { max: 5 }
-    };
-
-    if (options.dialect !== 'sqlite') {
-        options.host = config.database.host || 'localhost';
-    }
-
-    if (options.dialect === 'sqlite') {
-        options.storage = config.database.storage || '/etc/oblecto/database.sqlite';
-    }
-
-    const sequelize = new Sequelize(config.database.database, config.database.username, config.database.password, options);
-
+function initModels(sequelize) {
     Episode.init(episodeColumns, { sequelize });
     Movie.init(movieColumns, { sequelize });
     Series.init(seriesColumns, { sequelize });
@@ -70,7 +41,9 @@ export function initDatabase() {
     TrackEpisode.init(trackEpisodesColumns, { sequelize });
 
     User.init(userColumns, { sequelize });
+}
 
+function initAssociations() {
     Episode.belongsTo(Series);
     Series.hasMany(Episode);
 
@@ -97,6 +70,55 @@ export function initDatabase() {
 
     Episode.hasMany(TrackEpisode);
     Movie.hasMany(TrackMovie);
+}
 
-    return sequelize;
+/**
+ *
+ * @returns {Sequelize} - Connection to database
+ */
+export function initDatabase() {
+    if (sequelizeInstance) {
+        return sequelizeInstance;
+    }
+
+    const dialect = config.database.dialect || 'sqlite';
+    const poolMax = dialect === 'sqlite' ? 1 : config.queue.concurrency;
+
+    if (dialect === 'sqlite') {
+        logger.info('Using SQLITE, setting pool max to 1');
+    }
+
+    /** @type {import('sequelize').Options} */
+    const options = {
+        dialect,
+
+        logging: false,
+
+        pool: {
+            max: poolMax,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
+        },
+
+        retry: { max: 5 }
+    };
+
+    if (dialect !== 'sqlite') {
+        options.host = config.database.host || 'localhost';
+    } else {
+        options.storage = config.database.storage || DEFAULT_SQLITE_STORAGE;
+    }
+
+    sequelizeInstance = new Sequelize({
+        database: config.database.database,
+        username: config.database.username,
+        password: config.database.password,
+        ...options
+    });
+
+    initModels(sequelizeInstance);
+    initAssociations();
+
+    return sequelizeInstance;
 }
