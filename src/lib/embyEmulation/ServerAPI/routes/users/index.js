@@ -255,12 +255,19 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid/items', async (req, res) => {
         let items = [];
-        const includeItemTypes = req.query.IncludeItemTypes || req.query.includeItemTypes || req.query.includeitemtypes || '';
+        const includeItemTypes = (req.query.IncludeItemTypes || req.query.includeItemTypes || req.query.includeitemtypes || '').toLowerCase();
         const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
         const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
         const limit = parseInt(req.query.Limit || req.query.limit) || 100;
+        const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
 
-        if (includeItemTypes.toLowerCase().includes('movie')) {
+        let parsedParentId = null;
+
+        if (parentId) {
+            parsedParentId = parseId(parentId);
+        }
+
+        if (includeItemTypes.includes('movie')) {
             let count = await Movie.count();
 
             let where = null;
@@ -283,7 +290,7 @@ export default (server, embyEmulation) => {
                 'TotalRecordCount': count,
                 'StartIndex': startIndex
             });
-        } else if (includeItemTypes.toLowerCase().includes('series')) {
+        } else if (includeItemTypes.includes('series')) {
             let count = await Series.count();
 
             let where = null;
@@ -292,21 +299,21 @@ export default (server, embyEmulation) => {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const sortBy = req.query.SortBy || req.query.sortBy || req.query.sortby || '';
-            const sortOrder = req.query.SortOrder || req.query.sortOrder || req.query.sortorder || 'Ascending';
+            const sortBy = (req.query.SortBy || req.query.sortBy || req.query.sortby || '').toLowerCase();
+            const sortOrder = (req.query.SortOrder || req.query.sortOrder || req.query.sortorder || 'Ascending').toLowerCase();
             const order = [];
 
             if (sortBy) {
                 const parts = sortBy.split(',');
 
                 for (const part of parts) {
-                    const direction = sortOrder.toLowerCase().startsWith('desc') ? 'DESC' : 'ASC';
+                    const direction = sortOrder.startsWith('desc') ? 'DESC' : 'ASC';
 
-                    if (part === 'SortName') {
+                    if (part === 'sortname') {
                         order.push(['seriesName', direction]);
-                    } else if (part === 'PremiereDate' || part === 'ProductionYear') {
+                    } else if (part === 'premieredate' || part === 'productionyear') {
                         order.push(['firstAired', direction]);
-                    } else if (part === 'DateCreated') {
+                    } else if (part === 'datecreated') {
                         order.push(['createdAt', direction]);
                     }
                 }
@@ -330,20 +337,17 @@ export default (server, embyEmulation) => {
                 'TotalRecordCount': count,
                 'StartIndex': startIndex
             });
-        } else if (includeItemTypes.toLowerCase().includes('episode')) {
-            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
-            const userId = req.query.userid;
+        } else if (includeItemTypes.includes('episode') || (parsedParentId && parsedParentId.type === 'season')) {
+            const userId = req.params.userid; // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
             let where = {};
 
-            if (parentId) {
-                const parsed = parseId(parentId);
-
-                if (parsed.type === 'series') {
-                    where.SeriesId = parsed.id;
-                } else if (parsed.type === 'season') {
-                    where.SeriesId = Math.floor(parsed.id / 1000);
-                    where.airedSeason = parsed.id % 1000;
+            if (parsedParentId) {
+                if (parsedParentId.type === 'series') {
+                    where.SeriesId = parsedParentId.id;
+                } else if (parsedParentId.type === 'season') {
+                    where.SeriesId = Math.floor(parsedParentId.id / 1000);
+                    where.airedSeason = parsedParentId.id % 1000;
                 }
             }
 
@@ -378,16 +382,11 @@ export default (server, embyEmulation) => {
                 'TotalRecordCount': count,
                 'StartIndex': startIndex
             });
-        } else if (includeItemTypes.toLowerCase().includes('season')) {
-            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+        } else if (includeItemTypes.includes('season') || (parsedParentId && parsedParentId.type === 'series')) {
             let seriesId = null;
 
-            if (parentId) {
-                const parsed = parseId(parentId);
-
-                if (parsed.type === 'series') {
-                    seriesId = parsed.id;
-                }
+            if (parsedParentId && parsedParentId.type === 'series') {
+                seriesId = parsedParentId.id;
             }
 
             if (!seriesId) {
