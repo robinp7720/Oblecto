@@ -43,6 +43,11 @@ function initModels(sequelize) {
     User.init(userColumns, { sequelize });
 }
 
+/**
+ * Initialize database model associations and relationships.
+ *
+ * This function sets up the relationships between different models
+ */
 function initAssociations() {
     Episode.belongsTo(Series);
     Series.hasMany(Episode);
