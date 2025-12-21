@@ -105,6 +105,11 @@ export const streamColumns = {
     bl_present_flag: DataTypes.STRING,
     dv_bl_signal_compatibility_id: DataTypes.STRING,
 
+    initial_padding: DataTypes.INTEGER,
+    view_ids_available: DataTypes.STRING,
+    view_pos_available: DataTypes.STRING,
+    dv_md_compression: DataTypes.STRING,
+
     max_content: DataTypes.STRING,
     max_average: DataTypes.STRING,
     red_x: DataTypes.STRING,
