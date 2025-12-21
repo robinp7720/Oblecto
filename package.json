@@ -15,12 +15,15 @@
     "Oblecto-Web/dist/",
     "images/"
   ],
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
-    "build": "npx tsc --build; chmod +x ./dist/bin/oblecto.js",
+    "build": "npm run clean && npx tsc --build && chmod +x ./dist/bin/oblecto.js",
+    "clean": "rm -rf dist/",
     "prepare": "npm run build",
-    "start": "ts-node src/index.js",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.js",
+    "oblecto": "node dist/bin/oblecto.js",
     "debug": "node --inspect=0.0.0.0 -r ts-node/register src/index.js",
     "nodemon": "nodemon src --exec 'node --inspect=0.0.0.0 -r ts-node/register src/index.js'",
     "test:mocha": "mocha tests/mocha",

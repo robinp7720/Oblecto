@@ -2,14 +2,20 @@ export default async (args) => {
     if (args.length === 1) args[1] = 'oblecto';
 
     switch (args[1]) {
-        case 'oblecto':
-            await require('./general').default(args);
+        case 'oblecto': {
+            const { default: general } = await import('./general.js');
+            await general(args);
             break;
-        case 'database':
-            await require('./database').default(args);
+        }
+        case 'database': {
+            const { default: database } = await import('./database.js');
+            await database(args);
             break;
-        case 'assets':
-            await require('./assets').default(args);
+        }
+        case 'assets': {
+            const { default: assets } = await import('./assets.js');
+            await assets(args);
             break;
+        }
     }
 };
