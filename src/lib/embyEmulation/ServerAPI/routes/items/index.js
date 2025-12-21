@@ -240,7 +240,7 @@ export default (server, embyEmulation) => {
             const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
 
             for (const seasonNum of pagedSeasons) {
-                const pseudoId = seriesId * 1000 + seasonNum;
+                const pseudoId = seriesId * 1000 + parseInt(seasonNum);
                 const seasonObj = {
                     id: pseudoId,
                     seasonName: 'Season ' + seasonNum,

@@ -94,7 +94,7 @@ export default (server, embyEmulation) => {
         const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
 
         for (const seasonNum of sortedSeasons) {
-            const pseudoId = seriesId * 1000 + seasonNum;
+            const pseudoId = seriesId * 1000 + parseInt(seasonNum);
             const seasonObj = {
                 id: pseudoId,
                 seasonName: 'Season ' + seasonNum,
