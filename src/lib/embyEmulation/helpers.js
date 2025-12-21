@@ -228,9 +228,51 @@ export const formatId = (id, type) => {
     return prefix + Number(id).toString(16).padStart(31, '0');
 };
 
-export const parseId = (id) => {
-    const typeCode = id[0];
-    const numericId = parseInt(id.slice(1), 16);
+export const parseId = (value) => {
+    if (value === null || value === undefined) {
+        return { id: NaN, type: 'unknown' };
+    }
+
+    const raw = String(value).trim();
+
+    if (!raw) {
+        return { id: NaN, type: 'unknown' };
+    }
+
+    const lower = raw.toLowerCase();
+    const namedPrefixes = [
+        { prefix: 'movie', type: 'movie' },
+        { prefix: 'series', type: 'series' },
+        { prefix: 'episode', type: 'episode' },
+        { prefix: 'season', type: 'season' },
+        { prefix: 'user', type: 'user' }
+    ];
+
+    for (const { prefix, type } of namedPrefixes) {
+        if (lower.startsWith(prefix)) {
+            const rest = raw.slice(prefix.length);
+
+            if (!rest) {
+                return { id: NaN, type };
+            }
+
+            if (/^\d+$/.test(rest)) {
+                const parsed = parseInt(rest, 10);
+
+                return { id: parsed, type };
+            }
+
+            if (/^[0-9a-fA-F]+$/.test(rest)) {
+                const parsed = parseInt(rest, 16);
+
+                return { id: parsed, type };
+            }
+
+            return { id: NaN, type };
+        }
+    }
+
+    const typeCode = lower[0];
     let type = 'unknown';
 
     if (typeCode === '1') type = 'movie';
@@ -239,10 +281,28 @@ export const parseId = (id) => {
     else if (typeCode === '4') type = 'season';
     else if (typeCode === 'f') type = 'user';
 
-    return {
-        id: numericId,
-        type
-    };
+    if (type !== 'unknown') {
+        return {
+            id: parseInt(raw.slice(1), 16),
+            type
+        };
+    }
+
+    const normalized = raw.replace(/-/g, '');
+
+    if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
+        return { id: parseInt(normalized, 16), type: 'unknown' };
+    }
+
+    if (/^\d+$/.test(raw)) {
+        return { id: parseInt(raw, 10), type: 'unknown' };
+    }
+
+    if (/^[0-9a-fA-F]+$/.test(raw)) {
+        return { id: parseInt(raw, 16), type: 'unknown' };
+    }
+
+    return { id: NaN, type: 'unknown' };
 };
 
 export const formatMediaItem = (item, type, embyEmulation) => {
