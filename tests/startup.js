@@ -1,8 +1,7 @@
-'use strict';
-let core = require('../dist/core/index').default;
+import core from '../dist/core/index.js';
 
 core.start();
 
-setTimeout(function() {
+setTimeout(() => {
     core.close();
 }, 1000);

@@ -2,5 +2,6 @@ module.exports = {
     diff: true,
     extension: ['js'],
     package: './package.json',
-    'watch-files': ['dist/**/*.js', 'test/mocha/**/*.js'],
+    import: ['tsx'],
+    'watch-files': ['src/**/*.js', 'tests/mocha/**/*.js'],
 };

@@ -1,11 +1,10 @@
-'strict';
-const expect = require('expect.js');
+import expect from 'expect.js';
 
-const { default: Queue } = require('../../dist/lib/queue');
-const { default: SeriesIndexer } = require('../../dist/lib/indexers/series/SeriesIndexer');
-const { default: guessit } = require('../../dist/submodules/guessit');
-const TVDB = require('node-tvdb');
-const { MovieDb } = require('moviedb-promise');
+import Queue from '../../src/lib/queue/index.js';
+import SeriesIndexer from '../../src/lib/indexers/series/SeriesIndexer.js';
+import guessit from '../../src/submodules/guessit.js';
+import TVDB from 'node-tvdb';
+import { MovieDb } from 'moviedb-promise';
 
 const oblecto = {
     tvdb: new TVDB( '4908EBCEE2556E3D'),

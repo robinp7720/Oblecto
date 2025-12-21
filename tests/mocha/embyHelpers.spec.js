@@ -1,5 +1,5 @@
-const assert = require('assert');
-const { formatUuid, parseUuid } = require('../../dist/lib/embyEmulation/helpers');
+import assert from 'node:assert/strict';
+import { formatUuid, parseUuid } from '../../src/lib/embyEmulation/helpers.js';
 
 describe('Emby Emulation Helpers', () => {
     describe('formatUuid', () => {

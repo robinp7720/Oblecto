@@ -1,8 +1,10 @@
-require('chai').should();  // Using Should style
+import * as chai from 'chai';
 
-const { default: TmdbMovieArtworkRetriever } = require('../../dist/lib/artwork/movies/artworkRetrievers/TmdbMovieArtworkRetriever');
-const { default: Queue } = require('../../dist/lib/queue');
-const { MovieDb } = require('moviedb-promise');
+import TmdbMovieArtworkRetriever from '../../src/lib/artwork/movies/artworkRetrievers/TmdbMovieArtworkRetriever.js';
+import Queue from '../../src/lib/queue/index.js';
+import { MovieDb } from 'moviedb-promise';
+
+chai.should();
 
 const TMDBID_TEST_ID = '299534';
 

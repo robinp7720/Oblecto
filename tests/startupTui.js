@@ -1,8 +1,7 @@
-'use strict';
-let core = require('../dist/core/graphical').default;
+import core from '../dist/core/graphical.js';
 
 core.start();
 
-setTimeout(function() {
+setTimeout(() => {
     core.close();
 }, 1000);

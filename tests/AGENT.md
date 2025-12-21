@@ -5,7 +5,6 @@ What lives here
 - Startup smoke tests: `tests/startup.js` and `tests/startupTui.js`.
 
 How to run
-- Build first: `npm run build` (tests use `dist/`).
 - Unit tests: `npm run test:mocha`.
 - Smoke tests: `npm run test:startup` (runs `scripts/test.sh`).
 

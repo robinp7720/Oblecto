@@ -1,8 +1,7 @@
-'strict';
-const expect = require('expect.js');
+import expect from 'expect.js';
 
-const { default: Downloader } = require('../../dist/lib/downloader');
-const { default: Queue } = require('../../dist/lib/queue');
+import Downloader from '../../src/lib/downloader/index.js';
+import Queue from '../../src/lib/queue/index.js';
 
 const oblecto = { queue: new Queue(1) };
 
