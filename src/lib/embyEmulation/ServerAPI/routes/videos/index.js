@@ -40,16 +40,28 @@ const resolveFileForItem = async (req, itemId) => {
         return await File.findByPk(parsedMediaSourceId ?? mediaSourceId);
     }
 
-    const { id, type } = parseId(itemId);
+    const parsed = parseId(itemId);
+    const numericId = parsed.id;
+    const type = parsed.type;
 
     if (type === 'movie') {
-        const movie = await Movie.findByPk(id, { include: [File] });
+        const movie = await Movie.findByPk(numericId, { include: [File] });
 
         return movie?.Files?.[0] || null;
     }
 
     if (type === 'episode') {
-        const episode = await Episode.findByPk(id, { include: [File] });
+        const episode = await Episode.findByPk(numericId, { include: [File] });
+
+        return episode?.Files?.[0] || null;
+    }
+
+    if (type === 'unknown' && Number.isFinite(numericId)) {
+        const movie = await Movie.findByPk(numericId, { include: [File] });
+
+        if (movie?.Files?.[0]) return movie.Files[0];
+
+        const episode = await Episode.findByPk(numericId, { include: [File] });
 
         return episode?.Files?.[0] || null;
     }
