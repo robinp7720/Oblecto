@@ -92,6 +92,11 @@ export default class FileUpdater {
 
         if (!file.duration || file.duration === 0) {
             this.oblecto.queue.queueJob('updateFileFFProbe', file);
+        }
+
+        const streamCount = await file.countStreams();
+
+        if (streamCount === 0) {
             this.oblecto.queue.queueJob('indexFileStreams', file);
         }
     }
