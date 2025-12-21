@@ -7,6 +7,7 @@ import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { TrackMovie } from '../../../../../models/trackMovie';
+import { fileExists } from '../../../../../submodules/utils';
 
 /**
  *
@@ -14,6 +15,12 @@ import { TrackMovie } from '../../../../../models/trackMovie';
  * @param {EmbyEmulation} embyEmulation
  */
 export default (server, embyEmulation) => {
+    const sendImageIfExists = async (res, imagePath) => {
+        if (!imagePath || !(await fileExists(imagePath))) return false;
+        res.sendFile(imagePath);
+        return true;
+    };
+
     server.get('/items/:mediaid', async (req, res) => {
         const { id, type } = parseId(req.params.mediaid);
         const userId = req.query.userId || req.query.UserId || req.query.userid;
@@ -291,17 +298,28 @@ export default (server, embyEmulation) => {
 
         if (type === 'movie') {
             let movie = await Movie.findByPk(id, { include: [File] });
+            if (!movie) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
-
-            res.sendFile(posterPath);
+            if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
             let series = await Series.findByPk(id);
+            if (!series) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'medium');
-
-            res.sendFile(posterPath);
+            if (await sendImageIfExists(res, posterPath)) return;
+        } else if (type === 'episode') {
+            let episode = await Episode.findByPk(id, { include: [Series] });
+            if (!episode) return res.status(404).send();
+            let bannerPath = embyEmulation.oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
+            if (await sendImageIfExists(res, bannerPath)) return;
+            if (episode.Series) {
+                let seriesPosterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(episode.Series, 'medium');
+                if (await sendImageIfExists(res, seriesPosterPath)) return;
+            }
         } else {
-            res.status(404).send();
+            return res.status(404).send();
         }
+
+        return res.status(404).send();
     });
 
     server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
@@ -309,17 +327,20 @@ export default (server, embyEmulation) => {
 
         if (type === 'movie') {
             let movie = await Movie.findByPk(id, { include: [File] });
+            if (!movie) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
-
-            res.sendFile(posterPath);
+            if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
-            let series = await Series.findByPk(id, { include: [File] });
-            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(series, 'large');
-
-            res.sendFile(posterPath);
+            let series = await Series.findByPk(id);
+            if (!series) return res.status(404).send();
+            // No dedicated series fanart; fall back to poster so clients at least get an image.
+            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'large');
+            if (await sendImageIfExists(res, posterPath)) return;
         } else {
-            res.status(404).send();
+            return res.status(404).send();
         }
+
+        return res.status(404).send();
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req, res) => {
