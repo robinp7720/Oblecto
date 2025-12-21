@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import errors from '../errors';
-import sequelize from 'sequelize';
+import { Op } from 'sequelize';
 import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
@@ -9,8 +9,6 @@ import { TrackMovie } from '../../../models/trackMovie';
 import { File } from '../../../models/file';
 import { Movie } from '../../../models/movie';
 import { MovieSet } from '../../../models/movieSet';
-
-const Op = sequelize.Op;
 
 /**
  * @param {Server} server
@@ -281,8 +279,8 @@ export default (server, oblecto) => {
             ],
             where: {
                 userId: req.authorization.user.id,
-                progress: { [sequelize.Op.lt]: 0.9 },
-                updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
+                progress: { [Op.lt]: 0.9 },
+                updatedAt: { [Op.gt]: new Date() - (1000*60*60*24*7) }
             },
             order: [['updatedAt', 'DESC'],],
         });

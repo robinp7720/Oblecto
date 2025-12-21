@@ -1,6 +1,6 @@
 import path from 'path';
 import { promises as fs } from 'fs';
-import sequelize from 'sequelize';
+import { Op } from 'sequelize';
 import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth';
@@ -9,8 +9,6 @@ import errors from '../errors';
 import { Series } from '../../../models/series';
 import { Episode } from '../../../models/episode';
 import { TrackEpisode } from '../../../models/trackEpisode';
-
-const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     server.get('/series/list/:sorting', authMiddleWare.requiresAuth, async function (req, res) {

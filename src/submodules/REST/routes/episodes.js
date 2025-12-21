@@ -1,4 +1,4 @@
-import sequelize from 'sequelize';
+import { Op, and, col, fn, where } from 'sequelize';
 import { promises as fs } from 'fs';
 import errors from '../errors';
 import sharp from 'sharp';
@@ -8,8 +8,6 @@ import { Episode } from '../../../models/episode';
 import { Series } from '../../../models/series';
 import { TrackEpisode } from '../../../models/trackEpisode';
 import { File } from '../../../models/file';
-
-const Op = sequelize.Op;
 
 export default (server, oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -201,8 +199,8 @@ export default (server, oblecto) => {
                     required: true,
                     where: {
                         userId: req.authorization.user.id,
-                        progress: { [sequelize.Op.lt]: 0.9 },
-                        updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
+                        progress: { [Op.lt]: 0.9 },
+                        updatedAt: { [Op.gt]: new Date() - (1000*60*60*24*7) }
                     },
                 }
             ],
@@ -224,9 +222,9 @@ export default (server, oblecto) => {
         let latestWatched = await Episode.findAll({
             attributes: {
                 include: [
-                    [sequelize.fn('MAX', sequelize.col('absoluteNumber')), 'absoluteNumber'],
-                    [sequelize.fn('MAX', sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0'))), 'seasonepisode'],
-                    [sequelize.fn('MAX', sequelize.col('firstAired')), 'firstAired']
+                    [fn('MAX', col('absoluteNumber')), 'absoluteNumber'],
+                    [fn('MAX', fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0'))), 'seasonepisode'],
+                    [fn('MAX', col('firstAired')), 'firstAired']
                 ]
             },
             include: [
@@ -235,8 +233,8 @@ export default (server, oblecto) => {
                     required: true,
                     where: {
                         userId: req.authorization.user.id,
-                        progress: { [sequelize.Op.gt]: 0.9 },
-                        updatedAt: { [sequelize.Op.gt]: new Date() - (1000*60*60*24*7) }
+                        progress: { [Op.gt]: 0.9 },
+                        updatedAt: { [Op.gt]: new Date() - (1000*60*60*24*7) }
                     },
                 }
             ],
@@ -248,7 +246,7 @@ export default (server, oblecto) => {
         for (let latest of latestWatched) {
             latest = latest.toJSON();
             let next = await Episode.findOne({
-                attributes: { include: [[sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']] },
+                attributes: { include: [[fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']] },
                 include: [
                     Series,
                     {
@@ -256,11 +254,11 @@ export default (server, oblecto) => {
                         where: { userId: req.authorization.user.id },
                     }
                 ],
-                where: sequelize.and(
-                    sequelize.where(sequelize.col('SeriesId'), '=', latest.SeriesId),
-                    sequelize.where(sequelize.fn('concat', sequelize.fn('LPAD', sequelize.col('airedSeason'), 2, '0'), sequelize.fn('LPAD', sequelize.col('airedEpisodeNumber'), 2, '0')), '>', latest.seasonepisode),
+                where: and(
+                    where(col('SeriesId'), '=', latest.SeriesId),
+                    where(fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0')), '>', latest.seasonepisode),
                 ),
-                order: [sequelize.col('seasonepisode')]
+                order: [col('seasonepisode')]
             });
 
             if (next) {

@@ -2,7 +2,7 @@ import authMiddleWare from '../middleware/auth';
 import { File } from '../../../models/file';
 import { Episode } from '../../../models/episode';
 import { Movie } from '../../../models/movie';
-import sequelize from 'sequelize';
+import { col, fn } from 'sequelize';
 
 /**
  * @typedef {import('../../../lib/oblecto').default} Oblecto
@@ -19,10 +19,10 @@ export default (server, oblecto) => {
         const fileHashCounts = await File.findAll({
             attributes: [
                 'hash',
-                [sequelize.fn('COUNT', sequelize.col('hash')), 'count']
+                [fn('COUNT', col('hash')), 'count']
             ],
             group: ['hash'],
-            order: [[sequelize.fn('COUNT', sequelize.col('hash')), 'DESC']]
+            order: [[fn('COUNT', col('hash')), 'DESC']]
         });
 
         let duplicates = [];

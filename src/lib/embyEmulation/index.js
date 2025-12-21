@@ -6,7 +6,6 @@ import errors from './ServerAPI/errors';
 import bcrypt from 'bcrypt';
 import Primus from 'primus';
 import { timeout } from 'async';
-import { Sequelize } from 'sequelize';
 
 export default class EmbyEmulation {
     /**
