@@ -18,14 +18,14 @@
   "type": "module",
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
-    "build": "npm run clean && npx tsc --build && chmod +x ./dist/bin/oblecto.js",
+    "build": "npm run clean && npx esbuild src/index.js --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external && npx esbuild src/bin/oblecto.js --bundle --platform=node --format=esm --outfile=dist/bin/oblecto.js --packages=external && chmod +x ./dist/bin/oblecto.js",
     "clean": "rm -rf dist/",
     "prepare": "npm run build",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.js",
+    "dev": "tsx src/index.js",
     "oblecto": "node dist/bin/oblecto.js",
-    "debug": "node --inspect=0.0.0.0 -r ts-node/register src/index.js",
-    "nodemon": "nodemon src --exec 'node --inspect=0.0.0.0 -r ts-node/register src/index.js'",
+    "oblecto:dev": "tsx src/bin/oblecto.js",
+    "debug": "node --inspect=0.0.0.0 --loader tsx src/index.js",
     "test:mocha": "mocha tests/mocha",
     "test:startup": "scripts/test.sh",
     "test": "npm run test:mocha"
@@ -66,12 +66,14 @@
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.50.0",
     "chai": "^6.2.1",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "eslint-plugin-jsdoc": "^61.5.0",
     "expect.js": "^0.3.1",
     "mocha": "^11.7.5",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
