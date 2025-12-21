@@ -16,7 +16,9 @@ describe('FileUpdater', function () {
             this.queued.push({ name, data });
         }
         lowPriorityJob(name, data) {
-            this.queued.push({ name, data, priority: 'low' });
+            this.queued.push({
+                name, data, priority: 'low' 
+            });
         }
     }
 
@@ -43,6 +45,7 @@ describe('FileUpdater', function () {
 
         // Check if indexFileStreams was queued
         const indexJob = mockOblecto.queue.queued.find(j => j.name === 'indexFileStreams');
+
         expect(indexJob).to.be.ok();
         expect(indexJob.data).to.be(mockFile);
     });
@@ -67,6 +70,7 @@ describe('FileUpdater', function () {
 
         // Check if indexFileStreams was queued
         const indexJob = mockOblecto.queue.queued.find(j => j.name === 'indexFileStreams');
+
         expect(indexJob).to.not.be.ok();
     });
 });
