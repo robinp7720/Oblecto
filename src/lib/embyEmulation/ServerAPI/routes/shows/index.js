@@ -128,15 +128,22 @@ export default (server, embyEmulation) => {
             }
         }
 
+        const userIdParam = req.query.userid || req.query.UserId || req.query.userId;
+        const parsedUserId = userIdParam ? parseUuid(userIdParam) : null;
+
+        const include = [Series, File];
+
+        if (parsedUserId) {
+            include.push({
+                model: TrackEpisode,
+                required: false,
+                where: { userId: parsedUserId }
+            });
+        }
+
         const episodes = await Episode.findAll({
             where,
-            include: [
-                Series, File, {
-                    model: TrackEpisode,
-                    required: false,
-                    where: { userId: parseUuid(req.query.userid || req.query.UserId || req.query.userId) }
-                }
-            ],
+            include,
             order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
         });
 
