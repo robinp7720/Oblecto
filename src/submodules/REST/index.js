@@ -2,6 +2,7 @@ import express from 'express';
 import routes from './routes';
 import logger from '../logger';
 import cors from 'cors';
+import fileUpload from 'express-fileupload';
 
 /**
  * @typedef {import('../../lib/oblecto').default} Oblecto
@@ -26,6 +27,11 @@ export default class OblectoAPI {
             maxAge: 5,
             allowedHeaders: ['API-Token'],
             exposedHeaders: ['API-Token-Expiry']
+        }));
+
+        app.use(fileUpload({
+            useTempFiles: true,
+            tempFileDir: '/tmp/'
         }));
 
         // Parse Authorization header

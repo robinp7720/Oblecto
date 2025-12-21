@@ -61,7 +61,6 @@ export default class SeriesIndexer {
 
     /**
      * Identify and index the series of a given file
-     *
      * @param {File} file - File to be indexed
      * @param {GuessitIdentification} guessitIdentification - Guessit identification Object
      * @param seriesIdentification
@@ -130,7 +129,6 @@ export default class SeriesIndexer {
 
     /**
      * Index a specific file and identify it as a series
-     *
      * @param {string} episodePath - Path to episode to index
      * @returns {Promise<void>}
      */

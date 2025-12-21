@@ -17,7 +17,6 @@ export default class TmdbMovieRetriever {
 
     /**
      * Retrieve movie metadata for a movie entity
-     *
      * @param {Movie} movie - Movie entity to fetch metadata for
      * @returns {Promise<{originalName: string, overview: *, revenue: *, releaseDate: string, imdbid: string, genres: string, popularity: *, tagline: *, runtime: *, originalLanguage: string, movieName: *, budget: *}>} - Movie metadata
      */

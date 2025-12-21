@@ -11,7 +11,6 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
     /**
      * Find the most relevant series match from a TMDB Search output
-     *
      * @param {*} tmdbSearch - Search results object
      * @param {*} guessitIdentification - Guessit identification object
      * @returns {{first_air_date}|*} - Best result match
@@ -36,7 +35,6 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
     /**
      *  Identify the series of a given file
-     *
      * @param {string} path - Path of file to be identified
      * @param {*} guessitIdentification - Guessit identification object
      * @returns {Promise<{overview, tmdbid, seriesName}|*>} - Matched identification object

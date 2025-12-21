@@ -93,9 +93,7 @@ export default class FederationDataServerConnection extends FederationServerConn
 
 /**
  * Sleep for a certain amount of milliseconds
- *
  * @param {number} ms - Milliseconds
- *
  * @returns {Promise<void>}
  */
 function sleep(ms) {

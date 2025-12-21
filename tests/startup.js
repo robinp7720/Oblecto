@@ -1,5 +1,4 @@
-'use strict'
-
+'use strict';
 let core = require('../dist/core/index').default;
 
 core.start();

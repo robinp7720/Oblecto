@@ -19,7 +19,6 @@ export default class SeriesCollector {
 
     /**
      *  Add all files within a directory to the queue to be indexed
-     *
      * @param {string} directory - Which directory to add to the index queue
      * @returns {Promise<void>}
      */
@@ -36,7 +35,6 @@ export default class SeriesCollector {
 
     /**
      *  Queue a file to be indexed
-     *
      * @param {string} file - File path to add to the index queue
      * @returns {Promise<void>}
      */
@@ -50,7 +48,6 @@ export default class SeriesCollector {
 
     /**
      * Index all TV Show libraries
-     *
      * @returns {Promise<void>}
      */
     async collectAll() {

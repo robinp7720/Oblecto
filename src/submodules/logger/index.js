@@ -84,105 +84,95 @@ class Logger extends EventEmitter {
         this.log('DEBUG', ...messages);
     }
 
-        log(level, ...messages) {
+    log(level, ...messages) {
 
-            // Handle case where level is an Error object (old API support)
+        // Handle case where level is an Error object (old API support)
 
-            if (level instanceof Error) {
+        if (level instanceof Error) {
 
-                const err = level;
+            const err = level;
 
-                this.winston.error(err.message, { stack: err.stack });
+            this.winston.error(err.message, { stack: err.stack });
 
-                this.emit('log', { level: 'ERROR', messages: [err.message] });
+            this.emit('log', { level: 'ERROR', messages: [err.message] });
 
-                return;
-
-            }
-
-    
-
-            // Extract potential stack traces for metadata
-
-            const metadata = {};
-
-            const messageParts = messages.map(msg => {
-
-                if (msg instanceof Error) {
-
-                    if (!metadata.stack) {
-
-                        metadata.stack = msg.stack;
-
-                    }
-
-                    return msg.message;
-
-                }
-
-                if (typeof msg === 'object') {
-
-                    try {
-
-                        return JSON.stringify(msg);
-
-                    } catch(e) {
-
-                        return '[Circular/Object]';
-
-                    }
-
-                }
-
-                return msg;
-
-            });
-
-    
-
-            const messageText = messageParts.join(' ');
-
-    
-
-            // Map string levels to winston levels
-
-            // Default to info if unknown
-
-            let winstonLevel = 'info';
-
-            if (typeof level === 'string') {
-
-                const lowerLevel = level.toLowerCase();
-
-                if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
-
-                    winstonLevel = lowerLevel;
-
-                }
-
-            }
-
-    
-
-            // Log to winston
-
-            this.winston.log({
-
-                level: winstonLevel,
-
-                message: messageText,
-
-                ...metadata
-
-            });
-
-    
-
-            // Emit event for TUI (maintaining old payload structure)
-
-            this.emit('log', { level: level, messages: messageParts });
+            return;
 
         }
+
+        // Extract potential stack traces for metadata
+
+        const metadata = {};
+
+        const messageParts = messages.map(msg => {
+
+            if (msg instanceof Error) {
+
+                if (!metadata.stack) {
+
+                    metadata.stack = msg.stack;
+
+                }
+
+                return msg.message;
+
+            }
+
+            if (typeof msg === 'object') {
+
+                try {
+
+                    return JSON.stringify(msg);
+
+                } catch(e) {
+
+                    return '[Circular/Object]';
+
+                }
+
+            }
+
+            return msg;
+
+        });
+
+        const messageText = messageParts.join(' ');
+
+        // Map string levels to winston levels
+
+        // Default to info if unknown
+
+        let winstonLevel = 'info';
+
+        if (typeof level === 'string') {
+
+            const lowerLevel = level.toLowerCase();
+
+            if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
+
+                winstonLevel = lowerLevel;
+
+            }
+
+        }
+
+        // Log to winston
+
+        this.winston.log({
+
+            level: winstonLevel,
+
+            message: messageText,
+
+            ...metadata
+
+        });
+
+        // Emit event for TUI (maintaining old payload structure)
+
+        this.emit('log', { level: level, messages: messageParts });
+
+    }
 }
 
 export default new Logger();

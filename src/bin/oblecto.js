@@ -6,6 +6,9 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/**
+ *
+ */
 async function run() {
     try {
         const packageInfo = JSON.parse(await fs.readFile(join(__dirname, '../../package.json'), 'utf8'));
@@ -15,36 +18,43 @@ async function run() {
         switch (command) {
             case 'start': {
                 const { default: core } = await import('../core/index.js');
+
                 core.start();
                 break;
             }
             case 'start-tui': {
                 const { default: graphical } = await import('../core/graphical.js');
+
                 graphical.start();
                 break;
             }
             case 'init': {
                 const { default: init } = await import('./scripts/init/index.js');
+
                 await init(args);
                 break;
             }
             case 'adduser': {
                 const { default: adduser } = await import('./scripts/adduser.js');
+
                 await adduser(args);
                 break;
             }
             case 'changepassword': {
                 const { default: changepassword } = await import('./scripts/changepassword.js');
+
                 await changepassword(args);
                 break;
             }
             case 'removepassword': {
                 const { default: removepassword } = await import('./scripts/removepassword.js');
+
                 await removepassword(args);
                 break;
             }
             case 'deluser': {
                 const { default: deluser } = await import('./scripts/deluser.js');
+
                 await deluser(args);
                 break;
             }

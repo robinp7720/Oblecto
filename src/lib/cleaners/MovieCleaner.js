@@ -17,7 +17,6 @@ export default class MovieCleaner {
 
     /**
      * Remove all movies from the database without any linked files
-     *
      * @returns {Promise<void>}
      */
     async removeFileLessMovies() {

@@ -6,4 +6,7 @@ export default (server, embyEmulation) => {
             StartIndex: 0
         });
     });
+
+    server.get('/devices/info', async (req, res) => { res.send({}); });
+    server.get('/devices/options', async (req, res) => { res.send({}); });
 };

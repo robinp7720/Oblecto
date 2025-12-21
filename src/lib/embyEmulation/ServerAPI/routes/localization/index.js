@@ -28,4 +28,6 @@ export default (server, embyEmulation) => {
             }
         ]);
     });
+
+    server.get('/localization/parentalratings', async (req, res) => { res.send([]); });
 };

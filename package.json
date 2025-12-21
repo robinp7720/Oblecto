@@ -28,7 +28,9 @@
     "debug": "node --inspect=0.0.0.0 --loader tsx src/index.js",
     "test:mocha": "mocha tests/mocha",
     "test:startup": "scripts/test.sh",
-    "test": "npm run test:mocha"
+    "test": "npm run test:mocha",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "async": "^3.2.6",
@@ -37,6 +39,7 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "express-fileupload": "^1.5.2",
     "fastest-levenshtein": "^1.0.16",
     "fluent-ffmpeg": "^2.1.3",
     "guessit-exec": "^0.0.1",
@@ -70,10 +73,12 @@
     "eslint": "^9.39.2",
     "eslint-plugin-jsdoc": "^61.5.0",
     "expect.js": "^0.3.1",
+    "globals": "^16.5.0",
     "mocha": "^11.7.5",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.0"
   }
 }

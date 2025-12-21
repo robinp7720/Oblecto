@@ -11,7 +11,6 @@ export default class FileCleaner{
 
     /**
      * Remove all files which no longer exist on the filesystem from the database
-     *
      * @returns {Promise<void>}
      */
     async removedDeletedFiled () {
@@ -32,7 +31,6 @@ export default class FileCleaner{
 
     /**
      * Remove all files from the database which no longer have any attached media items
-     *
      * @returns {Promise<void>}
      */
     async removeAssoclessFiles () {

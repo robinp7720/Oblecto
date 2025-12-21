@@ -4,16 +4,19 @@ export default async (args) => {
     switch (args[1]) {
         case 'oblecto': {
             const { default: general } = await import('./general.js');
+
             await general(args);
             break;
         }
         case 'database': {
             const { default: database } = await import('./database.js');
+
             await database(args);
             break;
         }
         case 'assets': {
             const { default: assets } = await import('./assets.js');
+
             await assets(args);
             break;
         }

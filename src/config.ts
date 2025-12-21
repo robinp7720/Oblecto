@@ -1,8 +1,6 @@
 import fs from 'fs';
 import { IConfig } from './interfaces/config.js';
 
-let config: IConfig;
-
 const ConfigManager = {
     loadFile: function loadFile (file: string) {
         try {
@@ -19,6 +17,12 @@ const ConfigManager = {
         }
     },
     loadConfigFiles: function loadConfigs (): IConfig {
+        if (process.env.OBLECTO_CONFIG_PATH) {
+            return { ...this.loadFile(process.env.OBLECTO_CONFIG_PATH) };
+        }
+        if (fs.existsSync('./res/config.json')) {
+            return { ...this.loadFile('./res/config.json') };
+        }
         return { ...this.loadFile('/etc/oblecto/config.json') };
     },
     saveConfig: function saveConfig () {
@@ -28,7 +32,7 @@ const ConfigManager = {
     }
 };
 
-config = ConfigManager.loadConfigFiles();
+const config: IConfig = ConfigManager.loadConfigFiles();
 
 export default config;
 

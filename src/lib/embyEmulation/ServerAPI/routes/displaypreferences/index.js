@@ -29,4 +29,6 @@ export default (server, embyEmulation) => {
                 'Items':[],'TotalRecordCount':0,'StartIndex':0 
             });
     });
+
+    server.post('/displaypreferences/:displaypreferencesid', async (req, res) => { res.status(204).send(); });
 };

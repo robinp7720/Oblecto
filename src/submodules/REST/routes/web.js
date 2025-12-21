@@ -14,6 +14,7 @@ export default (server, oblecto) => {
     server.get('/web/logo.png', (req, res) => {
         try {
             const logoPath = path.join(process.cwd(), 'images/logomark.png');
+
             res.sendFile(logoPath);
         } catch (error) {
             res.status(500).send('Error serving logo image');
@@ -25,6 +26,6 @@ export default (server, oblecto) => {
     });
 
     server.get('/', async (req, res) => {
-        //res.redirect('/web', (v) => v);
+        // res.redirect('/web', (v) => v);
     });
 };

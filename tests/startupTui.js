@@ -1,5 +1,4 @@
-'use strict'
-
+'use strict';
 let core = require('../dist/core/graphical').default;
 
 core.start();

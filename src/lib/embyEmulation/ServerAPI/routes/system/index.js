@@ -125,4 +125,68 @@ export default (server, embyEmulation) => {
         });
     });
 
+    // TODO: Implement missing System routes
+    server.get('/system/configuration/branding', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.get('/system/configuration/metadataoptions/default', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.get('/system/logs', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.get('/system/logs/log', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.post('/system/restart', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.post('/system/shutdown', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+    
+    // Note: /system/configuration/:key must be last to avoid capturing specific paths
+    server.get('/system/configuration/:key', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    // TODO: Implement Backup routes
+    server.get('/backup', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.post('/backup/create', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.get('/backup/manifest', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.post('/backup/restore', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    // TODO: Implement ClientLog routes
+    server.post('/clientlog/document', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
 };

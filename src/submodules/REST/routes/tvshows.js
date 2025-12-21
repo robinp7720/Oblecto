@@ -18,15 +18,15 @@ export default (server, oblecto) => {
         const page = parseInt(req.query.page) || 0;
 
         if (!Number.isInteger(limit) || !Number.isInteger(page))
-            return new errors.BadRequestError('Limit or Page must be a number');
+            throw new errors.BadRequestError('Limit or Page must be a number');
 
         let AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.query.order.toLowerCase()) === -1)
-            return new errors.BadRequestError('Sorting order is invalid');
+            throw new errors.BadRequestError('Sorting order is invalid');
 
         if (!(req.params.sorting in Series.rawAttributes))
-            return new errors.BadRequestError('Sorting method is invalid');
+            throw new errors.BadRequestError('Sorting method is invalid');
 
         let results = await Series.findAll({
             order: [[req.params.sorting, req.query.order]],
@@ -78,7 +78,7 @@ export default (server, oblecto) => {
         let show = await Series.findByPk(req.params.id);
 
         if (!show) {
-            return new errors.NotFoundError('Movie does not exist');
+            throw new errors.NotFoundError('Movie does not exist');
         }
 
         let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
@@ -89,8 +89,8 @@ export default (server, oblecto) => {
             posterPath = path.join(showPath, show.seriesName + '-poster.jpg');
         }
 
-        if (req.files.length < 1) {
-            return new errors.MissingParameterError('Image file is missing');
+        if (!req.files || Object.keys(req.files).length === 0) {
+            throw new errors.MissingParameterError('Image file is missing');
         }
 
         let uploadPath = req.files[Object.keys(req.files)[0]].path;
@@ -100,22 +100,20 @@ export default (server, oblecto) => {
             let metadata = await image.metadata();
             let ratio = metadata.height / metadata.width;
 
-            if (!(1 <= ratio <= 2)) {
-                return new errors.InvalidContentError('Image aspect ratio is incorrect');
+            if (ratio < 1 || ratio > 2) {
+                throw new errors.UnprocessableEntityError('Image aspect ratio is incorrect');
             }
 
         } catch (e) {
-            return new errors.InvalidContentError('File is not an image');
+            if (e instanceof errors.UnprocessableEntityError) throw e;
+            throw new errors.UnprocessableEntityError('File is not an image');
         }
 
         try {
-            fs.copyFile(uploadPath, posterPath, (err) => {
-                if (err) throw err;
-
-                res.send(['success']);
-            });
+            await fs.copyFile(uploadPath, posterPath);
+            res.send(['success']);
         } catch (e) {
-            return new errors.InternalError('An error has occurred during upload of poster');
+            throw new errors.InternalServerError('An error has occurred during upload of poster');
         }
     });
 

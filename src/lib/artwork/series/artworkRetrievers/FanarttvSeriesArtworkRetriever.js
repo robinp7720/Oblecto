@@ -14,7 +14,6 @@ export default class FanarttvSeriesArtworkRetriever {
 
     /**
      *  Get artwork info from fanarttv
-     *
      * @param {number | string} id - tvdbid of series item
      * @returns {Promise<*>} - Artwork lists
      */

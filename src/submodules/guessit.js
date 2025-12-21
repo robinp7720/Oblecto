@@ -38,7 +38,6 @@ which('guessit', function (err, resolvedPath) {
 export default {
     /**
      * @param {string} search - Filename of media entity
-     *
      * @returns {GuessitIdentification} - Guessit Identification object
      */
     async identify(search) {

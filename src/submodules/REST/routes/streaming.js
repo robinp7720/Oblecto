@@ -11,7 +11,6 @@ import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStrea
 
 /**
  * Add routes for streaming
- *
  * @param {Server} server - Express server object
  * @param {Oblecto} oblecto - Oblecto server instance
  */

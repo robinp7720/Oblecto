@@ -2,7 +2,6 @@ import WarnExtendableError from '../lib/errors/WarnExtendableError';
 
 /**
  * Add a timeout to a promise
- *
  * @param {Promise} promise - Promise to which the timeout should be added
  * @param {number} time - Timeout milliseconds
  */

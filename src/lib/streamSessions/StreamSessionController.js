@@ -18,7 +18,6 @@ export default class StreamSessionController {
 
     /**
      * Initiate a new streaming session with a specified file
-     *
      * @param {File} file - File for which to initiate a new streamer session for
      * @param {*} options - options for created streamer session
      * @returns {StreamSession} - Created streamer session
@@ -38,7 +37,6 @@ export default class StreamSessionController {
 
     /**
      * Create a new streamer session based on the given options
-     *
      * @param {File} file - File for which to create a stream session
      * @param {*} options - Streamer object
      * @returns {HLSStreamer|DirectHttpStreamSession|RecodeFederationStreamSession|DirectStreamSession|RecodeStreamSession} - New stream session
@@ -71,7 +69,6 @@ export default class StreamSessionController {
 
     /**
      * Returns whether a specified streamer session exists
-     *
      * @param {string} sessionId - Stream id to check
      * @returns {boolean} - Whether or not the stream session exists
      */

@@ -12,4 +12,8 @@ export default (server, embyEmulation) => {
 
         res.send(false);
     });
+
+    server.get('/quickconnect/initiate', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/quickconnect/connect', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.post('/quickconnect/authorize', async (req, res) => { res.status(501).send('Not Implemented'); });
 };

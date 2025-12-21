@@ -17,7 +17,6 @@ export default class TmdbSeriesRetriever {
 
     /**
      * Get metadata for a series from TMDB
-     *
      * @param {Series} series - Series for which to fetch metadata
      * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>} - Updated series information
      */

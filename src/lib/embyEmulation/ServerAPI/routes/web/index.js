@@ -67,4 +67,9 @@ export default (server, embyEmulation) => {
             ]
         });
     });
+    server.get('/web/configurationpage', async (req, res) => {
+        // Spec says ConfigurationPage, seemingly a file or specific page info?
+        // Typically serves HTML or JS.
+        res.status(404).send('Not Found');
+    });
 };

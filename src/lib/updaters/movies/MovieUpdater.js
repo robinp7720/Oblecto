@@ -24,7 +24,6 @@ export default class MovieUpdater {
 
     /**
      * Fetch new movie metadata for a given movie entity
-     *
      * @param {Movie} movie - Movie entity to be updated
      * @returns {Promise<void>}
      */

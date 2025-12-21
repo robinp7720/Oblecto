@@ -26,6 +26,7 @@ const normalizeBool = (value) => {
 const normalizeContainer = (value) => {
     if (!value) return null;
     const container = String(value).toLowerCase();
+
     if (container === 'ts') return 'mpegts';
     return container;
 };
@@ -41,11 +42,13 @@ const resolveFileForItem = async (req, itemId) => {
 
     if (type === 'movie') {
         const movie = await Movie.findByPk(id, { include: [File] });
+
         return movie?.Files?.[0] || null;
     }
 
     if (type === 'episode') {
         const episode = await Episode.findByPk(id, { include: [File] });
+
         return episode?.Files?.[0] || null;
     }
 
@@ -69,9 +72,11 @@ const buildStreamTarget = (req, file, fallbackContainer) => {
 
 const getOffsetSeconds = (req) => {
     const startTicks = getQueryValue(req, 'starttimeticks');
+
     if (!startTicks) return 0;
 
     const parsed = Number(startTicks);
+
     if (!Number.isFinite(parsed)) return 0;
 
     return parsed / 10000000;
@@ -107,6 +112,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
 
     if (playSessionId && controller.sessionExists(playSessionId)) {
         const existingSession = controller.sessions[playSessionId];
+
         if (existingSession instanceof HLSStreamer) return existingSession;
     }
 
@@ -118,6 +124,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
 
     if (mappedId && controller.sessionExists(mappedId)) {
         const existingSession = controller.sessions[mappedId];
+
         if (existingSession instanceof HLSStreamer) return existingSession;
     }
 

@@ -111,6 +111,7 @@ export default class StreamSession extends EventEmitter {
             .on('close', () => {
                 // Remove destination by reference rather than finding index
                 const destinationIndex = this.destinations.indexOf(destination);
+
                 if (destinationIndex > -1) {
                     this.destinations.splice(destinationIndex, 1);
                 }

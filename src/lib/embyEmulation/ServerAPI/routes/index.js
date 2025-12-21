@@ -10,6 +10,12 @@ import quickconnect from './quickconnect';
 import web from './web';
 import localization from './localization';
 import devices from './devices';
+import artists from './artists';
+import channels from './channels';
+import library from './library';
+import media from './media';
+import plugins from './plugins';
+import others from './others';
 
 /**
  *
@@ -29,6 +35,12 @@ export default (server, embyEmulation) => {
     web(server, embyEmulation);
     localization(server, embyEmulation);
     devices(server, embyEmulation);
+    artists(server, embyEmulation);
+    channels(server, embyEmulation);
+    library(server, embyEmulation);
+    media(server, embyEmulation);
+    plugins(server, embyEmulation);
+    others(server, embyEmulation);
 
     server.get('/', (req, res) => {
         res.redirect('web/');

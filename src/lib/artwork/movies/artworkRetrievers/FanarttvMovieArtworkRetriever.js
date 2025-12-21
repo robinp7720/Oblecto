@@ -11,7 +11,6 @@ export default class FanarttvMovieArtworkRetriever {
 
     /**
      *  Get artwork info from fanarttv
-     *
      * @param {number | string} id - TMDB or IMDBID of movie item
      * @returns {Promise<*>} - Artwork lists
      */

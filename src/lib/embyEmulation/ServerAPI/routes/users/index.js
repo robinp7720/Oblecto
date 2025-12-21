@@ -655,4 +655,58 @@ export default (server, embyEmulation) => {
             'StartIndex': 0
         });
     });
+
+    // TODO: Implement Auth routes
+    server.get('/auth/keys', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.post('/auth/keys', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.delete('/auth/keys/:key', async (req, res) => {
+        // TODO: Implement
+        res.status(501).send('Not Implemented');
+    });
+
+    server.get('/auth/passwordresetproviders', async (req, res) => {
+        // TODO: Implement
+        res.send([]); // Return empty list for now
+    });
+
+    server.get('/auth/providers', async (req, res) => {
+        // TODO: Implement
+        res.send([]); // Return empty list for now
+    });
+
+    // Additional User Routes
+    server.get('/users/:userid/policy', async (req, res) => { res.send({}); });
+    server.post('/users/authenticatewithquickconnect', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/users/configuration', async (req, res) => { res.send([]); });
+    server.post('/users/forgotpassword', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.post('/users/forgotpassword/pin', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/users/me', async (req, res) => { res.status(401).send('Unauthorized'); }); // Needs auth middleware
+    server.post('/users/new', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.post('/users/password', async (req, res) => { res.status(501).send('Not Implemented'); });
+
+    // UserImage
+    server.get('/userimage', async (req, res) => { res.status(404).send('Not Found'); }); // This seems to be POST in some docs or GET specific image? Spec says GET /UserImage (truncated?)
+
+    // UserItems
+    server.get('/useritems/:itemid/userdata', async (req, res) => { res.send({}); });
+    server.post('/useritems/:itemid/rating', async (req, res) => { res.send({}); });
+
+    // UserPlayedItems
+    server.post('/userplayeditems/:itemid', async (req, res) => { res.send({}); });
+    server.delete('/userplayeditems/:itemid', async (req, res) => { res.send({}); });
+
+    // UserFavoriteItems
+    server.post('/userfavoriteitems/:itemid', async (req, res) => { res.send({}); });
+    server.delete('/userfavoriteitems/:itemid', async (req, res) => { res.send({}); });
+
+    // UserViews
+    server.get('/userviews/groupingoptions', async (req, res) => { res.send([]); });
 };

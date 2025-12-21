@@ -298,21 +298,28 @@ export default (server, embyEmulation) => {
 
         if (type === 'movie') {
             let movie = await Movie.findByPk(id, { include: [File] });
+
             if (!movie) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(movie, 'medium');
+
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
             let series = await Series.findByPk(id);
+
             if (!series) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'medium');
+
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'episode') {
             let episode = await Episode.findByPk(id, { include: [Series] });
+
             if (!episode) return res.status(404).send();
             let bannerPath = embyEmulation.oblecto.artworkUtils.episodeBannerPath(episode, 'medium');
+
             if (await sendImageIfExists(res, bannerPath)) return;
             if (episode.Series) {
                 let seriesPosterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(episode.Series, 'medium');
+
                 if (await sendImageIfExists(res, seriesPosterPath)) return;
             }
         } else {
@@ -327,14 +334,18 @@ export default (server, embyEmulation) => {
 
         if (type === 'movie') {
             let movie = await Movie.findByPk(id, { include: [File] });
+
             if (!movie) return res.status(404).send();
             let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(movie, 'large');
+
             if (await sendImageIfExists(res, posterPath)) return;
         } else if (type === 'series') {
             let series = await Series.findByPk(id);
+
             if (!series) return res.status(404).send();
             // No dedicated series fanart; fall back to poster so clients at least get an image.
             let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(series, 'large');
+
             if (await sendImageIfExists(res, posterPath)) return;
         } else {
             return res.status(404).send();
@@ -584,4 +595,89 @@ export default (server, embyEmulation) => {
             }
         );
     });
+
+    // Additional Items Routes
+    server.get('/items/filters', async (req, res) => { res.send({}); });
+    server.get('/items/filters2', async (req, res) => { res.send({}); });
+    server.get('/items/:itemid/images', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/images/:imagetype', async (req, res) => { res.status(404).send('Not Found'); });
+    // server.get('/items/:itemid/images/:imagetype/:imageindex', ...); // Already partially covered?
+    server.get('/items/:itemid/images/:imagetype/:imageindex/index', async (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/instantmix', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/:itemid/externalidinfos', async (req, res) => { res.send([]); });
+    
+    server.post('/items/remotesearch/apply/:itemid', async (req, res) => { res.status(204).send(); });
+    server.post('/items/remotesearch/book', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/boxset', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/movie', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicalbum', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicartist', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicvideo', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/person', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/series', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/trailer', async (req, res) => { res.send([]); });
+
+    server.post('/items/:itemid/refresh', async (req, res) => { res.status(204).send(); });
+    server.get('/items/:itemid/contenttype', async (req, res) => { res.send({}); }); // Guessing response
+    server.get('/items/:itemid/metadataeditor', async (req, res) => { res.send({}); });
+    server.get('/items/:itemid/ancestors', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/criticreviews', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/:itemid/download', async (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/file', async (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/themesongs', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/:itemid/themevideos', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/counts', async (req, res) => { res.send({}); });
+    server.get('/items/:itemid/remoteimages', async (req, res) => { res.send({
+        Images: [], TotalRecordCount: 0, Providers: [] 
+    }); });
+    server.get('/items/:itemid/remoteimages/download', async (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/remoteimages/providers', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/remotesearch/subtitles/:language', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/remotesearch/subtitles/:subtitleid', async (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/suggestions', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/:itemid/intros', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/items/:itemid/localtrailers', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/specialfeatures', async (req, res) => { res.send([]); });
+    server.get('/items/root', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+
+    // Movies
+    server.get('/movies/:itemid/similar', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/movies/recommendations', async (req, res) => { res.send([]); });
+
+    // Shows
+    server.get('/shows/:itemid/similar', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/shows/upcoming', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+
+    // Trailers
+    server.get('/trailers', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+    server.get('/trailers/:itemid/similar', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
+
+    // Search
+    server.get('/search/hints', async (req, res) => { res.send({
+        Items: [], TotalRecordCount: 0, StartIndex: 0 
+    }); });
 };

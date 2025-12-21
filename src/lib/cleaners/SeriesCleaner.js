@@ -18,7 +18,6 @@ export default class SeriesCleaner {
 
     /**
      * Remove all episodes from the database without any linked files
-     *
      * @returns {Promise<void>}
      */
     async removeFileLessEpisodes() {
@@ -37,7 +36,6 @@ export default class SeriesCleaner {
 
     /**
      * Remove all shows from the database without any defined path
-     *
      * @returns {Promise<void>}
      */
     async removePathLessShows() {
@@ -47,7 +45,6 @@ export default class SeriesCleaner {
 
     /**
      * Remove all shows from the database without any linked episodes
-     *
      * @returns {Promise<void>}
      */
     async removeEpisodeslessShows() {

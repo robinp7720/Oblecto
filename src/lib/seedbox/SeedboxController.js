@@ -41,10 +41,10 @@ export default class SeedboxController {
         await this.importAllMovies();
 
         setInterval(async () => {
-                await this.importAllEpisodes();
-                await this.importAllMovies();
-            },
-            30 * 60 * 1000
+            await this.importAllEpisodes();
+            await this.importAllMovies();
+        },
+        30 * 60 * 1000
         );
     }
 
@@ -124,9 +124,8 @@ export default class SeedboxController {
     async shouldImportEpisode(filePath) {
         const method = 'file';
 
-        // TODO: Add filter based on if episode exits
         if (method === 'episode') {
-
+            // TODO: Add filter based on if episode exits
         }
 
         if (method === 'file') {
@@ -148,7 +147,6 @@ export default class SeedboxController {
 
             if (this.alreadyImportingFile(file)) continue;
             if (await this.fileAlreadyImported(file)) continue;
-
 
             let movie_match = null;
 

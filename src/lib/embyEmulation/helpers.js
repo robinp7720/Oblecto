@@ -171,6 +171,7 @@ export const formatMediaItem = (item, type, embyEmulation) => {
 
         if (seriesId && Number.isFinite(seasonNumber)) {
             const seasonId = (seriesId * 1000) + seasonNumber;
+
             res.SeasonId = formatId(seasonId, 'season');
             res.ParentId = res.SeasonId;
         }
