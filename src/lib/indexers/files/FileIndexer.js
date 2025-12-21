@@ -5,6 +5,7 @@ import FileExistsError from '../../errors/FileExistsError';
 import VideoAnalysisError from '../../errors/VideoAnalysisError';
 import ffprobe from '../../../submodules/ffprobe';
 import { Stream } from '../../../models/stream';
+import logger from '../../../submodules/logger/index.js';
 
 /**
  * @typedef {import('../../oblecto').default} Oblecto
@@ -49,6 +50,8 @@ export default class FileIndexer {
     }
 
     async indexVideoFileStreams(file) {
+        logger.debug( `Indexing streams for ${file.path}`);
+
         let metadata;
 
         try {
