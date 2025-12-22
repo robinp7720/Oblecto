@@ -33,7 +33,7 @@ export default class Seedbox {
     }
 
     async findAll(indexPath, fileTypes) {
-        logger.debug( `Finding files in ${indexPath}`);
+        logger.debug(`Finding files in ${indexPath}`);
 
         const toIndex = [];
         const indexed = [];
@@ -48,7 +48,7 @@ export default class Seedbox {
             try {
                 entries = await this.storageDriver.list(current);
             } catch (e) {
-                console.log(`Failed to list files from remote: ${this.name}`, e);
+                logger.error(`Failed to list files from remote: ${this.name}`, e);
                 continue;
             }
 

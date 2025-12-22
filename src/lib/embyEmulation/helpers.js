@@ -153,7 +153,6 @@ export const createMediaSources = (files) => {
     if (!Array.isArray(files)) return [];
 
     return files.map((file) => {
-        console.log(file);
         const streams = Array.isArray(file.Streams) ? file.Streams : [];
         const container = file.container
             || (file.extension ? file.extension.replace(/^\./, '') : '')
@@ -308,7 +307,6 @@ export const parseId = (value) => {
 export const formatMediaItem = (item, type, embyEmulation) => {
     const id = formatId(item.id, type);
 
-    console.log(item);
     const res = {
         'Name': item.movieName || item.seriesName || item.episodeName || item.seasonName,
         'ServerId': embyEmulation.serverId,

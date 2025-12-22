@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { IConfig } from './interfaces/config.js';
+import logger from './submodules/logger';
 
 const ConfigManager = {
     loadFile: function loadFile (file: string) {
@@ -11,8 +12,7 @@ const ConfigManager = {
 
                 return {};
             }
-            console.log(`There is an error with the config file located at ${file}:`);
-            console.log(ex.message);
+            logger.error(`There is an error with the config file located at ${file}:`, ex);
             return {};
         }
     },

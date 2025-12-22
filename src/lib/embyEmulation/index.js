@@ -6,6 +6,7 @@ import errors from './ServerAPI/errors';
 import bcrypt from 'bcrypt';
 import Primus from 'primus';
 import { timeout } from 'async';
+import logger from '../../submodules/logger/index.js';
 
 export default class EmbyEmulation {
     /**
@@ -77,8 +78,7 @@ export default class EmbyEmulation {
             }, 2000);
 
             spark.on('data', function message(data) {
-
-                console.log('jellyfin ws recevied:', data);
+                logger.debug('jellyfin ws recevied:', data);
             });
         });
     }
@@ -88,8 +88,6 @@ export default class EmbyEmulation {
             where: { username },
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
-
-        console.log(user);
 
         if (!user) throw Error('Incorrect username');
 

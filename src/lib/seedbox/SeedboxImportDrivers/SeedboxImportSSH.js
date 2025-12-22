@@ -13,9 +13,6 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
 
     async setup() {
         try {
-
-            console.log(this.config);
-
             await this.client.connect({
                 host: this.config.host,
                 port: this.config.port || 22,
@@ -24,7 +21,7 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
             });
 
         } catch (e) {
-            logger.info( e);
+            logger.info(e);
         }
     }
 

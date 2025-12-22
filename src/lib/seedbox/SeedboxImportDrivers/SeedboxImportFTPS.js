@@ -14,9 +14,6 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
 
     async setup() {
         try {
-
-            console.log(this.config);
-
             await this.client.access({
                 host: this.config.host,
                 user: this.config.username,
