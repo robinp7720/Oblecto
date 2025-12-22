@@ -19,8 +19,6 @@ export default (server, embyEmulation) => {
     server.post('/sessions/playing', async (req, res) => {
         embyEmulation.sessions[req.headers.emby.Token].playSession = req.query;
 
-        console.log(req.query);
-
         embyEmulation.websocketSessions[req.headers.emby.Token].write({
             MessageType: 'Play',
             Data: req.query

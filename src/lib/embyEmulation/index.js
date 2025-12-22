@@ -84,7 +84,6 @@ export default class EmbyEmulation {
     }
 
     async handleLogin(username, password) {
-        console.log(username, password);
         let user = await User.findOne({
             where: { username },
             attributes: ['username', 'name', 'email', 'password', 'id']

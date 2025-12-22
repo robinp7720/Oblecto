@@ -51,7 +51,7 @@ export default class EmbyServerAPI {
 
         // Log requests
         this.server.use((req, res, next) => {
-            console.log(req.url, req.query, req.method);
+            logger.debug(req.url, req.query, req.method);
             next();
         });
 
@@ -102,7 +102,7 @@ export default class EmbyServerAPI {
 
         // Log unmatched routes
         this.server.use((req, res, next) => {
-            console.log('Route remained unmatched:', req.url, res.locals._data);
+            logger.debug('Route remained unmatched:', req.url, res.locals._data);
             next();
         });
 
@@ -123,7 +123,7 @@ export default class EmbyServerAPI {
 
         // Start express server
         this.server = this.server.listen(8096, () => {
-            console.log('Jellyfin emulation server listening at http://localhost:8096');
+            logger.info('Jellyfin emulation server listening at http://localhost:8096');
         });
     }
 }

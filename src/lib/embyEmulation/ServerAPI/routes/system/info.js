@@ -12,7 +12,6 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/system/info', async (req, res) => {
-        console.log('Getting system info');
         res.send({
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,
