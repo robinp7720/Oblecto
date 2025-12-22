@@ -24,23 +24,25 @@ let sequelizeInstance = null;
  * @param {Sequelize} sequelize
  */
 function initModels(sequelize) {
-    Episode.init(episodeColumns, { sequelize });
-    Movie.init(movieColumns, { sequelize });
-    Series.init(seriesColumns, { sequelize });
+    const modelOptions = (modelName) => ({ sequelize, modelName });
 
-    File.init(fileColumns, { sequelize });
-    Stream.init(streamColumns, { sequelize });
+    Episode.init(episodeColumns, modelOptions('Episode'));
+    Movie.init(movieColumns, modelOptions('Movie'));
+    Series.init(seriesColumns, modelOptions('Series'));
 
-    EpisodeFiles.init(episodeFilesColumns, { sequelize });
-    MovieFiles.init(movieFileColumns, { sequelize });
+    File.init(fileColumns, modelOptions('File'));
+    Stream.init(streamColumns, modelOptions('Stream'));
 
-    MovieSet.init(movieSetColumns, { sequelize });
-    SeriesSet.init(seriesSetColumns, { sequelize });
+    EpisodeFiles.init(episodeFilesColumns, modelOptions('EpisodeFiles'));
+    MovieFiles.init(movieFileColumns, modelOptions('MovieFiles'));
 
-    TrackMovie.init(trackMovieColumns, { sequelize });
-    TrackEpisode.init(trackEpisodesColumns, { sequelize });
+    MovieSet.init(movieSetColumns, modelOptions('MovieSet'));
+    SeriesSet.init(seriesSetColumns, modelOptions('SeriesSet'));
 
-    User.init(userColumns, { sequelize });
+    TrackMovie.init(trackMovieColumns, modelOptions('TrackMovie'));
+    TrackEpisode.init(trackEpisodesColumns, modelOptions('TrackEpisode'));
+
+    User.init(userColumns, modelOptions('User'));
 }
 
 /**
