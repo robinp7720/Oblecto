@@ -109,7 +109,7 @@ export default class Oblecto {
         }
 
         this.oblectoAPI = new OblectoAPI(this);
-        // this.realTimeController = new RealtimeController(this);
+        this.realTimeController = new RealtimeController(this);
 
         // Emby Server emulation
         this.embyServer = new EmbyEmulation(this);
