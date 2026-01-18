@@ -406,6 +406,14 @@ export default (server, embyEmulation) => {
                 });
             }
 
+            const series = await Series.findByPk(seriesId);
+
+            if (!series) {
+                return res.send({
+                    Items: [], TotalRecordCount: 0, StartIndex: 0
+                });
+            }
+
             const episodes = await Episode.findAll({
                 where: { SeriesId: seriesId },
                 attributes: ['airedSeason'],

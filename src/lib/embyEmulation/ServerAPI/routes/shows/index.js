@@ -81,6 +81,16 @@ export default (server, embyEmulation) => {
     server.get('/shows/:seriesid/seasons', async (req, res) => {
         const { id: seriesId } = parseId(req.params.seriesid);
 
+        const series = await Series.findByPk(seriesId);
+
+        if (!series) {
+            return res.send({
+                'Items': [],
+                'TotalRecordCount': 0,
+                'StartIndex': 0
+            });
+        }
+
         const episodes = await Episode.findAll({
             where: { SeriesId: seriesId },
             attributes: ['airedSeason'],
