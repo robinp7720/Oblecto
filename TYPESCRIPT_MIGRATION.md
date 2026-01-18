@@ -16,18 +16,12 @@ This document outlines the plan for migrating the Oblecto backend code (`src/`) 
 - [x] Ensure all configuration-related files are TS.
 - [x] Verify `tsconfig.json` settings (Done).
 
-### Phase 2: Core Models (`src/models/`)
-- [ ] Create interfaces/types for all Sequelize models.
-- [x] Migrate `src/models/user.ts` (Done).
-- [x] Migrate `src/models/movie.ts` (Done).
-- [x] Migrate `src/models/series.ts` (Done).
-- [x] Migrate `src/models/episode.ts` (Done).
-- [x] Migrate `src/models/file.ts` (Done).
-- [x] Migrate `src/models/stream.ts` (Done).
-- [ ] Migrate remaining model definition files.
-- [ ] Ensure correct typing for Sequelize model associations.
+### Phase 2: Core Models (`src/models/`) (Completed)
+- [x] Create interfaces/types for all Sequelize models.
+- [x] Migrate all model definition files to `.ts`.
+- [x] Ensure correct typing for Sequelize model associations in class definitions.
 
-### Phase 3: Submodules (`src/submodules/`)
+### Phase 3: Submodules (`src/submodules/`) (Started)
 - [ ] Migrate utility modules (`utils.js`, `logger/`, `ffmpeg.js`, etc.).
 - [ ] Migrate `src/submodules/database.js` to strictly typed initialization.
 - [ ] Migrate REST API (`src/submodules/REST/`). This is a large task; tackle route by route.
