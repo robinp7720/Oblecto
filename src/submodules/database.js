@@ -127,7 +127,5 @@ export function initDatabase() {
     initModels(sequelizeInstance);
     initAssociations();
 
-    sequelizeInstance.sync({ alter: true });
-
     return sequelizeInstance;
 }
