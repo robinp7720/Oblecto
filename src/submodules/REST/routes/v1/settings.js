@@ -6,7 +6,7 @@ const ALLOWED_SECTIONS = [
     'indexer', 'cleaner', 'mdns', 'queue', 'tvdb', 'themoviedb', 
     'fanart.tv', 'assets', 'server', 'files', 'artwork', 
     'fileExtensions', 'tracker', 'transcoding', 'web', 'streaming', 
-    'authentication', 'federation', 'seedboxes' // Added these as they are sections in IConfig
+    'authentication', 'federation', 'seedboxes', 'movies', 'tvshows' // Added these as they are sections in IConfig
 ];
 
 // Simple secret scrubber
