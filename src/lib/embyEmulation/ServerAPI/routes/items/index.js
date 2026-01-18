@@ -1,6 +1,6 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import { createMediaSources, formatId, formatMediaItem, parseFileId, parseId, parseUuid } from '../../../helpers';
+import { createMediaSources, formatFileId, formatId, formatMediaItem, parseFileId, parseId, parseUuid } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
 import { Op } from 'sequelize';
 import { Series } from '../../../../../models/series';
@@ -9,6 +9,9 @@ import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { TrackMovie } from '../../../../../models/trackMovie';
 import { fileExists } from '../../../../../submodules/utils';
 import logger from '../../../../../submodules/logger/index.js';
+import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
+import { getLastMediaSource, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  *
@@ -577,9 +580,16 @@ export default (server, embyEmulation) => {
         }
 
         let file = files[0];
+        const token = getEmbyToken(req);
+        const mediaSourceId = getRequestValue(req, 'MediaSourceId');
+        const playSessionId = getRequestValue(req, 'PlaySessionId') || uuidv4();
+        const existingPlayback = getPlaybackEntry(embyEmulation, token, playSessionId);
+        const lastMediaSource = getLastMediaSource(embyEmulation, token, req.params.mediaid);
 
-        if (req.query.MediaSourceId) {
-            const parsedMediaSourceId = parseFileId(req.query.MediaSourceId);
+        const resolvedMediaSourceId = mediaSourceId ?? existingPlayback?.mediaSourceId ?? lastMediaSource;
+
+        if (resolvedMediaSourceId) {
+            const parsedMediaSourceId = parseFileId(resolvedMediaSourceId);
 
             for (let f of files) {
                 if (parsedMediaSourceId !== null && f.id === parsedMediaSourceId) {
@@ -589,19 +599,17 @@ export default (server, embyEmulation) => {
             }
         }
 
-        const streamSession = embyEmulation.oblecto.streamSessionController.newSession(file,
-            {
-                streamType: 'directhttp',
-                target: {
-                    formats: ['mp4, mkv'],
-                    videoCodecs: ['h264', 'hevc'],
-                    audioCodecs: []
-                }
-            });
+        upsertPlaybackEntry(embyEmulation, token, {
+            playSessionId,
+            itemId: req.params.mediaid,
+            mediaSourceId: file?.id ?? null
+        });
+        setLastMediaSource(embyEmulation, token, req.params.mediaid, file?.id ?? null);
 
         res.send({
             'MediaSources': createMediaSources(files),
-            'PlaySessionId': streamSession.sessionId
+            'PlaySessionId': playSessionId,
+            'MediaSourceId': formatFileId(file?.id)
         });
     });
 

@@ -4,6 +4,8 @@ import { Episode } from '../../../../../models/episode';
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
 import { parseId } from '../../../helpers';
+import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
+import { deletePlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
 
 /**
  * @param {rest} server
@@ -17,25 +19,55 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/sessions/playing', async (req, res) => {
-        embyEmulation.sessions[req.headers.emby.Token].playSession = req.query;
+        const token = getEmbyToken(req);
+        const params = { ...req.query, ...req.body };
 
-        embyEmulation.websocketSessions[req.headers.emby.Token].write({
-            MessageType: 'Play',
-            Data: req.query
-        });
+        if (token && embyEmulation.sessions[token]) {
+            embyEmulation.sessions[token].playSession = params;
+        }
+
+        if (token && embyEmulation.websocketSessions[token]) {
+            embyEmulation.websocketSessions[token].write({
+                MessageType: 'Play',
+                Data: params
+            });
+        }
+
+        const playSessionId = getRequestValue(req, 'PlaySessionId');
+        const mediaSourceId = getRequestValue(req, 'MediaSourceId');
+
+        if (playSessionId) {
+            upsertPlaybackEntry(embyEmulation, token, {
+                playSessionId,
+                itemId: params.ItemId,
+                mediaSourceId
+            });
+            if (params.ItemId && mediaSourceId !== undefined) {
+                setLastMediaSource(embyEmulation, token, params.ItemId, mediaSourceId);
+            }
+        }
 
         res.send();
     });
 
     server.post('/sessions/playing/progress', async (req, res) => {
-        if (!req.headers.emby || !req.headers.emby.Token || !embyEmulation.sessions[req.headers.emby.Token]) {
+        const token = getEmbyToken(req);
+        if (!token || !embyEmulation.sessions[token]) {
             return res.status(401).send('Unauthorized');
         }
 
-        const session = embyEmulation.sessions[req.headers.emby.Token];
+        const session = embyEmulation.sessions[token];
         const userId = session.Id;
         const params = { ...req.query, ...req.body };
         const { ItemId, PositionTicks } = params;
+        const playSessionId = getRequestValue(req, 'PlaySessionId');
+
+        if (playSessionId) {
+            upsertPlaybackEntry(embyEmulation, token, {
+                playSessionId,
+                itemId: ItemId,
+            });
+        }
 
         if (!ItemId) return res.status(400).send('Missing ItemId');
 
@@ -91,7 +123,15 @@ export default (server, embyEmulation) => {
 
     // Additional Session Routes
     server.post('/sessions/playing/ping', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/playing/stopped', async (req, res) => { res.status(204).send(); });
+    server.post('/sessions/playing/stopped', async (req, res) => {
+        const token = getEmbyToken(req);
+        const playSessionId = getRequestValue(req, 'PlaySessionId')
+            || embyEmulation.sessions?.[token]?.playSession?.PlaySessionId;
+        if (playSessionId) {
+            deletePlaybackEntry(embyEmulation, token, playSessionId);
+        }
+        res.status(204).send();
+    });
     server.get('/sessions', async (req, res) => { res.send([]); });
     server.post('/sessions/:sessionid/command', async (req, res) => { res.status(204).send(); });
     server.post('/sessions/:sessionid/command/:command', async (req, res) => { res.status(204).send(); });
