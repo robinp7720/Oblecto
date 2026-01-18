@@ -15,13 +15,13 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
      * @returns {Promise<*>} - Movie identification object
      */
     async identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification> {
-        let query: { query: string; primary_release_year?: number } = { query: guessitIdentification.title };
+        const query: { query: string; primary_release_year?: number } = { query: guessitIdentification.title };
 
         if (guessitIdentification.year) {
             query.primary_release_year = guessitIdentification.year;
         }
 
-        let res = await promiseTimeout(this.oblecto.tmdb.searchMovie(query, { timeout: 5000 })) as {
+        const res = await promiseTimeout(this.oblecto.tmdb.searchMovie(query, { timeout: 5000 })) as {
             results: Array<{
                 id: number;
                 title: string;
@@ -29,7 +29,7 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
             }>;
         };
 
-        let identifiedMovie = res.results[0];
+        const identifiedMovie = res.results[0];
 
         if (!identifiedMovie) {
             throw new IdentificationError(

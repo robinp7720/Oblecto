@@ -123,6 +123,7 @@ export default class HLSStreamer extends StreamSession {
         this.clearTimeout();
 
         const response = res as NodeJS.WritableStream & { on: (event: 'close', cb: () => void) => void };
+
         response.on('close', () => {
             this.startTimeout();
         });
@@ -131,7 +132,7 @@ export default class HLSStreamer extends StreamSession {
 
         const files = await pfs.readdir(`${os.tmpdir()}/oblecto/sessions/${this.sessionId}/`);
 
-        for (let file of files) {
+        for (const file of files) {
             let sequenceId = file.replace('index', '')
                 .replace('.vtt', '')
                 .replace('.ts', '');
@@ -148,7 +149,7 @@ export default class HLSStreamer extends StreamSession {
         this.destinations.push(destination);
 
         destination.stream.on('close', () => {
-            for (let i in this.destinations) {
+            for (const i in this.destinations) {
                 if (this.destinations[i].stream === destination.stream) {
                     this.destinations.splice(Number(i), 1);
                 }

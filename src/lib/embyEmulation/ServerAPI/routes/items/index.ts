@@ -28,9 +28,11 @@ export default (server, embyEmulation) => {
     const normalizeImageType = (rawType) => (rawType || '').toString().toLowerCase();
     const normalizeQueryList = (query, ...keys) => {
         const values = [];
+
         for (const key of keys) {
             if (query[key] === undefined) continue;
             const raw = query[key];
+
             if (Array.isArray(raw)) {
                 for (const entry of raw) {
                     values.push(entry);
@@ -46,6 +48,7 @@ export default (server, embyEmulation) => {
     };
     const normalizeQueryString = (query, ...keys) => {
         const values = normalizeQueryList(query, ...keys);
+
         return values.length > 0 ? values.join(',') : '';
     };
     const normalizeItemTypes = (query) => {
@@ -79,6 +82,7 @@ export default (server, embyEmulation) => {
     const shuffleItems = (items) => {
         for (let i = items.length - 1; i > 0; i -= 1) {
             const j = Math.floor(Math.random() * (i + 1));
+
             [items[i], items[j]] = [items[j], items[i]];
         }
         return items;
@@ -88,6 +92,7 @@ export default (server, embyEmulation) => {
         for (const key of keys) {
             if (query[key] !== undefined) {
                 const parsed = parseInt(query[key], 10);
+
                 if (Number.isFinite(parsed)) return parsed;
             }
         }
@@ -106,6 +111,7 @@ export default (server, embyEmulation) => {
 
         if (target === null) {
             const medium = entries.find(entry => entry.key === 'medium');
+
             return medium ? medium.key : entries[Math.floor(entries.length / 2)].key;
         }
 
@@ -131,6 +137,7 @@ export default (server, embyEmulation) => {
         if (type === 'movie') {
             if (normalized === 'primary' || normalized === 'poster' || normalized === 'box' || normalized === 'boxrear') {
                 const sizeKey = chooseSizeKey(config.poster, query);
+
                 return [
                     artwork.moviePosterPath(item, sizeKey),
                     artwork.moviePosterPath(item, null),
@@ -139,6 +146,7 @@ export default (server, embyEmulation) => {
 
             if (normalized === 'backdrop' || normalized === 'fanart' || normalized === 'art') {
                 const sizeKey = chooseSizeKey(config.fanart, query);
+
                 return [
                     artwork.movieFanartPath(item, sizeKey),
                     artwork.movieFanartPath(item, null),
@@ -149,6 +157,7 @@ export default (server, embyEmulation) => {
         if (type === 'series') {
             if (normalized === 'primary' || normalized === 'poster' || normalized === 'banner' || normalized === 'thumb') {
                 const sizeKey = chooseSizeKey(config.poster, query);
+
                 return [
                     artwork.seriesPosterPath(item, sizeKey),
                     artwork.seriesPosterPath(item, null),
@@ -157,6 +166,7 @@ export default (server, embyEmulation) => {
 
             if (normalized === 'backdrop' || normalized === 'fanart' || normalized === 'art') {
                 const sizeKey = chooseSizeKey(config.poster, query);
+
                 return [
                     artwork.seriesPosterPath(item, sizeKey),
                     artwork.seriesPosterPath(item, null),
@@ -171,8 +181,10 @@ export default (server, embyEmulation) => {
                     artwork.episodeBannerPath(item, sizeKey),
                     artwork.episodeBannerPath(item, null),
                 ];
+
                 if (item.Series) {
                     const seriesSize = chooseSizeKey(config.poster, query);
+
                     candidates.push(artwork.seriesPosterPath(item.Series, seriesSize));
                     candidates.push(artwork.seriesPosterPath(item.Series, null));
                 }
@@ -183,6 +195,7 @@ export default (server, embyEmulation) => {
         if (type === 'season') {
             if (normalized === 'primary' || normalized === 'poster' || normalized === 'banner' || normalized === 'thumb') {
                 const sizeKey = chooseSizeKey(config.poster, query);
+
                 return [
                     artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, sizeKey),
                     artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, null),
@@ -203,13 +216,16 @@ export default (server, embyEmulation) => {
 
         if (imageIndex !== undefined) {
             const parsedIndex = parseInt(imageIndex, 10);
+
             if (!Number.isFinite(parsedIndex) || parsedIndex !== 0) return res.status(404).send();
         }
 
         const candidates = resolveImageCandidates(item, type, requestedType, req.query || {});
+
         if (candidates.length === 0) return res.status(404).send();
 
         const found = await findFirstExistingImage(res, candidates);
+
         if (found) return;
 
         return res.status(404).send();
@@ -342,6 +358,7 @@ export default (server, embyEmulation) => {
             }
 
             const count = await Movie.count({ where });
+
             totalCount += count;
 
             const results = await Movie.findAll({
@@ -363,6 +380,7 @@ export default (server, embyEmulation) => {
             }
 
             const count = await Series.count({ where });
+
             totalCount += count;
 
             const sortByValue = normalizeQueryString(req.query, 'SortBy', 'sortBy', 'sortby');
@@ -403,7 +421,7 @@ export default (server, embyEmulation) => {
             const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
             const userId = req.query.userId || req.query.UserId || req.query.userid;
             const parsedUserId = userId ? parseUuid(userId) : null;
-            let where = {};
+            const where = {};
 
             if (parentId) {
                 const parsed = parseId(parentId);
@@ -421,6 +439,7 @@ export default (server, embyEmulation) => {
             }
 
             const count = await Episode.count({ where });
+
             totalCount += count;
 
             const include = [Series, { model: File, include: [{ model: Stream }] }];
@@ -516,6 +535,7 @@ export default (server, embyEmulation) => {
             finalItems = aggregatedItems.sort((a, b) => {
                 const nameA = (a.Name || '').toLowerCase();
                 const nameB = (b.Name || '').toLowerCase();
+
                 return nameA.localeCompare(nameB);
             });
         }
@@ -591,7 +611,7 @@ export default (server, embyEmulation) => {
         if (resolvedMediaSourceId) {
             const parsedMediaSourceId = parseFileId(resolvedMediaSourceId);
 
-            for (let f of files) {
+            for (const f of files) {
                 if (parsedMediaSourceId !== null && f.id === parsedMediaSourceId) {
                     file = f;
                     break;
@@ -864,6 +884,7 @@ export default (server, embyEmulation) => {
         if (wantsMovie) {
             const where = { movieName: { [Op.like]: `%${searchTerm}%` } };
             const count = await Movie.count({ where });
+
             totalCount += count;
             const results = await Movie.findAll({
                 where,
@@ -871,12 +892,14 @@ export default (server, embyEmulation) => {
                 offset: startIndex,
                 order: [['movieName', 'ASC']]
             });
+
             hints.push(...results.map(movie => toSearchHint(movie, 'movie')));
         }
 
         if (wantsSeries) {
             const where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             const count = await Series.count({ where });
+
             totalCount += count;
             const results = await Series.findAll({
                 where,
@@ -884,12 +907,14 @@ export default (server, embyEmulation) => {
                 offset: startIndex,
                 order: [['seriesName', 'ASC']]
             });
+
             hints.push(...results.map(series => toSearchHint(series, 'series')));
         }
 
         if (wantsEpisode) {
             const where = { episodeName: { [Op.like]: `%${searchTerm}%` } };
             const count = await Episode.count({ where });
+
             totalCount += count;
             const results = await Episode.findAll({
                 where,
@@ -898,6 +923,7 @@ export default (server, embyEmulation) => {
                 offset: startIndex,
                 order: [['episodeName', 'ASC']]
             });
+
             hints.push(...results.map(ep => toSearchHint(ep, 'episode')));
         }
 

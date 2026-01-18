@@ -17,14 +17,15 @@ export default (server: Express, oblecto: any) => {
         const limit = parseInt(req.combined_params.count) || 20;
         const page = parseInt(req.combined_params.page) || 0;
 
-        let AllowedOrders = ['desc', 'asc'];
+        const AllowedOrders = ['desc', 'asc'];
+
         if (req.combined_params.order && AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
         if (!(req.params.sorting in Series.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
-        let results = await Series.findAll({
+        const results = await Series.findAll({
             order: [[req.params.sorting, req.combined_params.order || 'asc']],
             limit,
             offset: limit * page
@@ -34,7 +35,8 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/series/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let results = await SeriesSet.findAll({});
+        const results = await SeriesSet.findAll({});
+
         res.send(results);
     });
 
@@ -42,7 +44,7 @@ export default (server: Express, oblecto: any) => {
         const limit = parseInt(req.combined_params.count) || 20;
         const page = parseInt(req.combined_params.page) || 0;
 
-        let results = await SeriesSet.findAll({
+        const results = await SeriesSet.findAll({
             include: [{ model: Series }],
             where: { id: req.params.id },
             limit,
@@ -53,31 +55,34 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let series: any = await Series.findByPk(req.params.id as string, {
+        const series: any = await Series.findByPk(req.params.id as string, {
             attributes: [],
             include: [{ model: SeriesSet }]
         });
+
         res.send(series ? series.SeriesSets : []);
     });
 
     server.put('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         try {
-            let series = await Series.findByPk(req.params.id as string);
-            let set = await SeriesSet.findByPk(req.body.setId);
+            const series = await Series.findByPk(req.params.id as string);
+            const set = await SeriesSet.findByPk(req.body.setId);
 
             if (!series || !set) return res.status(404).send({ message: 'Series or set not found' });
             await set.addSeries(series);
             res.send({ success: true });
         } catch (e) {
-             return res.status(500).send({ message: 'Error adding series to set' });
+            return res.status(500).send({ message: 'Error adding series to set' });
         }
     });
 
     server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id as string);
+
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
         const data: any = show.toJSON();
+
         if (data.genre) data.genre = JSON.parse(data.genre);
 
         res.send(data);
@@ -85,7 +90,7 @@ export default (server: Express, oblecto: any) => {
 
     // Endpoint to get all episodes within a series
     server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let show = await Episode.findAll({
+        const show = await Episode.findAll({
             include: [
                 Series,
                 {
@@ -105,15 +110,17 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/series/:id/poster', async function (req: any, res: Response) {
-        let show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id as string);
+
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
-        let imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.combined_params.size || 'medium');
+        const imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.combined_params.size || 'medium');
+
         res.sendFile(imagePath);
     });
 
     server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id as string);
 
         if (!show) {
             return res.status(404).send({ message: 'Series does not exist' });
@@ -122,7 +129,8 @@ export default (server: Express, oblecto: any) => {
         let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
 
         if (oblecto.config.assets.storeWithFile) {
-            let showPath = show.directory;
+            const showPath = show.directory;
+
             if (showPath) {
                 posterPath = path.join(showPath, (show.seriesName || show.id) + '-poster.jpg');
             }
@@ -132,12 +140,12 @@ export default (server: Express, oblecto: any) => {
             return res.status(400).send({ message: 'Image file is missing' });
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path;
+        const uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await sharp(uploadPath);
-            let metadata = await image.metadata();
-            let ratio = (metadata.height || 0) / (metadata.width || 1);
+            const image = await sharp(uploadPath);
+            const metadata = await image.metadata();
+            const ratio = (metadata.height || 0) / (metadata.width || 1);
 
             if (ratio < 1 || ratio > 2) {
                 return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
@@ -156,7 +164,8 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let series = await Series.findAll({ where: { seriesName: { [Op.like]: '%' + req.params.name + '%' } } });
+        const series = await Series.findAll({ where: { seriesName: { [Op.like]: '%' + req.params.name + '%' } } });
+
         res.send(series);
     });
 };

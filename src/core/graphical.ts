@@ -107,11 +107,13 @@ const graphical = {
 
             if (log instanceof Error) {
                 const error = log as Error & { level?: string };
+
                 this.logBox.addItem(`[${error.level ?? 'ERROR'}] ${error.message}`);
             } else {
                 const entry = log as { level?: string; messages?: unknown[] };
                 const level = entry.level ?? 'INFO';
                 const messages = Array.isArray(entry.messages) ? entry.messages.join(' ') : '';
+
                 this.logBox.addItem(`[${level}] ${messages}`);
             }
 
@@ -143,10 +145,12 @@ const graphical = {
         this.streamerSessionsBox.clearItems();
 
         const sessions = this.oblecto.streamSessionController.sessions as SessionMap;
+
         this.streamerSessionsBox.setLabel('Active Streaming Sessions: ' + Object.keys(sessions).length);
 
         for (const sessionId of Object.keys(sessions)) {
             const session = sessions[sessionId];
+
             this.streamerSessionsBox.addItem(session.constructor.name + ':');
             this.streamerSessionsBox.addItem(sessionId);
             this.streamerSessionsBox.addItem(session.file.path);
@@ -161,6 +165,7 @@ const graphical = {
         this.queueBox.clearItems();
 
         const tasks = (this.oblecto.queue.queue as { _tasks?: Task[] })._tasks ?? [];
+
         this.queueBox.setLabel('Queue: ' + tasks.length);
 
         for (const task of tasks) {
@@ -197,6 +202,7 @@ const graphical = {
         this.sessionBox.clearItems();
 
         const clients = this.oblecto.realTimeController.clients as Record<string, ClientSession>;
+
         this.sessionBox.setLabel('Web Socket sessions: ' + Object.keys(clients).length);
 
         for (const sessionId of Object.keys(clients)) {

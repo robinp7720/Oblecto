@@ -67,6 +67,7 @@ export default (server: Express, oblecto: any) => {
         const getSeedbox = () => {
             if (device === 'all') return null;
             const byIndex = oblecto.seedboxController.seedBoxes[device];
+
             if (byIndex) return byIndex;
             return oblecto.seedboxController.seedBoxes.find((seedbox: { name?: string }) => seedbox.name === device) || null;
         };
@@ -77,14 +78,16 @@ export default (server: Express, oblecto: any) => {
                     oblecto.seedboxController.importAllMovies();
                 } else {
                     const seedbox = getSeedbox();
+
                     if (!seedbox) return next(new errors.NotFoundError(`Seedbox '${device}' not found`));
                     oblecto.seedboxController.importMovies(seedbox);
                 }
             } else if (type === 'tvshows') {
-                 if (device === 'all') {
+                if (device === 'all') {
                     oblecto.seedboxController.importAllEpisodes();
                 } else {
                     const seedbox = getSeedbox();
+
                     if (!seedbox) return next(new errors.NotFoundError(`Seedbox '${device}' not found`));
                     oblecto.seedboxController.importEpisodes(seedbox);
                 }
@@ -109,6 +112,7 @@ export default (server: Express, oblecto: any) => {
             nodeVersion: process.version,
             memory: process.memoryUsage()
         };
+
         res.send(info);
     });
 

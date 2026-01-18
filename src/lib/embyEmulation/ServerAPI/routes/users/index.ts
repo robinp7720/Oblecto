@@ -11,7 +11,7 @@ import logger from '../../../../../submodules/logger';
 import { Op } from 'sequelize';
 
 const buildUserDto = (user, embyEmulation) => {
-    let HasPassword = user.password !== '';
+    const HasPassword = user.password !== '';
 
     return {
         Name: user.name,
@@ -99,7 +99,7 @@ export default (server, embyEmulation) => {
     });
 
     server.post('/users/authenticatebyname', async (req, res) => {
-        let sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
+        const sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
         logger.debug(embyEmulation.sessions[sessionId]);
@@ -161,7 +161,7 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid', async (req, res) => {
         // let user = await User.findByPk(parseUuid(req.query.userid));
-        let user = await User.findByPk(1);
+        const user = await User.findByPk(1);
 
         res.send(buildUserDto(user, embyEmulation));
     });
@@ -268,9 +268,11 @@ export default (server, embyEmulation) => {
         let items = [];
         const normalizeQueryList = (query, ...keys) => {
             const values = [];
+
             for (const key of keys) {
                 if (query[key] === undefined) continue;
                 const raw = query[key];
+
                 if (Array.isArray(raw)) {
                     for (const entry of raw) {
                         values.push(entry);
@@ -298,7 +300,7 @@ export default (server, embyEmulation) => {
         }
 
         if (includeItemTypes.includes('movie')) {
-            let count = await Movie.count();
+            const count = await Movie.count();
 
             let where = null;
 
@@ -306,7 +308,7 @@ export default (server, embyEmulation) => {
                 where = { movieName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            let results = await Movie.findAll({
+            const results = await Movie.findAll({
                 where,
                 include: [{ model: File, include: [{ model: Stream }] }],
                 limit: limit,
@@ -321,7 +323,7 @@ export default (server, embyEmulation) => {
                 'StartIndex': startIndex
             });
         } else if (includeItemTypes.includes('series')) {
-            let count = await Series.count();
+            const count = await Series.count();
 
             let where = null;
 
@@ -357,7 +359,7 @@ export default (server, embyEmulation) => {
                 order.push(['seriesName', 'ASC']);
             }
 
-            let results = await Series.findAll({
+            const results = await Series.findAll({
                 where,
                 limit: limit,
                 offset: startIndex,
@@ -374,7 +376,7 @@ export default (server, embyEmulation) => {
         } else if (includeItemTypes.includes('episode') || (parsedParentId && parsedParentId.type === 'season')) {
             const userId = req.params.userid; // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
-            let where = {};
+            const where = {};
 
             if (parsedParentId) {
                 if (parsedParentId.type === 'series') {
@@ -389,7 +391,7 @@ export default (server, embyEmulation) => {
                 where.episodeName = { [Op.like]: `%${searchTerm}%` };
             }
 
-            let count = await Episode.count({ where });
+            const count = await Episode.count({ where });
 
             const include = [Series, { model: File, include: [{ model: Stream }] }];
 
@@ -401,7 +403,7 @@ export default (server, embyEmulation) => {
                 });
             }
 
-            let results = await Episode.findAll({
+            const results = await Episode.findAll({
                 where,
                 include,
                 limit: limit,
@@ -595,7 +597,7 @@ export default (server, embyEmulation) => {
         const parentId = req.query.parentId || req.query.parentid;
 
         if (parentId === 'movies') {
-            let results = await Movie.findAll({
+            const results = await Movie.findAll({
                 /* include: [
                     {
                         model: TrackMovie,
@@ -608,7 +610,7 @@ export default (server, embyEmulation) => {
                 offset: 0
             });
 
-            let movies = results.map((movie) => {
+            const movies = results.map((movie) => {
                 return {
                     'Name': movie.movieName,
                     'ServerId': embyEmulation.serverId,
@@ -643,7 +645,7 @@ export default (server, embyEmulation) => {
         }
 
         if (parentId === 'shows') {
-            let results = await Series.findAll({
+            const results = await Series.findAll({
                 /* include: [
                     {
                         model: TrackMovie,
@@ -656,7 +658,7 @@ export default (server, embyEmulation) => {
                 offset: 0
             });
 
-            let series = results.map((show) => {
+            const series = results.map((show) => {
                 return {
                     'Name': show.seriesName,
                     'ServerId': embyEmulation.serverId,

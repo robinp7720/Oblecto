@@ -10,7 +10,7 @@ export default function<T = any> (config: AxiosRequestConfig): Promise<AxiosResp
         const timeoutDuration = 20000;
         const axiosTimeout = 10000;
 
-        let timeout = setTimeout(() => {
+        const timeout = setTimeout(() => {
             timedout = true;
 
             reject(new WarnExtendableError(`Axios timeout failed and promise timeout expired for ${config.url}`));

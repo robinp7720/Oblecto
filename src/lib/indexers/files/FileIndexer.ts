@@ -90,6 +90,7 @@ export default class FileIndexer {
             }
 
             const errorMsg = lastLine || 'Unknown error';
+
             await file.update({ problematic: true, error: errorMsg });
 
             throw new VideoAnalysisError(`Failed to probe ${file.path}: ${errorMsg}`);

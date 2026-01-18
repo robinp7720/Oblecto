@@ -35,7 +35,7 @@ export default class MovieIndexer {
 
         this.availableIdentifiers = Object.keys(movieIdentifiers);
 
-        for (let identifier of this.oblecto.config.movies.movieIdentifiers) {
+        for (const identifier of this.oblecto.config.movies.movieIdentifiers) {
             logger.debug( `Loading ${identifier} movie identifier`);
             this.movieIdentifier.loadIdentifier(new movieIdentifiers[identifier](this.oblecto));
         }
@@ -75,18 +75,20 @@ export default class MovieIndexer {
         const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
         let movieIdentification: MovieIdentification;
+
         try {
             movieIdentification = await this.matchFile(moviePath);
         } catch (e) {
             const error = e as Error & { name?: string; message?: string };
+
             if (error.name === 'IdentificationError') {
-                 await file.update({ problematic: true, error: error.message });
-                 return;
+                await file.update({ problematic: true, error: error.message });
+                return;
             }
             throw e;
         }
 
-        let [movie, movieCreated] = await Movie.findOrCreate(
+        const [movie, movieCreated] = await Movie.findOrCreate(
             {
                 where: { tmdbid: movieIdentification.tmdbid },
                 defaults: movieIdentification

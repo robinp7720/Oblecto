@@ -30,8 +30,8 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         let shortestDistance = -1;
         let shortestItem;
 
-        for (let item of found) {
-            let currentDistance = distance(title, item.seriesName);
+        for (const item of found) {
+            const currentDistance = distance(title, item.seriesName);
 
             if (shortestDistance === -1 || currentDistance < shortestDistance) {
                 shortestDistance = currentDistance;
@@ -49,7 +49,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             title = title.join(' ');
         }
 
-        let tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title)) as Array<{
+        const tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title)) as Array<{
             id: number;
             seriesName: string;
             overview?: string;
@@ -58,9 +58,9 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);
 
-        let candidates: Array<{ id: number; seriesName: string; overview?: string; firstAired?: string }> = [];
+        const candidates: Array<{ id: number; seriesName: string; overview?: string; firstAired?: string }> = [];
 
-        for (let series of tvdbSearch) {
+        for (const series of tvdbSearch) {
             if (!series.firstAired) continue;
             if (guessitIdentification.year.toString() !== series.firstAired.substr(0, 4)) continue;
 
@@ -87,7 +87,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             return this.tvShowCache[title];
         }
 
-        let series = await this.searchSeries(guessitIdentification);
+        const series = await this.searchSeries(guessitIdentification);
 
         this.tvShowCache[title] = {
             tvdbid: series.id,

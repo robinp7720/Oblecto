@@ -93,6 +93,7 @@ export default class SeedboxController {
 
     alreadyImportingFile(filePath: string): boolean {
         const tasks = (this.importQueue as any).queue._tasks as Array<{ attr: { origin: string } }>;
+
         for (const task of tasks) {
             if (task.attr.origin === filePath) {
                 return true;

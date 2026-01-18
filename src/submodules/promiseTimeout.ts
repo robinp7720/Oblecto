@@ -8,7 +8,7 @@ import WarnExtendableError from '../lib/errors/WarnExtendableError';
 export default function<T> (promise: Promise<T>, time: number = 10000): Promise<T> {
     return new Promise<T>(function(resolve, reject) {
         let timedout = false;
-        let timeout = setTimeout(() => {
+        const timeout = setTimeout(() => {
             timedout = true;
 
             reject(new WarnExtendableError('A promise has timed out'));

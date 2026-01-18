@@ -15,6 +15,7 @@ describe('Downloader', function () {
 
     it('Download test file', async function () {
         const path = '/tmp/oblectoTestDownload';
+
         await fs.rm(path, { force: true });
         return Downloader.download('https://github.com', path, true);
     });
@@ -28,6 +29,7 @@ describe('Downloader', function () {
 
     it('Download first successful from array', async function () {
         const path = '/tmp/oblectoTestAttempt';
+
         await fs.rm(path, { force: true });
         return Downloader.attemptDownload(['https://example.invalid','https://github.com'], path);
     });

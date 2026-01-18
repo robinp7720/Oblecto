@@ -12,13 +12,13 @@ export default (server: Express, oblecto: any) => {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
             }
 
-            let streamSession = oblecto.streamSessionController.sessions[req.combined_params.sessionId];
+            const streamSession = oblecto.streamSessionController.sessions[req.combined_params.sessionId];
 
             if (!(streamSession instanceof HLSStreamer)) {
                 throw new errors.BadRequestError('Invalid stream session type');
             }
 
-            let segmentId = parseInt(req.params.id);
+            const segmentId = parseInt(req.params.id);
 
             await streamSession.streamSegment(req, res, segmentId);
         } catch (error) {
@@ -29,9 +29,9 @@ export default (server: Express, oblecto: any) => {
     server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req: any, res: Response, next: NextFunction) {
         try {
             let file;
-            let formats = (req.combined_params.formats || 'mp4').split(',');
-            let videoCodecs = (req.combined_params.videoCodecs || 'h264').split(',');
-            let audioCodecs = (req.combined_params.audioCodec || 'aac').split(',');
+            const formats = (req.combined_params.formats || 'mp4').split(',');
+            const videoCodecs = (req.combined_params.videoCodecs || 'h264').split(',');
+            const audioCodecs = (req.combined_params.audioCodec || 'aac').split(',');
 
             try {
                 file = await File.findByPk(req.params.id);
@@ -49,7 +49,7 @@ export default (server: Express, oblecto: any) => {
 
             if (req.combined_params.noremux) streamType = 'directhttp';
 
-            let streamSession = oblecto.streamSessionController.newSession(file, {
+            const streamSession = oblecto.streamSessionController.newSession(file, {
                 streamType,
 
                 target: {
@@ -79,7 +79,7 @@ export default (server: Express, oblecto: any) => {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
             }
 
-            let streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
+            const streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
 
             if (req.combined_params.offset) {
                 streamSession.offset = req.combined_params.offset;

@@ -51,9 +51,9 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      */
     async retrieveEpisode(series: SeriesIdentification, guessitIdentification: EpisodeGuessitIdentification) {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
-        let tvdbEpisodes = await this.getEpisodes(series.tvdbid);
+        const tvdbEpisodes = await this.getEpisodes(series.tvdbid);
 
-        for (let episode of tvdbEpisodes) {
+        for (const episode of tvdbEpisodes) {
             if (episode.episodeName === guessitIdentification.episode_name) return episode;
 
             if (episode.airedSeason !== guessitIdentification.season) continue;
@@ -78,7 +78,7 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Returns a metadata object for an episode
      */
     async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification> {
-        let episode = await this.retrieveEpisode(series, guessitIdentification);
+        const episode = await this.retrieveEpisode(series, guessitIdentification);
 
         return {
             tvdbid: episode.id,

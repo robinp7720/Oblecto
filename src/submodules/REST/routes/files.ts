@@ -16,10 +16,11 @@ export default (server: Express, oblecto: any) => {
             order: [[fn('COUNT', col('hash')), 'DESC']]
         });
 
-        let duplicates = [];
+        const duplicates = [];
 
         for (const fileHashCount of fileHashCounts) {
             const data: any = fileHashCount.toJSON();
+
             if (data.count <= 1) break;
 
             duplicates.push(
@@ -34,15 +35,15 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/files/problematic', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const brokenFiles = await File.findAll({
-            where: { problematic: true }
-        });
+        const brokenFiles = await File.findAll({ where: { problematic: true } });
+
         res.send(brokenFiles);
     });
 
     server.post('/files/:id/retry', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
         try {
             const file = await File.findByPk(req.params.id as string);
+
             if (!file) {
                 res.status(404).send({ message: 'File not found' });
                 return;
@@ -52,6 +53,7 @@ export default (server: Express, oblecto: any) => {
             await file.update({ problematic: false, error: null });
 
             const filePath = file.path;
+
             if (!filePath) {
                 res.status(400).send({ message: 'File path is missing' });
                 return;
@@ -61,6 +63,7 @@ export default (server: Express, oblecto: any) => {
 
             // Check Movie Directories
             const movieDirs = oblecto.config.movies.directories || [];
+
             for (const dir of movieDirs) {
                 if (filePath.startsWith(dir.path)) {
                     oblecto.queue.queueJob('indexMovie', { path: filePath, doReIndex: true });
@@ -72,6 +75,7 @@ export default (server: Express, oblecto: any) => {
             // Check TV Directories
             if (!queued) {
                 const tvDirs = oblecto.config.tvshows.directories || [];
+
                 for (const dir of tvDirs) {
                     if (filePath.startsWith(dir.path)) {
                         oblecto.queue.queueJob('indexEpisode', { path: filePath });
@@ -83,7 +87,7 @@ export default (server: Express, oblecto: any) => {
             
             // If not matched, try to re-index streams directly as a fallback
             if (!queued) {
-                 oblecto.queue.queueJob('indexFileStreams', file);
+                oblecto.queue.queueJob('indexFileStreams', file);
             }
 
             res.send({ success: true, message: 'Retry scheduled' });

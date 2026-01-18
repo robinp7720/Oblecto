@@ -91,6 +91,7 @@ class Logger extends EventEmitter {
         // Handle case where level is an Error object (old API support)
         if (level instanceof Error) {
             const err = level;
+
             this.winston.error(err.message, { stack: err.stack });
             this.emit('log', { level: 'ERROR', messages: [err.message] });
             return;
@@ -120,8 +121,10 @@ class Logger extends EventEmitter {
         // Map string levels to winston levels
         // Default to info if unknown
         let winstonLevel = 'info';
+
         if (typeof level === 'string') {
             const lowerLevel = level.toLowerCase();
+
             if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
                 winstonLevel = lowerLevel;
             }

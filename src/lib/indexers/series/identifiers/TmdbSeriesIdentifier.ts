@@ -27,7 +27,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
         // If more then one possible match was found, use the one where the date is an exact match
         // TODO: We might want to also match to the most similar name
-        for (let series of tmdbSearch) {
+        for (const series of tmdbSearch) {
             if (!series.first_air_date) continue;
             if (guessitIdentification.year!.toString() !== series.first_air_date.substr(0, 4).toString()) continue;
 
@@ -60,7 +60,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: title }, { timeout: 5000 }))).results as Array<{
+        const tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: title }, { timeout: 5000 }))).results as Array<{
             id: number;
             name: string;
             overview: string;

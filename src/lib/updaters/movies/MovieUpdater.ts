@@ -53,14 +53,13 @@ export default class MovieUpdater {
 
         if (data._set) {
             const setInfo = data._set;
+
             delete data._set;
 
             try {
                 const [movieSet] = await MovieSet.findOrCreate({
                     where: { tmdbid: setInfo.id },
-                    defaults: {
-                        setName: setInfo.name,
-                    }
+                    defaults: { setName: setInfo.name, }
                 });
 
                 // Update name if it changed

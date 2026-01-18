@@ -19,7 +19,7 @@ export default class MovieCollector {
      * @returns {Promise<void>}
      */
     async collectDirectory(directory: string): Promise<void> {
-        let files = await recursive(directory);
+        const files = await recursive(directory);
 
         files.forEach(file => {
             this.collectFile(file);
@@ -32,7 +32,7 @@ export default class MovieCollector {
      * @returns {Promise<void>}
      */
     async collectFile(file: string): Promise<void> {
-        let extension = path.parse(file).ext.toLowerCase().replace('.', '');
+        const extension = path.parse(file).ext.toLowerCase().replace('.', '');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
             this.oblecto.queue.queueJob('indexMovie',{ path: file });

@@ -304,10 +304,10 @@ export const parseId = (value: unknown): { id: number; type: string } => {
 
     const type = prefix === '1' ? 'movie'
         : prefix === '2' ? 'series'
-        : prefix === '3' ? 'episode'
-        : prefix === '4' ? 'season'
-        : prefix === 'f' ? 'user'
-        : 'unknown';
+            : prefix === '3' ? 'episode'
+                : prefix === '4' ? 'season'
+                    : prefix === 'f' ? 'user'
+                        : 'unknown';
 
     return {
         id: parseInt(rest, 16),

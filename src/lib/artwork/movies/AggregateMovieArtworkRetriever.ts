@@ -35,6 +35,7 @@ export default class AggregateMovieArtworkRetriever {
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.movieFanartPath(movie));
             } catch(e) {
                 const err = e as Error & { level?: string };
+
                 logger.log(err.level ?? 'error', `${retriever.constructor.name}: ${err.message}`);
             }
         }
@@ -52,6 +53,7 @@ export default class AggregateMovieArtworkRetriever {
                 return Downloader.attemptDownload(urls, this.oblecto.artworkUtils.moviePosterPath(movie));
             } catch(e) {
                 const err = e as Error & { level?: string };
+
                 logger.log(err.level ?? 'error', `${retriever.constructor.name}: ${err.message}`);
             }
         }

@@ -12,6 +12,9 @@ type PackageInfo = {
     version?: string;
 };
 
+/**
+ *
+ */
 async function run(): Promise<void> {
     try {
         const packageInfo = JSON.parse(await fs.readFile(join(__dirname, '../../package.json'), 'utf8')) as PackageInfo;

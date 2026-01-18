@@ -30,7 +30,7 @@ export default class AggregateIdentifier {
     async identify(...args: unknown[]): Promise<Record<string, unknown>> {
         let identification: Record<string, unknown> = {};
 
-        for (let identifier of this.identifiers) {
+        for (const identifier of this.identifiers) {
             let currentIdentification: Record<string, unknown>;
 
             try {
@@ -44,7 +44,7 @@ export default class AggregateIdentifier {
         }
 
         // Cleanup the input data to make sure that the data is predictable
-        for (let key of Object.keys(identification)) {
+        for (const key of Object.keys(identification)) {
             // Remove strings from retrieved information if they are empty.
             // The imdbid is a string which would be null if no id supplied.
             // The empty string however causes issues.

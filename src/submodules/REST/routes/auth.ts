@@ -12,7 +12,7 @@ export default (server: Express, oblecto: any) => {
             if (!req.body.password && !oblecto.config.authentication.allowPasswordlessLogin)
                 throw new errors.BadRequestError('Password is missing');
 
-            let user = await User.findOne({
+            const user = await User.findOne({
                 where: { username: req.body.username },
                 attributes: ['username', 'name', 'email', 'password', 'id']
             });
@@ -29,14 +29,14 @@ export default (server: Express, oblecto: any) => {
             if (!allowLogin)
                 throw new errors.UnauthorizedError('Password is incorrect');
 
-            let tokenPayload = {
+            const tokenPayload = {
                 id: user.id,
                 username: user.username,
                 name: user.name,
                 email: user.email
             };
 
-            let accessToken = jwt.sign(tokenPayload, oblecto.config.authentication.secret);
+            const accessToken = jwt.sign(tokenPayload, oblecto.config.authentication.secret);
 
             res.send({ accessToken });
         } catch (error) {

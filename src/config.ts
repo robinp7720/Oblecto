@@ -8,6 +8,7 @@ const ConfigManager = {
     loadFile: function loadFile (file: string) {
         try {
             const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+
             loadedConfigPath = file;
             return data;
         } catch (ex: any) {
@@ -31,6 +32,7 @@ const ConfigManager = {
     },
     saveConfig: function saveConfig () {
         const savePath = loadedConfigPath || '/etc/oblecto/config.json';
+
         fs.writeFile(savePath, JSON.stringify(config, null, 4), (err) => {
             if (err) {
                 logger.error(`Failed to save config to ${savePath}:`, err);

@@ -93,7 +93,7 @@ export default class RecodeStreamSession extends StreamSession {
 
         // Define default streams. We don't want to end up with a video without any audio or video streams
         let selectedAudioStream = audioStreams?.[0]?.index;
-        let selectedVideoStream = videoStreams?.[0]?.index;
+        const selectedVideoStream = videoStreams?.[0]?.index;
 
         // Find a video stream with the desired language code
         // TODO: Some languages may be identified by multiple language codes

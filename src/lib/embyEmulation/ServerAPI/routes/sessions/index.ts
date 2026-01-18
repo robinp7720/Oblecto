@@ -52,6 +52,7 @@ export default (server, embyEmulation) => {
 
     server.post('/sessions/playing/progress', async (req, res) => {
         const token = getEmbyToken(req);
+
         if (!token || !embyEmulation.sessions[token]) {
             return res.status(401).send('Unauthorized');
         }
@@ -127,6 +128,7 @@ export default (server, embyEmulation) => {
         const token = getEmbyToken(req);
         const playSessionId = getRequestValue(req, 'PlaySessionId')
             || embyEmulation.sessions?.[token]?.playSession?.PlaySessionId;
+
         if (playSessionId) {
             deletePlaybackEntry(embyEmulation, token, playSessionId);
         }

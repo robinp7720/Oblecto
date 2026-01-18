@@ -11,7 +11,7 @@ export default (server: Express, oblecto: any) => {
             return new errors.InvalidArgumentError('Argument public is not a boolean');
         }
 
-        let [set] = await MovieSet
+        const [set] = await MovieSet
             .findOrCreate({
                 where: { setName: req.combined_params.name },
                 defaults: {
@@ -28,7 +28,7 @@ export default (server: Express, oblecto: any) => {
             return new errors.InvalidArgumentError('Argument public is not a boolean');
         }
 
-        let [set] = await SeriesSet
+        const [set] = await SeriesSet
             .findOrCreate({
                 where: { setName: req.combined_params.name },
                 defaults: {
@@ -41,14 +41,16 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.delete('/set/movie/:id', authMiddleWare.requiresAuth, async function (req: any, res: any) {
-        let set = await MovieSet.findByPk(req.params.id);
+        const set = await MovieSet.findByPk(req.params.id);
+
         if (!set) throw new errors.NotFoundError('Set not found');
         await set.destroy();
         res.send({ success: true });
     });
 
     server.delete('/set/series/:id', authMiddleWare.requiresAuth, async function (req: any, res: any) {
-        let set = await SeriesSet.findByPk(req.params.id);
+        const set = await SeriesSet.findByPk(req.params.id);
+
         if (!set) throw new errors.NotFoundError('Set not found');
         await set.destroy();
         res.send({ success: true });

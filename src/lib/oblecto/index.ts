@@ -147,8 +147,9 @@ export default class Oblecto {
     }
 
     close() {
-        for (let item of Object.keys(this)) {
+        for (const item of Object.keys(this)) {
             const member = (this as any)[item];
+
             if (member && member.close) {
                 member.close();
             }

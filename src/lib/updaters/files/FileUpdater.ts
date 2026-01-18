@@ -49,6 +49,7 @@ export default class FileUpdater {
                 continue;
 
             const duration = typeof stream.duration === 'number' ? stream.duration : 0;
+
             if (duration >= primaryDuration) {
                 primaryStream = stream;
                 primaryDuration = duration;
@@ -68,6 +69,7 @@ export default class FileUpdater {
                 continue;
 
             const duration = typeof stream.duration === 'number' ? stream.duration : 0;
+
             if (duration >= primaryDuration) {
                 primaryStream = stream;
                 primaryDuration = duration;

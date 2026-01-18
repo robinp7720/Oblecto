@@ -16,7 +16,7 @@ export default (server: Express, oblecto: any) => {
         let limit = 20;
         let page = 0;
 
-        let AllowedOrders = ['desc', 'asc'];
+        const AllowedOrders = ['desc', 'asc'];
 
         if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
@@ -30,7 +30,7 @@ export default (server: Express, oblecto: any) => {
         if (req.combined_params.page && Number.isInteger(parseInt(req.combined_params.page)))
             page = parseInt(req.combined_params.page);
 
-        let results = await Movie.findAll({
+        const results = await Movie.findAll({
             include: [
                 {
                     model: TrackMovie,
@@ -47,19 +47,21 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let results = await MovieSet.findAll({});
+        const results = await MovieSet.findAll({});
+
         res.send(results);
     });
 
     server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let limit = parseInt(req.combined_params.count) || 20;
-        let page = parseInt(req.combined_params.page) || 0;
+        const limit = parseInt(req.combined_params.count) || 20;
+        const page = parseInt(req.combined_params.page) || 0;
 
-        let AllowedOrders = ['desc', 'asc'];
+        const AllowedOrders = ['desc', 'asc'];
+
         if (req.combined_params.order && AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
-        let results = await MovieSet.findAll({
+        const results = await MovieSet.findAll({
             include: [
                 {
                     model: Movie,
@@ -81,32 +83,34 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movie/:id/poster', async function (req: any, res: Response) {
-        let movie = await Movie.findByPk(req.params.id as string);
+        const movie = await Movie.findByPk(req.params.id as string);
+
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
 
         const path = oblecto.artworkUtils.moviePosterPath(movie, req.combined_params.size || 'medium');
+
         res.sendFile(path);
     });
 
     server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let movie = await Movie.findByPk(req.params.id as string, { include: [File] });
+        const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
             return res.status(404).send({ message: 'Movie does not exist' });
         }
 
-        let posterPath = oblecto.artworkUtils.moviePosterPath(movie);
+        const posterPath = oblecto.artworkUtils.moviePosterPath(movie);
 
         if (!req.files || Object.keys(req.files).length === 0) {
             return res.status(400).send({ message: 'Image file is missing' });
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path;
+        const uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await sharp(uploadPath);
-            let metadata = await image.metadata();
-            let ratio = (metadata.height || 0) / (metadata.width || 1);
+            const image = await sharp(uploadPath);
+            const metadata = await image.metadata();
+            const ratio = (metadata.height || 0) / (metadata.width || 1);
 
             if (ratio < 1 || ratio > 2) {
                 return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
@@ -117,7 +121,7 @@ export default (server: Express, oblecto: any) => {
 
         await fs.copyFile(uploadPath, posterPath);
 
-        for (let size of Object.keys(oblecto.config.artwork.poster)) {
+        for (const size of Object.keys(oblecto.config.artwork.poster)) {
             oblecto.queue.pushJob('rescaleImage', {
                 from: oblecto.artworkUtils.moviePosterPath(movie),
                 to: oblecto.artworkUtils.moviePosterPath(movie, size),
@@ -129,32 +133,34 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movie/:id/fanart', async function (req: any, res: Response) {
-        let movie = await Movie.findByPk(req.params.id as string);
+        const movie = await Movie.findByPk(req.params.id as string);
+
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
 
         const path = oblecto.artworkUtils.movieFanartPath(movie, req.combined_params.size || 'large');
+
         res.sendFile(path);
     });
 
     server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let movie = await Movie.findByPk(req.params.id as string, { include: [File] });
+        const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
             return res.status(404).send({ message: 'Movie does not exist' });
         }
 
-        let fanartPath = oblecto.artworkUtils.movieFanartPath(movie);
+        const fanartPath = oblecto.artworkUtils.movieFanartPath(movie);
 
         if (!req.files || Object.keys(req.files).length === 0) {
             return res.status(400).send({ message: 'Image file is missing' });
         }
 
-        let uploadPath = req.files[Object.keys(req.files)[0]].path;
+        const uploadPath = req.files[Object.keys(req.files)[0]].path;
 
         try {
-            let image = await sharp(uploadPath);
-            let metadata = await image.metadata();
-            let ratio = (metadata.height || 0) / (metadata.width || 1);
+            const image = await sharp(uploadPath);
+            const metadata = await image.metadata();
+            const ratio = (metadata.height || 0) / (metadata.width || 1);
 
             if (ratio < 1 || ratio > 2) {
                 return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
@@ -165,7 +171,7 @@ export default (server: Express, oblecto: any) => {
 
         await fs.copyFile(uploadPath, fanartPath);
 
-        for (let size of Object.keys(oblecto.config.artwork.poster)) {
+        for (const size of Object.keys(oblecto.config.artwork.poster)) {
             oblecto.queue.pushJob('rescaleImage', {
                 from: oblecto.artworkUtils.movieFanartPath(movie),
                 to: oblecto.artworkUtils.movieFanartPath(movie, size),
@@ -177,7 +183,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let movie = await Movie.findByPk(req.params.id as string, {
+        const movie = await Movie.findByPk(req.params.id as string, {
             include: [
                 File,
                 {
@@ -192,17 +198,19 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movie/:id/play', async function (req: Request, res: Response) {
-        let movie: any = await Movie.findByPk(req.params.id as string, { include: [{ model: File }] });
+        const movie: any = await Movie.findByPk(req.params.id as string, { include: [{ model: File }] });
+
         if (!movie || !movie.Files || movie.Files.length === 0) {
             return res.status(404).send({ message: 'No files found for this movie' });
         }
 
-        let file = movie.Files[0];
+        const file = movie.Files[0];
+
         res.redirect(`/stream/${file.id}`);
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let sets: any = await Movie.findByPk(req.params.id as string, {
+        const sets: any = await Movie.findByPk(req.params.id as string, {
             attributes: [],
             include: [
                 {
@@ -228,8 +236,8 @@ export default (server: Express, oblecto: any) => {
 
     server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
         try {
-            let movie = await Movie.findByPk(req.params.id as string);
-            let set = await MovieSet.findByPk(req.combined_params.setId);
+            const movie = await Movie.findByPk(req.params.id as string);
+            const set = await MovieSet.findByPk(req.combined_params.setId);
 
             if (!movie || !set) {
                 return res.status(404).send({ message: 'Movie or set not found' });
@@ -243,15 +251,16 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let movie = await Movie.findAll({
+        const movie = await Movie.findAll({
             where: { movieName: { [Op.like]: '%' + req.params.name + '%' } },
             include: [File]
         });
+
         res.send(movie);
     });
 
     server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        let tracks = await TrackMovie.findAll({
+        const tracks = await TrackMovie.findAll({
             include: [
                 {
                     model: Movie,

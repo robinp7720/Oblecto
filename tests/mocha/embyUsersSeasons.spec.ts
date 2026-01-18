@@ -47,7 +47,9 @@ describe('Emby users routes - seasons', () => {
 
     before(async () => {
         ownsSequelize = !Series.sequelize;
-        sequelize = Series.sequelize || new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = Series.sequelize || new Sequelize({
+            dialect: 'sqlite', storage: ':memory:', logging: false 
+        });
         if (ownsSequelize) {
             Series.init(seriesColumns, { sequelize, modelName: 'Series' });
         }

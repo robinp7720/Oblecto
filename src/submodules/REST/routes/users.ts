@@ -7,20 +7,22 @@ import { User } from '../../../models/user.js';
 
 export default (server: Express, oblecto: any) => {
     server.get('/users', async function (req: Request, res: Response) {
-        let users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
+        const users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
+
         res.send(users);
     });
 
     server.get('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let user = await User.findOne({
+        const user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
+
         res.send(user);
     });
 
     server.delete('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        let user = await User.findOne({
+        const user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
@@ -39,7 +41,7 @@ export default (server: Express, oblecto: any) => {
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req: any, res: Response) {
-        let user = await User.findByPk(req.params.id);
+        const user = await User.findByPk(req.params.id);
 
         if (!user) {
             res.status(400).send({ message: 'User with id does not exist' });
@@ -85,7 +87,7 @@ export default (server: Express, oblecto: any) => {
         if (req.combined_params.password)
             passwordHash = await bcrypt.hash(req.combined_params.password, oblecto.config.authentication.saltRounds);
 
-        let [user] = await User.findOrCreate({
+        const [user] = await User.findOrCreate({
             where: { username: req.combined_params.username },
             defaults: {
                 username: req.combined_params.username,

@@ -13,6 +13,7 @@ const ALLOWED_SECTIONS = [
 // Simple secret scrubber
 const scrubConfig = (conf: any) => {
     const copy = JSON.parse(JSON.stringify(conf));
+
     if (copy.authentication && copy.authentication.secret) copy.authentication.secret = '***';
     if (copy.federation && copy.federation.key) copy.federation.key = '***';
     if (copy.seedboxes) {
@@ -35,6 +36,7 @@ export default (server: Express, oblecto: any) => {
     // PATCH /api/v1/settings - Update multiple sections
     server.patch('/api/v1/settings', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
         const updates = req.body;
+
         if (!updates || Object.keys(updates).length === 0) {
             return next(new errors.BadRequestError('Empty configuration provided'));
         }
@@ -49,7 +51,7 @@ export default (server: Express, oblecto: any) => {
         // Apply updates
         for (const [key, value] of Object.entries(updates)) {
             // Shallow merge for top-level sections
-             if (typeof oblecto.config[key as keyof any] === 'object' && !Array.isArray(oblecto.config[key as keyof any]) && oblecto.config[key as keyof any] !== null) {
+            if (typeof oblecto.config[key as keyof any] === 'object' && !Array.isArray(oblecto.config[key as keyof any]) && oblecto.config[key as keyof any] !== null) {
                 Object.assign(oblecto.config[key as keyof any], value);
             } else {
                 oblecto.config[key as keyof any] = value as any;
@@ -63,13 +65,16 @@ export default (server: Express, oblecto: any) => {
     // GET /api/v1/settings/:section
     server.get('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
         const section = req.params.section as string;
+
         if (!ALLOWED_SECTIONS.includes(section)) {
             return next(new errors.BadRequestError('Invalid setting section'));
         }
         const sectionData = oblecto.config[section as keyof any];
+
         if (!sectionData) return next(new errors.NotFoundError('Section not found'));
 
         let dataToSend = sectionData;
+
         if (section === 'authentication') {
             dataToSend = { ...sectionData, secret: '***' };
         } else if (section === 'federation') {
@@ -82,11 +87,13 @@ export default (server: Express, oblecto: any) => {
     // PATCH /api/v1/settings/:section
     server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
         const section = req.params.section as string;
+
         if (!ALLOWED_SECTIONS.includes(section)) {
             return next(new errors.BadRequestError('Invalid setting section'));
         }
 
         const updates = req.body;
+
         if (!updates || Object.keys(updates).length === 0) {
             return next(new errors.BadRequestError('Empty configuration provided'));
         }
@@ -94,6 +101,7 @@ export default (server: Express, oblecto: any) => {
         if (!oblecto.config[section as keyof any]) oblecto.config[section as keyof any] = {} as any;
 
         const currentSection = oblecto.config[section as keyof any];
+
         if (typeof currentSection === 'object' && !Array.isArray(currentSection)) {
             Object.assign(currentSection, updates);
         } else {

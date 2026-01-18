@@ -97,6 +97,7 @@ export default class RealtimeClient extends EventEmitter {
         if (this.user === null) return;
 
         const payload = this.storage.series[id];
+
         if (!payload) return;
 
         const [item, created] = await TrackEpisode.findOrCreate({
@@ -124,6 +125,7 @@ export default class RealtimeClient extends EventEmitter {
         if (this.user == null) return;
 
         const payload = this.storage.movie[id];
+
         if (!payload) return;
 
         const [item, created] = await TrackMovie.findOrCreate({

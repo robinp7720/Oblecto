@@ -22,6 +22,7 @@ export default async (args: string[]): Promise<void> => {
         await fs.mkdir('/etc/oblecto');
     } catch (e) {
         const error = e as NodeJS.ErrnoException;
+
         if (error.code !== 'EEXIST') {
             console.log('Unable to create Oblecto data directory. Aborting');
             console.log('Please create the directory "/etc/oblecto" and give current user read/write permissions');

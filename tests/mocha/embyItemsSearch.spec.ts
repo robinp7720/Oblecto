@@ -46,7 +46,9 @@ describe('Emby items search routes', () => {
     let series;
 
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = new Sequelize({
+            dialect: 'sqlite', storage: ':memory:', logging: false 
+        });
 
         Movie.init(movieColumns, { sequelize, modelName: 'Movie' });
         Series.init(seriesColumns, { sequelize, modelName: 'Series' });
@@ -101,6 +103,7 @@ describe('Emby items search routes', () => {
         assert.strictEqual(res.body.Items.length, 2);
         assert.strictEqual(res.body.TotalRecordCount, 2);
         const names = res.body.Items.map(item => item.Name).sort();
+
         assert.deepStrictEqual(names, ['Alpha', 'Bravo']);
     });
 

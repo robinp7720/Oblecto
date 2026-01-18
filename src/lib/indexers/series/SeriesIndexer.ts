@@ -81,12 +81,12 @@ export default class SeriesIndexer {
         this.availableSeriesIdentifiers = Object.keys(seriesIdentifiers);
         this.availableEpisodeIdentifiers = Object.keys(episodeIdentifiers);
 
-        for (let identifier of this.oblecto.config.tvshows.seriesIdentifiers) {
+        for (const identifier of this.oblecto.config.tvshows.seriesIdentifiers) {
             logger.debug( `Loading ${identifier} series identifier`);
             this.seriesIdentifier.loadIdentifier(new seriesIdentifiers[identifier](this.oblecto));
         }
 
-        for (let identifier of this.oblecto.config.tvshows.episodeIdentifiers) {
+        for (const identifier of this.oblecto.config.tvshows.episodeIdentifiers) {
             logger.debug( `Loading ${identifier} episode identifier`);
             this.episodeIdentifer.loadIdentifier(new episodeIdentifiers[identifier](this.oblecto));
         }
@@ -107,14 +107,14 @@ export default class SeriesIndexer {
     async indexSeries(seriesIdentification: SeriesIdentification): Promise<Series> {
         const identifiers = ['tvdbid', 'tmdbid'];
 
-        let seriesQuery: Array<Record<string, unknown>> = [];
+        const seriesQuery: Array<Record<string, unknown>> = [];
 
-        for (let identifier of identifiers) {
+        for (const identifier of identifiers) {
             if (!seriesIdentification[identifier]) continue;
             seriesQuery.push({ [identifier]: seriesIdentification[identifier] });
         }
 
-        let [series, seriesCreated] = await Series.findOrCreate(
+        const [series, seriesCreated] = await Series.findOrCreate(
             {
                 where: { [Op.or] : seriesQuery },
                 defaults: seriesIdentification
@@ -175,15 +175,16 @@ export default class SeriesIndexer {
      * @returns {Promise<void>}
      */
     async indexFile(episodePath: string): Promise<void> {
-        let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
+        const file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
         let seriesIdentification: SeriesIdentification;
         let episodeIdentification: EpisodeIdentification;
 
         try {
-             ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath));
+            ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath));
         } catch (e) {
             const error = e as Error & { name?: string; message?: string };
+
             if (error.name === 'IdentificationError') {
                 await file.update({ problematic: true, error: error.message });
                 return;
@@ -195,7 +196,7 @@ export default class SeriesIndexer {
 
         logger.debug( `${file.path} episode identified ${episodeIdentification.episodeName}`);
 
-        let [episode, episodeCreated] = await Episode.findOrCreate(
+        const [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 where: {
                     airedSeason: episodeIdentification.airedSeason || 1,

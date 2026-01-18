@@ -57,9 +57,7 @@ const resolveFileForItem = async (embyEmulation, req, itemId) => {
         });
 
         if (!episode?.Files?.[0]) {
-            logger.warn('Jellyfin emulation: episode media source not found', {
-                episodeId: numericId
-            });
+            logger.warn('Jellyfin emulation: episode media source not found', { episodeId: numericId });
         }
 
         return episode?.Files?.[0] || null;
@@ -78,9 +76,7 @@ const resolveFileForItem = async (embyEmulation, req, itemId) => {
         });
 
         if (!episode?.Files?.[0]) {
-            logger.warn('Jellyfin emulation: unknown item media source not found', {
-                itemId: numericId
-            });
+            logger.warn('Jellyfin emulation: unknown item media source not found', { itemId: numericId });
         }
 
         return episode?.Files?.[0] || null;
@@ -141,6 +137,7 @@ const resolveStreamSession = (embyEmulation, req, file, streamType, fallbackCont
         target,
         offset,
     });
+
     if (playSessionId) {
         upsertPlaybackEntry(embyEmulation, token, {
             playSessionId,

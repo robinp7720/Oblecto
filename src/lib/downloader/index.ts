@@ -32,7 +32,7 @@ export default class Downloader {
             flags = 'w';
         }
 
-        let { data } = await axiosTimeout({
+        const { data } = await axiosTimeout({
             method: 'get',
             url,
             responseType: 'arraybuffer',
@@ -48,7 +48,7 @@ export default class Downloader {
      * @param path - Destination path for file
      */
     static async attemptDownload(urls: string[], path: string): Promise<void> {
-        for (let url of urls) {
+        for (const url of urls) {
             try {
                 await Downloader.download(
                     url,
