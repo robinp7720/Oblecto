@@ -40,7 +40,9 @@ export default class TmdbMovieRetriever {
 
             overview: movieInfo.overview,
             popularity: movieInfo.popularity,
-            releaseDate: movieInfo.release_date
+            releaseDate: movieInfo.release_date,
+
+            _set: movieInfo.belongs_to_collection
         };
 
         return data;

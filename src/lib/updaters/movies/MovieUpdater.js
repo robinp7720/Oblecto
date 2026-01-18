@@ -2,6 +2,7 @@ import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
 import TmdbMovieRetriever from './informationRetrievers/TmdbMovieRetriever';
 import logger from '../../../submodules/logger';
 import { Movie } from '../../../models/movie';
+import { MovieSet } from '../../../models/movieSet';
 
 export default class MovieUpdater {
     constructor(oblecto) {
@@ -31,6 +32,30 @@ export default class MovieUpdater {
      */
     async updateMovie(movie) {
         let data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie);
+
+        if (data._set) {
+            const setInfo = data._set;
+            delete data._set;
+
+            try {
+                let [movieSet] = await MovieSet.findOrCreate({
+                    where: { tmdbid: setInfo.id },
+                    defaults: {
+                        setName: setInfo.name,
+                    }
+                });
+
+                // Update name if it changed
+                if (movieSet.setName !== setInfo.name) {
+                    await movieSet.update({ setName: setInfo.name });
+                }
+
+                await movieSet.addMovie(movie);
+                logger.debug(`Added movie ${movie.id} to set ${movieSet.setName}`);
+            } catch (e) {
+                logger.error(`Failed to update movie set for movie ${movie.id}`, e);
+            }
+        }
 
         await movie.update(data);
     }
