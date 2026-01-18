@@ -26,7 +26,7 @@
     "oblecto": "node dist/bin/oblecto.js",
     "oblecto:dev": "tsx src/bin/oblecto.ts",
     "debug": "node --inspect=0.0.0.0 --loader tsx src/index.ts",
-    "test:mocha": "mocha tests/mocha",
+    "test:mocha": "mocha --extension ts --require tsx tests/mocha",
     "test:startup": "scripts/test.sh",
     "test": "npm run test:mocha",
     "lint": "eslint .",

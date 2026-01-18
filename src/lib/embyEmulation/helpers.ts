@@ -314,3 +314,118 @@ export const parseId = (value: unknown): { id: number; type: string } => {
         type
     };
 };
+
+type MediaItem = {
+    id: number | string;
+    movieName?: string;
+    seasonName?: string;
+    episodeName?: string;
+    seriesName?: string;
+    releaseDate?: string;
+    firstAired?: string;
+    rating?: string;
+    popularity?: number;
+    runtime?: number;
+    overview?: string;
+    airedSeason?: string;
+    airedEpisodeNumber?: string;
+    Series?: { id: number; seriesName?: string };
+    SeriesId?: number;
+    indexNumber?: string | number;
+    Files?: MediaFile[];
+    TrackMovies?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
+    TrackEpisodes?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
+};
+
+type EmbyEmulationLike = {
+    serverId: string;
+};
+
+export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: EmbyEmulationLike): Record<string, unknown> => {
+    const id = formatId(item.id, type);
+
+    const res: Record<string, any> = {
+        'Name': item.movieName || item.seasonName || item.episodeName || item.seriesName,
+        'ServerId': embyEmulation.serverId,
+        'Id': id,
+        'HasSubtitles': true,
+        'Container': 'mkv',
+        'PremiereDate': item.releaseDate || item.firstAired,
+        'CriticRating': 82,
+        'OfficialRating': item.rating || 'PG-13',
+        'CommunityRating': item.popularity || 2.6,
+        'RunTimeTicks': (item.runtime || 0) * 60 * 10000000,
+        'ProductionYear': (item.releaseDate || item.firstAired || '').substring(0, 4),
+        'IsFolder': type === 'series' || type === 'season',
+        'Type': type.charAt(0).toUpperCase() + type.slice(1),
+        'PrimaryImageAspectRatio': 0.6666666666666666,
+        'VideoType': 'VideoFile',
+        'LocationType': 'FileSystem',
+        'MediaType': 'Video',
+        'Overview': item.overview,
+        'UserData': {
+            'PlaybackPositionTicks': 0,
+            'PlayCount': 0,
+            'IsFavorite': false,
+            'Played': false,
+            'Key': item.id.toString(),
+            'ItemId': id
+        },
+        'ImageTags': { 'Primary': 'primary' },
+        'BackdropImageTags': ['backdrop'],
+        'ImageBlurHashes': {
+            'Primary': { 'primary': 'WZE2te~q.8?b-;-;-p%2t8tQt6W.s.sSayNaR%NGxtt7t7t7X8oz' },
+            'Backdrop': { 'backdrop': 'WeEx-RE0IUxuR*%1~WE1M{t7S1t7-;IoRjt7bbae-pRjRQt7ofRj' }
+        }
+    };
+
+    if (type === 'episode') {
+        const seriesId = item.Series ? item.Series.id : item.SeriesId;
+        const seasonNumber = parseInt(item.airedSeason ?? '0', 10);
+
+        res.IndexNumber = parseInt(item.airedEpisodeNumber ?? '0', 10);
+        res.ParentIndexNumber = seasonNumber;
+        res.SeriesName = item.Series ? item.Series.seriesName : '';
+        res.SeriesId = seriesId ? formatId(seriesId, 'series') : '';
+        res.SeasonName = 'Season ' + item.airedSeason;
+        res.PrimaryImageAspectRatio = 1.7777777777777777;
+        res.ImageTags = { ...res.ImageTags, Thumb: 'thumb' };
+
+        if (seriesId && Number.isFinite(seasonNumber)) {
+            const seasonId = (seriesId * 1000) + seasonNumber;
+
+            res.SeasonId = formatId(seasonId, 'season');
+            res.ParentId = res.SeasonId;
+        }
+    }
+
+    if (type === 'season') {
+        res.SeriesId = item.SeriesId ? formatId(item.SeriesId, 'series') : '';
+        res.SeasonName = item.seasonName;
+        res.IndexNumber = parseInt(String(item.indexNumber ?? '0'), 10);
+        res.ParentId = res.SeriesId;
+        res.SeriesName = item.seriesName;
+    }
+
+    if (item.Files && item.Files.length > 0) {
+        res.Path = item.Files[0].path;
+        res.Container = item.Files[0].container || res.Container;
+        if (Number.isFinite(item.Files[0].duration)) {
+            res.RunTimeTicks = (item.Files[0].duration as number) * 10000000;
+        }
+        res.MediaSources = createMediaSources(item.Files);
+    }
+
+    const track = item.TrackMovies ? item.TrackMovies[0] : (item.TrackEpisodes ? item.TrackEpisodes[0] : null);
+
+    if (track) {
+        res.UserData.PlaybackPositionTicks = (track.time || 0) * 10000000;
+        res.UserData.Played = (track.progress ?? 0) >= 1;
+        res.UserData.PlayCount = res.UserData.Played ? 1 : 0;
+        if (track.updatedAt) {
+            res.UserData.LastPlayedDate = track.updatedAt.toISOString();
+        }
+    }
+
+    return res;
+};
