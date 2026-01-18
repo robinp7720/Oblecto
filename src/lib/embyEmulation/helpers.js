@@ -355,6 +355,7 @@ export const formatMediaItem = (item, type, embyEmulation) => {
         res.SeriesId = seriesId ? formatId(seriesId, 'series') : '';
         res.SeasonName = 'Season ' + item.airedSeason;
         res.PrimaryImageAspectRatio = 1.7777777777777777;
+        res.ImageTags = { ...res.ImageTags, Thumb: 'thumb' };
 
         if (seriesId && Number.isFinite(seasonNumber)) {
             const seasonId = (seriesId * 1000) + seasonNumber;

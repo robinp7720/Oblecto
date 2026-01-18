@@ -22,6 +22,139 @@ export default (server, embyEmulation) => {
         return true;
     };
 
+    const normalizeImageType = (rawType) => (rawType || '').toString().toLowerCase();
+
+    const readQueryNumber = (query, ...keys) => {
+        for (const key of keys) {
+            if (query[key] !== undefined) {
+                const parsed = parseInt(query[key], 10);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+        }
+        return null;
+    };
+
+    const chooseSizeKey = (sizeMap, query) => {
+        if (!sizeMap || Object.keys(sizeMap).length === 0) return null;
+        const target = readQueryNumber(query, 'maxwidth', 'maxheight', 'width', 'height', 'fillwidth', 'fillheight');
+        const entries = Object.entries(sizeMap)
+            .map(([key, value]) => ({ key, value: Number(value) }))
+            .filter(entry => Number.isFinite(entry.value))
+            .sort((a, b) => a.value - b.value);
+
+        if (entries.length === 0) return null;
+
+        if (target === null) {
+            const medium = entries.find(entry => entry.key === 'medium');
+            return medium ? medium.key : entries[Math.floor(entries.length / 2)].key;
+        }
+
+        for (const entry of entries) {
+            if (entry.value >= target) return entry.key;
+        }
+
+        return entries[entries.length - 1].key;
+    };
+
+    const findFirstExistingImage = async (res, candidates) => {
+        for (const candidate of candidates) {
+            if (await sendImageIfExists(res, candidate)) return true;
+        }
+        return false;
+    };
+
+    const resolveImageCandidates = (item, type, imageType, query) => {
+        const artwork = embyEmulation.oblecto.artworkUtils;
+        const config = embyEmulation.oblecto.config.artwork;
+        const normalized = normalizeImageType(imageType);
+
+        if (type === 'movie') {
+            if (normalized === 'primary' || normalized === 'poster' || normalized === 'box' || normalized === 'boxrear') {
+                const sizeKey = chooseSizeKey(config.poster, query);
+                return [
+                    artwork.moviePosterPath(item, sizeKey),
+                    artwork.moviePosterPath(item, null),
+                ];
+            }
+
+            if (normalized === 'backdrop' || normalized === 'fanart' || normalized === 'art') {
+                const sizeKey = chooseSizeKey(config.fanart, query);
+                return [
+                    artwork.movieFanartPath(item, sizeKey),
+                    artwork.movieFanartPath(item, null),
+                ];
+            }
+        }
+
+        if (type === 'series') {
+            if (normalized === 'primary' || normalized === 'poster' || normalized === 'banner' || normalized === 'thumb') {
+                const sizeKey = chooseSizeKey(config.poster, query);
+                return [
+                    artwork.seriesPosterPath(item, sizeKey),
+                    artwork.seriesPosterPath(item, null),
+                ];
+            }
+
+            if (normalized === 'backdrop' || normalized === 'fanart' || normalized === 'art') {
+                const sizeKey = chooseSizeKey(config.poster, query);
+                return [
+                    artwork.seriesPosterPath(item, sizeKey),
+                    artwork.seriesPosterPath(item, null),
+                ];
+            }
+        }
+
+        if (type === 'episode') {
+            if (normalized === 'primary' || normalized === 'banner' || normalized === 'thumb') {
+                const sizeKey = chooseSizeKey(config.banner, query);
+                const candidates = [
+                    artwork.episodeBannerPath(item, sizeKey),
+                    artwork.episodeBannerPath(item, null),
+                ];
+                if (item.Series) {
+                    const seriesSize = chooseSizeKey(config.poster, query);
+                    candidates.push(artwork.seriesPosterPath(item.Series, seriesSize));
+                    candidates.push(artwork.seriesPosterPath(item.Series, null));
+                }
+                return candidates;
+            }
+        }
+
+        if (type === 'season') {
+            if (normalized === 'primary' || normalized === 'poster' || normalized === 'banner' || normalized === 'thumb') {
+                const sizeKey = chooseSizeKey(config.poster, query);
+                return [
+                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, sizeKey),
+                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, null),
+                ];
+            }
+        }
+
+        return [];
+    };
+
+    const handleItemImageRequest = async (req, res, imageTypeOverride = null) => {
+        const { item, type } = await resolveItemById(req.params.mediaid);
+
+        if (!item) return res.status(404).send();
+
+        const requestedType = imageTypeOverride || req.params.imagetype || req.params.imageType || 'primary';
+        const imageIndex = req.params.imageindex ?? req.query.imageindex ?? req.query.imageIndex;
+
+        if (imageIndex !== undefined) {
+            const parsedIndex = parseInt(imageIndex, 10);
+            if (!Number.isFinite(parsedIndex) || parsedIndex !== 0) return res.status(404).send();
+        }
+
+        const candidates = resolveImageCandidates(item, type, requestedType, req.query || {});
+        if (candidates.length === 0) return res.status(404).send();
+
+        const found = await findFirstExistingImage(res, candidates);
+        if (found) return;
+
+        return res.status(404).send();
+    };
+
     const buildMovieInclude = (userId) => {
         const include = [
             {
@@ -340,54 +473,11 @@ export default (server, embyEmulation) => {
     });
 
     server.get('/items/:mediaid/images/primary', async (req, res) => {
-        const { item, type } = await resolveItemById(req.params.mediaid);
-
-        if (type === 'movie') {
-            if (!item) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.moviePosterPath(item, 'medium');
-
-            if (await sendImageIfExists(res, posterPath)) return;
-        } else if (type === 'series') {
-            if (!item) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item, 'medium');
-
-            if (await sendImageIfExists(res, posterPath)) return;
-        } else if (type === 'episode') {
-            if (!item) return res.status(404).send();
-            let bannerPath = embyEmulation.oblecto.artworkUtils.episodeBannerPath(item, 'medium');
-
-            if (await sendImageIfExists(res, bannerPath)) return;
-            if (item.Series) {
-                let seriesPosterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item.Series, 'medium');
-
-                if (await sendImageIfExists(res, seriesPosterPath)) return;
-            }
-        } else {
-            return res.status(404).send();
-        }
-
-        return res.status(404).send();
+        return handleItemImageRequest(req, res, 'primary');
     });
 
     server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
-        const { item, type } = await resolveItemById(req.params.mediaid);
-
-        if (type === 'movie') {
-            if (!item) return res.status(404).send();
-            let posterPath = embyEmulation.oblecto.artworkUtils.movieFanartPath(item, 'large');
-
-            if (await sendImageIfExists(res, posterPath)) return;
-        } else if (type === 'series') {
-            if (!item) return res.status(404).send();
-            // No dedicated series fanart; fall back to poster so clients at least get an image.
-            let posterPath = embyEmulation.oblecto.artworkUtils.seriesPosterPath(item, 'large');
-
-            if (await sendImageIfExists(res, posterPath)) return;
-        } else {
-            return res.status(404).send();
-        }
-
-        return res.status(404).send();
+        return handleItemImageRequest(req, res, 'backdrop');
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req, res) => {
@@ -587,8 +677,8 @@ export default (server, embyEmulation) => {
     server.get('/items/filters', async (req, res) => { res.send({}); });
     server.get('/items/filters2', async (req, res) => { res.send({}); });
     server.get('/items/:itemid/images', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/images/:imagetype', async (req, res) => { res.status(404).send('Not Found'); });
-    // server.get('/items/:itemid/images/:imagetype/:imageindex', ...); // Already partially covered?
+    server.get('/items/:mediaid/images/:imagetype', async (req, res) => handleItemImageRequest(req, res));
+    server.get('/items/:mediaid/images/:imagetype/:imageindex', async (req, res) => handleItemImageRequest(req, res));
     server.get('/items/:itemid/images/:imagetype/:imageindex/index', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/instantmix', async (req, res) => { res.send({
         Items: [], TotalRecordCount: 0, StartIndex: 0

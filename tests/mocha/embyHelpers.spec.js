@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { formatFileId, formatUuid, parseFileId, parseUuid } from '../../src/lib/embyEmulation/helpers.js';
+import { formatFileId, formatMediaItem, formatUuid, parseFileId, parseUuid } from '../../src/lib/embyEmulation/helpers.js';
 
 describe('Emby Emulation Helpers', () => {
     describe('formatUuid', () => {
@@ -60,6 +60,25 @@ describe('Emby Emulation Helpers', () => {
             const parsed = parseUuid(uuid);
 
             assert.strictEqual(parsed, id);
+        });
+    });
+
+    describe('formatMediaItem (episodes)', () => {
+        it('should advertise a Thumb image tag for episodes', () => {
+            const episode = {
+                id: 42,
+                episodeName: 'Pilot',
+                airedSeason: 1,
+                airedEpisodeNumber: 1,
+                Series: { id: 7, seriesName: 'Sample Show' }
+            };
+            const embyEmulation = { serverId: 'test-server' };
+
+            const dto = formatMediaItem(episode, 'episode', embyEmulation);
+
+            assert.ok(dto.ImageTags);
+            assert.strictEqual(dto.ImageTags.Primary, 'primary');
+            assert.strictEqual(dto.ImageTags.Thumb, 'thumb');
         });
     });
 });
