@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 import expect from 'expect.js';
 
 import Downloader from '../../src/lib/downloader/index.js';
@@ -12,8 +13,10 @@ describe('Downloader', function () {
         expect(oblecto.queue.jobs).to.have.property('downloadFile');
     });
 
-    it('Download test file', function () {
-        return Downloader.download('https://github.com', '/tmp/oblectoTest', true);
+    it('Download test file', async function () {
+        const path = '/tmp/oblectoTestDownload';
+        await fs.rm(path, { force: true });
+        return Downloader.download('https://github.com', path, true);
     });
 
     // TODO: FIX TEST
@@ -23,7 +26,9 @@ describe('Downloader', function () {
             .catch(() => done());
     });*/
 
-    it('Download first successful from array', function () {
-        return Downloader.attemptDownload(['https://exapmle.com','https://github.com'], '/tmp/oblectoTest', true);
+    it('Download first successful from array', async function () {
+        const path = '/tmp/oblectoTestAttempt';
+        await fs.rm(path, { force: true });
+        return Downloader.attemptDownload(['https://example.invalid','https://github.com'], path);
     });
 });
