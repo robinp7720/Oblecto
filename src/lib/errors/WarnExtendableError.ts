@@ -1,7 +1,7 @@
 import ExtendableError from './ExtendableError';
 
 export default class WarnExtendableError extends ExtendableError {
-    constructor(message) {
+    constructor(message: string) {
         super(message);
 
         this.level = 'WARN';

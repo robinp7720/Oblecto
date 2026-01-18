@@ -2,10 +2,16 @@ import IdentificationError from '../errors/IdentificationError';
 import logger from '../../submodules/logger';
 import MediaIdentifier from '../indexers/MediaIdentifier';
 
+type Identifier = MediaIdentifier & {
+    identify: (...args: unknown[]) => Promise<Record<string, unknown>>;
+};
+
 // TODO: Combine this with the AggregateUpdateRetriever
 // This is no reason to have two seperate classes that basically do the same thing
 
 export default class AggregateIdentifier {
+    private identifiers: Identifier[];
+
     /**
      * Wrapper class to combine multiple identifiers and return information as a combined json output
      */
@@ -15,17 +21,17 @@ export default class AggregateIdentifier {
 
     /**
      * Load another MediaIdentifier to be used
-     * @param {MediaIdentifier} identifier - Identifier object
+     * @param identifier - Identifier object
      */
-    loadIdentifier(identifier) {
+    loadIdentifier(identifier: Identifier): void {
         this.identifiers.push(identifier);
     }
 
-    async identify (...args) {
-        let identification = {};
+    async identify(...args: unknown[]): Promise<Record<string, unknown>> {
+        let identification: Record<string, unknown> = {};
 
         for (let identifier of this.identifiers) {
-            let currentIdentification;
+            let currentIdentification: Record<string, unknown>;
 
             try {
                 currentIdentification = await identifier.identify(...args);

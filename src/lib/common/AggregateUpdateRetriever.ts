@@ -1,7 +1,13 @@
 import logger from '../../submodules/logger';
 import IdentificationError from '../errors/IdentificationError';
 
+type InformationRetriever = {
+    retrieveInformation: (...args: unknown[]) => Promise<Record<string, unknown>>;
+};
+
 export default class AggregateUpdateRetriever {
+    private retrievers: InformationRetriever[];
+
     /**
      * Wrapper class to combine multiple entity updaters and return information as a combined json output
      */
@@ -9,12 +15,12 @@ export default class AggregateUpdateRetriever {
         this.retrievers = [];
     }
 
-    loadRetriever(retriever) {
+    loadRetriever(retriever: InformationRetriever): void {
         this.retrievers.push(retriever);
     }
 
-    async retrieveInformation(...args) {
-        let information = {};
+    async retrieveInformation(...args: unknown[]): Promise<Record<string, unknown>> {
+        let information: Record<string, unknown> = {};
 
         for (let retriever of this.retrievers) {
             try {
