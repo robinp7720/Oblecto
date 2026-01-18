@@ -276,7 +276,8 @@ Manage the core application configuration.
 Manage media libraries and sources.
 
 - **List Libraries:** `GET /api/v1/libraries`
-- **Get Library Config:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
+- **Get Library Paths:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
+  - **Response:** Array of directory objects (e.g., `[{ "path": "/path/to/media" }]`).
 - **Update Library Config:** `PATCH /api/v1/libraries/:type`
 - **Add Source Path:** `POST /api/v1/libraries/:type/paths`
   - **Body:** `{ "path": "/path/to/media" }`
@@ -310,6 +311,27 @@ Trigger imports from configured remote seedboxes.
 ### System Info
 - **Get Info:** `GET /api/v1/system/info`
   - **Response:** `{ "version": "...", "uptime": 123, ... }`
+
+### System Capabilities
+Get list of available identifiers and updaters.
+
+- **URL:** `/api/v1/system/capabilities`
+- **Method:** `GET`
+- **Response:**
+  ```json
+  {
+    "movies": {
+      "identifiers": ["tmdb"],
+      "updaters": ["tmdb"]
+    },
+    "tvshows": {
+      "seriesIdentifiers": ["tmdb", "tvdb"],
+      "episodeIdentifiers": ["tmdb"],
+      "seriesUpdaters": ["tmdb", "tvdb"],
+      "episodeUpdaters": ["tmdb"]
+    }
+  }
+  ```
 
 ## Files
 
