@@ -35,6 +35,9 @@ export default class SeriesUpdater {
             'tvdb': TvdbEpisodeRetriever
         };
 
+        this.availableSeriesUpdaters = Object.keys(seriesUpdateRetrievers);
+        this.availableEpisodeUpdaters = Object.keys(episodeUpdateRetrievers);
+
         for (let updater of this.oblecto.config.tvshows.seriesUpdaters) {
             logger.debug( `Loading ${updater} series updater`);
             this.aggregateSeriesUpdateRetriever.loadRetriever(new seriesUpdateRetrievers[updater](this.oblecto));

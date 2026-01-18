@@ -11,6 +11,8 @@ export default class MovieUpdater {
 
         const movieUpdateRetrievers = { 'tmdb': TmdbMovieRetriever };
 
+        this.availableUpdaters = Object.keys(movieUpdateRetrievers);
+
         for (let updater of this.oblecto.config.movies.movieUpdaters) {
             logger.debug( `Loading ${updater} movie updater`);
             this.aggregateMovieUpdateRetriever.loadRetriever(new movieUpdateRetrievers[updater](this.oblecto));

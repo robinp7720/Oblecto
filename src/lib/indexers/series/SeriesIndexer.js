@@ -45,6 +45,9 @@ export default class SeriesIndexer {
             'tvdb': TvdbEpisodeIdentifier
         };
 
+        this.availableSeriesIdentifiers = Object.keys(seriesIdentifiers);
+        this.availableEpisodeIdentifiers = Object.keys(episodeIdentifiers);
+
         for (let identifier of this.oblecto.config.tvshows.seriesIdentifiers) {
             logger.debug( `Loading ${identifier} series identifier`);
             this.seriesIdentifier.loadIdentifier(new seriesIdentifiers[identifier](this.oblecto));

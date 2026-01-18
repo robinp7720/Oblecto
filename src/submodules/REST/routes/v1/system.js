@@ -104,4 +104,20 @@ export default (server, oblecto) => {
         };
         res.send(info);
     });
+
+    // GET /api/v1/system/capabilities
+    server.get('/api/v1/system/capabilities', authMiddleWare.requiresAuth, (req, res) => {
+        res.send({
+            movies: {
+                identifiers: oblecto.movieIndexer.availableIdentifiers,
+                updaters: oblecto.movieUpdater.availableUpdaters
+            },
+            tvshows: {
+                seriesIdentifiers: oblecto.seriesIndexer.availableSeriesIdentifiers,
+                episodeIdentifiers: oblecto.seriesIndexer.availableEpisodeIdentifiers,
+                seriesUpdaters: oblecto.seriesUpdater.availableSeriesUpdaters,
+                episodeUpdaters: oblecto.seriesUpdater.availableEpisodeUpdaters
+            }
+        });
+    });
 };

@@ -21,6 +21,8 @@ export default class MovieIndexer {
 
         const movieIdentifiers = { 'tmdb': TmdbMovieIdentifier };
 
+        this.availableIdentifiers = Object.keys(movieIdentifiers);
+
         for (let identifier of this.oblecto.config.movies.movieIdentifiers) {
             logger.debug( `Loading ${identifier} movie identifier`);
             this.movieIdentifier.loadIdentifier(new movieIdentifiers[identifier](this.oblecto));

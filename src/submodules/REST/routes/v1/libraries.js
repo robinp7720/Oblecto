@@ -20,7 +20,7 @@ export default (server, oblecto) => {
         if (!ALLOWED_LIBRARIES.includes(req.params.type)) {
             return next(new errors.BadRequestError('Invalid library type'));
         }
-        res.send(oblecto.config[req.params.type]);
+        res.send(oblecto.config[req.params.type].directories || []);
     });
 
     // PATCH /api/v1/libraries/:type - Update general library settings (identifiers, updaters, etc)
