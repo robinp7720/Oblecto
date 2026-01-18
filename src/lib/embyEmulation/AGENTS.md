@@ -66,3 +66,9 @@ The API often receives requests where `IncludeItemTypes` is empty (e.g., when a 
 1.  **Add a Route**: Register the endpoint in the appropriate file in `src/lib/embyEmulation/ServerAPI/routes/`.
 2.  **Access Parameters**: Use `req.query` for query parameters, ensuring you check for lowercased keys.
 3.  **Return Data**: Always use `formatMediaItem(item, type, embyEmulation)` to transform database models into API-compliant objects.
+
+When extending the Jellyfin/Emby emulation layer:
+- Always reference the Jellyfin OpenAPI spec (`jellyfin-openapi-stable.json`). If it is outdated, refresh it from the official Jellyfin OpenAPI stable spec.
+- Use `PLAN.md` as the source of truth for current coverage and gaps.
+- Document every change you make in `PLAN.md` under the Change log section (date + short summary).
+- Keep route implementations aligned with the spec path shapes, HTTP methods, and required parameters.
