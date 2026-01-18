@@ -99,6 +99,7 @@ export default (server, embyEmulation) => {
             const seasonObj = {
                 id: pseudoId,
                 seasonName: 'Season ' + seasonNum,
+                seriesName: series.seriesName,
                 SeriesId: seriesId,
                 indexNumber: seasonNum
             };

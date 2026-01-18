@@ -69,11 +69,16 @@ export default (server, embyEmulation) => {
             item = await Episode.findByPk(numericId, { include: buildEpisodeInclude(userId) });
         } else if (resolvedType === 'season' && Number.isFinite(numericId)) {
             const seriesId = Math.floor(numericId / 1000);
+
+            const series = await Series.findByPk(seriesId);
             const seasonNum = numericId % 1000;
+
+            logger.debug(series.seriesName);
 
             item = {
                 id: numericId,
                 seasonName: 'Season ' + seasonNum,
+                seriesName: series.seriesName,
                 SeriesId: seriesId,
                 indexNumber: seasonNum,
             };
@@ -276,6 +281,7 @@ export default (server, embyEmulation) => {
                 const seasonObj = {
                     id: pseudoId,
                     seasonName: 'Season ' + seasonNum,
+                    seriesName: series.seriesName,
                     SeriesId: seriesId,
                     indexNumber: seasonNum
                 };

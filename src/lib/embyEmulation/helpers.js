@@ -309,7 +309,7 @@ export const formatMediaItem = (item, type, embyEmulation) => {
     const id = formatId(item.id, type);
 
     const res = {
-        'Name': item.movieName || item.seriesName || item.episodeName || item.seasonName,
+        'Name': item.movieName || item.seasonName || item.episodeName || item.seriesName,
         'ServerId': embyEmulation.serverId,
         'Id': id,
         'HasSubtitles': true,
@@ -367,6 +367,7 @@ export const formatMediaItem = (item, type, embyEmulation) => {
         res.SeasonName = item.seasonName;
         res.IndexNumber = parseInt(item.indexNumber);
         res.ParentId = res.SeriesId;
+        res.SeriesName = item.seriesName;
     }
 
     if (item.Files && item.Files.length > 0) {
