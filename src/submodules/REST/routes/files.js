@@ -1,4 +1,5 @@
 import authMiddleWare from '../middleware/auth';
+import errors from '../errors';
 import { File } from '../../../models/file';
 import { Episode } from '../../../models/episode';
 import { Movie } from '../../../models/movie';
@@ -44,5 +45,56 @@ export default (server, oblecto) => {
         }
 
         res.send(duplicates);
+    });
+
+    server.get('/files/problematic', authMiddleWare.requiresAuth, async function (req, res) {
+        const brokenFiles = await File.findAll({
+            where: { problematic: true }
+        });
+        res.send(brokenFiles);
+    });
+
+    server.post('/files/:id/retry', authMiddleWare.requiresAuth, async function (req, res, next) {
+        try {
+            const file = await File.findByPk(req.params.id);
+            if (!file) return next(new errors.NotFoundError('File not found'));
+
+            // Reset error state
+            await file.update({ problematic: false, error: null });
+
+            const filePath = file.path;
+            let queued = false;
+
+            // Check Movie Directories
+            const movieDirs = oblecto.config.movies.directories || [];
+            for (const dir of movieDirs) {
+                if (filePath.startsWith(dir.path)) {
+                    oblecto.queue.queueJob('indexMovie', { path: filePath, doReIndex: true });
+                    queued = true;
+                    break;
+                }
+            }
+
+            // Check TV Directories
+            if (!queued) {
+                const tvDirs = oblecto.config.tvshows.directories || [];
+                for (const dir of tvDirs) {
+                    if (filePath.startsWith(dir.path)) {
+                        oblecto.queue.queueJob('indexEpisode', { path: filePath });
+                        queued = true;
+                        break;
+                    }
+                }
+            }
+            
+            // If not matched, try to re-index streams directly as a fallback
+            if (!queued) {
+                 oblecto.queue.queueJob('indexFileStreams', file);
+            }
+
+            res.send({ success: true, message: 'Retry scheduled' });
+        } catch (e) {
+            next(e);
+        }
     });
 };
