@@ -135,7 +135,17 @@ export default class SeriesIndexer {
     async indexFile(episodePath) {
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
-        let { series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath);
+        let seriesIdentification, episodeIdentification;
+
+        try {
+             ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath));
+        } catch (e) {
+            if (e.name === 'IdentificationError') {
+                await file.update({ problematic: true, error: e.message });
+                return;
+            }
+            throw e;
+        }
 
         const series = await this.indexSeries(seriesIdentification);
 

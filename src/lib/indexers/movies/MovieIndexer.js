@@ -58,7 +58,16 @@ export default class MovieIndexer {
     async indexFile(moviePath, doReindex) {
         const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
-        const movieIdentification = await this.matchFile(moviePath);
+        let movieIdentification;
+        try {
+            movieIdentification = await this.matchFile(moviePath);
+        } catch (e) {
+            if (e.name === 'IdentificationError') {
+                 await file.update({ problematic: true, error: e.message });
+                 return;
+            }
+            throw e;
+        }
 
         let [movie, movieCreated] = await Movie.findOrCreate(
             {

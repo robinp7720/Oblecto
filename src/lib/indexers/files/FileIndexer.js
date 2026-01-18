@@ -57,10 +57,18 @@ export default class FileIndexer {
         try {
             metadata = await ffprobe(file.path);
         } catch (e) {
-            const lines = e.message.split('\n');
-            const lastLine = lines[lines.length - 1];
+            const lines = e.message.trim().split('\n');
+            let lastLine = lines[lines.length - 1];
 
-            throw new VideoAnalysisError(`Failed to probe ${file.path}: ${lastLine}`);
+            // Remove file path from error if present to make it concise
+            if (lastLine.includes(file.path)) {
+                lastLine = lastLine.replace(file.path, '').replace(/^:\s*/, '').trim();
+            }
+
+            const errorMsg = lastLine || 'Unknown error';
+            await file.update({ problematic: true, error: errorMsg });
+
+            throw new VideoAnalysisError(`Failed to probe ${file.path}: ${errorMsg}`);
         }
 
         for (let stream_base of metadata.streams) {
