@@ -20,6 +20,8 @@ This document outlines the plan for migrating the Oblecto backend code (`src/`) 
 - [ ] Create interfaces/types for all Sequelize models.
 - [x] Migrate `src/models/user.ts` (Done).
 - [x] Migrate `src/models/movie.ts` (Done).
+- [x] Migrate `src/models/series.ts` (Done).
+- [x] Migrate `src/models/episode.ts` (Done).
 - [ ] Migrate remaining model definition files.
 - [ ] Ensure correct typing for Sequelize model associations.
 
