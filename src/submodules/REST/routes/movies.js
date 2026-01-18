@@ -232,7 +232,7 @@ export default (server, oblecto) => {
             ]
         });
 
-        res.send(sets.movieSets);
+        res.send(sets ? sets.MovieSets : []);
     });
 
     server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req, res) {
