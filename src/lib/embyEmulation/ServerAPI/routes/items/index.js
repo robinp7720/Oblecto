@@ -8,6 +8,7 @@ import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { TrackMovie } from '../../../../../models/trackMovie';
 import { fileExists } from '../../../../../submodules/utils';
+import logger from '../../../../../submodules/logger/index.js';
 
 /**
  *
