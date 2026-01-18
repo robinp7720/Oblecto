@@ -266,7 +266,26 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid/items', async (req, res) => {
         let items = [];
-        const includeItemTypes = (req.query.IncludeItemTypes || req.query.includeItemTypes || req.query.includeitemtypes || '').toLowerCase();
+        const normalizeQueryList = (query, ...keys) => {
+            const values = [];
+            for (const key of keys) {
+                if (query[key] === undefined) continue;
+                const raw = query[key];
+                if (Array.isArray(raw)) {
+                    for (const entry of raw) {
+                        values.push(entry);
+                    }
+                } else {
+                    values.push(raw);
+                }
+            }
+            return values
+                .flatMap(value => String(value).split(','))
+                .map(value => value.trim())
+                .filter(value => value.length > 0);
+        };
+        const includeItemTypes = normalizeQueryList(req.query, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
+            .map(value => value.toLowerCase());
         const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
         const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
         const limit = parseInt(req.query.Limit || req.query.limit) || 100;
@@ -310,8 +329,12 @@ export default (server, embyEmulation) => {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const sortBy = (req.query.SortBy || req.query.sortBy || req.query.sortby || '').toLowerCase();
-            const sortOrder = (req.query.SortOrder || req.query.sortOrder || req.query.sortorder || 'Ascending').toLowerCase();
+            const sortBy = normalizeQueryList(req.query, 'SortBy', 'sortBy', 'sortby')
+                .map(value => value.toLowerCase())
+                .join(',');
+            const sortOrder = normalizeQueryList(req.query, 'SortOrder', 'sortOrder', 'sortorder')
+                .map(value => value.toLowerCase())
+                .join(',') || 'ascending';
             const order = [];
 
             if (sortBy) {

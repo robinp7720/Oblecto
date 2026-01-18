@@ -24,6 +24,8 @@ Implemented
   - GET /items/{param}/images/{param}
   - GET /items/{param}/images/{param}/{param}
   - POST /items/{param}/playbackinfo
+- Search
+  - GET /search/hints
 - Shows
   - GET /shows/nextup
   - GET /shows/{param}/seasons
@@ -95,7 +97,7 @@ Partially implemented
   - GET /items/{param}/remoteimages, /items/{param}/remoteimages/providers (empty)
   - GET /items/{param}/remotesearch/subtitles/{param} (empty) and /items/{param}/remotesearch/subtitles/{param} (404)
   - GET /items/suggestions, /items/{param}/intros, /items/{param}/localtrailers, /items/{param}/specialfeatures, /items/root (empty)
-  - GET /movies/{param}/similar, /movies/recommendations, /shows/{param}/similar, /shows/upcoming, /trailers, /trailers/{param}/similar, /search/hints (empty)
+  - GET /movies/{param}/similar, /movies/recommendations, /shows/{param}/similar, /shows/upcoming, /trailers, /trailers/{param}/similar (empty)
 - Sessions
   - POST /sessions/capabilities/{param}, /sessions/playing, /sessions/playing/ping, /sessions/playing/stopped (no-op or minimal)
   - GET /sessions, /sessions/viewing (empty)
@@ -317,3 +319,4 @@ Notes
 
 Change log
 - 2026-01-18: Added image-type handling for /items/{id}/images/* with size selection + episode thumb tags; added regression test for episode Thumb tags; created PLAN.md + AGENTS.md for Jellyfin emulation tracking.
+- 2026-01-18: Implemented search hints + multi-type search handling for /items; added tests for array query params in items/users search flows.

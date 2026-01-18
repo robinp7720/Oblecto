@@ -43,10 +43,12 @@ const makeRes = () => {
 describe('Emby users routes - seasons', () => {
     let sequelize;
     let series;
+    let ownsSequelize = false;
 
     before(async () => {
+        ownsSequelize = !Series.sequelize;
         sequelize = Series.sequelize || new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
-        if (!Series.sequelize) {
+        if (ownsSequelize) {
             Series.init(seriesColumns, { sequelize, modelName: 'Series' });
         }
         if (!Episode.sequelize) {
@@ -71,9 +73,7 @@ describe('Emby users routes - seasons', () => {
     });
 
     after(async () => {
-        if (sequelize) {
-            await sequelize.close();
-        }
+        // Keep the shared in-memory DB open for other Emby route tests.
     });
 
     it('includes SeriesName when listing seasons for a series', async () => {
