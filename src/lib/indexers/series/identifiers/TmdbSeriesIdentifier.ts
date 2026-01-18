@@ -1,9 +1,13 @@
-import IdentificationError from '../../../errors/IdentificationError';
-import SeriesIdentifer from '../SeriesIdentifer';
-import promiseTimeout from '../../../../submodules/promiseTimeout';
+import IdentificationError from '../../../errors/IdentificationError.js';
+import SeriesIdentifer, { SeriesIdentification } from '../SeriesIdentifer.js';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import type { GuessitIdentification } from '../../../../submodules/guessit.js';
+import type Oblecto from '../../../oblecto/index.js';
 
 export default class TmdbSeriesIdentifier extends SeriesIdentifer {
-    constructor(oblecto) {
+    public tvShowCache: Record<string, SeriesIdentification>;
+
+    constructor(oblecto: Oblecto) {
         super(oblecto);
 
         this.tvShowCache = {};
@@ -15,7 +19,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
      * @param {*} guessitIdentification - Guessit identification object
      * @returns {{first_air_date}|*} - Best result match
      */
-    retrieveSeries(tmdbSearch, guessitIdentification) {
+    retrieveSeries(tmdbSearch: Array<{ first_air_date?: string }>, guessitIdentification: GuessitIdentification) {
         // If TMDB only found one series that matches, we'll just ignore the date
         // This fixes some releases where the episode release year is included in
         // the file name instead of the first series release year
@@ -25,7 +29,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
         // TODO: We might want to also match to the most similar name
         for (let series of tmdbSearch) {
             if (!series.first_air_date) continue;
-            if (guessitIdentification.year.toString() !== series.first_air_date.substr(0, 4).toString()) continue;
+            if (guessitIdentification.year!.toString() !== series.first_air_date.substr(0, 4).toString()) continue;
 
             return series;
         }
@@ -39,8 +43,8 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
      * @param {*} guessitIdentification - Guessit identification object
      * @returns {Promise<{overview, tmdbid, seriesName}|*>} - Matched identification object
      */
-    async identify(path, guessitIdentification) {
-        let title = guessitIdentification.title;
+    async identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification> {
+        let title: string | string[] = guessitIdentification.title;
 
         if (Array.isArray(title)) {
             title = title.join(' ');
@@ -56,7 +60,12 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return this.tvShowCache[cacheId];
         }
 
-        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: title }, { timeout: 5000 }))).results;
+        let tmdbSearch = (await promiseTimeout(this.oblecto.tmdb.searchTv({ query: title }, { timeout: 5000 }))).results as Array<{
+            id: number;
+            name: string;
+            overview: string;
+            first_air_date?: string;
+        }>;
 
         if (tmdbSearch.length < 1) {
             throw new IdentificationError('Search result from TMDB returned empty');

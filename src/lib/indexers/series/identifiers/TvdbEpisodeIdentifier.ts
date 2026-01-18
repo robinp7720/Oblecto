@@ -1,11 +1,25 @@
-import IdentificationError from '../../../errors/IdentificationError';
-import EpisodeIdentifier from '../EpisodeIdentifier';
-import promiseTimeout from '../../../../submodules/promiseTimeout';
+import IdentificationError from '../../../errors/IdentificationError.js';
+import EpisodeIdentifier, { EpisodeGuessitIdentification, EpisodeIdentification } from '../EpisodeIdentifier.js';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
-import { Series } from '../../../../models/series';
+import type Oblecto from '../../../oblecto/index.js';
+import type { SeriesIdentification } from '../SeriesIdentifer.js';
 
 export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
-    constructor(oblecto) {
+    public episodeCache: Record<number, Array<{
+        id: number;
+        imdbId?: string;
+        episodeName?: string;
+        airedEpisodeNumber?: number;
+        airedSeason?: number;
+        dvdEpisodeNumber?: number;
+        dvdSeason?: number;
+        absoluteNumber?: number;
+        overview?: string;
+        firstAired?: string;
+    }>>;
+
+    constructor(oblecto: Oblecto) {
         super(oblecto);
 
         this.episodeCache = {};
@@ -16,7 +30,7 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param {number} tvdbId - TVDBID for the series to get episodes for
      * @returns {Promise<*>} - Object containing all episodes of a series
      */
-    async getEpisodes(tvdbId) {
+    async getEpisodes(tvdbId: number) {
         // TODO: Caching should be moved somewhere else or at least improved. This implementation is terrible
         if (this.episodeCache[tvdbId]) {
             return this.episodeCache[tvdbId];
@@ -35,7 +49,8 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param {*} guessitIdentification - Guessit identification of a file
      * @returns {Promise<*>} - Match an episode to a guessit Identification
      */
-    async retrieveEpisode(series, guessitIdentification) {
+    async retrieveEpisode(series: SeriesIdentification, guessitIdentification: EpisodeGuessitIdentification) {
+        if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
         let tvdbEpisodes = await this.getEpisodes(series.tvdbid);
 
         for (let episode of tvdbEpisodes) {
@@ -62,9 +77,7 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param {Series} series - Series to which the episode should belong
      * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Returns a metadata object for an episode
      */
-    async identify(path, guessitIdentification, series) {
-        if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
-
+    async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification> {
         let episode = await this.retrieveEpisode(series, guessitIdentification);
 
         return {

@@ -1,46 +1,79 @@
 import { Op } from 'sequelize';
-
-import AggregateIdentifier from '../../common/AggregateIdentifier';
-
-import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier';
-import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier';
-import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier';
-import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier';
-
-import { Series } from '../../../models/series';
-import { Episode } from '../../../models/episode';
-import { File } from '../../../models/file';
-
-import IdentificationError from '../../errors/IdentificationError';
-import logger from '../../../submodules/logger';
-import guessit from '../../../submodules/guessit';
 import path from 'path';
 
-/**
- * @typedef {import('../../oblecto').default} Oblecto
- * @typedef {import('../../../submodules/guessit').GuessitIdentification} GuessitIdentification
- */
+import AggregateIdentifier from '../../common/AggregateIdentifier.js';
+import TmdbSeriesIdentifier from './identifiers/TmdbSeriesIdentifier.js';
+import TmdbEpisodeIdentifier from './identifiers/TmdbEpisodeIdentifier.js';
+import TvdbSeriesIdentifier from './identifiers/TvdbSeriesIdentifier.js';
+import TvdbEpisodeIdentifier from './identifiers/TvdbEpisodeIdentifier.js';
+
+import { Series } from '../../../models/series.js';
+import { Episode } from '../../../models/episode.js';
+import { File } from '../../../models/file.js';
+
+import IdentificationError from '../../errors/IdentificationError.js';
+import logger from '../../../submodules/logger/index.js';
+import guessit, { GuessitIdentification } from '../../../submodules/guessit.js';
+
+import type Oblecto from '../../oblecto/index.js';
+
+interface SeriesIdentification {
+    [key: string]: unknown;
+    tvdbid?: number | null;
+    tmdbid?: number | null;
+    seriesName?: string | null;
+    overview?: string | null;
+}
+
+interface EpisodeIdentification {
+    [key: string]: unknown;
+    airedSeason?: number | null;
+    airedEpisodeNumber?: number | null;
+    episodeName?: string | null;
+}
+
+type EpisodeGuessitIdentification = GuessitIdentification & {
+    episode_name?: string;
+    episode_title?: string;
+};
+
+type SeriesIdentifierConstructor = new (oblecto: Oblecto) => {
+    identify: (path: string, guessit: GuessitIdentification) => Promise<SeriesIdentification>;
+};
+
+type EpisodeIdentifierConstructor = new (oblecto: Oblecto) => {
+    identify: (
+        path: string,
+        guessit: EpisodeGuessitIdentification,
+        series: SeriesIdentification
+    ) => Promise<EpisodeIdentification>;
+};
 
 /**
  * Oblecto module to identify and index series and episodes
  */
 export default class SeriesIndexer {
+    public oblecto: Oblecto;
+    public seriesIdentifier: AggregateIdentifier;
+    public episodeIdentifer: AggregateIdentifier;
+    public availableSeriesIdentifiers: string[];
+    public availableEpisodeIdentifiers: string[];
     /**
      *
      * @param {Oblecto} oblecto - Oblecto server instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
 
         this.seriesIdentifier = new AggregateIdentifier();
         this.episodeIdentifer = new AggregateIdentifier();
 
-        const seriesIdentifiers = {
+        const seriesIdentifiers: Record<string, SeriesIdentifierConstructor> = {
             'tmdb': TmdbSeriesIdentifier,
             'tvdb': TvdbSeriesIdentifier,
         };
 
-        const episodeIdentifiers = {
+        const episodeIdentifiers: Record<string, EpisodeIdentifierConstructor> = {
             'tmdb': TmdbEpisodeIdentifier,
             'tvdb': TvdbEpisodeIdentifier
         };
@@ -59,7 +92,9 @@ export default class SeriesIndexer {
         }
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.registerJob('indexEpisode', async (job) => await this.indexFile(job.path));
+        this.oblecto.queue.registerJob('indexEpisode', async (job: { path: string }) => {
+            await this.indexFile(job.path);
+        });
     }
 
     /**
@@ -69,10 +104,10 @@ export default class SeriesIndexer {
      * @param seriesIdentification
      * @returns {Promise<Series>} - Matched series
      */
-    async indexSeries(seriesIdentification) {
+    async indexSeries(seriesIdentification: SeriesIdentification): Promise<Series> {
         const identifiers = ['tvdbid', 'tmdbid'];
 
-        let seriesQuery = [];
+        let seriesQuery: Array<Record<string, unknown>> = [];
 
         for (let identifier of identifiers) {
             if (!seriesIdentification[identifier]) continue;
@@ -93,11 +128,11 @@ export default class SeriesIndexer {
         return series;
     }
 
-    async identify(episodePath) {
+    async identify(episodePath: string): Promise<{ series: SeriesIdentification; episode: EpisodeIdentification }>{
         const identificationNames = [path.basename(episodePath), episodePath];
 
-        let guessitIdentification;
-        let seriesIdentification;
+        let guessitIdentification: EpisodeGuessitIdentification | undefined;
+        let seriesIdentification: SeriesIdentification | undefined;
 
         let seriesIdentified = false;
 
@@ -121,11 +156,15 @@ export default class SeriesIndexer {
             }
         }
 
-        if (seriesIdentified === false) {
+        if (seriesIdentified === false || !guessitIdentification || !seriesIdentification) {
             throw new IdentificationError('Could not identify series');
         }
 
-        const episodeIdentification = await this.episodeIdentifer.identify(episodePath, guessitIdentification, seriesIdentification);
+        const episodeIdentification = await this.episodeIdentifer.identify(
+            episodePath,
+            guessitIdentification,
+            seriesIdentification
+        ) as EpisodeIdentification;
 
         return { series: seriesIdentification, episode: episodeIdentification };
     }
@@ -135,16 +174,18 @@ export default class SeriesIndexer {
      * @param {string} episodePath - Path to episode to index
      * @returns {Promise<void>}
      */
-    async indexFile(episodePath) {
+    async indexFile(episodePath: string): Promise<void> {
         let file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
-        let seriesIdentification, episodeIdentification;
+        let seriesIdentification: SeriesIdentification;
+        let episodeIdentification: EpisodeIdentification;
 
         try {
              ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath));
         } catch (e) {
-            if (e.name === 'IdentificationError') {
-                await file.update({ problematic: true, error: e.message });
+            const error = e as Error & { name?: string; message?: string };
+            if (error.name === 'IdentificationError') {
+                await file.update({ problematic: true, error: error.message });
                 return;
             }
             throw e;

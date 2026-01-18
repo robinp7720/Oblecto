@@ -1,10 +1,14 @@
-import IdentificationError from '../../../errors/IdentificationError';
-import EpisodeIdentifier from '../EpisodeIdentifier';
-import promiseTimeout from '../../../../submodules/promiseTimeout';
+import IdentificationError from '../../../errors/IdentificationError.js';
+import EpisodeIdentifier, { EpisodeGuessitIdentification, EpisodeIdentification } from '../EpisodeIdentifier.js';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
-import { Series } from '../../../../models/series';
+import type Oblecto from '../../../oblecto/index.js';
+import type { SeriesIdentification } from '../SeriesIdentifer.js';
 
 export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
+    constructor(oblecto: Oblecto) {
+        super(oblecto);
+    }
     /**
      *  Identify an episode using TMDB
      * @param {string} path - Path to the episode to be identified
@@ -12,17 +16,25 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param {Series} series - Series to which the episode should belong
      * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Identification object
      */
-    async identify(path, guessitIdentification, series) {
+    async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification> {
         if (!series.tmdbid) throw new IdentificationError('Series does not have a TMDB ID');
+        const tmdbid = series.tmdbid;
 
-        let episode;
+        let episode: {
+            id: number;
+            name: string;
+            episode_number: number;
+            season_number: number;
+            overview?: string;
+            air_date?: string;
+        };
 
         try {
             episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
-                id: series.tmdbid,
+                id: tmdbid,
                 season_number: guessitIdentification.season || 1,
                 episode_number: guessitIdentification.episode
-            }, { timeout: 5000 }));
+            }, { timeout: 5000 })) as typeof episode;
         } catch (e) {
             throw new IdentificationError('Could not find episode');
         }

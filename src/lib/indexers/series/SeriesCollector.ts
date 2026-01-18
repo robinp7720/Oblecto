@@ -1,6 +1,8 @@
 import recursive from 'recursive-readdir';
 import { extname } from 'path';
 
+import type Oblecto from '../../oblecto/index.js';
+
 /**
  * @typedef {import('../../oblecto').default} Oblecto
  */
@@ -9,11 +11,12 @@ import { extname } from 'path';
  * Module for oblecto to scan for media files which are to be indexed by the episode indexer
  */
 export default class SeriesCollector {
+    public oblecto: Oblecto;
     /**
      *
      * @param {Oblecto} oblecto - Oblecto server instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
     }
 
@@ -22,7 +25,7 @@ export default class SeriesCollector {
      * @param {string} directory - Which directory to add to the index queue
      * @returns {Promise<void>}
      */
-    async collectDirectory(directory) {
+    async collectDirectory(directory: string): Promise<void> {
         /**
          * @type {string[]}
          */
@@ -38,7 +41,7 @@ export default class SeriesCollector {
      * @param {string} file - File path to add to the index queue
      * @returns {Promise<void>}
      */
-    async collectFile(file) {
+    async collectFile(file: string): Promise<void> {
         let extension = extname(file).toLowerCase().replace('.','');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
@@ -50,7 +53,7 @@ export default class SeriesCollector {
      * Index all TV Show libraries
      * @returns {Promise<void>}
      */
-    async collectAll() {
+    async collectAll(): Promise<void> {
         this.oblecto.config.tvshows.directories.forEach(directory => {
             this.collectDirectory(directory.path);
         });

@@ -1,16 +1,15 @@
 import recursive from 'recursive-readdir';
 import path from 'path';
 
-/**
- * @typedef {import('../../oblecto').default} Oblecto
- */
+import type Oblecto from '../../oblecto/index.js';
 
 export default class MovieCollector {
+    public oblecto: Oblecto;
     /**
      *
      * @param {Oblecto} oblecto - Oblecto server instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
     }
 
@@ -19,7 +18,7 @@ export default class MovieCollector {
      * @param {string} directory - Which directory to add to the index queue
      * @returns {Promise<void>}
      */
-    async collectDirectory(directory) {
+    async collectDirectory(directory: string): Promise<void> {
         let files = await recursive(directory);
 
         files.forEach(file => {
@@ -32,7 +31,7 @@ export default class MovieCollector {
      * @param {string} file - File path to add to the index queue
      * @returns {Promise<void>}
      */
-    async collectFile(file) {
+    async collectFile(file: string): Promise<void> {
         let extension = path.parse(file).ext.toLowerCase().replace('.', '');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
@@ -44,7 +43,7 @@ export default class MovieCollector {
      *
      * @returns {Promise<void>}
      */
-    async collectAll() {
+    async collectAll(): Promise<void> {
         this.oblecto.config.movies.directories.forEach(directory => {
             this.collectDirectory(directory.path);
         });

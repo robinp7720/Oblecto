@@ -1,24 +1,24 @@
-import IdentificationError from '../../../errors/IdentificationError';
-import promiseTimeout from '../../../../submodules/promiseTimeout.js';
-import SeriesIdentifier from '../SeriesIdentifer';
 import { distance } from 'fastest-levenshtein';
 
-/**
- * @typedef {import('../../../oblecto').default} Oblecto
- */
+import IdentificationError from '../../../errors/IdentificationError.js';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import SeriesIdentifier, { SeriesIdentification } from '../SeriesIdentifer.js';
+import type { GuessitIdentification } from '../../../../submodules/guessit.js';
+import type Oblecto from '../../../oblecto/index.js';
 
 export default class TvdbSeriesIdentifier extends SeriesIdentifier {
+    public tvShowCache: Record<string, SeriesIdentification>;
     /**
      * @param {Oblecto} oblecto - Oblecto instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         super(oblecto);
 
         this.tvShowCache = {};
     }
 
-    findMatch(found, guessitId) {
-        let title = guessitId.title;
+    findMatch(found: Array<{ seriesName: string }>, guessitId: GuessitIdentification) {
+        let title: string | string[] = guessitId.title;
 
         if (Array.isArray(title)) {
             title = title.join(' ');
@@ -42,18 +42,23 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         return shortestItem;
     }
 
-    async searchSeries(guessitIdentification) {
-        let title = guessitIdentification.title;
+    async searchSeries(guessitIdentification: GuessitIdentification) {
+        let title: string | string[] = guessitIdentification.title;
 
         if (Array.isArray(title)) {
             title = title.join(' ');
         }
 
-        let tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title));
+        let tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title)) as Array<{
+            id: number;
+            seriesName: string;
+            overview?: string;
+            firstAired?: string;
+        }>;
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);
 
-        let candidates = [];
+        let candidates: Array<{ id: number; seriesName: string; overview?: string; firstAired?: string }> = [];
 
         for (let series of tvdbSearch) {
             if (!series.firstAired) continue;
@@ -67,8 +72,8 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         return this.findMatch(candidates, guessitIdentification);
     }
 
-    async identify(path, guessitIdentification) {
-        let title = guessitIdentification.title;
+    async identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification> {
+        let title: string | string[] = guessitIdentification.title;
 
         if (Array.isArray(title)) {
             title = title.join(' ');
