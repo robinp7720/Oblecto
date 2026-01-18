@@ -1,29 +1,32 @@
-import promiseTimeout from '../../../../submodules/promiseTimeout';
-import DebugExtendableError from '../../../errors/DebugExtendableError';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
-import { Series } from '../../../../models/series';
+import type { Series } from '../../../../models/series.js';
+import type Oblecto from '../../../oblecto/index.js';
 
-/**
- * @typedef {import('../../..//oblecto').default} Oblecto
- */
+type SeriesWithTvdb = Series & {
+    tvdbid: number | null;
+};
 
 export default class TvdbSeriesRetriever {
+    public oblecto: Oblecto;
+
     /**
-     * @param {Oblecto} oblecto - Oblecto server Instance
+     * @param oblecto - Oblecto server Instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
     }
 
     /**
      * Get metadata for a series from TVDB
-     * @param {Series} series - Series for which to fetch metadata
-     * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>} - Updated series information
+     * @param series - Series for which to fetch metadata
+     * @returns - Updated series information
      */
-    async retrieveInformation(series) {
+    async retrieveInformation(series: SeriesWithTvdb): Promise<Record<string, unknown>> {
         if (!series.tvdbid) throw new DebugExtendableError('No tvdbid attached to series');
 
-        let seriesInfo = await promiseTimeout(this.oblecto.tvdb.getSeriesById(series.tvdbid));
+        const seriesInfo = await promiseTimeout(this.oblecto.tvdb.getSeriesById(series.tvdbid));
 
         // TODO: TMDB Voting should be separated from TVDB voting
 
@@ -41,6 +44,5 @@ export default class TvdbSeriesRetriever {
             imdbid: seriesInfo.imdbId || null,
             zap2itId: seriesInfo.zap2itId || null
         };
-
     }
 }

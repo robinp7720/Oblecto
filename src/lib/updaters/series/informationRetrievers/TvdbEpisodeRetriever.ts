@@ -1,17 +1,26 @@
-import promiseTimeout from '../../../../submodules/promiseTimeout';
-import DebugExtendableError from '../../../errors/DebugExtendableError';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import DebugExtendableError from '../../../errors/DebugExtendableError.js';
+
+import type Oblecto from '../../../oblecto/index.js';
+import type { Episode } from '../../../../models/episode.js';
+
+type EpisodeWithTvdb = Episode & {
+    tvdbid: number | null;
+};
 
 export default class TvdbEpisodeRetriever {
-    constructor(oblecto) {
+    public oblecto: Oblecto;
+
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
     }
 
-    async retrieveInformation(episode) {
+    async retrieveInformation(episode: EpisodeWithTvdb): Promise<unknown> {
         if (!episode.tvdbid) throw new DebugExtendableError('No tvdbid attached to episode');
 
-        let episodeInfo = await promiseTimeout(this.oblecto.tvdb.getEpisodeById(episode.tvdbid));
+        const episodeInfo = await promiseTimeout(this.oblecto.tvdb.getEpisodeById(episode.tvdbid));
 
-        let data = {
+        const data = {
             episodeName: episodeInfo.episodeName,
             airedEpisodeNumber: episodeInfo.airedEpisodeNumber,
             airedSeason: episodeInfo.airedSeason,

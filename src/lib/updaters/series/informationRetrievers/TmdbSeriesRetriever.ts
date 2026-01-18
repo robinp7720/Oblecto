@@ -1,31 +1,36 @@
-import promiseTimeout from '../../../../submodules/promiseTimeout';
-import DebugExtendableError from '../../../errors/DebugExtendableError';
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
-import { Series } from '../../../../models/series';
+import type { Series } from '../../../../models/series.js';
+import type Oblecto from '../../../oblecto/index.js';
 
-/**
- * @typedef {import('../../..//oblecto').default} Oblecto
- */
+type SeriesWithTmdb = Series & {
+    tmdbid: number | null;
+    tvdbid: number | null;
+    imdbid: string | null;
+};
 
 export default class TmdbSeriesRetriever {
+    public oblecto: Oblecto;
+
     /**
-     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param oblecto - Oblecto server instance
      */
-    constructor(oblecto) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
     }
 
     /**
      * Get metadata for a series from TMDB
-     * @param {Series} series - Series for which to fetch metadata
-     * @returns {Promise<{overview: *, siteRating: *, seriesName: *, firstAired: *, popularity: *, siteRatingCount: *, status: *}>} - Updated series information
+     * @param series - Series for which to fetch metadata
+     * @returns - Updated series information
      */
-    async retrieveInformation(series) {
+    async retrieveInformation(series: SeriesWithTmdb): Promise<Record<string, unknown>> {
         if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
 
         const seriesInfo = await promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, { timeout: 5000 }));
 
-        let data = {
+        const data: Record<string, unknown> = {
             seriesName: seriesInfo.name,
             status: seriesInfo.status,
             firstAired: seriesInfo.first_air_date,
@@ -33,10 +38,10 @@ export default class TmdbSeriesRetriever {
             popularity: seriesInfo.popularity,
             siteRating: seriesInfo.vote_average,
             siteRatingCount: seriesInfo.vote_count,
-            genre: JSON.stringify(seriesInfo.genres.map(i => i.name))
+            genre: JSON.stringify(seriesInfo.genres.map((i: { name: string }) => i.name))
         };
 
-        let externalIds = {};
+        let externalIds: { tvdb_id?: number; imdb_id?: string } = {};
 
         if (!(series.tvdbid && series.imdbid)) {
             externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({ id: series.tmdbid }, { timeout: 5000 }));
@@ -51,6 +56,5 @@ export default class TmdbSeriesRetriever {
         }
 
         return data;
-
     }
 }
