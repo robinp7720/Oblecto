@@ -1,44 +1,62 @@
-import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever';
-import TmdbMovieRetriever from './informationRetrievers/TmdbMovieRetriever';
-import logger from '../../../submodules/logger';
-import { Movie } from '../../../models/movie';
-import { MovieSet } from '../../../models/movieSet';
+import AggregateUpdateRetriever from '../../common/AggregateUpdateRetriever.js';
+import TmdbMovieRetriever from './informationRetrievers/TmdbMovieRetriever.js';
+import logger from '../../../submodules/logger/index.js';
+import { Movie } from '../../../models/movie.js';
+import { MovieSet } from '../../../models/movieSet.js';
+
+import type Oblecto from '../../oblecto/index.js';
+
+type MovieSetInfo = {
+    id: number;
+    name: string;
+};
+
+type MovieUpdateData = Record<string, unknown> & {
+    _set?: MovieSetInfo | null;
+};
+
+type UpdaterConstructor = new (oblecto: Oblecto) => {
+    retrieveInformation: (entity: unknown) => Promise<Record<string, unknown>>;
+};
 
 export default class MovieUpdater {
-    constructor(oblecto) {
+    public oblecto: Oblecto;
+    public aggregateMovieUpdateRetriever: AggregateUpdateRetriever;
+    public availableUpdaters: string[];
+
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
 
         this.aggregateMovieUpdateRetriever = new AggregateUpdateRetriever();
 
-        const movieUpdateRetrievers = { 'tmdb': TmdbMovieRetriever };
+        const movieUpdateRetrievers: Record<string, UpdaterConstructor> = { 'tmdb': TmdbMovieRetriever };
 
         this.availableUpdaters = Object.keys(movieUpdateRetrievers);
 
-        for (let updater of this.oblecto.config.movies.movieUpdaters) {
+        for (const updater of this.oblecto.config.movies.movieUpdaters) {
             logger.debug( `Loading ${updater} movie updater`);
             this.aggregateMovieUpdateRetriever.loadRetriever(new movieUpdateRetrievers[updater](this.oblecto));
         }
 
         // Register task availability to Oblecto queue
-        this.oblecto.queue.registerJob('updateMovie', async (job) => {
+        this.oblecto.queue.registerJob('updateMovie', async (job: Movie) => {
             await this.updateMovie(job);
         });
     }
 
     /**
      * Fetch new movie metadata for a given movie entity
-     * @param {Movie} movie - Movie entity to be updated
-     * @returns {Promise<void>}
+     * @param movie - Movie entity to be updated
      */
-    async updateMovie(movie) {
-        let data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie);
+    async updateMovie(movie: Movie): Promise<void> {
+        const data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie) as MovieUpdateData;
 
         if (data._set) {
             const setInfo = data._set;
             delete data._set;
 
             try {
-                let [movieSet] = await MovieSet.findOrCreate({
+                const [movieSet] = await MovieSet.findOrCreate({
                     where: { tmdbid: setInfo.id },
                     defaults: {
                         setName: setInfo.name,
