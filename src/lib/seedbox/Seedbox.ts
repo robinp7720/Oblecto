@@ -4,7 +4,8 @@ import logger from '../../submodules/logger/index.js';
 import SeedboxImportFTPS from './SeedboxImportDrivers/SeedboxImportFTPS.js';
 import SeedboxImportSSH from './SeedboxImportDrivers/SeedboxImportSSH.js';
 
-import type SeedboxImportDriver, { SeedboxStorageDriverConfig, SeedboxListEntry } from './SeedboxImportDriver.js';
+import type SeedboxImportDriver from './SeedboxImportDriver.js';
+import type { SeedboxStorageDriverConfig, SeedboxListEntry } from './SeedboxImportDriver.js';
 
 type SeedboxConfig = {
     name: string;
