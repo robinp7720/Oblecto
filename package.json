@@ -64,6 +64,7 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "@types/async": "^3.2.25",
     "@types/bcrypt": "^5.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

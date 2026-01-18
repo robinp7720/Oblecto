@@ -1,28 +1,27 @@
 import async from 'async';
-import logger from '../../submodules/logger';
+import logger from '../../submodules/logger/index.js';
 
 export default class Queue {
-    /**
-     *
-     * @param {number} concurrency - Amount of tasks to handle simultaneously
-     */
-    constructor(concurrency) {
-        this.jobs = {};
+    private jobs: Record<string, (attr: any) => Promise<void>> = {};
+    private queue: async.AsyncPriorityQueue<any>;
 
-        this.queue = async.priorityQueue((job, callback) => {
+    /**
+     * @param concurrency - Amount of tasks to handle simultaneously
+     */
+    constructor(concurrency: number) {
+        this.queue = async.priorityQueue((job: any, callback: () => void) => {
             if (!this.jobs[job.id]) return callback();
 
-            let jobTimeout = setTimeout(() => {
+            const jobTimeout = setTimeout(() => {
                 // logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
             this.jobs[job.id](job.attr)
                 .then(() => {
                     clearTimeout(jobTimeout);
-
                     callback();
                 })
-                .catch((err) => {
+                .catch((err: any) => {
                     clearTimeout(jobTimeout);
 
                     if (err.level) {
@@ -38,47 +37,45 @@ export default class Queue {
 
     /**
      *  Define a new job
-     * @param {string} id - ID/Name for job
-     * @param {Function} job - Function used for Queue item
+     * @param id - ID/Name for job
+     * @param job - Function used for Queue item
      */
-    registerJob(id, job) {
+    registerJob(id: string, job: (attr: any) => Promise<void>): void {
         if (this.jobs[id]) {
             logger.error( `A job has been registered which was already registered: ${id}`);
             logger.error( 'This should not happen');
-
             return;
         }
 
         logger.debug( 'New queue item has been registered:', id);
-
         this.jobs[id] = job;
     }
 
     /**
      *  Add a job to the end of the queue
-     * @param {string} id - Id for the job to be called
-     * @param {object} attr - Attributes to be passed to the job
-     * @param {number} priority - Priority for the job
+     * @param id - Id for the job to be called
+     * @param attr - Attributes to be passed to the job
+     * @param priority - Priority for the job
      */
-    queueJob(id, attr, priority = 5) {
+    queueJob(id: string, attr: any, priority: number = 5): void {
         this.queue.push({ id, attr }, priority);
     }
 
     /**
      *  Adds a queue which should be completed as soon as possible
-     * @param {string} id - Id for the job to be called
-     * @param {object} attr - Attributes to be passed to the job
+     * @param id - Id for the job to be called
+     * @param attr - Attributes to be passed to the job
      */
-    lowPriorityJob(id, attr) {
+    lowPriorityJob(id: string, attr: any): void {
         this.queueJob(id, attr, 20);
     }
 
     /**
      *  Add a job to the front of the queue
-     * @param {string} id - Id for the job to be called
-     * @param {object} attr - Attributes to be passed the job
+     * @param id - Id for the job to be called
+     * @param attr - Attributes to be passed the job
      */
-    pushJob(id, attr) {
+    pushJob(id: string, attr: any): void {
         this.queueJob(id, attr, 0);
     }
 }

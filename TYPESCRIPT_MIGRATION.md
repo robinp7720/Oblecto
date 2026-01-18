@@ -27,11 +27,13 @@ This document outlines the plan for migrating the Oblecto backend code (`src/`) 
 - [x] Migrate REST API (`src/submodules/REST/`) including middleware and all routes.
 
 ### Phase 4: Library Core (`src/lib/`) (Started)
-- [ ] Migrate core logic in `src/lib/oblecto/`.
+- [x] Migrate core logic in `src/lib/oblecto/index.ts` (Done).
+- [x] Migrate `src/lib/queue/index.ts` (Done).
+- [x] Migrate `src/lib/downloader/index.ts` (Done).
 - [ ] Migrate Indexers (`src/lib/indexers/`).
-- [ ] Migrate Collectors (`src/lib/collectors/` - *Note: Check exact path name*).
+- [ ] Migrate Collectors (`src/lib/indexers/` - series/movie collectors).
 - [ ] Migrate Updaters (`src/lib/updaters/`).
-- [ ] Migrate other services (Queue, Artwork, Federation, etc.).
+- [ ] Migrate other services (Artwork, Federation, etc.).
 
 ### Phase 5: CLI & Scripts (`src/bin/`, `scripts/`)
 - [ ] Migrate CLI entry points (`src/bin/oblecto.js` -> `.ts`).
