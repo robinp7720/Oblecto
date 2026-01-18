@@ -32,16 +32,16 @@ This document outlines the plan for migrating the Oblecto backend code (`src/`) 
 - [x] Migrate `src/lib/downloader/index.ts` (Done).
 - [x] Migrate Indexers (`src/lib/indexers/`). (Series + movies + files done)
 - [ ] Migrate Collectors (`src/lib/indexers/` - series/movie collectors).
-- [ ] Migrate Updaters (`src/lib/updaters/`). (Series + movie updaters done)
-- [ ] Migrate other services (Artwork, Federation, etc.).
+- [x] Migrate Updaters (`src/lib/updaters/`). (Series + movie + file updaters done)
+- [x] Migrate other services (Artwork, Federation, etc.). (Artwork, realtime, seedbox, stream sessions, federation, emby emulation done)
 
 ### Phase 5: CLI & Scripts (`src/bin/`, `scripts/`)
-- [ ] Migrate CLI entry points (`src/bin/oblecto.js` -> `.ts`).
-- [ ] Migrate setup scripts (`src/bin/scripts/`).
+- [x] Migrate CLI entry points (`src/bin/oblecto.js` -> `.ts`).
+- [x] Migrate setup scripts (`src/bin/scripts/`).
 
 ### Phase 6: Tests (`tests/`)
-- [ ] Migrate Mocha tests to TypeScript (`tests/mocha/`).
-- [ ] Ensure test helpers are typed.
+- [x] Migrate Mocha tests to TypeScript (`tests/mocha/`).
+- [x] Ensure test helpers are typed.
 
 ## Guidelines for Developers/Agents
 
