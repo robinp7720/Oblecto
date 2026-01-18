@@ -30,7 +30,7 @@ This document outlines the plan for migrating the Oblecto backend code (`src/`) 
 - [x] Migrate core logic in `src/lib/oblecto/index.ts` (Done).
 - [x] Migrate `src/lib/queue/index.ts` (Done).
 - [x] Migrate `src/lib/downloader/index.ts` (Done).
-- [ ] Migrate Indexers (`src/lib/indexers/`). (Series + movies done; files pending)
+- [x] Migrate Indexers (`src/lib/indexers/`). (Series + movies + files done)
 - [ ] Migrate Collectors (`src/lib/indexers/` - series/movie collectors).
 - [ ] Migrate Updaters (`src/lib/updaters/`).
 - [ ] Migrate other services (Artwork, Federation, etc.).
