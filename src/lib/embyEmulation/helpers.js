@@ -238,7 +238,10 @@ export const parseId = (value) => {
         return { id: NaN, type: 'unknown' };
     }
 
-    const lower = raw.toLowerCase();
+    // Normalize early: remove dashes for UUID-formatted strings
+    const normalized = raw.replace(/-/g, '');
+    const lower = normalized.toLowerCase();
+
     const namedPrefixes = [
         { prefix: 'movie', type: 'movie' },
         { prefix: 'series', type: 'series' },
@@ -249,7 +252,7 @@ export const parseId = (value) => {
 
     for (const { prefix, type } of namedPrefixes) {
         if (lower.startsWith(prefix)) {
-            const rest = raw.slice(prefix.length);
+            const rest = normalized.slice(prefix.length);
 
             if (!rest) {
                 return { id: NaN, type };
@@ -282,12 +285,10 @@ export const parseId = (value) => {
 
     if (type !== 'unknown') {
         return {
-            id: parseInt(raw.slice(1), 16),
+            id: parseInt(normalized.slice(1), 16),
             type
         };
     }
-
-    const normalized = raw.replace(/-/g, '');
 
     if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
         return { id: parseInt(normalized, 16), type: 'unknown' };
