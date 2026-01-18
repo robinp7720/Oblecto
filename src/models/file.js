@@ -18,4 +18,7 @@ export const fileColumns = {
 
     hash: { type: DataTypes.STRING, allowNull: true },
     size: { type: DataTypes.BIGINT, allowNull: true },
+
+    problematic: { type: DataTypes.BOOLEAN, defaultValue: false },
+    error: { type: DataTypes.TEXT, allowNull: true },
 };
