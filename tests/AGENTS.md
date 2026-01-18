@@ -11,3 +11,4 @@ How to run
 Notes
 - `scripts/test.sh` may create `/etc/oblecto` and run `oblecto init`.
 - If you change CLI commands or startup flow, update the smoke tests accordingly.
+- **Migration**: Tests will be migrated to TS in Phase 6. Ensure type checking is run on tests once migrated.

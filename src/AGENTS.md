@@ -14,6 +14,7 @@ Conventions
 - Most services are classes that accept the `Oblecto` instance and store `this.oblecto`.
 - Background work is scheduled through `lib/queue` (register jobs in constructors).
 - Long-lived components should expose `close()` so `core.close()` can clean up.
+- **TypeScript**: The project is migrating to TS. Use `.ts` for new files.
 
 When changing
 - Config schema: update `src/interfaces/config.ts` and usage in `src/config.ts`.

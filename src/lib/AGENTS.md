@@ -15,3 +15,4 @@ Adding new behavior
 - Prefer adding a new service class and wire it in `lib/oblecto` so it is constructed once.
 - Register queue jobs in the constructor so they are available at startup.
 - Keep file and network work async and avoid blocking the event loop.
+- **TypeScript**: Use `.ts` for new service classes. Define interfaces for job payloads.

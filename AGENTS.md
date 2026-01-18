@@ -22,3 +22,8 @@ Conventions
 - ESM modules (`package.json` has `"type": "module"`).
 - `dist/` and `Oblecto-Web/dist/` are build outputs; avoid editing.
 - `node_modules/` and `Oblecto-Web/node_modules/` are vendor.
+
+TypeScript Migration
+- The project is migrating to TypeScript. See `TYPESCRIPT_MIGRATION.md` for details.
+- Prefer creating new files as `.ts`.
+- When modifying existing `.js` files, consider migrating them to `.ts`.

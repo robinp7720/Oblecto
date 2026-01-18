@@ -13,3 +13,4 @@ Supported commands
 Notes
 - `init` writes to `/etc/oblecto`; depending on permissions it may require sudo.
 - Keep the help output in `oblecto.js` aligned with command behavior.
+- **Migration**: CLI scripts are scheduled for Phase 5 of the TS migration.

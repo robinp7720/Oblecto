@@ -17,3 +17,7 @@ Database notes
 Tooling notes
 - ffmpeg/ffprobe wrappers are used by streaming and indexing; keep interfaces stable.
 - `guessit` is used for filename parsing; avoid changing return shapes without updating callers.
+
+TypeScript
+- This directory is part of the migration plan. See `TYPESCRIPT_MIGRATION.md`.
+- Prioritize typing utilities and database initialization.
