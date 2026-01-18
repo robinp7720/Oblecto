@@ -6,6 +6,7 @@ import { Episode } from '../../../../../models/episode';
 import { File } from '../../../../../models/file';
 import { parseFileId, parseId } from '../../../helpers';
 import HLSStreamer from '../../../../streamSessions/StreamSessionTypes/HLSStreamer';
+import logger from '../../../../../submodules/logger';
 
 const getQueryValue = (req, key) => {
     const target = key.toLowerCase();
@@ -53,6 +54,17 @@ const resolveFileForItem = async (req, itemId) => {
     if (type === 'episode') {
         const episode = await Episode.findByPk(numericId, { include: [File] });
 
+        logger.debug('Jellyfin emulation: episode stream lookup', {
+            episodeId: numericId,
+            fileCount: episode?.Files?.length || 0
+        });
+
+        if (!episode?.Files?.[0]) {
+            logger.warn('Jellyfin emulation: episode media source not found', {
+                episodeId: numericId
+            });
+        }
+
         return episode?.Files?.[0] || null;
     }
 
@@ -62,6 +74,17 @@ const resolveFileForItem = async (req, itemId) => {
         if (movie?.Files?.[0]) return movie.Files[0];
 
         const episode = await Episode.findByPk(numericId, { include: [File] });
+
+        logger.debug('Jellyfin emulation: unknown item stream lookup', {
+            itemId: numericId,
+            episodeFileCount: episode?.Files?.length || 0
+        });
+
+        if (!episode?.Files?.[0]) {
+            logger.warn('Jellyfin emulation: unknown item media source not found', {
+                itemId: numericId
+            });
+        }
 
         return episode?.Files?.[0] || null;
     }

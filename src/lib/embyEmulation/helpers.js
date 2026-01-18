@@ -108,18 +108,20 @@ export const formatFileId = (value) => {
 
     const normalized = raw.replace(/-/g, '');
 
+    if (/^\d+$/.test(raw)) {
+        const numeric = Number(raw);
+
+        if (Number.isFinite(numeric)) {
+            return numeric.toString(16).padStart(32, '0');
+        }
+    }
+
     if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
         return normalized.toLowerCase();
     }
 
     if (/^[0-9a-fA-F]+$/.test(normalized)) {
         return normalized.toLowerCase().padStart(32, '0');
-    }
-
-    const numeric = Number(raw);
-
-    if (Number.isFinite(numeric)) {
-        return numeric.toString(16).padStart(32, '0');
     }
 
     return raw;

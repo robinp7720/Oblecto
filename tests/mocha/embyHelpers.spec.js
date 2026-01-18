@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { formatUuid, parseUuid } from '../../src/lib/embyEmulation/helpers.js';
+import { formatFileId, formatUuid, parseFileId, parseUuid } from '../../src/lib/embyEmulation/helpers.js';
 
 describe('Emby Emulation Helpers', () => {
     describe('formatUuid', () => {
@@ -32,6 +32,24 @@ describe('Emby Emulation Helpers', () => {
             const expected = 123456789;
 
             assert.strictEqual(parseUuid(uuid), expected);
+        });
+    });
+
+    describe('formatFileId/parseFileId', () => {
+        it('should round-trip numeric string ids as decimal', () => {
+            const raw = '6214';
+            const formatted = formatFileId(raw);
+            const parsed = parseFileId(formatted);
+
+            assert.strictEqual(parsed, 6214);
+        });
+
+        it('should keep hex ids stable', () => {
+            const raw = 'abcd';
+            const formatted = formatFileId(raw);
+            const parsed = parseFileId(formatted);
+
+            assert.strictEqual(parsed, parseInt(raw, 16));
         });
     });
 
