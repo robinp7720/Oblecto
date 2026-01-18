@@ -1,17 +1,8 @@
-import authMiddleWare from '../middleware/auth';
+import { Express, Response } from 'express';
+import authMiddleWare from '../middleware/auth.js';
 
-/**
- * @typedef {import('../../../lib/oblecto').default} Oblecto
- * @typedef {import('express').Express} Server
- */
-
-/**
- *
- * @param {Server} server - Express server object
- * @param {Oblecto} oblecto - Oblecto server instance
- */
-export default (server, oblecto) => {
-    server.get('/clients', authMiddleWare.requiresAuth, async function (req, res) {
+export default (server: Express, oblecto: any) => {
+    server.get('/clients', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
         let clients = [];
 
         for (let clientId in oblecto.realTimeController.clients) {
@@ -28,9 +19,14 @@ export default (server, oblecto) => {
         res.send(clients);
     });
 
-    server.post('/client/:clientId/playback', authMiddleWare.requiresAuth, async function (req, res) {
+    server.post('/client/:clientId/playback', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
         let type = req.combined_params.type;
         let client = oblecto.realTimeController.clients[req.params.clientId];
+
+        if (!client) {
+            res.status(404).send({ message: 'Client not found' });
+            return;
+        }
 
         switch (type) {
             case 'episode':

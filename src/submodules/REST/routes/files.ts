@@ -1,22 +1,12 @@
-import authMiddleWare from '../middleware/auth';
-import errors from '../errors';
-import { File } from '../../../models/file';
-import { Episode } from '../../../models/episode';
-import { Movie } from '../../../models/movie';
 import { col, fn } from 'sequelize';
+import { Express, Request, Response, NextFunction } from 'express';
+import authMiddleWare from '../middleware/auth.js';
+import { File } from '../../../models/file.js';
+import { Episode } from '../../../models/episode.js';
+import { Movie } from '../../../models/movie.js';
 
-/**
- * @typedef {import('../../../lib/oblecto').default} Oblecto
- * @typedef {import('express').Express} Server
- */
-
-/**
- *
- * @param {Server} server - Express server object
- * @param {Oblecto} oblecto - Oblecto server instance
- */
-export default (server, oblecto) => {
-    server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req, res) {
+export default (server: Express, oblecto: any) => {
+    server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const fileHashCounts = await File.findAll({
             attributes: [
                 'hash',
@@ -29,17 +19,13 @@ export default (server, oblecto) => {
         let duplicates = [];
 
         for (const fileHashCount of fileHashCounts) {
-            // The list of file hashes with counts is sorted descending,
-            // which means that once we have reached an item with a duplicate count of less then 2,
-            // no files be any duplicates anymore.
-
-            if (fileHashCount.toJSON().count <= 1) break;
+            const data: any = fileHashCount.toJSON();
+            if (data.count <= 1) break;
 
             duplicates.push(
                 (await File.findAll({
-                    where: { hash: fileHashCount.hash },
+                    where: { hash: data.hash },
                     include: [Episode, Movie]
-
                 }))
             );
         }
@@ -47,22 +33,30 @@ export default (server, oblecto) => {
         res.send(duplicates);
     });
 
-    server.get('/files/problematic', authMiddleWare.requiresAuth, async function (req, res) {
+    server.get('/files/problematic', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const brokenFiles = await File.findAll({
             where: { problematic: true }
         });
         res.send(brokenFiles);
     });
 
-    server.post('/files/:id/retry', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.post('/files/:id/retry', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
         try {
-            const file = await File.findByPk(req.params.id);
-            if (!file) return next(new errors.NotFoundError('File not found'));
+            const file = await File.findByPk(req.params.id as string);
+            if (!file) {
+                res.status(404).send({ message: 'File not found' });
+                return;
+            }
 
             // Reset error state
             await file.update({ problematic: false, error: null });
 
             const filePath = file.path;
+            if (!filePath) {
+                res.status(400).send({ message: 'File path is missing' });
+                return;
+            }
+
             let queued = false;
 
             // Check Movie Directories

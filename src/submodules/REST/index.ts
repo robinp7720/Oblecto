@@ -1,25 +1,19 @@
-import express from 'express';
-import routes from './routes';
-import logger from '../logger';
+import express, { Request, Response, NextFunction } from 'express';
+import routes from './routes/index.js';
+import logger from '../logger/index.js';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
-
-/**
- * @typedef {import('../../lib/oblecto').default} Oblecto
- */
+import { Server } from 'http';
 
 export default class OblectoAPI {
-    /**
-     * @param {Oblecto} oblecto - Oblecto instance
-     */
-    constructor(oblecto) {
+    public oblecto: any;
+    public server: Server;
+
+    constructor(oblecto: any) {
         this.oblecto = oblecto;
 
         // Initialize REST based server
         const app = express();
-
-        this.server = app;
-        // this.server.name = 'Oblecto';
 
         // Configure CORS
         app.use(cors({
@@ -35,7 +29,7 @@ export default class OblectoAPI {
         }));
 
         // Parse Authorization header
-        app.use((req, res, next) => {
+        app.use((req: any, res: Response, next: NextFunction) => {
             if (req.headers.authorization) {
                 const parts = req.headers.authorization.split(' ');
 
@@ -54,7 +48,7 @@ export default class OblectoAPI {
         app.use(express.json());
 
         // Map query and body params to req.combined_params for compatibility with existing code
-        app.use((req, res, next) => {
+        app.use((req: any, res: Response, next: NextFunction) => {
             req.combined_params = { ...req.query, ...req.body };
             next();
         });
@@ -63,7 +57,7 @@ export default class OblectoAPI {
         routes(app, this.oblecto);
 
         // Error handling middleware
-        app.use((err, req, res, next) => {
+        app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
             const statusCode = err.statusCode || 500;
@@ -83,7 +77,7 @@ export default class OblectoAPI {
         });
     }
 
-    close() {
+    close(): Promise<void> {
         if (this.server && this.server.listening) {
             return new Promise((resolve, reject) => {
                 this.server.close(err => {

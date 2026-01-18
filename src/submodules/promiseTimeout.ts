@@ -2,11 +2,11 @@ import WarnExtendableError from '../lib/errors/WarnExtendableError';
 
 /**
  * Add a timeout to a promise
- * @param {Promise} promise - Promise to which the timeout should be added
- * @param {number} time - Timeout milliseconds
+ * @param promise - Promise to which the timeout should be added
+ * @param time - Timeout milliseconds
  */
-export default function (promise, time = 10000) {
-    return new Promise(function(resolve, reject) {
+export default function<T> (promise: Promise<T>, time: number = 10000): Promise<T> {
+    return new Promise<T>(function(resolve, reject) {
         let timedout = false;
         let timeout = setTimeout(() => {
             timedout = true;

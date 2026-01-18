@@ -1,32 +1,34 @@
-import errors from '../errors';
+import { Express, Request, Response } from 'express';
+import errors from '../errors.js';
 import bcrypt from 'bcrypt';
+import config from '../../../config.js';
+import authMiddleWare from '../middleware/auth.js';
+import { User } from '../../../models/user.js';
 
-import config from '../../../config';
-import authMiddleWare from '../middleware/auth';
-
-import { User } from '../../../models/user';
-
-export default (server, oblecto) => {
-    server.get('/users', async function (req, res) {
+export default (server: Express, oblecto: any) => {
+    server.get('/users', async function (req: Request, res: Response) {
         let users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
-
         res.send(users);
     });
 
-    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req, res) {
+    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         let user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
-
         res.send(user);
     });
 
-    server.delete('/user/:id', authMiddleWare.requiresAuth, async function (req, res) {
+    server.delete('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         let user = await User.findOne({
             where: { id: req.params.id },
             attributes: ['username', 'name', 'email', 'id']
         });
+
+        if (!user) {
+            res.status(404).send({ message: 'User not found' });
+            return;
+        }
 
         // Send the user information of the user to the client first
         res.send(user);
@@ -36,11 +38,12 @@ export default (server, oblecto) => {
     });
 
     // Endpoint to update the entries of a certain user
-    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req, res) {
+    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req: any, res: Response) {
         let user = await User.findByPk(req.params.id);
 
         if (!user) {
-            return new errors.BadRequestError('User with id does not exist');
+            res.status(400).send({ message: 'User with id does not exist' });
+            return;
         }
 
         if (req.combined_params.username) {
@@ -68,18 +71,16 @@ export default (server, oblecto) => {
         });
     });
 
-    server.post('/user', authMiddleWare.requiresAuth, async function (req, res) {
-        // Make sure the required input fields are present, and if not send a bad request error with the associated information to the error
-
+    server.post('/user', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
         if (!req.combined_params.username)
-            return new errors.BadRequestError('Username is missing');
+            return res.status(400).send({ message: 'Username is missing' });
 
         if (!req.combined_params.email)
-            return new errors.BadRequestError('E-Mail is missing');
+            return res.status(400).send({ message: 'E-Mail is missing' });
         if (!req.combined_params.name)
-            return new errors.BadRequestError('Name is missing');
+            return res.status(400).send({ message: 'Name is missing' });
 
-        let passwordHash;
+        let passwordHash: string | undefined;
 
         if (req.combined_params.password)
             passwordHash = await bcrypt.hash(req.combined_params.password, oblecto.config.authentication.saltRounds);
@@ -87,9 +88,10 @@ export default (server, oblecto) => {
         let [user] = await User.findOrCreate({
             where: { username: req.combined_params.username },
             defaults: {
+                username: req.combined_params.username,
                 name: req.combined_params.name,
                 email: req.combined_params.email,
-                password: passwordHash
+                password: passwordHash || null
             }
         });
 

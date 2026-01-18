@@ -1,5 +1,8 @@
 export interface IConfig {
-    'ffmpeg': unknown
+    'ffmpeg': {
+        'pathFFmpeg': string | null,
+        'pathFFprobe': string | null
+    },
     'indexer': {
         'runAtBoot': boolean
     },
@@ -33,7 +36,8 @@ export interface IConfig {
         'host': string,
         'username': string,
         'password': string,
-        'database': string
+        'database': string,
+        'storage'?: string
     },
     'server': {
         'port': number

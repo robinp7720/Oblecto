@@ -1,21 +1,22 @@
-import authMiddleWare from '../../middleware/auth';
-import errors from '../../errors';
-import { ConfigManager } from '../../../../config';
+import { Express, Request, Response, NextFunction } from 'express';
+import authMiddleWare from '../../middleware/auth.js';
+import errors from '../../errors.js';
+import { ConfigManager } from '../../../../config.js';
 
 const ALLOWED_SECTIONS = [
     'indexer', 'cleaner', 'mdns', 'queue', 'tvdb', 'themoviedb', 
     'fanart.tv', 'assets', 'server', 'files', 'artwork', 
     'fileExtensions', 'tracker', 'transcoding', 'web', 'streaming', 
-    'authentication', 'federation', 'seedboxes', 'movies', 'tvshows' // Added these as they are sections in IConfig
+    'authentication', 'federation', 'seedboxes', 'movies', 'tvshows'
 ];
 
 // Simple secret scrubber
-const scrubConfig = (conf) => {
+const scrubConfig = (conf: any) => {
     const copy = JSON.parse(JSON.stringify(conf));
     if (copy.authentication && copy.authentication.secret) copy.authentication.secret = '***';
     if (copy.federation && copy.federation.key) copy.federation.key = '***';
     if (copy.seedboxes) {
-        copy.seedboxes.forEach(sb => {
+        copy.seedboxes.forEach((sb: any) => {
             if (sb.storageDriverOptions && sb.storageDriverOptions.password) {
                 sb.storageDriverOptions.password = '***';
             }
@@ -24,15 +25,15 @@ const scrubConfig = (conf) => {
     return copy;
 };
 
-export default (server, oblecto) => {
+export default (server: Express, oblecto: any) => {
     
     // GET /api/v1/settings - Get full config
-    server.get('/api/v1/settings', authMiddleWare.requiresAuth, (req, res) => {
+    server.get('/api/v1/settings', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         res.send(scrubConfig(oblecto.config));
     });
 
     // PATCH /api/v1/settings - Update multiple sections
-    server.patch('/api/v1/settings', authMiddleWare.requiresAuth, (req, res, next) => {
+    server.patch('/api/v1/settings', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
         const updates = req.body;
         if (!updates || Object.keys(updates).length === 0) {
             return next(new errors.BadRequestError('Empty configuration provided'));
@@ -48,10 +49,10 @@ export default (server, oblecto) => {
         // Apply updates
         for (const [key, value] of Object.entries(updates)) {
             // Shallow merge for top-level sections
-             if (typeof oblecto.config[key] === 'object' && !Array.isArray(oblecto.config[key]) && oblecto.config[key] !== null) {
-                Object.assign(oblecto.config[key], value);
+             if (typeof oblecto.config[key as keyof any] === 'object' && !Array.isArray(oblecto.config[key as keyof any]) && oblecto.config[key as keyof any] !== null) {
+                Object.assign(oblecto.config[key as keyof any], value);
             } else {
-                oblecto.config[key] = value;
+                oblecto.config[key as keyof any] = value as any;
             }
         }
 
@@ -60,30 +61,27 @@ export default (server, oblecto) => {
     });
 
     // GET /api/v1/settings/:section
-    server.get('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req, res, next) => {
-        if (!ALLOWED_SECTIONS.includes(req.params.section)) {
+    server.get('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
+        const section = req.params.section as string;
+        if (!ALLOWED_SECTIONS.includes(section)) {
             return next(new errors.BadRequestError('Invalid setting section'));
         }
-        const sectionData = oblecto.config[req.params.section];
+        const sectionData = oblecto.config[section as keyof any];
         if (!sectionData) return next(new errors.NotFoundError('Section not found'));
 
-        // We wrap it in a dummy object to reuse scrubConfig logic easily or just scrub manually
-        // But since scrubConfig expects full structure for deep keys, let's just send it if it's not sensitive
-        // or simple manual check.
         let dataToSend = sectionData;
-        if (req.params.section === 'authentication') {
+        if (section === 'authentication') {
             dataToSend = { ...sectionData, secret: '***' };
-        } else if (req.params.section === 'federation') {
+        } else if (section === 'federation') {
             dataToSend = { ...sectionData, key: '***' };
         }
-        // Seedboxes logic omitted for brevity in single section fetch, can add if needed.
 
         res.send(dataToSend);
     });
 
     // PATCH /api/v1/settings/:section
-    server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req, res, next) => {
-        const section = req.params.section;
+    server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
+        const section = req.params.section as string;
         if (!ALLOWED_SECTIONS.includes(section)) {
             return next(new errors.BadRequestError('Invalid setting section'));
         }
@@ -93,15 +91,16 @@ export default (server, oblecto) => {
             return next(new errors.BadRequestError('Empty configuration provided'));
         }
 
-        if (!oblecto.config[section]) oblecto.config[section] = {};
+        if (!oblecto.config[section as keyof any]) oblecto.config[section as keyof any] = {} as any;
 
-        if (typeof oblecto.config[section] === 'object' && !Array.isArray(oblecto.config[section])) {
-            Object.assign(oblecto.config[section], updates);
+        const currentSection = oblecto.config[section as keyof any];
+        if (typeof currentSection === 'object' && !Array.isArray(currentSection)) {
+            Object.assign(currentSection, updates);
         } else {
-            oblecto.config[section] = updates;
+            oblecto.config[section as keyof any] = updates;
         }
 
         ConfigManager.saveConfig();
-        res.send(oblecto.config[section]);
+        res.send(oblecto.config[section as keyof any]);
     });
 };

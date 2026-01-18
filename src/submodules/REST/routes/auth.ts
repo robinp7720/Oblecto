@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
-import errors from '../errors';
+import { Express, Request, Response, NextFunction } from 'express';
+import errors from '../errors.js';
 import bcrypt from 'bcrypt';
-import { User } from '../../../models/user';
+import { User } from '../../../models/user.js';
 
-export default (server, oblecto) => {
-    server.post('/auth/login', async function (req, res, next) {
+export default (server: Express, oblecto: any) => {
+    server.post('/auth/login', async function (req: Request, res: Response, next: NextFunction) {
         try {
             if (!req.body.username)
                 throw new errors.BadRequestError('Username is missing');

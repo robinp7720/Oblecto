@@ -1,21 +1,12 @@
-import errors from '../errors';
-import authMiddleWare from '../middleware/auth';
-import { File } from '../../../models/file';
-import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession';
-import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer';
+import { Express, Request, Response, NextFunction } from 'express';
+import errors from '../errors.js';
+import authMiddleWare from '../middleware/auth.js';
+import { File } from '../../../models/file.js';
+import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession.js';
+import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer.js';
 
-/**
- * @typedef {import('../../../lib/oblecto').default} Oblecto
- * @typedef {import('express').Express} Server
- */
-
-/**
- * Add routes for streaming
- * @param {Server} server - Express server object
- * @param {Oblecto} oblecto - Oblecto server instance
- */
-export default (server, oblecto) => {
-    server.get('/HLS/:sessionId/segment/:id', async function (req, res, next) {
+export default (server: Express, oblecto: any) => {
+    server.get('/HLS/:sessionId/segment/:id', async function (req: any, res: Response, next: NextFunction) {
         try {
             if (!oblecto.streamSessionController.sessionExists(req.combined_params.sessionId)) {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
@@ -23,7 +14,6 @@ export default (server, oblecto) => {
 
             let streamSession = oblecto.streamSessionController.sessions[req.combined_params.sessionId];
 
-            // TODO: Send appropriate error if session is not a HLS stream session
             if (!(streamSession instanceof HLSStreamer)) {
                 throw new errors.BadRequestError('Invalid stream session type');
             }
@@ -36,7 +26,7 @@ export default (server, oblecto) => {
         }
     });
 
-    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req, res, next) {
+    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req: any, res: Response, next: NextFunction) {
         try {
             let file;
             let formats = (req.combined_params.formats || 'mp4').split(',');
@@ -83,7 +73,7 @@ export default (server, oblecto) => {
         }
     });
 
-    server.get('/session/stream/:sessionId', async function (req, res, next) {
+    server.get('/session/stream/:sessionId', async function (req: any, res: Response, next: NextFunction) {
         try {
             if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');

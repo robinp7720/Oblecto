@@ -1,17 +1,12 @@
-import express from 'express';
+import express, { Express, Request, Response } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const webDir = path.join(process.cwd(), 'Oblecto-Web/dist/web/');
 
-export default (server, oblecto) => {
+export default (server: Express, oblecto: any) => {
     server.use('/web', express.static(webDir));
 
-    server.get('/web/logo.png', (req, res) => {
+    server.get('/web/logo.png', (req: Request, res: Response) => {
         try {
             const logoPath = path.join(process.cwd(), 'images/logomark.png');
 
@@ -21,11 +16,11 @@ export default (server, oblecto) => {
         }
     });
 
-    server.use('/web/*route', (req, res) => {
+    server.use('/web/*route', (req: Request, res: Response) => {
         res.sendFile(path.join(webDir, 'index.html'));
     });
 
-    server.get('/', async (req, res) => {
+    server.get('/', async (req: Request, res: Response) => {
         // res.redirect('/web', (v) => v);
     });
 };

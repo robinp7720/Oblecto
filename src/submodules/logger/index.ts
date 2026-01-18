@@ -15,10 +15,12 @@ if (!fs.existsSync(logDir)) {
 }
 
 class Logger extends EventEmitter {
+    private _silent: boolean = false;
+    private winston: winston.Logger;
+    private consoleTransport: winston.transports.ConsoleTransportInstance;
+
     constructor() {
         super();
-
-        this._silent = false;
 
         // Custom format for console that mimics/improves the old one
         const consoleFormat = winston.format.combine(
@@ -52,11 +54,11 @@ class Logger extends EventEmitter {
         this.winston.add(this.consoleTransport);
     }
 
-    get silent() {
+    get silent(): boolean {
         return this._silent;
     }
 
-    set silent(value) {
+    set silent(value: boolean) {
         this._silent = value;
         if (value) {
             this.winston.remove(this.consoleTransport);
@@ -68,110 +70,72 @@ class Logger extends EventEmitter {
         }
     }
 
-    info(...messages) {
+    info(...messages: any[]): void {
         this.log('INFO', ...messages);
     }
 
-    warn(...messages) {
+    warn(...messages: any[]): void {
         this.log('WARN', ...messages);
     }
 
-    error(...messages) {
+    error(...messages: any[]): void {
         this.log('ERROR', ...messages);
     }
 
-    debug(...messages) {
+    debug(...messages: any[]): void {
         this.log('DEBUG', ...messages);
     }
 
-    log(level, ...messages) {
+    log(level: string | Error, ...messages: any[]): void {
 
         // Handle case where level is an Error object (old API support)
-
         if (level instanceof Error) {
-
             const err = level;
-
             this.winston.error(err.message, { stack: err.stack });
-
             this.emit('log', { level: 'ERROR', messages: [err.message] });
-
             return;
-
         }
 
         // Extract potential stack traces for metadata
-
-        const metadata = {};
-
+        const metadata: any = {};
         const messageParts = messages.map(msg => {
-
             if (msg instanceof Error) {
-
                 if (!metadata.stack) {
-
                     metadata.stack = msg.stack;
-
                 }
-
                 return msg.message;
-
             }
-
             if (typeof msg === 'object') {
-
                 try {
-
                     return JSON.stringify(msg);
-
                 } catch(e) {
-
                     return '[Circular/Object]';
-
                 }
-
             }
-
             return msg;
-
         });
 
         const messageText = messageParts.join(' ');
 
         // Map string levels to winston levels
-
         // Default to info if unknown
-
         let winstonLevel = 'info';
-
         if (typeof level === 'string') {
-
             const lowerLevel = level.toLowerCase();
-
             if (['error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly'].includes(lowerLevel)) {
-
                 winstonLevel = lowerLevel;
-
             }
-
         }
 
         // Log to winston
-
         this.winston.log({
-
             level: winstonLevel,
-
             message: messageText,
-
             ...metadata
-
         });
 
         // Emit event for TUI (maintaining old payload structure)
-
         this.emit('log', { level: level, messages: messageParts });
-
     }
 }
 

@@ -1,6 +1,5 @@
 import ffmpeg from 'fluent-ffmpeg';
-
-import config from '../config';
+import config from '../config.js';
 
 if (config.ffmpeg.pathFFprobe) {
     ffmpeg.setFfprobePath(config.ffmpeg.pathFFprobe);

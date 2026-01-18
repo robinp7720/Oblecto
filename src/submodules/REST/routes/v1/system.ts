@@ -1,11 +1,12 @@
-import authMiddleWare from '../../middleware/auth';
-import errors from '../../errors';
+import { Express, Request, Response, NextFunction } from 'express';
+import authMiddleWare from '../../middleware/auth.js';
+import errors from '../../errors.js';
 
-export default (server, oblecto) => {
+export default (server: Express, oblecto: any) => {
 
     // POST /api/v1/system/maintenance
-    server.post('/api/v1/system/maintenance', authMiddleWare.requiresAuth, async (req, res, next) => {
-        const { action, target, options } = req.body;
+    server.post('/api/v1/system/maintenance', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
+        const { action, target } = req.body;
 
         if (!action || !target) {
             return next(new errors.BadRequestError('Action and target are required'));
@@ -57,7 +58,7 @@ export default (server, oblecto) => {
     });
 
     // POST /api/v1/system/imports
-    server.post('/api/v1/system/imports', authMiddleWare.requiresAuth, async (req, res, next) => {
+    server.post('/api/v1/system/imports', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
         const { source, type } = req.body;
 
         if (!type) return next(new errors.BadRequestError('Type is required (movies|tvshows)'));
@@ -93,9 +94,9 @@ export default (server, oblecto) => {
     });
 
     // GET /api/v1/system/info
-    server.get('/api/v1/system/info', authMiddleWare.requiresAuth, (req, res) => {
+    server.get('/api/v1/system/info', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         const info = {
-            version: process.env.npm_package_version || 'unknown', // Assuming npm start or similar
+            version: process.env.npm_package_version || 'unknown',
             platform: process.platform,
             arch: process.arch,
             uptime: process.uptime(),
@@ -106,7 +107,7 @@ export default (server, oblecto) => {
     });
 
     // GET /api/v1/system/capabilities
-    server.get('/api/v1/system/capabilities', authMiddleWare.requiresAuth, (req, res) => {
+    server.get('/api/v1/system/capabilities', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         res.send({
             movies: {
                 identifiers: oblecto.movieIndexer.availableIdentifiers,
