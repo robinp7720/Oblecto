@@ -188,7 +188,7 @@ export class HlsStreamSession extends MediaSession {
         this.process.kill('SIGSTOP');
         const leadInfo = lead !== undefined ? ` lead=${lead} max=${this.maxLeadSegments}` : '';
 
-        logger.info(`HlsSession ${this.sessionId} segmenter paused (${reason})${leadInfo}`);
+        logger.debug(`HlsSession ${this.sessionId} segmenter paused (${reason})${leadInfo}`);
     }
 
     private resumeSegmenter(reason: string = 'lead', lead?: number): void {
@@ -199,7 +199,7 @@ export class HlsStreamSession extends MediaSession {
         this.process.kill('SIGCONT');
         const leadInfo = lead !== undefined ? ` lead=${lead} max=${this.maxLeadSegments}` : '';
 
-        logger.info(`HlsSession ${this.sessionId} segmenter resumed (${reason})${leadInfo}`);
+        logger.debug(`HlsSession ${this.sessionId} segmenter resumed (${reason})${leadInfo}`);
     }
 
     private onActivityStart(): void {
