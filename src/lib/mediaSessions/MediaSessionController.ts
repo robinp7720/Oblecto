@@ -1,3 +1,5 @@
+import * as os from 'os';
+import * as fs from 'fs';
 import logger from '../../submodules/logger/index.js';
 import { MediaSession } from './MediaSession.js';
 
@@ -160,6 +162,14 @@ export class MediaSessionController {
     close(): void {
         for (const session of Object.values(this.sessions)) {
             session.endSession();
+        }
+
+        // Ensure any leftover HLS session temp data is removed on shutdown.
+        const sessionRoot = `${os.tmpdir()}/oblecto/sessions`;
+        try {
+            fs.rmSync(sessionRoot, { recursive: true, force: true });
+        } catch (error) {
+            logger.warn('Failed to remove HLS session temp directory on shutdown', error);
         }
     }
 }

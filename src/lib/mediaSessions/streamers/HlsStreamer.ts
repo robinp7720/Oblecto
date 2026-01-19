@@ -13,9 +13,9 @@ import type { FfmpegCommand } from 'fluent-ffmpeg';
 import type { Request, Response } from 'express';
 import type { Streamer, MediaSessionOptions, StreamDestination } from '../types.js';
 
-const PLAYLIST_WAIT_TIMEOUT_MS = 60000; // 60 seconds for slow transcodes
+const PLAYLIST_WAIT_TIMEOUT_MS = 15000; // 15 seconds for playlist creation
 const PLAYLIST_POLL_INTERVAL_MS = 50;
-const SEGMENT_WAIT_TIMEOUT_MS = 30000; // 30 seconds for segments
+const SEGMENT_WAIT_TIMEOUT_MS = 10000; // 10 seconds for segments
 const HLS_SEGMENT_DURATION_SEC = 4;
 const HLS_TIMEOUT_BUFFER_MS = 10000;
 const HLS_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -140,8 +140,6 @@ export class HlsStreamSession extends MediaSession {
                 if (!match) return;
                 const id = parseInt(match[1], 10);
 
-                console.log(`HlsSession ${this.sessionId} generated segment ${id}: ${line}`);
-
                 if (Number.isNaN(id)) return;
                 if (this.lastGeneratedSegmentId === null || id > this.lastGeneratedSegmentId) {
                     this.lastGeneratedSegmentId = id;
@@ -154,6 +152,7 @@ export class HlsStreamSession extends MediaSession {
             })
             .on('end', () => {
                 logger.info(`HlsSession ${this.sessionId} segmenter ended`);
+                this.endSession();
             });
     }
 
@@ -216,6 +215,8 @@ export class HlsStreamSession extends MediaSession {
         if (this.lastGeneratedSegmentId === null) return;
         if (this.lastRequestedSegmentId === null) return;
         const lead = this.lastGeneratedSegmentId - this.lastRequestedSegmentId;
+
+        logger.debug(`HlsSession ${this.sessionId} lead=${lead} max=${this.maxLeadSegments} requested=${this.lastRequestedSegmentId} generated=${this.lastGeneratedSegmentId}`);
 
         if (lead > this.maxLeadSegments) {
             this.pauseSegmenter('lead', lead);
@@ -322,8 +323,6 @@ export class HlsStreamSession extends MediaSession {
      */
     async streamSegment(req: Request, res: Response, segmentId: number): Promise<void> {
         this.onActivityStart();
-
-        console.log(`HlsSession ${this.sessionId} requested segment ${segmentId}`);
 
         if (this.lastRequestedSegmentId === null || segmentId > this.lastRequestedSegmentId)
             this.lastRequestedSegmentId = segmentId;
