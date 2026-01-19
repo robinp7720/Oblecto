@@ -10,7 +10,7 @@ import type { Streamer, MediaSessionOptions, StreamDestination, HttpDestination 
 
 /**
  * Direct HTTP streaming session with range request support
- * 
+ *
  * Handles HTTP byte-range requests for seeking on the client side.
  */
 export class DirectHttpStreamSession extends MediaSession {
@@ -39,6 +39,7 @@ export class DirectHttpStreamSession extends MediaSession {
         // Only support single destination - replace any existing
         if (this.destinations.length > 0) {
             const existing = this.destinations[0].stream as Response;
+
             existing.destroy();
             this.destinations.length = 0;
         }
@@ -47,6 +48,7 @@ export class DirectHttpStreamSession extends MediaSession {
 
         httpDest.stream.on('close', () => {
             const index = this.destinations.indexOf(httpDest);
+
             if (index > -1) {
                 this.destinations.splice(index, 1);
             }
@@ -65,6 +67,7 @@ export class DirectHttpStreamSession extends MediaSession {
         await super.startStream();
 
         const httpDest = this.destinations[0] as HttpDestination;
+
         if (!httpDest) {
             throw new Error('No HTTP destination connected');
         }
@@ -78,6 +81,9 @@ export class DirectHttpStreamSession extends MediaSession {
 
     /**
      * Handle HTTP streaming with range support
+     * @param req
+     * @param res
+     * @param file
      */
     static async handleHttpStream(req: Request, res: Response, file: File | string): Promise<void> {
         let path: string;

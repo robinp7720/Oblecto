@@ -184,38 +184,54 @@ Redirects to the stream URL for the episode's file.
 
 ## Streaming
 
+The REST streaming API uses a two-step flow: create a session, then request the stream.
+HLS is served via the same session stream endpoint for playlists plus a segment endpoint.
+
 ### Create Session
-Initialize a streaming session for a file.
+Initialize a streaming session for a file. Requires authentication.
 
 - **URL:** `/session/create/:id`
 - **Method:** `GET`
+- **Auth:** `Authorization: Bearer <token>`
 - **Query Params:**
   - `formats`: Comma-separated list (default: `mp4`).
   - `videoCodecs`: Comma-separated list (default: `h264`).
   - `audioCodec`: Comma-separated list (default: `aac`).
   - `type`: `recode`, `directhttp`, or `hls` (default: `recode`).
   - `offset`: Start time in seconds (default: `0`).
-  - `noremux`: `true` to force direct playback.
+  - `noremux`: If present, force direct playback (`directhttp`).
 - **Response:**
   ```json
   {
     "sessionId": "uuid",
     "seeking": "client" | "server",
-    "outputCodec": { ... },
-    "inputCodec": { ... }
+    "outputCodec": {
+      "video": "h264",
+      "audio": "aac"
+    },
+    "inputCodec": {
+      "video": "h264",
+      "audio": "aac"
+    }
   }
   ```
 
-### Start Stream
-Start the actual data stream.
+### Stream (Direct or HLS Playlist)
+Start the actual data stream or (for HLS) receive the `.m3u8` playlist.
 
 - **URL:** `/session/stream/:sessionId`
 - **Method:** `GET`
 - **Query Params:**
-  - `offset`: Seek offset.
-  - `nostart`: If present, setup destination but don't start flowing data immediately.
+  - `offset`: Seek offset in seconds (server-side seek).
+  - `nostart`: If present, set up the destination but do not start the stream immediately.
+- **Notes:**
+  - For `directhttp` and `recode`, this returns the media stream directly.
+  - For `hls`, this returns the playlist (`Content-Type: application/x-mpegURL`).
+  - HLS clients should re-request this endpoint to refresh the playlist.
 
 ### HLS Segment
+Fetch a specific HLS segment referenced by the playlist.
+
 - **URL:** `/HLS/:sessionId/segment/:id`
 - **Method:** `GET`
 

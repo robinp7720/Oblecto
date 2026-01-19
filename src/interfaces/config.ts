@@ -113,7 +113,8 @@ string
         'enabled': boolean
     },
     'streaming': {
-        'defaultTargetLanguageCode': string
+        'defaultTargetLanguageCode': string,
+        'hlsMaxSegmentLead'?: number
     },
     'federation': {
         'key': string,

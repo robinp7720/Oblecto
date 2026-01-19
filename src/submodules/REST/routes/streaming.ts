@@ -8,11 +8,13 @@ import Oblecto from '../../../lib/oblecto';
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req: any, res: Response, next: NextFunction) {
         try {
-            if (!oblecto.streamSessionController.sessionExists(req.combined_params.sessionId)) {
+            const sessionId = req.params.sessionId;
+
+            if (!oblecto.streamSessionController.sessionExists(sessionId)) {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
             }
 
-            const streamSession = oblecto.streamSessionController.sessions[req.combined_params.sessionId];
+            const streamSession = oblecto.streamSessionController.sessions[sessionId];
 
             if (!(streamSession instanceof HlsStreamSession)) {
                 throw new errors.BadRequestError('Invalid stream session type');
@@ -80,6 +82,13 @@ export default (server: Express, oblecto: Oblecto) => {
             }
 
             const streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
+
+            // For HLS sessions, if the segmenter is already started, this is a playlist poll request
+            // Just serve the fresh playlist without adding destinations or restarting
+            if (streamSession instanceof HlsStreamSession && streamSession.segmenterStarted) {
+                await streamSession.sendPlaylistFile(res);
+                return;
+            }
 
             if (req.combined_params.offset) {
                 streamSession.offset = req.combined_params.offset;
