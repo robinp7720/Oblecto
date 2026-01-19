@@ -5,7 +5,7 @@ import { Movie } from '../../../../../models/movie';
 import { Episode } from '../../../../../models/episode';
 import { File } from '../../../../../models/file';
 import { parseFileId, parseId } from '../../../helpers';
-import HLSStreamer from '../../../../streamSessions/StreamSessionTypes/HLSStreamer';
+import { HlsStreamSession } from '../../../../mediaSessions/index.js';
 import logger from '../../../../../submodules/logger';
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { getLastMediaSource, getPlaybackEntry, upsertPlaybackEntry } from '../../playbackState.js';
@@ -123,8 +123,8 @@ const resolveStreamSession = (embyEmulation, req, file, streamType, fallbackCont
         const existingSession = controller.sessions[existingSessionId];
 
         if (streamType === 'hls') {
-            if (existingSession instanceof HLSStreamer) return existingSession;
-        } else if (!(existingSession instanceof HLSStreamer)) {
+            if (existingSession instanceof HlsStreamSession) return existingSession;
+        } else if (!(existingSession instanceof HlsStreamSession)) {
             return existingSession;
         }
     }
@@ -157,7 +157,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
     if (existingSessionId && controller.sessionExists(existingSessionId)) {
         const existingSession = controller.sessions[existingSessionId];
 
-        if (existingSession instanceof HLSStreamer) return existingSession;
+        if (existingSession instanceof HlsStreamSession) return existingSession;
     }
 
     embyEmulation.hlsSessionsByItemId = embyEmulation.hlsSessionsByItemId || {};
@@ -169,7 +169,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
     if (mappedId && controller.sessionExists(mappedId)) {
         const existingSession = controller.sessions[mappedId];
 
-        if (existingSession instanceof HLSStreamer) return existingSession;
+        if (existingSession instanceof HlsStreamSession) return existingSession;
     }
 
     if (!file) return null;
@@ -226,7 +226,7 @@ export default (server, embyEmulation) => {
 
             const streamSession = embyEmulation.oblecto.streamSessionController.sessions[sessionId];
 
-            if (!(streamSession instanceof HLSStreamer)) {
+            if (!(streamSession instanceof HlsStreamSession)) {
                 throw errors.BadRequestError('Invalid stream session type');
             }
 
@@ -324,7 +324,7 @@ export default (server, embyEmulation) => {
 
             const streamSession = ensureHlsSession(embyEmulation, req, null, itemId, playlistId);
 
-            if (!streamSession || !(streamSession instanceof HLSStreamer)) {
+            if (!streamSession || !(streamSession instanceof HlsStreamSession)) {
                 throw errors.BadRequestError('Invalid stream session type');
             }
 

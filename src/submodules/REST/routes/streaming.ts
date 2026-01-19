@@ -2,10 +2,10 @@ import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import authMiddleWare from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
-import DirectHttpStreamSession from '../../../lib/streamSessions/StreamSessionTypes/DirectHttpStreamSession.js';
-import HLSStreamer from '../../../lib/streamSessions/StreamSessionTypes/HLSStreamer.js';
+import { DirectHttpStreamSession, HlsStreamSession } from '../../../lib/mediaSessions/index.js';
+import Oblecto from '../../../lib/oblecto';
 
-export default (server: Express, oblecto: any) => {
+export default (server: Express, oblecto: Oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req: any, res: Response, next: NextFunction) {
         try {
             if (!oblecto.streamSessionController.sessionExists(req.combined_params.sessionId)) {
@@ -14,7 +14,7 @@ export default (server: Express, oblecto: any) => {
 
             const streamSession = oblecto.streamSessionController.sessions[req.combined_params.sessionId];
 
-            if (!(streamSession instanceof HLSStreamer)) {
+            if (!(streamSession instanceof HlsStreamSession)) {
                 throw new errors.BadRequestError('Invalid stream session type');
             }
 
