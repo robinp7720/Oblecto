@@ -95,7 +95,7 @@ export class HlsStreamSession extends MediaSession {
         const hlsOptions: string[] = [
             `-hls_time ${HLS_SEGMENT_DURATION_SEC}`,
             `-hls_delete_threshold ${this.maxSegments + 5}`,
-            `-hls_list_size ${this.maxSegments / 2}`,
+            `-hls_list_size ${this.maxSegments}`,
             '-hls_flags delete_segments+independent_segments+temp_file',
             `-hls_base_url /HLS/${this.sessionId}/segment/`,
             `-hls_segment_filename ${this.segmentTemplate}`,
@@ -110,6 +110,8 @@ export class HlsStreamSession extends MediaSession {
 
         if (videoCodec !== 'copy') {
             hlsOptions.push('-pix_fmt yuv420p');
+            hlsOptions.push(`-force_key_frames expr:gte(t,n_forced*${HLS_SEGMENT_DURATION_SEC})`);
+            hlsOptions.push('-sc_threshold 0');
         }
 
         // Add hardware acceleration options if configured
