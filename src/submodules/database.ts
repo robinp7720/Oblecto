@@ -20,34 +20,34 @@ const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
 let sequelizeInstance: Sequelize | null = null;
 
 /**
- * @param sequelize
+ * @param sequelize - Sequelize instance
  */
-function initModels(sequelize: Sequelize) {
-    const modelOptions = (modelName: string) => ({ sequelize, modelName });
+function initModels(sequelize: Sequelize): void {
+    const modelOptions = (modelName: string): { sequelize: Sequelize; modelName: string } => ({ sequelize, modelName });
 
-    Episode.init(episodeColumns as any, modelOptions('Episode'));
-    Movie.init(movieColumns as any, modelOptions('Movie'));
-    Series.init(seriesColumns as any, modelOptions('Series'));
+    Episode.init(episodeColumns, modelOptions('Episode'));
+    Movie.init(movieColumns, modelOptions('Movie'));
+    Series.init(seriesColumns, modelOptions('Series'));
 
-    File.init(fileColumns as any, modelOptions('File'));
-    Stream.init(streamColumns as any, modelOptions('Stream'));
+    File.init(fileColumns, modelOptions('File'));
+    Stream.init(streamColumns, modelOptions('Stream'));
 
-    EpisodeFiles.init(episodeFilesColumns as any, modelOptions('EpisodeFiles'));
-    MovieFiles.init(movieFileColumns as any, modelOptions('MovieFiles'));
+    EpisodeFiles.init(episodeFilesColumns, modelOptions('EpisodeFiles'));
+    MovieFiles.init(movieFileColumns, modelOptions('MovieFiles'));
 
-    MovieSet.init(movieSetColumns as any, modelOptions('MovieSet'));
-    SeriesSet.init(seriesSetColumns as any, modelOptions('SeriesSet'));
+    MovieSet.init(movieSetColumns, modelOptions('MovieSet'));
+    SeriesSet.init(seriesSetColumns, modelOptions('SeriesSet'));
 
-    TrackMovie.init(trackMovieColumns as any, modelOptions('TrackMovie'));
-    TrackEpisode.init(trackEpisodesColumns as any, modelOptions('TrackEpisode'));
+    TrackMovie.init(trackMovieColumns, modelOptions('TrackMovie'));
+    TrackEpisode.init(trackEpisodesColumns, modelOptions('TrackEpisode'));
 
-    User.init(userColumns as any, modelOptions('User'));
+    User.init(userColumns, modelOptions('User'));
 }
 
 /**
  * Initialize database model associations and relationships.
  */
-function initAssociations() {
+function initAssociations(): void {
     Episode.belongsTo(Series);
     Series.hasMany(Episode);
 
@@ -106,7 +106,7 @@ export function initDatabase(): Sequelize {
     if (dialect !== 'sqlite') {
         options.host = config.database.host || 'localhost';
     } else {
-        options.storage = config.database.storage || DEFAULT_SQLITE_STORAGE;
+        options.storage = config.database.storage ?? DEFAULT_SQLITE_STORAGE;
     }
 
     sequelizeInstance = new Sequelize({

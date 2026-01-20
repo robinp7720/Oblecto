@@ -17,10 +17,16 @@ export class SeriesSet extends Model<InferAttributes<SeriesSet>, InferCreationAt
 }
 
 export const seriesSetColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     setName: DataTypes.STRING,
     overview: DataTypes.TEXT,
     tmdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     public: { type: DataTypes.BOOLEAN, defaultValue: true },
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

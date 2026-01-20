@@ -2,7 +2,7 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 
 export class Stream extends Model<InferAttributes<Stream>, InferCreationAttributes<Stream>> {
     declare id: CreationOptional<number>;
-    
+
     declare index: number | null;
     declare codec_name: string | null;
     declare profile: string | null;
@@ -128,6 +128,9 @@ export class Stream extends Model<InferAttributes<Stream>, InferCreationAttribut
 }
 
 export const streamColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     index: DataTypes.INTEGER,
     codec_name: DataTypes.STRING,
     profile: DataTypes.STRING,
@@ -246,5 +249,8 @@ export const streamColumns = {
     white_point_y: DataTypes.STRING,
     white_point_x: DataTypes.STRING,
     min_luminance: DataTypes.STRING,
-    max_luminance: DataTypes.STRING
+    max_luminance: DataTypes.STRING,
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

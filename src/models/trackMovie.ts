@@ -4,7 +4,7 @@ export class TrackMovie extends Model<InferAttributes<TrackMovie>, InferCreation
     declare id: CreationOptional<number>;
     declare userId: ForeignKey<number>;
     declare movieId: ForeignKey<number>;
-    
+
     declare time: number | null;
     declare progress: number | null;
 
@@ -13,6 +13,15 @@ export class TrackMovie extends Model<InferAttributes<TrackMovie>, InferCreation
 }
 
 export const trackMovieColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
+    userId: DataTypes.INTEGER,
+    movieId: DataTypes.INTEGER,
+
     time: DataTypes.FLOAT,
     progress: DataTypes.FLOAT,
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

@@ -2,7 +2,7 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 
 export class File extends Model<InferAttributes<File>, InferCreationAttributes<File>> {
     declare id: CreationOptional<number>;
-    
+
     declare host: string | null;
     declare path: string | null;
 
@@ -27,6 +27,9 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
 }
 
 export const fileColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     host: DataTypes.STRING,
     path: DataTypes.STRING,
 
@@ -45,4 +48,7 @@ export const fileColumns = {
 
     problematic: { type: DataTypes.BOOLEAN, defaultValue: false },
     error: { type: DataTypes.TEXT, allowNull: true },
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

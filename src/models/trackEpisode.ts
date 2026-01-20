@@ -4,7 +4,7 @@ export class TrackEpisode extends Model<InferAttributes<TrackEpisode>, InferCrea
     declare id: CreationOptional<number>;
     declare userId: ForeignKey<number>;
     declare episodeId: ForeignKey<number>;
-    
+
     declare time: number | null;
     declare progress: number | null;
 
@@ -13,6 +13,15 @@ export class TrackEpisode extends Model<InferAttributes<TrackEpisode>, InferCrea
 }
 
 export const trackEpisodesColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
+    userId: DataTypes.INTEGER,
+    episodeId: DataTypes.INTEGER,
+
     time: DataTypes.FLOAT,
-    progress: DataTypes.FLOAT
+    progress: DataTypes.FLOAT,
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

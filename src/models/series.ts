@@ -30,17 +30,20 @@ export class Series extends Model<InferAttributes<Series>, InferCreationAttribut
 }
 
 export const seriesColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     tvdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     imdbid: {
-        type: DataTypes.STRING(64), allowNull: true, unique: true 
+        type: DataTypes.STRING(64), allowNull: true, unique: true
     },
     zap2itId: {
-        type: DataTypes.STRING(64), allowNull: true, unique: true 
+        type: DataTypes.STRING(64), allowNull: true, unique: true
     },
     tmdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
 
     seriesName: DataTypes.STRING,
@@ -59,5 +62,8 @@ export const seriesColumns = {
     siteRating: DataTypes.DOUBLE,
     siteRatingCount: DataTypes.INTEGER,
 
-    directory: DataTypes.STRING
+    directory: DataTypes.STRING,
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

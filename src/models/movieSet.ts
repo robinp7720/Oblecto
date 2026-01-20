@@ -17,10 +17,16 @@ export class MovieSet extends Model<InferAttributes<MovieSet>, InferCreationAttr
 }
 
 export const movieSetColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     setName: DataTypes.STRING,
     overview: DataTypes.TEXT,
     tmdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     public: { type: DataTypes.BOOLEAN, defaultValue: true },
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

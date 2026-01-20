@@ -13,9 +13,15 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
 }
 
 export const userColumns = {
-    username:  { type: DataTypes.STRING(16), unique: true },
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
+    username: { type: DataTypes.STRING(16), unique: true },
     name: DataTypes.STRING,
     email: DataTypes.STRING,
     password: DataTypes.STRING,
     access_token: { type: DataTypes.STRING, allowNull: true },
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };

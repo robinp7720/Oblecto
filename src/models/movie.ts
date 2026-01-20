@@ -2,7 +2,7 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 
 export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes<Movie>> {
     declare id: CreationOptional<number>;
-    
+
     declare tmdbid: number | null;
     declare imdbid: string | null;
 
@@ -28,11 +28,14 @@ export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes
 }
 
 export const movieColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     tmdbid: {
-        type: DataTypes.INTEGER, allowNull: true, unique: true 
+        type: DataTypes.INTEGER, allowNull: true, unique: true
     },
     imdbid: {
-        type: DataTypes.STRING, allowNull: true, unique: true 
+        type: DataTypes.STRING, allowNull: true, unique: true
     },
 
     movieName: DataTypes.STRING,
@@ -51,4 +54,7 @@ export const movieColumns = {
 
     releaseDate: DataTypes.DATEONLY,
     overview: DataTypes.TEXT,
+
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };
