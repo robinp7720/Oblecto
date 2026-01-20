@@ -9,7 +9,7 @@ export default {
         if (req.authorization === undefined)
             return next(new errors.UnauthorizedError('Session is not authenticated'));
 
-        jwt.verify(req.authorization.credentials || (req.combined_params && req.combined_params.auth), config.authentication.secret, function (err: any, decoded: any) {
+        jwt.verify(req.authorization.credentials || (req.combined_params?.auth), config.authentication.secret, function (err: any, decoded: any) {
             if (err)
                 return next(new errors.UnauthorizedError('An error has occurred during session authentication'));
 

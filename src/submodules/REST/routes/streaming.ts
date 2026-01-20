@@ -92,7 +92,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 return;
             }
 
-            if (req.combined_params && req.combined_params.offset) {
+            if (req.combined_params?.offset) {
                 streamSession.offset = req.combined_params.offset as number;
             }
 
@@ -103,7 +103,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 type: 'http'
             });
 
-            if (req.combined_params && req.combined_params.nostart) return;
+            if (req.combined_params?.nostart) return;
 
             await streamSession.startStream();
         } catch (error) {

@@ -32,7 +32,7 @@ type Task = {
 
 const graphical = {
     oblecto: null as Oblecto | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     screen: blessed.screen({ smartCSR: true }) as any,
     streamerSessionsBox: null as ReturnType<typeof blessed.list> | null,
     queueBox: null as ReturnType<typeof blessed.list> | null,

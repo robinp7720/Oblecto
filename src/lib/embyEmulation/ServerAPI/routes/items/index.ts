@@ -143,7 +143,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.moviePosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.moviePosterPath(item, (sizeKey ?? undefined)) ?? undefined,
                     artwork.moviePosterPath(item, undefined) ?? undefined,
                 ];
             }
@@ -152,7 +152,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 const sizeKey = chooseSizeKey(config.fanart, query);
 
                 return [
-                    artwork.movieFanartPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.movieFanartPath(item, (sizeKey ?? undefined)) ?? undefined,
                     artwork.movieFanartPath(item, undefined) ?? undefined,
                 ];
             }
@@ -163,7 +163,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath(item, (sizeKey ?? undefined)) ?? undefined,
                     artwork.seriesPosterPath(item, undefined) ?? undefined,
                 ];
             }
@@ -172,7 +172,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath(item, (sizeKey ?? undefined)) ?? undefined,
                     artwork.seriesPosterPath(item, undefined) ?? undefined,
                 ];
             }
@@ -182,14 +182,14 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             if (normalized === 'primary' || normalized === 'banner' || normalized === 'thumb') {
                 const sizeKey = chooseSizeKey(config.banner, query);
                 const candidates: (string | undefined)[] = [
-                    artwork.episodeBannerPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.episodeBannerPath(item, (sizeKey ?? undefined)) ?? undefined,
                     artwork.episodeBannerPath(item, undefined) ?? undefined,
                 ];
 
                 if (item.Series) {
                     const seriesSize = chooseSizeKey(config.poster, query);
 
-                    candidates.push(artwork.seriesPosterPath(item.Series, (seriesSize ?? undefined) as string | undefined) ?? undefined);
+                    candidates.push(artwork.seriesPosterPath(item.Series, (seriesSize ?? undefined)) ?? undefined);
                     candidates.push(artwork.seriesPosterPath(item.Series, undefined) ?? undefined);
                 }
                 return candidates;
@@ -201,7 +201,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) } as any, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) } as any, (sizeKey ?? undefined)) ?? undefined,
                     artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) } as any, undefined) ?? undefined,
                 ];
             }
@@ -367,7 +367,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             totalCount += (count as unknown as number);
 
             const results = await Movie.findAll({
-                where: where as any,
+                where: where,
                 include: [{ model: File, include: [{ model: Stream }] }],
                 limit: perTypeLimit,
                 offset: startIndex,
@@ -458,7 +458,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
 
             const results = await Episode.findAll({
-                where: where as any,
+                where: where,
                 include: include as any,
                 limit: perTypeLimit,
                 offset: startIndex,
