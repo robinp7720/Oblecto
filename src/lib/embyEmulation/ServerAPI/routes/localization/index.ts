@@ -1,12 +1,15 @@
-export default (server, embyEmulation) => {
-    server.get('/localization/options', async (req, res) => {
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, _embyEmulation: EmbyEmulation): void => {
+    server.get('/localization/options', (_req: Request, res: Response) => {
         res.send([
             { Name: 'English', Value: 'en' },
             { Name: 'English (United States)', Value: 'en-US' }
         ]);
     });
 
-    server.get('/localization/cultures', async (req, res) => {
+    server.get('/localization/cultures', (_req: Request, res: Response) => {
         res.send([
             {
                 Name: 'en-US',
@@ -18,7 +21,7 @@ export default (server, embyEmulation) => {
         ]);
     });
 
-    server.get('/localization/countries', async (req, res) => {
+    server.get('/localization/countries', (_req: Request, res: Response) => {
         res.send([
             {
                 Name: 'United States',
@@ -29,5 +32,5 @@ export default (server, embyEmulation) => {
         ]);
     });
 
-    server.get('/localization/parentalratings', async (req, res) => { res.send([]); });
+    server.get('/localization/parentalratings', (_req: Request, res: Response) => { res.send([]); });
 };

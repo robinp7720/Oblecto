@@ -1,19 +1,22 @@
-export default (server, embyEmulation) => {
-    server.get('/branding/configuration', async (req, res) => {
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, _embyEmulation: EmbyEmulation): void => {
+    server.get('/branding/configuration', (_req: Request, res: Response) => {
         res.send({
             LoginDisclaimer: 'This is an Oblecto Media server',
             CustomCss: ''
         });
     });
 
-    server.get('/branding/css', async (req, res) => {
+    server.get('/branding/css', (_req: Request, res: Response) => {
         res.send();
     });
 
-    server.get('/branding/splashscreen', async (req, res) => {
+    server.get('/branding/splashscreen', (_req: Request, res: Response) => {
         res.send('');
     });
-    server.get('/branding/css.css', async (req, res) => {
+    server.get('/branding/css.css', (_req: Request, res: Response) => {
         res.send('');
     });
 };
