@@ -19,9 +19,9 @@ export default class FederationServer {
 
         this.server.listen(port);
 
-        this.server.on('error', (err) => this.errorHandler(err));
-        this.server.on('connection', (socket) => this.connectionHandler(socket));
-        this.server.on('secureConnection', (socket) => this.secureConnectionHandler(socket));
+        this.server.on('error', (err: Error) => this.errorHandler(err));
+        this.server.on('connection', (socket: tls.TLSSocket) => this.connectionHandler(socket));
+        this.server.on('secureConnection', (socket: tls.TLSSocket) => this.secureConnectionHandler(socket));
     }
 
     errorHandler(error: Error): void {

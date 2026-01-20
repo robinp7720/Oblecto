@@ -18,7 +18,7 @@ export default class FederationMediaServerConnection extends FederationServerCon
     }
 
     async headerHandler(data: string): Promise<void> {
-        super.headerHandler(data);
+        await super.headerHandler(data);
 
         if (!this.authenticated) return;
 

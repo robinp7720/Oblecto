@@ -26,7 +26,7 @@ export default class FederationMediaClient extends FederationClient {
 
         switch (split[0]) {
             case 'READY':
-                this.readyHandler(split[1]);
+                void this.readyHandler(split[1]);
                 break;
         }
 
@@ -58,7 +58,7 @@ export default class FederationMediaClient extends FederationClient {
 
         this.socket.pipe(this.streamDestination);
 
-        this.startStream();
+        await this.startStream();
     }
 
     async startStream(): Promise<void> {

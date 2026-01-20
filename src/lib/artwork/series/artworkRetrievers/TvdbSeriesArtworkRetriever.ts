@@ -6,9 +6,6 @@ import { Series } from '../../../../models/series.js';
 
 import type Oblecto from '../../../oblecto/index.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Any = any;
-
 export default class TvdbSeriesArtworkRetriever {
     public oblecto: Oblecto;
 
@@ -45,7 +42,6 @@ export default class TvdbSeriesArtworkRetriever {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const data = await promiseTimeout((this.oblecto.tvdb).getSeriesPosters(series.tvdbid));
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        return data.map((image: any) => `http://thetvdb.com/banners/${image.fileName}`);
+        return (data as { fileName: string }[]).map((image) => `http://thetvdb.com/banners/${image.fileName}`);
     }
 }

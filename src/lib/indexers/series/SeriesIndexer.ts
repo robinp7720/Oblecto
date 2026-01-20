@@ -195,7 +195,7 @@ export default class SeriesIndexer {
         const series = await this.indexSeries(seriesIdentification);
 
         logger.debug( `${file.path} episode identified ${episodeIdentification.episodeName}`);
-
+         
         const [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 where: {

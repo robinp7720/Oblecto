@@ -60,7 +60,7 @@ export default class FederationEpisodeIndexer {
 
         if (file.fileInfo.tvdbid) episodeQuery.tvdbid = file.fileInfo.tvdbid;
         if (file.fileInfo.tmdbid) episodeQuery.tmdbid = file.fileInfo.tmdbid;
-
+         
         const [episode, episodeInserted] = await Episode.findOrCreate({
             where: episodeQuery,
             defaults: {

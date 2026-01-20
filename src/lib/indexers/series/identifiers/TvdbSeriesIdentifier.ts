@@ -49,6 +49,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             title = title.join(' ');
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title));
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);

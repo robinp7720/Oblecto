@@ -1,4 +1,4 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute, HasManyCountAssociationsMixin } from 'sequelize';
 import type { Stream } from './stream.js';
 
 export class File extends Model<InferAttributes<File>, InferCreationAttributes<File>> {
@@ -28,6 +28,7 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
 
     // Mixins
     declare getStreams: HasManyGetAssociationsMixin<Stream>;
+    declare countStreams: HasManyCountAssociationsMixin;
     declare Streams?: NonAttribute<Stream[]>;
 }
 

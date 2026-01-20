@@ -36,8 +36,7 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
             return this.episodeCache[tvdbId];
         }
 
-        if (Object.keys(this.episodeCache).length > 100) this.episodeCache = {};
-
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         this.episodeCache[tvdbId] = await promiseTimeout(this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId));
 
         return this.episodeCache[tvdbId];

@@ -119,7 +119,7 @@ export default class FileUpdater {
 
             fd.on('end', function() {
                 hash.end();
-                resolve(hash.read());
+                resolve(hash.read() as string);
             });
 
             fd.on('error', () => {

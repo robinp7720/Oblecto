@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import FederationServerConnection from './FederationServerConnection.js';
 import { File } from '../../../models/file.js';
 import { Movie } from '../../../models/movie.js';
@@ -16,7 +17,7 @@ export default class FederationDataServerConnection extends FederationServerConn
     }
 
     async headerHandler(data: string): Promise<void> {
-        super.headerHandler(data);
+        await super.headerHandler(data);
 
         if (!this.authenticated) return;
 

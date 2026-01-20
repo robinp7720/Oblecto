@@ -26,22 +26,35 @@ export default class TvdbSeriesRetriever {
     async retrieveInformation(series: SeriesWithTvdb): Promise<Record<string, unknown>> {
         if (!series.tvdbid) throw new DebugExtendableError('No tvdbid attached to series');
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const seriesInfo = await promiseTimeout(this.oblecto.tvdb.getSeriesById(series.tvdbid));
 
         // TODO: TMDB Voting should be separated from TVDB voting
 
         return {
+             
             seriesName: seriesInfo.seriesName,
+             
             status: seriesInfo.status,
+             
             firstAired: seriesInfo.firstAired,
+             
             overview: seriesInfo.overview,
+             
             siteRating: seriesInfo.siteRating,
+             
             siteRatingCount: seriesInfo.siteRatingCount,
+             
             rating: seriesInfo.rating,
+             
             airsDayOfWeek: seriesInfo.airsDayOfWeek,
+             
             airsTime: seriesInfo.airsTime,
+             
             network: seriesInfo.network,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
             imdbid: seriesInfo.imdbId || null,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
             zap2itId: seriesInfo.zap2itId || null
         };
     }

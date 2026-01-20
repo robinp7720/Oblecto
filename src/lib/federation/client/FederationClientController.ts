@@ -22,7 +22,7 @@ export default class FederationClientController {
         const client = new FederationDataClient(this.oblecto, server);
 
         await client.connect();
-        await client.requestFullSync();
+        client.requestFullSync();
 
         this.syncServers.push(client);
     }

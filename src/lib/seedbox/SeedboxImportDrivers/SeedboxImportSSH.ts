@@ -9,11 +9,13 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
     constructor(config: SeedboxStorageDriverConfig) {
         super(config);
 
-        this.client = new Client();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+        this.client = new (Client as any)();
     }
 
     async setup(): Promise<void> {
         try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
             await this.client.connect({
                 host: this.config.host,
                 port: this.config.port || 22,
@@ -27,9 +29,12 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
     }
 
     async list(path: string): Promise<SeedboxListEntry[]> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const listing = await this.client.list(path);
 
-        return listing.map(item => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        return listing.map((item: any) => {
+             
             return {
                 name: item.name,
                 type: item.type === 'd'? 1:0
@@ -38,8 +43,10 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
     }
 
     async copy(origin: string, destination: string): Promise<void> {
-        const client =  new Client();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+        const client =  new (Client as any)();
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await client.connect({
             host: this.config.host,
             port: this.config.port || 22,
@@ -47,12 +54,14 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
             password: this.config.password,
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await client.fastGet(origin, destination, {
             step: () => {
                 // console.log(transfered, chunk, total, transfered/total);
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await client.end();
     }
 }

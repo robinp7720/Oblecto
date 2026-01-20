@@ -121,19 +121,15 @@ string
         'dataPort': number,
         'mediaPort': number,
         'enable': boolean,
-        'servers': {
-            'oblecto': {
-                'address': string,
-                'ca': string,
-                'dataPort': number,
-                'mediaPort': number
-            }
-        },
-        'clients': {
-            'tria': {
-                'key': string
-            }
-        },
+        'servers': Record<string, {
+            'address': string,
+            'ca': string,
+            'dataPort': number,
+            'mediaPort': number
+        }>,
+        'clients': Record<string, {
+            'key': string
+        }>,
         'uuid': string
     },
     'seedboxes': [
@@ -154,6 +150,9 @@ string
             'deleteOnImport': boolean,
             'enabled': boolean
         }
-    ]
+    ],
+    'seedboxImport': {
+        'concurrency': number
+    }
 
 }

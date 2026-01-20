@@ -36,7 +36,7 @@ export default class FederationDataClient extends FederationClient {
 
         switch (split[0]) {
             case 'FILE':
-                this.fileHandler(split[1]);
+                void this.fileHandler(split[1]);
                 break;
         }
     }

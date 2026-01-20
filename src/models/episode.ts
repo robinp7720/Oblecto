@@ -1,7 +1,10 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToGetAssociationMixin } from 'sequelize';
+import { Series } from './series.js';
 
 export class Episode extends Model<InferAttributes<Episode>, InferCreationAttributes<Episode>> {
     declare id: CreationOptional<number>;
+
+    declare getSeries: BelongsToGetAssociationMixin<Series>;
 
     declare tvdbid: number | null;
     declare tmdbid: number | null;

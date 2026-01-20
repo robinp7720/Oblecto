@@ -23,16 +23,21 @@ export default class TmdbSeriesArtworkRetriever {
     async retrieveEpisodeBanner(episode: Episode): Promise<string[]> {
         if (episode.tmdbid === null || episode.tmdbid === undefined) throw new DebugExtendableError(`TMDB Episode banner retriever failed for ${episode.episodeName}`);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const series = await episode.getSeries() as any;
+        const series = await episode.getSeries();
 
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+        if (!series) {
+            throw new DebugExtendableError(`Could not find series for episode ${episode.id}`);
+        }
+
+        if (!series.tmdbid) {
+            throw new DebugExtendableError(`Series ${series.seriesName} has no tmdbid`);
+        }
+
         const { stills } = await promiseTimeout(this.oblecto.tmdb.episodeImages({
             id: series.tmdbid,
-            episode_number: episode.airedEpisodeNumber,
-            season_number: episode.airedSeason
+            episode_number: parseInt(episode.airedEpisodeNumber),
+            season_number: parseInt(episode.airedSeason)
         }));
-        /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
         return (stills as TmdbImage[]).map(image => `https://image.tmdb.org/t/p/original${image.file_path}`);
     }

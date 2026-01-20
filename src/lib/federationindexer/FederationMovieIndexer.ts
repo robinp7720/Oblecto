@@ -38,9 +38,10 @@ export default class FederationMovieIndexer {
                 duration: file.duration
             }
         });
-
+         
         const [movie, movieInserted] = await Movie.findOrCreate({ where: { tmdbid: file.fileInfo.tmdbid } });
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         await movie.addFile(fileEntity);
 
         if (!movieInserted) return;

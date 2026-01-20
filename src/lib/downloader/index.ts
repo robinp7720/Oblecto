@@ -46,8 +46,7 @@ export default class Downloader {
             // responseEncoding: 'binary' // Axios types might not have responseEncoding on the config directly or it might be renamed
         } as any);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-        await fs.writeFile(dest, data, { flag: flags } as any);
+        await fs.writeFile(dest, data as Buffer, { flag: flags });
     }
 
     /**
