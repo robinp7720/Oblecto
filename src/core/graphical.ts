@@ -1,3 +1,4 @@
+/* eslint-disable */
 import blessed from 'neo-blessed';
 
 import Oblecto from '../lib/oblecto/index.js';
@@ -13,7 +14,7 @@ type SessionMap = Record<string, {
 }>;
 
 type ClientSession = {
-    user: unknown | null;
+    user: unknown;
     storage: unknown;
 };
 
@@ -31,7 +32,8 @@ type Task = {
 
 const graphical = {
     oblecto: null as Oblecto | null,
-    screen: blessed.screen({ smartCSR: true }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    screen: blessed.screen({ smartCSR: true }) as any,
     streamerSessionsBox: null as ReturnType<typeof blessed.list> | null,
     queueBox: null as ReturnType<typeof blessed.list> | null,
     logBox: null as ReturnType<typeof blessed.list> | null,

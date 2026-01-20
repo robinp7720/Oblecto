@@ -3,8 +3,10 @@ import bcrypt from 'bcrypt';
 import config from '../../../config.js';
 import authMiddleWare from '../middleware/auth.js';
 import { User } from '../../../models/user.js';
+import Oblecto from '../../../lib/oblecto/index.js';
+import { OblectoRequest } from '../index.js';
 
-export default (server: Express, oblecto: any) => {
+export default (server: Express, oblecto: Oblecto) => {
     server.get('/users', async function (req: Request, res: Response) {
         const users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
 
@@ -39,7 +41,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // Endpoint to update the entries of a certain user
-    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req: any, res: Response) {
+    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req: OblectoRequest, res: Response) {
         const user = await User.findByPk(req.params.id);
 
         if (!user) {
@@ -47,20 +49,22 @@ export default (server: Express, oblecto: any) => {
             return;
         }
 
-        if (req.combined_params.username) {
-            user.username = req.combined_params.username;
+        const params = req.combined_params!;
+
+        if (params.username) {
+            user.username = params.username as string;
         }
 
-        if (req.combined_params.password) {
-            user.password = await bcrypt.hash(req.combined_params.password, config.authentication.saltRounds);
+        if (params.password) {
+            user.password = await bcrypt.hash(params.password as string, config.authentication.saltRounds);
         }
 
-        if (req.combined_params.email) {
-            user.email = req.combined_params.email;
+        if (params.email) {
+            user.email = params.email as string;
         }
 
-        if (req.combined_params.name) {
-            user.name = req.combined_params.name;
+        if (params.name) {
+            user.name = params.name as string;
         }
 
         await user.save();
@@ -72,26 +76,28 @@ export default (server: Express, oblecto: any) => {
         });
     });
 
-    server.post('/user', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        if (!req.combined_params.username)
+    server.post('/user', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const params = req.combined_params!;
+
+        if (!params.username)
             return res.status(400).send({ message: 'Username is missing' });
 
-        if (!req.combined_params.email)
+        if (!params.email)
             return res.status(400).send({ message: 'E-Mail is missing' });
-        if (!req.combined_params.name)
+        if (!params.name)
             return res.status(400).send({ message: 'Name is missing' });
 
         let passwordHash: string | undefined;
 
-        if (req.combined_params.password)
-            passwordHash = await bcrypt.hash(req.combined_params.password, oblecto.config.authentication.saltRounds);
+        if (params.password)
+            passwordHash = await bcrypt.hash(params.password as string, oblecto.config.authentication.saltRounds);
 
         const [user] = await User.findOrCreate({
-            where: { username: req.combined_params.username },
+            where: { username: params.username },
             defaults: {
-                username: req.combined_params.username,
-                name: req.combined_params.name,
-                email: req.combined_params.email,
+                username: params.username as string,
+                name: params.name as string,
+                email: params.email as string,
                 password: passwordHash || null
             }
         });

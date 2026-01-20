@@ -58,7 +58,7 @@ export interface IConfig {
         'doReIndex': boolean,
         'ignoreSeriesMismatch': boolean,
         'indexBroken': boolean,
-        'directories': [string]
+        'directories': { path: string }[]
     },
     'movies': {
         'movieIdentifiers': [
@@ -69,7 +69,7 @@ export interface IConfig {
         ],
         'doReIndex': boolean,
         'indexBroken': boolean,
-        'directories': [string]
+        'directories': { path: string }[]
     },
     'files': {
         'doHash': true

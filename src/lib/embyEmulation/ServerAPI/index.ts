@@ -5,7 +5,7 @@ import logger from '../../../submodules/logger/index.js';
 
 import type EmbyEmulation from '../index.js';
 
-type EmbyRequest = Request & {
+export type EmbyRequest = Request & {
     authorization?: { scheme: string; credentials: string };
     headers: Request['headers'] & { emby?: Record<string, string> };
 };

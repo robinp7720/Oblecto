@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
+import { EmbyRequest } from '../../index.js';
 
 /**
  *
@@ -28,9 +29,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return true;
     };
 
-    const normalizeImageType = (rawType: any): string => (rawType || '').toString().toLowerCase();
+    const normalizeImageType = (rawType: any): string => String(rawType || '').toLowerCase();
     const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
-        const values: any[] = [];
+        const values: string[] = [];
 
         for (const key of keys) {
             if (query[key] === undefined) continue;
@@ -38,10 +39,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
             if (Array.isArray(raw)) {
                 for (const entry of raw) {
-                    values.push(entry);
+                    values.push(String(entry));
                 }
             } else {
-                values.push(raw);
+                values.push(String(raw));
             }
         }
         return values
@@ -317,8 +318,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return { item, type: resolvedType };
     };
 
-    server.get('/items/:mediaid', async (req: Request, res: Response) => {
-        const userId = String(req.query.userId || req.query.UserId || req.query.userid || '');
+    server.get('/items/:mediaid', async (req: EmbyRequest, res: Response) => {
+        const userId = getRequestValue(req as any, 'UserId') || '';
         const parsedUserId = userId ? parseUuid(userId) : null;
         const { item, type } = await resolveItemById(String(req.params.mediaid), parsedUserId as string | null);
 
@@ -329,12 +330,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
-    server.get('/items', async (req: Request, res: Response) => {
+    server.get('/items', async (req: EmbyRequest, res: Response) => {
         let items: any[] = [];
         const includeItemTypes = normalizeItemTypes(req.query as Record<string, any>);
-        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
-        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex || '0'), 10) || 0;
-        const limit = parseInt(String(req.query.Limit || req.query.limit || '100'), 10) || 100;
+        const searchTerm = getRequestValue(req as any, 'SearchTerm') || '';
+        const startIndex = parseInt(getRequestValue(req as any, 'StartIndex') || '0', 10) || 0;
+        const limit = parseInt(getRequestValue(req as any, 'Limit') || '100', 10) || 100;
         const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby').map(value => value.toLowerCase());
         const perTypeLimit = limit + startIndex;
         const wantsRandom = sortBy.includes('random');
@@ -387,8 +388,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
             totalCount += (count as unknown as number);
 
-            const sortByValue = normalizeQueryString(req.query as any, 'SortBy', 'sortBy', 'sortby');
-            const sortOrder = normalizeQueryString(req.query as any, 'SortOrder', 'sortOrder', 'sortorder') || 'Ascending';
+            const sortByValue = getRequestValue(req as any, 'SortBy');
+            const sortOrder = getRequestValue(req as any, 'SortOrder') || 'Ascending';
             const order: any[] = [];
 
             if (sortByValue) {
@@ -422,8 +423,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (wantsEpisode) {
-            const parentId = String(req.query.ParentId || req.query.parentId || req.query.parentid || '');
-            const userId = String(req.query.userId || req.query.UserId || req.query.userid || '');
+            const parentId = getRequestValue(req as any, 'ParentId') || '';
+            const userId = getRequestValue(req as any, 'UserId') || '';
             const parsedUserId = userId ? parseUuid(userId) : null;
             const where: any = {};
 
@@ -468,7 +469,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (wantsSeason) {
-            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+            const parentId = getRequestValue(req as any, 'ParentId') || '';
             let seriesId = null;
 
             if (parentId) {
@@ -589,7 +590,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return handleItemImageRequest(req, res, 'backdrop');
     });
 
-    server.post('/items/:mediaid/playbackinfo', async (req, res) => {
+    server.post('/items/:mediaid/playbackinfo', async (req: EmbyRequest, res: Response) => {
         const { item, type } = await resolveItemById(req.params.mediaid);
         let files = [];
 
@@ -604,12 +605,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         let file = files[0];
-        const token = getEmbyToken(req);
+        const token = getEmbyToken(req as any);
 
         if (!token) return res.status(401).send();
 
-        const mediaSourceId = getRequestValue(req, 'MediaSourceId');
-        const playSessionId = getRequestValue(req, 'PlaySessionId') || uuidv4();
+        const mediaSourceId = getRequestValue(req as any, 'MediaSourceId');
+        const playSessionId = getRequestValue(req as any, 'PlaySessionId') || uuidv4();
         const existingPlayback = getPlaybackEntry(embyEmulation as any, token, playSessionId);
         const lastMediaSource = getLastMediaSource(embyEmulation as any, token, req.params.mediaid);
 
@@ -897,11 +898,11 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // Search
-    server.get('/search/hints', async (req, res) => {
-        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
-        const includeItemTypes = normalizeItemTypes(req.query as any);
-        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex), 10) || 0;
-        const limit = parseInt(String(req.query.Limit || req.query.limit), 10) || 100;
+    server.get('/search/hints', async (req: EmbyRequest, res: Response) => {
+        const searchTerm = getRequestValue(req as any, 'SearchTerm') || '';
+        const includeItemTypes = normalizeItemTypes(req.query as Record<string, any>);
+        const startIndex = parseInt(getRequestValue(req as any, 'StartIndex') || '0', 10) || 0;
+        const limit = parseInt(getRequestValue(req as any, 'Limit') || '100', 10) || 100;
         const wantsMovie = includeItemTypes.length === 0 || includeItemTypes.includes('movie');
         const wantsSeries = includeItemTypes.length === 0 || includeItemTypes.includes('series');
         const wantsEpisode = includeItemTypes.length === 0 || includeItemTypes.includes('episode');

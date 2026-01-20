@@ -17,7 +17,7 @@ import v1System from './v1/system.js';
 import { Express } from 'express';
 import Oblecto from '../../../lib/oblecto/index.js';
 
-export default (server: Express, oblecto: Oblecto) => {
+export default (server: Express, oblecto: Oblecto): void => {
     if (oblecto.config.web.enabled) {
         web(server, oblecto);
     }

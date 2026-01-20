@@ -4,8 +4,10 @@ import authMiddleWare from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
 import { Episode } from '../../../models/episode.js';
 import { Movie } from '../../../models/movie.js';
+import Oblecto from '../../../lib/oblecto/index.js';
+import { OblectoRequest } from '../index.js';
 
-export default (server: Express, oblecto: any) => {
+export default (server: Express, oblecto: Oblecto) => {
     server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const fileHashCounts = await File.findAll({
             attributes: [
