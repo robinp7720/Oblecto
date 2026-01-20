@@ -7,10 +7,10 @@ import { FfprobeData } from 'fluent-ffmpeg';
  * @returns - JSON object containing file information
  */
 export default function ffprobe(path: string): Promise<FfprobeData> {
-    return new Promise<FfprobeData>(function(resolve, reject) {
+    return new Promise<FfprobeData>(function (resolve, reject) {
         ffmpeg.ffprobe(path, function (err, metadata) {
             if (err) {
-                return reject(err);
+                return reject(err instanceof Error ? err : new Error(String(err)));
             }
 
             return resolve(metadata);

@@ -14,7 +14,7 @@ export interface GuessitIdentification {
     release_group?: string;
     container?: string;
     mimetype?: string;
-    type: 'movie' | 'episode' | string;
+    type: 'movie' | 'episode' | (string & {});
     season?: number;
     episode?: number;
     episode_title?: string;
@@ -23,11 +23,11 @@ export interface GuessitIdentification {
 
 try {
     which.sync('guessit');
-    logger.info( 'Guessit binary has been found');
-    logger.info( 'Using local guessit binary');
-} catch (e) {
-    logger.info( 'Guessit binary has not been found');
-    logger.info( 'Please install guessit from your package manager');
+    logger.info('Guessit binary has been found');
+    logger.info('Using local guessit binary');
+} catch {
+    logger.info('Guessit binary has not been found');
+    logger.info('Please install guessit from your package manager');
     process.exit(1);
 }
 
@@ -36,7 +36,8 @@ export default {
      * @param search - Filename of media entity
      * @returns - Guessit Identification object
      */
-    async identify(search: string): Promise<GuessitIdentification> {
-        return binary(search);
+    identify(search: string): Promise<GuessitIdentification> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        return binary(search) as Promise<GuessitIdentification>;
     }
 };

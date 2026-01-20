@@ -4,8 +4,8 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 /**
  * @param config - Axios request config
  */
-export default function<T = any> (config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    return new Promise<AxiosResponse<T>>(function(resolve, reject) {
+export default function <T = unknown>(config: AxiosRequestConfig): Promise<AxiosResponse<T>> {
+    return new Promise<AxiosResponse<T>>(function (resolve, reject) {
         let timedout = false;
         const timeoutDuration = 20000;
         const axiosTimeout = 10000;
@@ -23,10 +23,10 @@ export default function<T = any> (config: AxiosRequestConfig): Promise<AxiosResp
 
             clearTimeout(timeout);
 
-            resolve(response);
-        }).catch(err =>{
+            resolve(response as AxiosResponse<T>);
+        }).catch((err: unknown) => {
             clearTimeout(timeout);
-            reject(err);
+            reject(err instanceof Error ? err : new Error(String(err)));
         });
     });
 }

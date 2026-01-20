@@ -27,7 +27,7 @@ class Logger extends EventEmitter {
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
             winston.format.colorize(),
             winston.format.printf(({ level, message, timestamp }) => {
-                return `${timestamp} ${level}: ${message}`;
+                return `${String(timestamp)} ${String(level)}: ${String(message)}`;
             })
         );
 
@@ -64,29 +64,30 @@ class Logger extends EventEmitter {
             this.winston.remove(this.consoleTransport);
         } else {
             // Check if already added to avoid duplicates
-            if (!this.winston.transports.includes(this.consoleTransport)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+            if (!this.winston.transports.includes(this.consoleTransport as any)) {
                 this.winston.add(this.consoleTransport);
             }
         }
     }
 
-    info(...messages: any[]): void {
+    info(...messages: unknown[]): void {
         this.log('INFO', ...messages);
     }
 
-    warn(...messages: any[]): void {
+    warn(...messages: unknown[]): void {
         this.log('WARN', ...messages);
     }
 
-    error(...messages: any[]): void {
+    error(...messages: unknown[]): void {
         this.log('ERROR', ...messages);
     }
 
-    debug(...messages: any[]): void {
+    debug(...messages: unknown[]): void {
         this.log('DEBUG', ...messages);
     }
 
-    log(level: string | Error, ...messages: any[]): void {
+    log(level: string | Error, ...messages: unknown[]): void {
 
         // Handle case where level is an Error object (old API support)
         if (level instanceof Error) {
@@ -98,7 +99,7 @@ class Logger extends EventEmitter {
         }
 
         // Extract potential stack traces for metadata
-        const metadata: any = {};
+        const metadata: { stack?: string;[key: string]: unknown } = {};
         const messageParts = messages.map(msg => {
             if (msg instanceof Error) {
                 if (!metadata.stack) {
@@ -106,14 +107,14 @@ class Logger extends EventEmitter {
                 }
                 return msg.message;
             }
-            if (typeof msg === 'object') {
+            if (typeof msg === 'object' && msg !== null) {
                 try {
                     return JSON.stringify(msg);
-                } catch(e) {
+                } catch {
                     return '[Circular/Object]';
                 }
             }
-            return msg;
+            return String(msg);
         });
 
         const messageText = messageParts.join(' ');

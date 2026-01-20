@@ -1,15 +1,22 @@
 import async from 'async';
 import logger from '../../submodules/logger/index.js';
 
+interface QueueItem {
+    id: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    attr: any;
+}
+
 export default class Queue {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private jobs: Record<string, (attr: any) => Promise<void>> = {};
-    private queue: async.AsyncPriorityQueue<any>;
+    private queue: async.AsyncPriorityQueue<QueueItem>;
 
     /**
      * @param concurrency - Amount of tasks to handle simultaneously
      */
     constructor(concurrency: number) {
-        this.queue = async.priorityQueue((job: any, callback: () => void) => {
+        this.queue = async.priorityQueue((job: QueueItem, callback: () => void) => {
             if (!this.jobs[job.id]) return callback();
 
             const jobTimeout = setTimeout(() => {
@@ -21,13 +28,18 @@ export default class Queue {
                     clearTimeout(jobTimeout);
                     callback();
                 })
-                .catch((err: any) => {
+                .catch((err: unknown) => {
                     clearTimeout(jobTimeout);
 
-                    if (err.level) {
-                        logger.log(err.level, err);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const error = err as any;
+
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions
+                    if (error.level) {
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+                        logger.log(error.level, error);
                     } else {
-                        logger.error(err);
+                        logger.error(error);
                     }
 
                     callback();
@@ -40,14 +52,15 @@ export default class Queue {
      * @param id - ID/Name for job
      * @param job - Function used for Queue item
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     registerJob(id: string, job: (attr: any) => Promise<void>): void {
         if (this.jobs[id]) {
-            logger.error( `A job has been registered which was already registered: ${id}`);
-            logger.error( 'This should not happen');
+            logger.error(`A job has been registered which was already registered: ${id}`);
+            logger.error('This should not happen');
             return;
         }
 
-        logger.debug( 'New queue item has been registered:', id);
+        logger.debug('New queue item has been registered:', id);
         this.jobs[id] = job;
     }
 
@@ -57,8 +70,9 @@ export default class Queue {
      * @param attr - Attributes to be passed to the job
      * @param priority - Priority for the job
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     queueJob(id: string, attr: any, priority: number = 5): void {
-        this.queue.push({ id, attr }, priority);
+        void this.queue.push({ id, attr }, priority);
     }
 
     /**
@@ -66,6 +80,7 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed to the job
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lowPriorityJob(id: string, attr: any): void {
         this.queueJob(id, attr, 20);
     }
@@ -75,6 +90,7 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed the job
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pushJob(id: string, attr: any): void {
         this.queueJob(id, attr, 0);
     }

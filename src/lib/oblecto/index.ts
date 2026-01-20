@@ -90,6 +90,7 @@ export default class Oblecto {
 
         this.database = initDatabase();
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
         this.tvdb = new (TVDB)(this.config.tvdb.key);
         this.tmdb = new MovieDb(this.config.themoviedb.key);
 
@@ -127,7 +128,7 @@ export default class Oblecto {
         this.streamSessionController = new MediaSessionController(this);
 
         this.seedboxController = new SeedboxController(this);
-        this.seedboxController.loadAllSeedboxes();
+        void this.seedboxController.loadAllSeedboxes();
 
         if (this.config.federation.enable) {
             this.federationController = new FederationController(this);
@@ -136,7 +137,7 @@ export default class Oblecto {
             this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
             this.federationMovieIndexer = new FederationMovieIndexer(this);
 
-            this.federationClientController.addAllSyncMasters();
+            void this.federationClientController.addAllSyncMasters();
         }
 
         this.oblectoAPI = new OblectoAPI(this);
@@ -146,11 +147,14 @@ export default class Oblecto {
         this.embyServer = new EmbyEmulation(this);
     }
 
-    close() {
+    close(): void {
         for (const item of Object.keys(this)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             const member = (this as any)[item];
 
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-call
             if (member?.close) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
                 member.close();
             }
         }
