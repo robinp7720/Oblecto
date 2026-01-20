@@ -3,7 +3,7 @@ import { Series } from '../../../../../models/series';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { File } from '../../../../../models/file';
 import { Stream } from '../../../../../models/stream';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-base-to-string, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/no-floating-promises, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-base-to-string, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers';
 import { Op } from 'sequelize';
 

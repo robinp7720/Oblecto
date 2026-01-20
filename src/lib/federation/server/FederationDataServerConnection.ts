@@ -55,9 +55,8 @@ export default class FederationDataServerConnection extends FederationServerConn
 
         for (const result of results) {
             if (this.socket.destroyed) return;
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const file = result.toJSON() as any;
+             
+            const file = result.toJSON();
 
             const fileInfo: Record<string, unknown> = {};
 

@@ -69,8 +69,8 @@ export default class FederationServerConnection {
 
         const key = await fs.readFile(this.oblecto.config.federation.clients[clientId].key);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call
-        this.key = new (NodeRSA as any)(key);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        this.key = new (NodeRSA)(key);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         this.write('CHALLENGE', (this.key as any).encrypt(this.challenge, 'base64') as string);

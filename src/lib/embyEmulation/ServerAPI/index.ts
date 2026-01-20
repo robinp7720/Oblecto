@@ -116,7 +116,7 @@ export default class EmbyServerAPI {
         });
 
         // Error handling middleware
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+         
         this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 

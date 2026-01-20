@@ -29,9 +29,8 @@ export default class TvdbSeriesArtworkRetriever {
         if (episode.tvdbid === null || episode.tvdbid === undefined) throw new DebugExtendableError(`TVDB Episode banner retriever failed for ${episode.episodeName}`);
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const data = await promiseTimeout((this.oblecto.tvdb as Any).getEpisodeById(episode.tvdbid));
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        const data = await promiseTimeout((this.oblecto.tvdb).getEpisodeById(episode.tvdbid));
+         
         return [`https://thetvdb.com/banners/_cache/${data.filename}`];
     }
 
@@ -44,7 +43,7 @@ export default class TvdbSeriesArtworkRetriever {
         if (series.tvdbid === null || series.tvdbid === undefined) throw new DebugExtendableError(`TVDB Series poster retriever failed for ${series.seriesName}`);
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const data = await promiseTimeout((this.oblecto.tvdb as Any).getSeriesPosters(series.tvdbid));
+        const data = await promiseTimeout((this.oblecto.tvdb).getSeriesPosters(series.tvdbid));
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         return data.map((image: any) => `http://thetvdb.com/banners/${image.fileName}`);

@@ -103,12 +103,12 @@ export default class FederationClient {
     }
 
     async challengeHandler(data: string): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const pemKey = await fs.readFile((this.oblecto.config.federation as FederationConfig).key);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call
-        const key = new (NodeRSA as any)(pemKey);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        const key = new (NodeRSA)(pemKey);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const decrypted = key.decrypt(data, 'ascii');
 
         this.write('CHALLENGE', decrypted as string);

@@ -7,7 +7,7 @@ import { File } from '../../../../../models/file';
 import { parseFileId, parseId } from '../../../helpers';
 import { HlsStreamSession } from '../../../../mediaSessions/index.js';
 import logger from '../../../../../submodules/logger';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/no-floating-promises, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/prefer-nullish-coalescing */
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { getLastMediaSource, getPlaybackEntry, upsertPlaybackEntry } from '../../playbackState.js';
 
