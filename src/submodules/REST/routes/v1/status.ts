@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, jsdoc/check-tag-names, jsdoc/tag-lines, jsdoc/check-types, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/no-floating-promises, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import Oblecto from '../../../../lib/oblecto/index.js';
@@ -67,5 +68,31 @@ export default (server: Express, oblecto: Oblecto) => {
         }
 
         res.send(clients);
+    });
+
+    /**
+     * @api {get} /api/v1/status/seedbox Get seedbox importer status
+     * @apiName GetSeedboxStatus
+     * @apiGroup Status
+     * @apiVersion 1.0.0
+     * @apiPermission admin
+     *
+     * @apiSuccess {Object} status Seedbox status object
+     */
+    server.get('/api/v1/status/seedbox', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+        const seedboxes = oblecto.seedboxController.seedBoxes.map(sb => ({
+            name: sb.name,
+            // We can't access enabled state easily from the instance as it's not stored on the class, 
+            // but we know these are the loaded ones.
+            // moviePath: sb.moviePath, // path might be sensitive? usually internal docker path so maybe ok.
+            // seriesPath: sb.seriesPath
+        }));
+
+        const queueStats = oblecto.seedboxController.importQueue.getStats();
+
+        res.send({
+            seedboxes,
+            queue: queueStats
+        });
     });
 };

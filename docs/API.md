@@ -405,6 +405,28 @@ Get a list of all connected realtime clients (e.g., Web UI, remote players).
   ]
   ```
 
+### Seedbox Status
+Get the status of the seedbox importer, including configured seedboxes and import queue statistics.
+
+- **URL:** `/api/v1/status/seedbox`
+- **Method:** `GET`
+- **Permission:** Requires Authentication
+- **Response:** Status object.
+  ```json
+  {
+    "seedboxes": [
+      {
+        "name": "MySeedbox"
+      }
+    ],
+    "queue": {
+      "length": 0,
+      "running": 0,
+      "idle": true
+    }
+  }
+  ```
+
 ## Files
 
 ### Find Duplicates

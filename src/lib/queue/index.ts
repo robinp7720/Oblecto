@@ -94,4 +94,15 @@ export default class Queue {
     pushJob(id: string, attr: any): void {
         this.queueJob(id, attr, 0);
     }
+
+    /**
+     * Get queue statistics
+     */
+    getStats(): { length: number; running: number; idle: boolean } {
+        return {
+            length: this.queue.length(),
+            running: this.queue.running(),
+            idle: this.queue.idle()
+        };
+    }
 }
