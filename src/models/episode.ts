@@ -2,7 +2,7 @@ import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOpt
 
 export class Episode extends Model<InferAttributes<Episode>, InferCreationAttributes<Episode>> {
     declare id: CreationOptional<number>;
-    
+
     declare tvdbid: number | null;
     declare tmdbid: number | null;
     declare imdbid: string | null;
@@ -17,7 +17,7 @@ export class Episode extends Model<InferAttributes<Episode>, InferCreationAttrib
 
     declare firstAired: string | null;
     declare overview: string | null;
-    
+
     declare SeriesId: CreationOptional<number>;
 
     declare createdAt: CreationOptional<Date>;
@@ -25,6 +25,9 @@ export class Episode extends Model<InferAttributes<Episode>, InferCreationAttrib
 }
 
 export const episodeColumns = {
+    id: {
+ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
+},
     tvdbid: {
         type: DataTypes.INTEGER, allowNull: true, unique: true
     },
@@ -45,4 +48,8 @@ export const episodeColumns = {
 
     firstAired: { type: DataTypes.DATEONLY, allowNull: true },
     overview: { type: DataTypes.TEXT, allowNull: true },
+
+    SeriesId: DataTypes.INTEGER,
+    createdAt: DataTypes.DATE,
+    updatedAt: DataTypes.DATE,
 };
