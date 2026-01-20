@@ -10,7 +10,7 @@ export default {
 
     /**
      * @param movie
-     * @returns {boolean}
+     * @returns
      */
     GetTmdbCollection: async function (movie: Movie): Promise<boolean> {
         const response = await tmdb.movieInfo({ id: movie.tmdbid });

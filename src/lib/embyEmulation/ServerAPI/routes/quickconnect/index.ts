@@ -1,6 +1,6 @@
 /**
  * @param server
- * @param {EmbyEmulation} embyEmulation
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     server.get('/quickconnect/enabled', async (req, res) => {

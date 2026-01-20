@@ -147,7 +147,7 @@ export class HlsStreamSession extends MediaSession {
                 }
             })
             .on('error', (error) => {
-                this.segmenterError = error as Error;
+                this.segmenterError = error;
                 logger.error(`HlsSession ${this.sessionId} error:`, error);
             })
             .on('end', () => {
@@ -177,7 +177,7 @@ export class HlsStreamSession extends MediaSession {
         if (this.segmenterStarted) return;
 
         this.segmenterStarted = true;
-        (this.process as FfmpegCommand).run();
+        (this.process).run();
     }
 
     private pauseSegmenter(reason: string = 'lead', lead?: number): void {

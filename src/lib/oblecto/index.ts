@@ -90,7 +90,7 @@ export default class Oblecto {
 
         this.database = initDatabase();
 
-        this.tvdb = new (TVDB as any)(this.config.tvdb.key);
+        this.tvdb = new (TVDB)(this.config.tvdb.key);
         this.tmdb = new MovieDb(this.config.themoviedb.key);
 
         this.queue = new Queue(this.config.queue.concurrency);
@@ -150,7 +150,7 @@ export default class Oblecto {
         for (const item of Object.keys(this)) {
             const member = (this as any)[item];
 
-            if (member && member.close) {
+            if (member?.close) {
                 member.close();
             }
         }

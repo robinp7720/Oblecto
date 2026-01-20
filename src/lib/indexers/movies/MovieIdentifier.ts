@@ -15,9 +15,9 @@ export default class MovieIdentifier extends MediaIdentifier {
     }
     /**
      * Identify a Movie based a file path
-     * @param {string} moviePath File path to the Movie
-     * @param {*} guessitIdentification - Guessit identification object
-     * @returns {Promise<*>} - Movie identification object
+     * @param moviePath File path to the Movie
+     * @param guessitIdentification - Guessit identification object
+     * @returns - Movie identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification | undefined> {

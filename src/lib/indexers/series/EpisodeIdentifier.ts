@@ -22,10 +22,10 @@ export default class EpisodeIdentifier extends MediaIdentifier {
     }
     /**
      * Identify an Episode based a file path and series information
-     * @param {string} path - File path to the Episode
-     * @param {*} guessitIdentification - identification object
-     * @param {Series} series - Series object from Sequalize
-     * @returns {Promise<JSON>} - Episode identification object
+     * @param path - File path to the Episode
+     * @param guessitIdentification - identification object
+     * @param series - Series object from Sequalize
+     * @returns - Episode identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification | undefined> {

@@ -7,7 +7,7 @@ export default class MovieCollector {
     public oblecto: Oblecto;
     /**
      *
-     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param oblecto - Oblecto server instance
      */
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -15,8 +15,8 @@ export default class MovieCollector {
 
     /**
      *
-     * @param {string} directory - Which directory to add to the index queue
-     * @returns {Promise<void>}
+     * @param directory - Which directory to add to the index queue
+     * @returns
      */
     async collectDirectory(directory: string): Promise<void> {
         const files = await recursive(directory);
@@ -28,8 +28,8 @@ export default class MovieCollector {
 
     /**
      *
-     * @param {string} file - File path to add to the index queue
-     * @returns {Promise<void>}
+     * @param file - File path to add to the index queue
+     * @returns
      */
     async collectFile(file: string): Promise<void> {
         const extension = path.parse(file).ext.toLowerCase().replace('.', '');
@@ -41,7 +41,7 @@ export default class MovieCollector {
 
     /**
      *
-     * @returns {Promise<void>}
+     * @returns
      */
     async collectAll(): Promise<void> {
         this.oblecto.config.movies.directories.forEach(directory => {

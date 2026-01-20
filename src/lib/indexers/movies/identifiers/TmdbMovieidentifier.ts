@@ -10,9 +10,9 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
     }
     /**
      * Identify a Movie based a file path
-     * @param {string} moviePath File path to the Movie
-     * @param {*} guessitIdentification - Guessit identification object
-     * @returns {Promise<*>} - Movie identification object
+     * @param moviePath File path to the Movie
+     * @param guessitIdentification - Guessit identification object
+     * @returns - Movie identification object
      */
     async identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification> {
         const query: { query: string; primary_release_year?: number } = { query: guessitIdentification.title };

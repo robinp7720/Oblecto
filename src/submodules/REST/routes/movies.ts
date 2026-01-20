@@ -200,7 +200,7 @@ export default (server: Express, oblecto: any) => {
     server.get('/movie/:id/play', async function (req: Request, res: Response) {
         const movie: any = await Movie.findByPk(req.params.id as string, { include: [{ model: File }] });
 
-        if (!movie || !movie.Files || movie.Files.length === 0) {
+        if (!movie?.Files || movie.Files.length === 0) {
             return res.status(404).send({ message: 'No files found for this movie' });
         }
 

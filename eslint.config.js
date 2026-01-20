@@ -47,14 +47,16 @@ export default tseslint.config(
             ],
             'array-bracket-newline': ['error', { 'multiline': true }],
 
-            '@typescript-eslint/no-unused-vars': ['warn', {
+            '@typescript-eslint/no-unused-vars': [
+'warn', {
                 'argsIgnorePattern': '^_',
                 'varsIgnorePattern': '^_',
                 'caughtErrorsIgnorePattern': '^_'
             }
 ],
             '@typescript-eslint/no-explicit-any': 'warn',
-            '@typescript-eslint/explicit-function-return-type': ['warn', {
+            '@typescript-eslint/explicit-function-return-type': [
+'warn', {
                 'allowExpressions': true,
                 'allowTypedFunctionExpressions': true,
                 'allowHigherOrderFunctions': true
@@ -67,11 +69,13 @@ export default tseslint.config(
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
             '@typescript-eslint/prefer-nullish-coalescing': 'warn',
             '@typescript-eslint/prefer-optional-chain': 'warn',
-            '@typescript-eslint/strict-boolean-expressions': ['warn', {
+            '@typescript-eslint/strict-boolean-expressions': [
+'warn', {
                 'allowString': true,
                 'allowNumber': true,
                 'allowNullableObject': true
-            }],
+            }
+],
 
             // JSDoc rules - focus on documentation quality, not type duplication
             'jsdoc/require-jsdoc': 'off', // Don't force JSDoc everywhere

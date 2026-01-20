@@ -14,11 +14,11 @@ const ALLOWED_SECTIONS = [
 const scrubConfig = (conf: any) => {
     const copy = JSON.parse(JSON.stringify(conf));
 
-    if (copy.authentication && copy.authentication.secret) copy.authentication.secret = '***';
-    if (copy.federation && copy.federation.key) copy.federation.key = '***';
+    if (copy.authentication?.secret) copy.authentication.secret = '***';
+    if (copy.federation?.key) copy.federation.key = '***';
     if (copy.seedboxes) {
         copy.seedboxes.forEach((sb: any) => {
-            if (sb.storageDriverOptions && sb.storageDriverOptions.password) {
+            if (sb.storageDriverOptions?.password) {
                 sb.storageDriverOptions.password = '***';
             }
         });

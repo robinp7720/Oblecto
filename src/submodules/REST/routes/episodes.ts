@@ -115,7 +115,7 @@ export default (server: Express, oblecto: any) => {
         // search for attributes
         const episode: any = await Episode.findByPk(req.params.id as string, { include: [File] });
 
-        if (!episode || !episode.Files || episode.Files.length === 0) {
+        if (!episode?.Files || episode.Files.length === 0) {
             res.status(404).send({ message: 'No files found for this episode' });
             return;
         }

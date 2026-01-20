@@ -27,8 +27,8 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
 
     /**
      * Get all episodes from TVDB from a given TVDB series id
-     * @param {number} tvdbId - TVDBID for the series to get episodes for
-     * @returns {Promise<*>} - Object containing all episodes of a series
+     * @param tvdbId - TVDBID for the series to get episodes for
+     * @returns - Object containing all episodes of a series
      */
     async getEpisodes(tvdbId: number) {
         // TODO: Caching should be moved somewhere else or at least improved. This implementation is terrible
@@ -45,9 +45,9 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
 
     /**
      * Match an episode to given guessit identification
-     * @param {Series} series - series to a match a guessit identification to
-     * @param {*} guessitIdentification - Guessit identification of a file
-     * @returns {Promise<*>} - Match an episode to a guessit Identification
+     * @param series - series to a match a guessit identification to
+     * @param guessitIdentification - Guessit identification of a file
+     * @returns - Match an episode to a guessit Identification
      */
     async retrieveEpisode(series: SeriesIdentification, guessitIdentification: EpisodeGuessitIdentification) {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
@@ -72,10 +72,10 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
 
     /**
      *  Identify an episode using TVDB
-     * @param {string} path - Path to the episode to be identified
-     * @param {*} guessitIdentification - Guessit identification object
-     * @param {Series} series - Series to which the episode should belong
-     * @returns {Promise<{overview: *, tmdbid: *, episodeName: *, firstAired: *, airedSeason: *, airedEpisodeNumber: *}>} - Returns a metadata object for an episode
+     * @param path - Path to the episode to be identified
+     * @param guessitIdentification - Guessit identification object
+     * @param series - Series to which the episode should belong
+     * @returns - Returns a metadata object for an episode
      */
     async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification> {
         const episode = await this.retrieveEpisode(series, guessitIdentification);

@@ -4,7 +4,6 @@ import { extname } from 'path';
 import type Oblecto from '../../oblecto/index.js';
 
 /**
- * @typedef {import('../../oblecto').default} Oblecto
  */
 
 /**
@@ -14,7 +13,7 @@ export default class SeriesCollector {
     public oblecto: Oblecto;
     /**
      *
-     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param oblecto - Oblecto server instance
      */
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -22,12 +21,11 @@ export default class SeriesCollector {
 
     /**
      *  Add all files within a directory to the queue to be indexed
-     * @param {string} directory - Which directory to add to the index queue
-     * @returns {Promise<void>}
+     * @param directory - Which directory to add to the index queue
+     * @returns
      */
     async collectDirectory(directory: string): Promise<void> {
         /**
-         * @type {string[]}
          */
         const files = await recursive(directory);
 
@@ -38,8 +36,8 @@ export default class SeriesCollector {
 
     /**
      *  Queue a file to be indexed
-     * @param {string} file - File path to add to the index queue
-     * @returns {Promise<void>}
+     * @param file - File path to add to the index queue
+     * @returns
      */
     async collectFile(file: string): Promise<void> {
         const extension = extname(file).toLowerCase().replace('.','');
@@ -51,7 +49,7 @@ export default class SeriesCollector {
 
     /**
      * Index all TV Show libraries
-     * @returns {Promise<void>}
+     * @returns
      */
     async collectAll(): Promise<void> {
         this.oblecto.config.tvshows.directories.forEach(directory => {

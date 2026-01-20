@@ -84,8 +84,8 @@ const buildUserDto = (user, embyEmulation) => {
 };
 
 /**
- * @param {*} server
- * @param {EmbyEmulation} embyEmulation
+ * @param server
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     server.get('/users/public', async (req, res) => {
@@ -373,7 +373,7 @@ export default (server, embyEmulation) => {
                 'TotalRecordCount': count,
                 'StartIndex': startIndex
             });
-        } else if (includeItemTypes.includes('episode') || (parsedParentId && parsedParentId.type === 'season')) {
+        } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
             const userId = req.params.userid; // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
             const where = {};
@@ -418,10 +418,10 @@ export default (server, embyEmulation) => {
                 'TotalRecordCount': count,
                 'StartIndex': startIndex
             });
-        } else if (includeItemTypes.includes('season') || (parsedParentId && parsedParentId.type === 'series')) {
+        } else if (includeItemTypes.includes('season') || (parsedParentId?.type === 'series')) {
             let seriesId = null;
 
-            if (parsedParentId && parsedParentId.type === 'series') {
+            if (parsedParentId?.type === 'series') {
                 seriesId = parsedParentId.id;
             }
 

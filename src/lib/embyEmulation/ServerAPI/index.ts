@@ -131,7 +131,7 @@ export default class EmbyServerAPI {
         });
 
         // Start express server
-        this.server = (this.server as Application).listen(8096, () => {
+        this.server = (this.server).listen(8096, () => {
             logger.info('Jellyfin emulation server listening at http://localhost:8096');
         });
     }

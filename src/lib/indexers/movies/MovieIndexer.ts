@@ -24,7 +24,7 @@ export default class MovieIndexer {
     public availableIdentifiers: string[];
     /**
      *
-     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param oblecto - Oblecto server instance
      */
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -67,9 +67,9 @@ export default class MovieIndexer {
 
     /**
      * Index file based on file path
-     * @param {string} moviePath - Path to Movie to be indexed
-     * @param {boolean} doReindex - Whether or not to reindex a file if it has already been indexed
-     * @returns {Promise<void>}
+     * @param moviePath - Path to Movie to be indexed
+     * @param doReindex - Whether or not to reindex a file if it has already been indexed
+     * @returns
      */
     async indexFile(moviePath: string, doReindex?: boolean): Promise<void> {
         const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);

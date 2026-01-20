@@ -33,7 +33,7 @@ export default class TvdbSeriesArtworkRetriever {
     async retrieveEpisodeBanner(episode: Episode): Promise<string[]> {
         if (!episode.tvdbid) throw new DebugExtendableError(`TVDB Episode banner retriever failed for ${episode.episodeName}`);
 
-        const data = await promiseTimeout(this.oblecto.tvdb.getEpisodeById(episode.tvdbid)) as TvdbEpisodeInfo;
+        const data = await promiseTimeout(this.oblecto.tvdb.getEpisodeById(episode.tvdbid));
 
         return [`https://thetvdb.com/banners/_cache/${data.filename}`];
     }
@@ -46,7 +46,7 @@ export default class TvdbSeriesArtworkRetriever {
     async retrieveSeriesPoster(series: Series): Promise<string[]> {
         if (!series.tvdbid) throw new DebugExtendableError(`TVDB Series poster retriever failed for ${series.seriesName}`);
 
-        const data = await promiseTimeout(this.oblecto.tvdb.getSeriesPosters(series.tvdbid)) as TvdbPosterInfo[];
+        const data = await promiseTimeout(this.oblecto.tvdb.getSeriesPosters(series.tvdbid));
 
         return data.map(image => `http://thetvdb.com/banners/${image.fileName}`);
     }

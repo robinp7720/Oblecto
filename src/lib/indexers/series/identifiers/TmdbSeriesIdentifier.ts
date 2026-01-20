@@ -15,9 +15,9 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
     /**
      * Find the most relevant series match from a TMDB Search output
-     * @param {*} tmdbSearch - Search results object
-     * @param {*} guessitIdentification - Guessit identification object
-     * @returns {{first_air_date}|*} - Best result match
+     * @param tmdbSearch - Search results object
+     * @param guessitIdentification - Guessit identification object
+     * @returns - Best result match
      */
     retrieveSeries(tmdbSearch: Array<{ first_air_date?: string }>, guessitIdentification: GuessitIdentification) {
         // If TMDB only found one series that matches, we'll just ignore the date
@@ -39,9 +39,9 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
     /**
      *  Identify the series of a given file
-     * @param {string} path - Path of file to be identified
-     * @param {*} guessitIdentification - Guessit identification object
-     * @returns {Promise<{overview, tmdbid, seriesName}|*>} - Matched identification object
+     * @param path - Path of file to be identified
+     * @param guessitIdentification - Guessit identification object
+     * @returns - Matched identification object
      */
     async identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification> {
         let title: string | string[] = guessitIdentification.title;

@@ -16,9 +16,9 @@ export default class SeriesIdentifier extends MediaIdentifier {
     }
     /**
      * Identify a Series of an Episode based a file path
-     * @param {string} path - File path to the Episode
-     * @param {*} guessitIdentification - Guessit identification object
-     * @returns {Promise<JSON>} - Series identification object
+     * @param path - File path to the Episode
+     * @param guessitIdentification - Guessit identification object
+     * @returns - Series identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification | undefined> {

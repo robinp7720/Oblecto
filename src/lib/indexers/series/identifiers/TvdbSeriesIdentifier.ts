@@ -9,7 +9,7 @@ import type Oblecto from '../../../oblecto/index.js';
 export default class TvdbSeriesIdentifier extends SeriesIdentifier {
     public tvShowCache: Record<string, SeriesIdentification>;
     /**
-     * @param {Oblecto} oblecto - Oblecto instance
+     * @param oblecto - Oblecto instance
      */
     constructor(oblecto: Oblecto) {
         super(oblecto);
@@ -49,12 +49,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             title = title.join(' ');
         }
 
-        const tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title)) as Array<{
-            id: number;
-            seriesName: string;
-            overview?: string;
-            firstAired?: string;
-        }>;
+        const tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title));
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);
 

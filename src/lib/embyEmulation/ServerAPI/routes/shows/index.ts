@@ -7,8 +7,8 @@ import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers'
 import { Op } from 'sequelize';
 
 /**
- * @param {*} server
- * @param {EmbyEmulation} embyEmulation
+ * @param server
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     server.get('/shows/nextup', async (req, res) => {

@@ -60,7 +60,7 @@ export default class SeriesIndexer {
     public availableEpisodeIdentifiers: string[];
     /**
      *
-     * @param {Oblecto} oblecto - Oblecto server instance
+     * @param oblecto - Oblecto server instance
      */
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -99,10 +99,10 @@ export default class SeriesIndexer {
 
     /**
      * Identify and index the series of a given file
-     * @param {File} file - File to be indexed
-     * @param {GuessitIdentification} guessitIdentification - Guessit identification Object
+     * @param file - File to be indexed
+     * @param guessitIdentification - Guessit identification Object
      * @param seriesIdentification
-     * @returns {Promise<Series>} - Matched series
+     * @returns - Matched series
      */
     async indexSeries(seriesIdentification: SeriesIdentification): Promise<Series> {
         const identifiers = ['tvdbid', 'tmdbid'];
@@ -171,8 +171,8 @@ export default class SeriesIndexer {
 
     /**
      * Index a specific file and identify it as a series
-     * @param {string} episodePath - Path to episode to index
-     * @returns {Promise<void>}
+     * @param episodePath - Path to episode to index
+     * @returns
      */
     async indexFile(episodePath: string): Promise<void> {
         const file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);

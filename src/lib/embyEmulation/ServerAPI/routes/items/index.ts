@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  *
  * @param server
- * @param {EmbyEmulation} embyEmulation
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     const sendImageIfExists = async (res, imagePath) => {

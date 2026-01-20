@@ -57,7 +57,7 @@ export default class EmbyEmulation {
             authorization: function (req, done) {
                 const request = req as { query?: Record<string, string> };
 
-                if (!request.query || !request.query.api_key)
+                if (!request.query?.api_key)
                     return done({ statusCode: 403, message: '' });
 
                 (this as { auth?: string }).auth = 'test';
@@ -69,7 +69,7 @@ export default class EmbyEmulation {
         this.primus.on('connection', (spark: any) => {
             const req = spark.request as { query?: Record<string, string> };
 
-            if (!req.query || !req.query.api_key)
+            if (!req.query?.api_key)
                 return spark.disconnect();
 
             this.websocketSessions[req.query.api_key] = spark;

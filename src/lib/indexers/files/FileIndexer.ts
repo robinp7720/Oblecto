@@ -47,7 +47,7 @@ export default class FileIndexer {
     /**
      *
      * @param videoPath
-     * @returns {File}
+     * @returns
      */
     async indexVideoFile(videoPath: string): Promise<File> {
         const parsedPath = path.parse(videoPath);

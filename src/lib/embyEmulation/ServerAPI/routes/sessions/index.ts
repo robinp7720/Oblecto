@@ -8,8 +8,8 @@ import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { deletePlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
 
 /**
- * @param {rest} server
- * @param {EmbyEmulation} embyEmulation
+ * @param server
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     server.post('/sessions/capabilities/:type', async (req, res) => {

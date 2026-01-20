@@ -1,6 +1,6 @@
 /**
- * @param {*} server
- * @param {EmbyEmulation} embyEmulation
+ * @param server
+ * @param embyEmulation
  */
 export default (server, embyEmulation) => {
     server.get('/displaypreferences/usersettings', async (req, res) => {
