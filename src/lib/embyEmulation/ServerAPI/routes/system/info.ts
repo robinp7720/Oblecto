@@ -1,5 +1,8 @@
-export default (server, embyEmulation) => {
-    server.get('/system/info/public', async (req, res) => {
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    server.get('/system/info/public', async (req: Request, res: Response) => {
         res.send({
             'LocalAddress': 'http://oblecto:8096',
             'ServerName': embyEmulation.serverName,
@@ -7,11 +10,11 @@ export default (server, embyEmulation) => {
             'ProductName': 'Jellyfin Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId,
-            'StartupWizardCompleted':	true
+            'StartupWizardCompleted': true
         });
     });
 
-    server.get('/system/info', async (req, res) => {
+    server.get('/system/info', async (req: Request, res: Response) => {
         res.send({
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,
@@ -39,7 +42,7 @@ export default (server, embyEmulation) => {
         });
     });
 
-    server.get('/system/info/storage', async (req, res) => {
+    server.get('/system/info/storage', async (req: Request, res: Response) => {
         const baseStorage = {
             DeviceId: 'oblecto',
             StorageType: 'FileSystem',

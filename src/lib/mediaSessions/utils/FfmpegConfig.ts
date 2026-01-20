@@ -17,7 +17,7 @@ export interface HardwareAccelConfig {
 export class FfmpegConfig {
     /**
      * Get input options for hardware acceleration
-     * @param config
+     * @param config - The application configuration
      */
     static getHardwareAccelInputOptions(config: IConfig): string[] {
         const options: string[] = ['-noaccurate_seek'];
@@ -37,11 +37,11 @@ export class FfmpegConfig {
 
     /**
      * Get the FFmpeg video codec string for the given target codec
-     * @param targetCodec
-     * @param config
+     * @param targetCodec - The target codec to resolve
+     * @param config - The application configuration
      */
     static getVideoCodec(targetCodec: string | null, config: IConfig): string {
-        if (!targetCodec || targetCodec === 'copy') {
+        if (!targetCodec || targetCodec.length === 0 || targetCodec === 'copy') {
             return 'copy';
         }
 
@@ -87,7 +87,7 @@ export class FfmpegConfig {
 
     /**
      * Get output options for basic transcoding
-     * @param config
+     * @param config - The application configuration
      */
     static getTranscodeOutputOptions(config: IConfig): string[] {
         const options = this.getFragmentedMp4Options();
@@ -104,10 +104,10 @@ export class FfmpegConfig {
 
     /**
      * Get output options for HLS streaming
-     * @param segmentDir
-     * @param segmentTemplate
-     * @param baseUrl
-     * @param maxSegments
+     * @param segmentDir - Directory to store segments
+     * @param segmentTemplate - Template for segment filenames
+     * @param baseUrl - Base URL for segment access
+     * @param maxSegments - Maximum number of segments in playlist
      */
     static getHlsOptions(
         segmentDir: string,
@@ -127,8 +127,8 @@ export class FfmpegConfig {
 
     /**
      * Add stream mapping options for selected audio/video streams
-     * @param audioStreamIndex
-     * @param videoStreamIndex
+     * @param audioStreamIndex - Index of the audio stream
+     * @param videoStreamIndex - Index of the video stream
      */
     static getStreamMappingOptions(
         audioStreamIndex?: number,
@@ -148,27 +148,27 @@ export class FfmpegConfig {
 
     /**
      * Check if video codec needs transcoding
-     * @param sourceCodec
-     * @param targetCodecs
+     * @param sourceCodec - The source video codec
+     * @param targetCodecs - List of supported target codecs
      */
     static needsVideoTranscode(
         sourceCodec: string | null,
         targetCodecs: string[]
     ): boolean {
-        if (!sourceCodec) return true;
+        if (!sourceCodec || sourceCodec.length === 0) return true;
         return !targetCodecs.includes(sourceCodec);
     }
 
     /**
      * Check if audio codec needs transcoding
-     * @param sourceCodec
-     * @param targetCodecs
+     * @param sourceCodec - The source audio codec
+     * @param targetCodecs - List of supported target codecs
      */
     static needsAudioTranscode(
         sourceCodec: string | null,
         targetCodecs: string[]
     ): boolean {
-        if (!sourceCodec) return true;
+        if (!sourceCodec || sourceCodec.length === 0) return true;
         return !targetCodecs.includes(sourceCodec);
     }
 }

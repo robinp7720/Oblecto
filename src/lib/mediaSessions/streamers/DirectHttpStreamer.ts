@@ -1,6 +1,5 @@
 import { promises as fs, createReadStream } from 'fs';
 import mimeTypes from 'mime-types';
-import logger from '../../../submodules/logger/index.js';
 import { MediaSession } from '../MediaSession.js';
 
 import type { File } from '../../../models/file.js';
@@ -27,6 +26,7 @@ export class DirectHttpStreamSession extends MediaSession {
         return 'client';
     }
 
+    // eslint-disable-next-line @typescript-eslint/require-await
     async addDestination(destination: StreamDestination): Promise<void> {
         this.clearTimeout();
 
@@ -66,8 +66,7 @@ export class DirectHttpStreamSession extends MediaSession {
     async startStream(): Promise<void> {
         await super.startStream();
 
-        const httpDest = this.destinations[0] as HttpDestination;
-
+        const httpDest = this.destinations[0] as HttpDestination | undefined;
         if (!httpDest) {
             throw new Error('No HTTP destination connected');
         }
@@ -81,9 +80,9 @@ export class DirectHttpStreamSession extends MediaSession {
 
     /**
      * Handle HTTP streaming with range support
-     * @param req
-     * @param res
-     * @param file
+     * @param req - Express Request object
+     * @param res - Express Response object
+     * @param file - File object or path string
      */
     static async handleHttpStream(req: Request, res: Response, file: File | string): Promise<void> {
         let path: string;
@@ -96,18 +95,18 @@ export class DirectHttpStreamSession extends MediaSession {
             size = file.size;
         }
 
-        if (!size) {
+        if (size === null || size === undefined || size === 0) {
             size = (await fs.stat(path)).size;
         }
 
         const mimeType = mimeTypes.lookup(path) || 'application/octet-stream';
 
         // Handle range requests for seeking
-        if (req.headers.range) {
+        if (req.headers.range && req.headers.range.length > 0) {
             const range = req.headers.range;
             const parts = range.replace(/bytes=/, '').split('-');
             const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : size - 1;
+            const end = parts[1] && parts[1].length > 0 ? parseInt(parts[1], 10) : (size || 0) - 1;
             const chunkSize = (end - start) + 1;
 
             const stream = createReadStream(path, { start, end });
@@ -141,7 +140,7 @@ export class DirectHttpStreamer implements Streamer {
     readonly type = 'directhttp';
     readonly priority = 5; // Higher priority than direct
 
-    canHandle(file: File, options: MediaSessionOptions, oblecto: Oblecto): boolean {
+    canHandle(file: File, options: MediaSessionOptions, _oblecto: Oblecto): boolean {
         // Only handle local files
         if (file.host !== 'local') return false;
 
@@ -150,10 +149,10 @@ export class DirectHttpStreamer implements Streamer {
         if (options.streamType === 'recode' || options.streamType === 'transcode') return false;
 
         // Check if format is directly playable (container matches target)
-        const fileFormat = file.extension?.toLowerCase();
+        const fileFormat = file.extension?.toLowerCase() || '';
         const targetFormats = options.target.formats.map(f => f.toLowerCase());
 
-        if (fileFormat && targetFormats.includes(fileFormat)) {
+        if (fileFormat.length > 0 && targetFormats.includes(fileFormat)) {
             return true;
         }
 

@@ -39,7 +39,7 @@ export class DirectStreamSession extends MediaSession {
 
             readStream.pipe(this.outputStream);
 
-            readStream.on('error', (err) => {
+            readStream.on('error', (err: Error) => {
                 logger.error(`DirectStreamSession ${this.sessionId} read error:`, err);
                 this.endSession();
             });
@@ -57,7 +57,7 @@ export class DirectStreamer implements Streamer {
     readonly type = 'direct';
     readonly priority = 10;
 
-    canHandle(file: File, options: MediaSessionOptions, oblecto: Oblecto): boolean {
+    canHandle(file: File, options: MediaSessionOptions, _oblecto: Oblecto): boolean {
         // Only handle local files
         if (file.host !== 'local') return false;
 

@@ -9,7 +9,6 @@ import { FfmpegConfig } from '../utils/FfmpegConfig.js';
 
 import type { File } from '../../../models/file.js';
 import type Oblecto from '../../oblecto/index.js';
-import type { FfmpegCommand } from 'fluent-ffmpeg';
 import type { Request, Response } from 'express';
 import type { Streamer, MediaSessionOptions, StreamDestination } from '../types.js';
 
@@ -255,8 +254,8 @@ export class HlsStreamSession extends MediaSession {
 
     /**
      * Wait for a specific segment file to exist
-     * @param segmentId
-     * @param segmentPath
+     * @param segmentId - The ID of the segment to wait for
+     * @param segmentPath - The path to the segment file
      */
     async waitForSegment(segmentId: number, segmentPath: string): Promise<void> {
         const deadline = Date.now() + SEGMENT_WAIT_TIMEOUT_MS;
@@ -281,7 +280,7 @@ export class HlsStreamSession extends MediaSession {
 
     /**
      * Send the playlist file to a response
-     * @param res
+     * @param res - Express Response object
      */
     async sendPlaylistFile(res: Response): Promise<void> {
         this.onActivityStart();
@@ -317,9 +316,9 @@ export class HlsStreamSession extends MediaSession {
 
     /**
      * Stream a segment file
-     * @param req
-     * @param res
-     * @param segmentId
+     * @param req - Express Request object
+     * @param res - Express Response object
+     * @param segmentId - ID of the segment to stream
      */
     async streamSegment(req: Request, res: Response, segmentId: number): Promise<void> {
         this.onActivityStart();
@@ -366,13 +365,14 @@ export class HlsStreamSession extends MediaSession {
      * Override addDestination - HLS handles destinations differently
      *
      * For HLS, we just track the destination but don't pipe the outputStream
-     * @param destination
+     * @param destination - The destination to add
      */
+    // eslint-disable-next-line @typescript-eslint/require-await
     async addDestination(destination: StreamDestination): Promise<void> {
         this.clearTimeout();
         this.destinations.push(destination);
 
-        const handleDisconnect = () => {
+        const handleDisconnect = (): void => {
             const index = this.destinations.indexOf(destination);
 
             if (index > -1) {
@@ -414,7 +414,7 @@ export class HlsStreamer implements Streamer {
     readonly type = 'hls';
     readonly priority = 50;
 
-    canHandle(file: File, options: MediaSessionOptions, oblecto: Oblecto): boolean {
+    canHandle(file: File, options: MediaSessionOptions, _oblecto: Oblecto): boolean {
         // Only handle local files
         if (file.host !== 'local') return false;
 

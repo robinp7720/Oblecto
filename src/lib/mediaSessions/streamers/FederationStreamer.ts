@@ -29,7 +29,7 @@ export class FederationStreamSession extends MediaSession {
         super.endSession();
 
         // Close federation connection
-        this.federationClient?.closeConnection();
+        void this.federationClient?.closeConnection();
     }
 
     async startStream(): Promise<void> {
@@ -65,7 +65,7 @@ export class FederationStreamSession extends MediaSession {
             .on('start', (cmd) => {
                 logger.info(`FederationSession ${this.sessionId} started: ${cmd}`);
             })
-            .on('error', (err) => {
+            .on('error', (err: Error) => {
                 if (err.message !== 'ffmpeg was killed with signal SIGKILL') {
                     logger.error(`FederationSession ${this.sessionId} error:`, err);
                 }

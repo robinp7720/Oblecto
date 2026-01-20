@@ -1,6 +1,6 @@
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import { createMediaSources, formatFileId, formatId, formatMediaItem, parseFileId, parseId, parseUuid } from '../../../helpers';
+import { createMediaSources, formatFileId, formatId, formatMediaItem, MediaItem, parseFileId, parseId, parseUuid, toSearchHint } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
 import { Op } from 'sequelize';
 import { Series } from '../../../../../models/series';
@@ -13,21 +13,24 @@ import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { getLastMediaSource, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
 import { v4 as uuidv4 } from 'uuid';
 
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
 /**
  *
  * @param server
  * @param embyEmulation
  */
-export default (server, embyEmulation) => {
-    const sendImageIfExists = async (res, imagePath) => {
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    const sendImageIfExists = async (res: Response, imagePath: string | null | undefined): Promise<boolean> => {
         if (!imagePath || !(await fileExists(imagePath))) return false;
         res.sendFile(imagePath);
         return true;
     };
 
-    const normalizeImageType = (rawType) => (rawType || '').toString().toLowerCase();
-    const normalizeQueryList = (query, ...keys) => {
-        const values = [];
+    const normalizeImageType = (rawType: any): string => (rawType || '').toString().toLowerCase();
+    const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
+        const values: any[] = [];
 
         for (const key of keys) {
             if (query[key] === undefined) continue;
@@ -46,21 +49,21 @@ export default (server, embyEmulation) => {
             .map(value => value.trim())
             .filter(value => value.length > 0);
     };
-    const normalizeQueryString = (query, ...keys) => {
+    const normalizeQueryString = (query: Record<string, any>, ...keys: string[]): string => {
         const values = normalizeQueryList(query, ...keys);
 
         return values.length > 0 ? values.join(',') : '';
     };
-    const normalizeItemTypes = (query) => {
+    const normalizeItemTypes = (query: Record<string, any>): string[] => {
         return normalizeQueryList(query, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
             .map(value => value.toLowerCase());
     };
-    const toSearchHint = (item, type) => {
+    const toSearchHint = (item: any, type: string): any => {
         const id = formatId(item.id, type);
         const name = item.movieName || item.seasonName || item.episodeName || item.seriesName;
         const productionYearRaw = (item.releaseDate || item.firstAired || '').substring(0, 4);
         const productionYear = Number.isFinite(parseInt(productionYearRaw, 10)) ? parseInt(productionYearRaw, 10) : null;
-        const hint = {
+        const hint: Record<string, any> = {
             Id: id,
             Name: name,
             Type: type.charAt(0).toUpperCase() + type.slice(1),
@@ -71,15 +74,15 @@ export default (server, embyEmulation) => {
         };
 
         if (type === 'episode') {
-            hint.IndexNumber = parseInt(item.airedEpisodeNumber);
-            hint.ParentIndexNumber = parseInt(item.airedSeason);
+            hint.IndexNumber = parseInt(item.airedEpisodeNumber, 10);
+            hint.ParentIndexNumber = parseInt(item.airedSeason, 10);
             hint.Series = item.Series ? item.Series.seriesName : null;
             hint.ThumbImageTag = 'thumb';
         }
 
         return hint;
     };
-    const shuffleItems = (items) => {
+    const shuffleItems = (items: any[]): any[] => {
         for (let i = items.length - 1; i > 0; i -= 1) {
             const j = Math.floor(Math.random() * (i + 1));
 
@@ -88,7 +91,7 @@ export default (server, embyEmulation) => {
         return items;
     };
 
-    const readQueryNumber = (query, ...keys) => {
+    const readQueryNumber = (query: Record<string, any>, ...keys: string[]): number | null => {
         for (const key of keys) {
             if (query[key] !== undefined) {
                 const parsed = parseInt(query[key], 10);
@@ -99,7 +102,7 @@ export default (server, embyEmulation) => {
         return null;
     };
 
-    const chooseSizeKey = (sizeMap, query) => {
+    const chooseSizeKey = (sizeMap: any, query: Record<string, any>): string | null => {
         if (!sizeMap || Object.keys(sizeMap).length === 0) return null;
         const target = readQueryNumber(query, 'maxwidth', 'maxheight', 'width', 'height', 'fillwidth', 'fillheight');
         const entries = Object.entries(sizeMap)
@@ -122,14 +125,14 @@ export default (server, embyEmulation) => {
         return entries[entries.length - 1].key;
     };
 
-    const findFirstExistingImage = async (res, candidates) => {
+    const findFirstExistingImage = async (res: Response, candidates: (string | null | undefined)[]): Promise<boolean> => {
         for (const candidate of candidates) {
             if (await sendImageIfExists(res, candidate)) return true;
         }
         return false;
     };
 
-    const resolveImageCandidates = (item, type, imageType, query) => {
+    const resolveImageCandidates = (item: any, type: string, imageType: string, query: Record<string, any>): (string | null | undefined)[] => {
         const artwork = embyEmulation.oblecto.artworkUtils;
         const config = embyEmulation.oblecto.config.artwork;
         const normalized = normalizeImageType(imageType);
@@ -139,8 +142,8 @@ export default (server, embyEmulation) => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.moviePosterPath(item, sizeKey),
-                    artwork.moviePosterPath(item, null),
+                    artwork.moviePosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.moviePosterPath(item, undefined) ?? undefined,
                 ];
             }
 
@@ -148,8 +151,8 @@ export default (server, embyEmulation) => {
                 const sizeKey = chooseSizeKey(config.fanart, query);
 
                 return [
-                    artwork.movieFanartPath(item, sizeKey),
-                    artwork.movieFanartPath(item, null),
+                    artwork.movieFanartPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.movieFanartPath(item, undefined) ?? undefined,
                 ];
             }
         }
@@ -159,8 +162,8 @@ export default (server, embyEmulation) => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath(item, sizeKey),
-                    artwork.seriesPosterPath(item, null),
+                    artwork.seriesPosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath(item, undefined) ?? undefined,
                 ];
             }
 
@@ -168,8 +171,8 @@ export default (server, embyEmulation) => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath(item, sizeKey),
-                    artwork.seriesPosterPath(item, null),
+                    artwork.seriesPosterPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath(item, undefined) ?? undefined,
                 ];
             }
         }
@@ -177,16 +180,16 @@ export default (server, embyEmulation) => {
         if (type === 'episode') {
             if (normalized === 'primary' || normalized === 'banner' || normalized === 'thumb') {
                 const sizeKey = chooseSizeKey(config.banner, query);
-                const candidates = [
-                    artwork.episodeBannerPath(item, sizeKey),
-                    artwork.episodeBannerPath(item, null),
+                const candidates: (string | undefined)[] = [
+                    artwork.episodeBannerPath(item, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.episodeBannerPath(item, undefined) ?? undefined,
                 ];
 
                 if (item.Series) {
                     const seriesSize = chooseSizeKey(config.poster, query);
 
-                    candidates.push(artwork.seriesPosterPath(item.Series, seriesSize));
-                    candidates.push(artwork.seriesPosterPath(item.Series, null));
+                    candidates.push(artwork.seriesPosterPath(item.Series, (seriesSize ?? undefined) as string | undefined) ?? undefined);
+                    candidates.push(artwork.seriesPosterPath(item.Series, undefined) ?? undefined);
                 }
                 return candidates;
             }
@@ -197,8 +200,8 @@ export default (server, embyEmulation) => {
                 const sizeKey = chooseSizeKey(config.poster, query);
 
                 return [
-                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, sizeKey),
-                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) }, null),
+                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) } as any, (sizeKey ?? undefined) as string | undefined) ?? undefined,
+                    artwork.seriesPosterPath({ id: Math.floor(item.id / 1000) } as any, undefined) ?? undefined,
                 ];
             }
         }
@@ -206,8 +209,8 @@ export default (server, embyEmulation) => {
         return [];
     };
 
-    const handleItemImageRequest = async (req, res, imageTypeOverride = null) => {
-        const { item, type } = await resolveItemById(req.params.mediaid);
+    const handleItemImageRequest = async (req: Request, res: Response, imageTypeOverride: string | null = null): Promise<any> => {
+        const { item, type } = await resolveItemById(String(req.params.mediaid));
 
         if (!item) return res.status(404).send();
 
@@ -215,12 +218,12 @@ export default (server, embyEmulation) => {
         const imageIndex = req.params.imageindex ?? req.query.imageindex ?? req.query.imageIndex;
 
         if (imageIndex !== undefined) {
-            const parsedIndex = parseInt(imageIndex, 10);
+            const parsedIndex = parseInt(String(imageIndex), 10);
 
             if (!Number.isFinite(parsedIndex) || parsedIndex !== 0) return res.status(404).send();
         }
 
-        const candidates = resolveImageCandidates(item, type, requestedType, req.query || {});
+        const candidates = resolveImageCandidates(item, String(type || ''), String(requestedType), (req.query || {}) as Record<string, any>);
 
         if (candidates.length === 0) return res.status(404).send();
 
@@ -231,8 +234,8 @@ export default (server, embyEmulation) => {
         return res.status(404).send();
     };
 
-    const buildMovieInclude = (userId) => {
-        const include = [
+    const buildMovieInclude = (userId: string | null): any[] => {
+        const include: any[] = [
             {
                 model: File,
                 include: [{ model: Stream }]
@@ -250,8 +253,8 @@ export default (server, embyEmulation) => {
         return include;
     };
 
-    const buildEpisodeInclude = (userId) => {
-        const include = [Series, { model: File, include: [{ model: Stream }] }];
+    const buildEpisodeInclude = (userId: string | null): any[] => {
+        const include: any[] = [Series, { model: File, include: [{ model: Stream }] }];
 
         if (userId) {
             include.push({
@@ -264,7 +267,7 @@ export default (server, embyEmulation) => {
         return include;
     };
 
-    const resolveItemById = async (mediaId, userId = null) => {
+    const resolveItemById = async (mediaId: string, userId: string | null = null): Promise<{ item: any; type: string | null }> => {
         const parsed = parseId(mediaId);
         const numericId = parsed.id;
         let resolvedType = parsed.type;
@@ -280,6 +283,7 @@ export default (server, embyEmulation) => {
             const seriesId = Math.floor(numericId / 1000);
 
             const series = await Series.findByPk(seriesId);
+            if (!series) return { item: null, type: null };
             const seasonNum = numericId % 1000;
 
             logger.debug(series.seriesName);
@@ -313,25 +317,25 @@ export default (server, embyEmulation) => {
         return { item, type: resolvedType };
     };
 
-    server.get('/items/:mediaid', async (req, res) => {
-        const userId = req.query.userId || req.query.UserId || req.query.userid;
+    server.get('/items/:mediaid', async (req: Request, res: Response) => {
+        const userId = String(req.query.userId || req.query.UserId || req.query.userid || '');
         const parsedUserId = userId ? parseUuid(userId) : null;
-        const { item, type } = await resolveItemById(req.params.mediaid, parsedUserId);
+        const { item, type } = await resolveItemById(String(req.params.mediaid), parsedUserId as string | null);
 
         if (item) {
-            res.send(formatMediaItem(item, type, embyEmulation));
+            res.send(formatMediaItem(item, String(type || ''), embyEmulation));
         } else {
             res.status(404).send('Item not found');
         }
     });
 
-    server.get('/items', async (req, res) => {
-        let items = [];
-        const includeItemTypes = normalizeItemTypes(req.query);
-        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
-        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
-        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
-        const sortBy = normalizeQueryList(req.query, 'SortBy', 'sortBy', 'sortby').map(value => value.toLowerCase());
+    server.get('/items', async (req: Request, res: Response) => {
+        let items: any[] = [];
+        const includeItemTypes = normalizeItemTypes(req.query as Record<string, any>);
+        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
+        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex || '0'), 10) || 0;
+        const limit = parseInt(String(req.query.Limit || req.query.limit || '100'), 10) || 100;
+        const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby').map(value => value.toLowerCase());
         const perTypeLimit = limit + startIndex;
         const wantsRandom = sortBy.includes('random');
         const wantsMovie = includeItemTypes.includes('movie');
@@ -351,18 +355,18 @@ export default (server, embyEmulation) => {
         let totalCount = 0;
 
         if (wantsMovie) {
-            let where = null;
+            let where: any = null;
 
             if (searchTerm) {
                 where = { movieName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const count = await Movie.count({ where });
+            const count = await Movie.count({ where } as any);
 
-            totalCount += count;
+            totalCount += (count as unknown as number);
 
             const results = await Movie.findAll({
-                where,
+                where: where as any,
                 include: [{ model: File, include: [{ model: Stream }] }],
                 limit: perTypeLimit,
                 offset: startIndex,
@@ -373,19 +377,19 @@ export default (server, embyEmulation) => {
         }
 
         if (wantsSeries) {
-            let where = null;
+            let where: any = null;
 
             if (searchTerm) {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const count = await Series.count({ where });
+            const count = await Series.count({ where } as any);
 
-            totalCount += count;
+            totalCount += (count as unknown as number);
 
-            const sortByValue = normalizeQueryString(req.query, 'SortBy', 'sortBy', 'sortby');
-            const sortOrder = normalizeQueryString(req.query, 'SortOrder', 'sortOrder', 'sortorder') || 'Ascending';
-            const order = [];
+            const sortByValue = normalizeQueryString(req.query as any, 'SortBy', 'sortBy', 'sortby');
+            const sortOrder = normalizeQueryString(req.query as any, 'SortOrder', 'sortOrder', 'sortorder') || 'Ascending';
+            const order: any[] = [];
 
             if (sortByValue) {
                 const parts = sortByValue.split(',');
@@ -418,10 +422,10 @@ export default (server, embyEmulation) => {
         }
 
         if (wantsEpisode) {
-            const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
-            const userId = req.query.userId || req.query.UserId || req.query.userid;
+            const parentId = String(req.query.ParentId || req.query.parentId || req.query.parentid || '');
+            const userId = String(req.query.userId || req.query.UserId || req.query.userid || '');
             const parsedUserId = userId ? parseUuid(userId) : null;
-            const where = {};
+            const where: any = {};
 
             if (parentId) {
                 const parsed = parseId(parentId);
@@ -438,11 +442,11 @@ export default (server, embyEmulation) => {
                 where.episodeName = { [Op.like]: `%${searchTerm}%` };
             }
 
-            const count = await Episode.count({ where });
+            const count = await Episode.count({ where } as any);
 
-            totalCount += count;
+            totalCount += (count as unknown as number);
 
-            const include = [Series, { model: File, include: [{ model: Stream }] }];
+            const include: any[] = [Series, { model: File, include: [{ model: Stream }] }];
 
             if (parsedUserId) {
                 include.push({
@@ -453,8 +457,8 @@ export default (server, embyEmulation) => {
             }
 
             const results = await Episode.findAll({
-                where,
-                include,
+                where: where as any,
+                include: include as any,
                 limit: perTypeLimit,
                 offset: startIndex,
                 order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
@@ -493,7 +497,7 @@ export default (server, embyEmulation) => {
                     }
                 } else {
                     const episodes = await Episode.findAll({
-                        where: { SeriesId: seriesId },
+                        where: { SeriesId: seriesId } as any,
                         attributes: ['airedSeason'],
                         order: [['airedSeason', 'ASC']]
                     });
@@ -503,19 +507,19 @@ export default (server, embyEmulation) => {
                     episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
 
                     items = [];
-                    const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+                    const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => a - b);
 
                     // Apply limit/offset to seasons list
                     const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
 
                     for (const seasonNum of pagedSeasons) {
-                        const pseudoId = seriesId * 1000 + parseInt(seasonNum);
-                        const seasonObj = {
+                        const pseudoId = seriesId * 1000 + parseInt(String(seasonNum), 10);
+                        const seasonObj: MediaItem = {
                             id: pseudoId,
                             seasonName: 'Season ' + seasonNum,
                             seriesName: series.seriesName,
                             SeriesId: seriesId,
-                            indexNumber: seasonNum
+                            indexNumber: Number(seasonNum)
                         };
 
                         items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
@@ -532,7 +536,7 @@ export default (server, embyEmulation) => {
         if (wantsRandom) {
             finalItems = shuffleItems(finalItems);
         } else {
-            finalItems = aggregatedItems.sort((a, b) => {
+            finalItems = aggregatedItems.sort((a: any, b: any) => {
                 const nameA = (a.Name || '').toLowerCase();
                 const nameB = (b.Name || '').toLowerCase();
 
@@ -601,10 +605,13 @@ export default (server, embyEmulation) => {
 
         let file = files[0];
         const token = getEmbyToken(req);
+
+        if (!token) return res.status(401).send();
+
         const mediaSourceId = getRequestValue(req, 'MediaSourceId');
         const playSessionId = getRequestValue(req, 'PlaySessionId') || uuidv4();
-        const existingPlayback = getPlaybackEntry(embyEmulation, token, playSessionId);
-        const lastMediaSource = getLastMediaSource(embyEmulation, token, req.params.mediaid);
+        const existingPlayback = getPlaybackEntry(embyEmulation as any, token, playSessionId);
+        const lastMediaSource = getLastMediaSource(embyEmulation as any, token, req.params.mediaid);
 
         const resolvedMediaSourceId = mediaSourceId ?? existingPlayback?.mediaSourceId ?? lastMediaSource;
 
@@ -619,12 +626,12 @@ export default (server, embyEmulation) => {
             }
         }
 
-        upsertPlaybackEntry(embyEmulation, token, {
+        upsertPlaybackEntry(embyEmulation as any, token, {
             playSessionId,
             itemId: req.params.mediaid,
             mediaSourceId: file?.id ?? null
         });
-        setLastMediaSource(embyEmulation, token, req.params.mediaid, file?.id ?? null);
+        setLastMediaSource(embyEmulation as any, token, req.params.mediaid, file?.id ?? null);
 
         res.send({
             'MediaSources': createMediaSources(files),
@@ -787,12 +794,14 @@ export default (server, embyEmulation) => {
     server.get('/items/filters', async (req, res) => { res.send({}); });
     server.get('/items/filters2', async (req, res) => { res.send({}); });
     server.get('/items/:itemid/images', async (req, res) => { res.send([]); });
-    server.get('/items/:mediaid/images/:imagetype', async (req, res) => handleItemImageRequest(req, res));
-    server.get('/items/:mediaid/images/:imagetype/:imageindex', async (req, res) => handleItemImageRequest(req, res));
+    server.get('/items/:mediaid/images/:imagetype', async (req: Request, res: Response) => handleItemImageRequest(req, res));
+    server.get('/items/:mediaid/images/:imagetype/:imageindex', async (req: Request, res: Response) => handleItemImageRequest(req, res));
     server.get('/items/:itemid/images/:imagetype/:imageindex/index', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/instantmix', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/items/:itemid/instantmix', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
     server.get('/items/:itemid/externalidinfos', async (req, res) => { res.send([]); });
 
     server.post('/items/remotesearch/apply/:itemid', async (req, res) => { res.status(204).send(); });
@@ -810,65 +819,89 @@ export default (server, embyEmulation) => {
     server.get('/items/:itemid/contenttype', async (req, res) => { res.send({}); }); // Guessing response
     server.get('/items/:itemid/metadataeditor', async (req, res) => { res.send({}); });
     server.get('/items/:itemid/ancestors', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/criticreviews', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/items/:itemid/criticreviews', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
     server.get('/items/:itemid/download', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/file', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/themesongs', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
-    server.get('/items/:itemid/themevideos', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/items/:itemid/themesongs', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
+    server.get('/items/:itemid/themevideos', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
     server.get('/items/counts', async (req, res) => { res.send({}); });
-    server.get('/items/:itemid/remoteimages', async (req, res) => { res.send({
-        Images: [], TotalRecordCount: 0, Providers: []
-    }); });
+    server.get('/items/:itemid/remoteimages', async (req, res) => {
+        res.send({
+            Images: [], TotalRecordCount: 0, Providers: []
+        });
+    });
     server.get('/items/:itemid/remoteimages/download', async (req, res) => { res.status(404).send('Not Found'); });
     server.get('/items/:itemid/remoteimages/providers', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/remotesearch/subtitles/:language', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/remotesearch/subtitles/:subtitleid', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/suggestions', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
-    server.get('/items/:itemid/intros', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/items/suggestions', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
+    server.get('/items/:itemid/intros', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
     server.get('/items/:itemid/localtrailers', async (req, res) => { res.send([]); });
     server.get('/items/:itemid/specialfeatures', async (req, res) => { res.send([]); });
-    server.get('/items/root', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/items/root', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
 
     // Movies
-    server.get('/movies/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/movies/:itemid/similar', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
     server.get('/movies/recommendations', async (req, res) => { res.send([]); });
 
     // Shows
-    server.get('/shows/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
-    server.get('/shows/upcoming', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/shows/:itemid/similar', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
+    server.get('/shows/upcoming', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
 
     // Trailers
-    server.get('/trailers', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
-    server.get('/trailers/:itemid/similar', async (req, res) => { res.send({
-        Items: [], TotalRecordCount: 0, StartIndex: 0
-    }); });
+    server.get('/trailers', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
+    server.get('/trailers/:itemid/similar', async (req, res) => {
+        res.send({
+            Items: [], TotalRecordCount: 0, StartIndex: 0
+        });
+    });
 
     // Search
     server.get('/search/hints', async (req, res) => {
-        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
-        const includeItemTypes = normalizeItemTypes(req.query);
-        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
-        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
+        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
+        const includeItemTypes = normalizeItemTypes(req.query as any);
+        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex), 10) || 0;
+        const limit = parseInt(String(req.query.Limit || req.query.limit), 10) || 100;
         const wantsMovie = includeItemTypes.length === 0 || includeItemTypes.includes('movie');
         const wantsSeries = includeItemTypes.length === 0 || includeItemTypes.includes('series');
         const wantsEpisode = includeItemTypes.length === 0 || includeItemTypes.includes('episode');
@@ -878,7 +911,7 @@ export default (server, embyEmulation) => {
             return res.send({ SearchHints: [], TotalRecordCount: 0 });
         }
 
-        const hints = [];
+        const hints: Record<string, unknown>[] = [];
         let totalCount = 0;
 
         if (wantsMovie) {
@@ -927,7 +960,7 @@ export default (server, embyEmulation) => {
             hints.push(...results.map(ep => toSearchHint(ep, 'episode')));
         }
 
-        const sorted = hints.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
+        const sorted = hints.sort((a: any, b: any) => (a.Name || '').localeCompare(b.Name || ''));
         const paged = sorted.slice(startIndex, startIndex + limit);
 
         return res.send({

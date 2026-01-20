@@ -11,23 +11,29 @@ import { deletePlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '..
  * @param server
  * @param embyEmulation
  */
-export default (server, embyEmulation) => {
-    server.post('/sessions/capabilities/:type', async (req, res) => {
-        embyEmulation.sessions[req.headers.emby.Token].capabilities = req.query;
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    server.post('/sessions/capabilities/:type', async (req: Request, res: Response) => {
+        const token = getEmbyToken(req);
+        if (token && embyEmulation.sessions[token]) {
+            embyEmulation.sessions[token].capabilities = req.query;
+        }
 
         res.send();
     });
 
-    server.post('/sessions/playing', async (req, res) => {
+    server.post('/sessions/playing', async (req: Request, res: Response) => {
         const token = getEmbyToken(req);
         const params = { ...req.query, ...req.body };
 
         if (token && embyEmulation.sessions[token]) {
-            embyEmulation.sessions[token].playSession = params;
+            (embyEmulation.sessions[token] as any).playSession = params;
         }
 
         if (token && embyEmulation.websocketSessions[token]) {
-            embyEmulation.websocketSessions[token].write({
+            (embyEmulation.websocketSessions[token] as any).write({
                 MessageType: 'Play',
                 Data: params
             });
@@ -36,21 +42,21 @@ export default (server, embyEmulation) => {
         const playSessionId = getRequestValue(req, 'PlaySessionId');
         const mediaSourceId = getRequestValue(req, 'MediaSourceId');
 
-        if (playSessionId) {
-            upsertPlaybackEntry(embyEmulation, token, {
+        if (playSessionId && token) {
+            upsertPlaybackEntry(embyEmulation as any, token, {
                 playSessionId,
                 itemId: params.ItemId,
                 mediaSourceId
             });
             if (params.ItemId && mediaSourceId !== undefined) {
-                setLastMediaSource(embyEmulation, token, params.ItemId, mediaSourceId);
+                setLastMediaSource(embyEmulation as any, token, String(params.ItemId), String(mediaSourceId));
             }
         }
 
         res.send();
     });
 
-    server.post('/sessions/playing/progress', async (req, res) => {
+    server.post('/sessions/playing/progress', async (req: Request, res: Response) => {
         const token = getEmbyToken(req);
 
         if (!token || !embyEmulation.sessions[token]) {
@@ -59,12 +65,12 @@ export default (server, embyEmulation) => {
 
         const session = embyEmulation.sessions[token];
         const userId = session.Id;
-        const params = { ...req.query, ...req.body };
+        const params: any = { ...req.query, ...req.body };
         const { ItemId, PositionTicks } = params;
         const playSessionId = getRequestValue(req, 'PlaySessionId');
 
-        if (playSessionId) {
-            upsertPlaybackEntry(embyEmulation, token, {
+        if (playSessionId && token) {
+            upsertPlaybackEntry(embyEmulation as any, token, {
                 playSessionId,
                 itemId: ItemId,
             });
@@ -77,15 +83,15 @@ export default (server, embyEmulation) => {
 
         try {
             if (type === 'episode') {
-                const episode = await Episode.findByPk(id, { include: [File] });
+                const episode: any = await Episode.findByPk(id, { include: [File] });
 
                 if (episode) {
                     const duration = episode.Files?.[0]?.duration || (episode.runtime * 60) || 0;
                     const progress = duration > 0 ? time / duration : 0;
 
                     const [track, created] = await TrackEpisode.findOrCreate({
-                        where: { userId, EpisodeId: id },
-                        defaults: { time, progress }
+                        where: { userId, EpisodeId: id } as any,
+                        defaults: { time, progress, userId, EpisodeId: id } as any
                     });
 
                     if (!created) {
@@ -96,15 +102,15 @@ export default (server, embyEmulation) => {
                     }
                 }
             } else if (type === 'movie') {
-                const movie = await Movie.findByPk(id, { include: [File] });
+                const movie: any = await Movie.findByPk(id, { include: [File] });
 
                 if (movie) {
                     const duration = movie.Files?.[0]?.duration || (movie.runtime * 60) || 0;
                     const progress = duration > 0 ? time / duration : 0;
 
                     const [track, created] = await TrackMovie.findOrCreate({
-                        where: { userId, MovieId: id },
-                        defaults: { time, progress }
+                        where: { userId, MovieId: id } as any,
+                        defaults: { time, progress, userId, MovieId: id } as any
                     });
 
                     if (!created) {
@@ -127,10 +133,10 @@ export default (server, embyEmulation) => {
     server.post('/sessions/playing/stopped', async (req, res) => {
         const token = getEmbyToken(req);
         const playSessionId = getRequestValue(req, 'PlaySessionId')
-            || embyEmulation.sessions?.[token]?.playSession?.PlaySessionId;
+            || (token && embyEmulation.sessions?.[token] ? (embyEmulation.sessions[token] as any).playSession?.PlaySessionId : undefined);
 
-        if (playSessionId) {
-            deletePlaybackEntry(embyEmulation, token, playSessionId);
+        if (playSessionId && token) {
+            deletePlaybackEntry(embyEmulation as any, token, playSessionId);
         }
         res.status(204).send();
     });

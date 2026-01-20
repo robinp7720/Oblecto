@@ -3,14 +3,17 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
 import { User } from '../../../../../models/user';
 import { Stream } from '../../../../../models/stream';
-import { formatUuid, parseUuid, parseId, formatMediaItem, formatId } from '../../../helpers';
+import { formatUuid, parseUuid, parseId, formatMediaItem, formatId, MediaItem } from '../../../helpers';
 import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import logger from '../../../../../submodules/logger';
 import { Op } from 'sequelize';
 
-const buildUserDto = (user, embyEmulation) => {
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, unknown> => {
     const HasPassword = user.password !== '';
 
     return {
@@ -87,18 +90,18 @@ const buildUserDto = (user, embyEmulation) => {
  * @param server
  * @param embyEmulation
  */
-export default (server, embyEmulation) => {
-    server.get('/users/public', async (req, res) => {
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    server.get('/users/public', async (req: Request, res: Response) => {
         res.send([]);
     });
 
-    server.get('/users', async (req, res) => {
+    server.get('/users', async (req: Request, res: Response) => {
         const users = await User.findAll();
 
         res.send(users.map((user) => buildUserDto(user, embyEmulation)));
     });
 
-    server.post('/users/authenticatebyname', async (req, res) => {
+    server.post('/users/authenticatebyname', async (req: Request, res: Response) => {
         const sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
@@ -107,61 +110,66 @@ export default (server, embyEmulation) => {
         const session = embyEmulation.sessions[sessionId];
 
         res.send({
-            'User':{
+            'User': {
                 'Name': session.Name,
                 'ServerId': session.ServerId,
                 'Id': formatUuid(session.Id),
-                'PrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'PrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
                 'HasPassword': session.HasPassword,
                 'HasConfiguredPassword': session.HasConfiguredPassword,
                 'HasConfiguredEasyPassword': session.HasConfiguredEasyPassword,
                 'EnableAutoLogin': session.EnableAutoLogin,
                 'LastLoginDate': session.LastLoginDate,
                 'LastActivityDate': session.LastActivityDate,
-                'Configuration':{
-                    'AudioLanguagePreference':'','PlayDefaultAudioTrack':true,'SubtitleLanguagePreference':'','DisplayMissingEpisodes':false,'GroupedFolders':[],'SubtitleMode':'Default','DisplayCollectionsView':false,'EnableLocalPassword':true,'OrderedViews':['9d7ad6afe9afa2dab1a2f6e00ad28fa6','f137a2dd21bbc1b99aa5c0f6bf02a805','a656b907eb3a73532e40e44b968d0225'],'LatestItemsExcludes':[],'MyMediaExcludes':[],'HidePlayedInLatest':false,'RememberAudioSelections':true,'RememberSubtitleSelections':true,'EnableNextEpisodeAutoPlay':true,'CastReceiverId':'F007D354'
+                'Configuration': {
+                    'AudioLanguagePreference': '', 'PlayDefaultAudioTrack': true, 'SubtitleLanguagePreference': '', 'DisplayMissingEpisodes': false, 'GroupedFolders': [], 'SubtitleMode': 'Default', 'DisplayCollectionsView': false, 'EnableLocalPassword': true, 'OrderedViews': ['9d7ad6afe9afa2dab1a2f6e00ad28fa6', 'f137a2dd21bbc1b99aa5c0f6bf02a805', 'a656b907eb3a73532e40e44b968d0225'], 'LatestItemsExcludes': [], 'MyMediaExcludes': [], 'HidePlayedInLatest': false, 'RememberAudioSelections': true, 'RememberSubtitleSelections': true, 'EnableNextEpisodeAutoPlay': true, 'CastReceiverId': 'F007D354'
                 },
-                'Policy':{
-                    'IsAdministrator':true,'IsHidden':false,'EnableCollectionManagement':true,'EnableSubtitleManagement':true,'EnableLyricManagement':false,'IsDisabled':false,'BlockedTags':[],'AllowedTags':[],'EnableUserPreferenceAccess':true,'AccessSchedules':[],'BlockUnratedItems':[],'EnableRemoteControlOfOtherUsers':true,'EnableSharedDeviceControl':true,'EnableRemoteAccess':true,'EnableLiveTvManagement':true,'EnableLiveTvAccess':true,'EnableMediaPlayback':true,'EnableAudioPlaybackTranscoding':true,'EnableVideoPlaybackTranscoding':true,'EnablePlaybackRemuxing':true,'ForceRemoteSourceTranscoding':false,'EnableContentDeletion':true,'EnableContentDeletionFromFolders':[],'EnableContentDownloading':true,'EnableSyncTranscoding':true,'EnableMediaConversion':true,'EnabledDevices':[],'EnableAllDevices':true,'EnabledChannels':[],'EnableAllChannels':true,'EnabledFolders':[],'EnableAllFolders':true,'InvalidLoginAttemptCount':0,'LoginAttemptsBeforeLockout':-1,'MaxActiveSessions':0,'EnablePublicSharing':true,'BlockedMediaFolders':[],'BlockedChannels':[],'RemoteClientBitrateLimit':0,'AuthenticationProviderId':'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider','PasswordResetProviderId':'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider','SyncPlayAccess':'CreateAndJoinGroups'
+                'Policy': {
+                    'IsAdministrator': true, 'IsHidden': false, 'EnableCollectionManagement': true, 'EnableSubtitleManagement': true, 'EnableLyricManagement': false, 'IsDisabled': false, 'BlockedTags': [], 'AllowedTags': [], 'EnableUserPreferenceAccess': true, 'AccessSchedules': [], 'BlockUnratedItems': [], 'EnableRemoteControlOfOtherUsers': true, 'EnableSharedDeviceControl': true, 'EnableRemoteAccess': true, 'EnableLiveTvManagement': true, 'EnableLiveTvAccess': true, 'EnableMediaPlayback': true, 'EnableAudioPlaybackTranscoding': true, 'EnableVideoPlaybackTranscoding': true, 'EnablePlaybackRemuxing': true, 'ForceRemoteSourceTranscoding': false, 'EnableContentDeletion': true, 'EnableContentDeletionFromFolders': [], 'EnableContentDownloading': true, 'EnableSyncTranscoding': true, 'EnableMediaConversion': true, 'EnabledDevices': [], 'EnableAllDevices': true, 'EnabledChannels': [], 'EnableAllChannels': true, 'EnabledFolders': [], 'EnableAllFolders': true, 'InvalidLoginAttemptCount': 0, 'LoginAttemptsBeforeLockout': -1, 'MaxActiveSessions': 0, 'EnablePublicSharing': true, 'BlockedMediaFolders': [], 'BlockedChannels': [], 'RemoteClientBitrateLimit': 0, 'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider', 'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider', 'SyncPlayAccess': 'CreateAndJoinGroups'
                 }
             },
-            'SessionInfo':{
-                'PlayState':{
-                    'CanSeek':false,'IsPaused':false,'IsMuted':false,'RepeatMode':'RepeatNone','PlaybackOrder':'Default'
+            'SessionInfo': {
+                'PlayState': {
+                    'CanSeek': false, 'IsPaused': false, 'IsMuted': false, 'RepeatMode': 'RepeatNone', 'PlaybackOrder': 'Default'
                 },
-                'AdditionalUsers':[],
-                'Capabilities':{
-                    'PlayableMediaTypes':[],'SupportedCommands':[],'SupportsMediaControl':false,'SupportsPersistentIdentifier':true
+                'AdditionalUsers': [],
+                'Capabilities': {
+                    'PlayableMediaTypes': [], 'SupportedCommands': [], 'SupportsMediaControl': false, 'SupportsPersistentIdentifier': true
                 },
-                'RemoteEndPoint':'192.168.176.206',
-                'PlayableMediaTypes':[],
+                'RemoteEndPoint': '192.168.176.206',
+                'PlayableMediaTypes': [],
                 'Id': sessionId,
                 'UserId': formatUuid(session.Id),
                 'UserName': session.Name,
-                'Client':'Delfin',
+                'Client': 'Delfin',
                 'LastActivityDate': session.LastActivityDate,
-                'LastPlaybackCheckIn':'0001-01-01T00:00:00.0000000Z',
-                'DeviceName':'tria',
-                'DeviceId':'d0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
-                'ApplicationVersion':'0.4.8',
-                'IsActive':true,
-                'SupportsMediaControl':false,
-                'SupportsRemoteControl':false,
-                'NowPlayingQueue':[],
-                'NowPlayingQueueFullItems':[],
-                'HasCustomDeviceName':false,
+                'LastPlaybackCheckIn': '0001-01-01T00:00:00.0000000Z',
+                'DeviceName': 'tria',
+                'DeviceId': 'd0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
+                'ApplicationVersion': '0.4.8',
+                'IsActive': true,
+                'SupportsMediaControl': false,
+                'SupportsRemoteControl': false,
+                'NowPlayingQueue': [],
+                'NowPlayingQueueFullItems': [],
+                'HasCustomDeviceName': false,
                 'ServerId': session.ServerId,
-                'UserPrimaryImageTag':'d62dc9f98bfae3c2c8a1bbe092d94e1c',
-                'SupportedCommands':[]
+                'UserPrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'SupportedCommands': []
             },
             'AccessToken': sessionId,
             'ServerId': session.ServerId
         });
     });
 
-    server.get('/users/:userid', async (req, res) => {
+    server.get('/users/:userid', async (req: Request, res: Response) => {
         // let user = await User.findByPk(parseUuid(req.query.userid));
         const user = await User.findByPk(1);
+
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
 
         res.send(buildUserDto(user, embyEmulation));
     });
@@ -266,8 +274,8 @@ export default (server, embyEmulation) => {
 
     server.get('/users/:userid/items', async (req, res) => {
         let items = [];
-        const normalizeQueryList = (query, ...keys) => {
-            const values = [];
+        const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
+            const values: any[] = [];
 
             for (const key of keys) {
                 if (query[key] === undefined) continue;
@@ -286,12 +294,12 @@ export default (server, embyEmulation) => {
                 .map(value => value.trim())
                 .filter(value => value.length > 0);
         };
-        const includeItemTypes = normalizeQueryList(req.query, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
+        const includeItemTypes = normalizeQueryList(req.query as Record<string, any>, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
             .map(value => value.toLowerCase());
-        const searchTerm = req.query.SearchTerm || req.query.searchTerm || req.query.searchterm;
-        const startIndex = parseInt(req.query.StartIndex || req.query.startIndex || req.query.startindex) || 0;
-        const limit = parseInt(req.query.Limit || req.query.limit) || 100;
-        const parentId = req.query.ParentId || req.query.parentId || req.query.parentid;
+        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
+        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex || '0'), 10) || 0;
+        const limit = parseInt(String(req.query.Limit || req.query.limit || '100'), 10) || 100;
+        const parentId = String(req.query.ParentId || req.query.parentId || req.query.parentid || '');
 
         let parsedParentId = null;
 
@@ -302,7 +310,7 @@ export default (server, embyEmulation) => {
         if (includeItemTypes.includes('movie')) {
             const count = await Movie.count();
 
-            let where = null;
+            let where: any = {};
 
             if (searchTerm) {
                 where = { movieName: { [Op.like]: `%${searchTerm}%` } };
@@ -325,19 +333,19 @@ export default (server, embyEmulation) => {
         } else if (includeItemTypes.includes('series')) {
             const count = await Series.count();
 
-            let where = null;
+            let where: any = {};
 
             if (searchTerm) {
                 where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
             }
 
-            const sortBy = normalizeQueryList(req.query, 'SortBy', 'sortBy', 'sortby')
+            const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby')
                 .map(value => value.toLowerCase())
                 .join(',');
-            const sortOrder = normalizeQueryList(req.query, 'SortOrder', 'sortOrder', 'sortorder')
+            const sortOrder = normalizeQueryList(req.query as Record<string, any>, 'SortOrder', 'sortOrder', 'sortorder')
                 .map(value => value.toLowerCase())
                 .join(',') || 'ascending';
-            const order = [];
+            const order: any[] = [];
 
             if (sortBy) {
                 const parts = sortBy.split(',');
@@ -376,7 +384,7 @@ export default (server, embyEmulation) => {
         } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
             const userId = req.params.userid; // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
-            const where = {};
+            const where: any = {};
 
             if (parsedParentId) {
                 if (parsedParentId.type === 'series') {
@@ -400,7 +408,7 @@ export default (server, embyEmulation) => {
                     model: TrackEpisode,
                     required: false,
                     where: { userId: parsedUserId }
-                });
+                } as any);
             }
 
             const results = await Episode.findAll({
@@ -450,18 +458,18 @@ export default (server, embyEmulation) => {
             episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
 
             items = [];
-            const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+            const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => Number(a) - Number(b));
 
             const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
 
-            for (const seasonNum of pagedSeasons) {
-                const pseudoId = seriesId * 1000 + parseInt(seasonNum);
-                const seasonObj = {
+            for (const seasonNum of pagedSeasons as any[]) {
+                const pseudoId = seriesId * 1000 + parseInt(String(seasonNum), 10);
+                const seasonObj: MediaItem = {
                     id: pseudoId,
                     seasonName: 'Season ' + seasonNum,
                     seriesName: series.seriesName,
                     SeriesId: seriesId,
-                    indexNumber: seasonNum
+                    indexNumber: Number(seasonNum)
                 };
 
                 items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
@@ -488,7 +496,7 @@ export default (server, embyEmulation) => {
         let resolvedType = parsed.type;
         let item = null;
 
-        const resolveMovie = async (movieId) => Movie.findByPk(movieId, {
+        const resolveMovie = async (movieId: number | string): Promise<Movie | null> => Movie.findByPk(movieId, {
             include: [
                 {
                     model: File,
@@ -502,7 +510,7 @@ export default (server, embyEmulation) => {
             ]
         });
 
-        const resolveEpisode = async (episodeId) => Episode.findByPk(episodeId, {
+        const resolveEpisode = async (episodeId: number | string): Promise<Episode | null> => Episode.findByPk(episodeId, {
             include: [
                 { model: Series },
                 {
@@ -517,7 +525,7 @@ export default (server, embyEmulation) => {
             ]
         });
 
-        const resolveSeries = async (seriesId) => Series.findByPk(seriesId);
+        const resolveSeries = async (seriesId: number | string): Promise<Series | null> => Series.findByPk(seriesId);
 
         if (resolvedType === 'movie' && Number.isFinite(numericId)) {
             item = await resolveMovie(numericId);
@@ -593,7 +601,7 @@ export default (server, embyEmulation) => {
         });
     });
 
-    const getLatestItems = async (req, res) => {
+    const getLatestItems = async (req: Request, res: Response): Promise<void> => {
         const parentId = req.query.parentId || req.query.parentid;
 
         if (parentId === 'movies') {
@@ -621,8 +629,8 @@ export default (server, embyEmulation) => {
                     'CriticRating': 82,
                     'OfficialRating': 'PG-13',
                     'CommunityRating': 2.6,
-                    'RunTimeTicks': movie.runtime * 10000000,
-                    'ProductionYear': movie.releaseDate.substring(0, 4),
+                    'RunTimeTicks': (movie.runtime || 0) * 10000000,
+                    'ProductionYear': (movie.releaseDate || '').substring(0, 4),
                     'IsFolder': false,
                     'Type': 'Movie',
                     'PrimaryImageAspectRatio': 0.6666666666666666,

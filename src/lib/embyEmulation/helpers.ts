@@ -34,6 +34,10 @@ type MediaFile = {
 
 const normalizeBoolean = (value: unknown): boolean => value === true || value === 1;
 
+const firstNonEmpty = (...args: (string | undefined | null)[]): string => {
+    return args.find(arg => arg !== null && arg !== undefined && arg.length > 0) || '';
+};
+
 const resolveDefaultStreamIndex = (streams: MediaStream[], codecType: string): number => {
     const matching = streams.filter((stream) => stream.codec_type === codecType);
 
@@ -134,8 +138,14 @@ export const createStreamsList = (streams: MediaStream[]): Record<string, unknow
 export const formatFileId = (value: unknown): string => {
     if (value === null || value === undefined) return '';
 
-    const raw = String(value).trim();
+    let raw = '';
+    if (typeof value === 'string') raw = value.trim();
+    else if (typeof value === 'number' || typeof value === 'boolean') raw = String(value);
 
+    if (!raw) return '';
+
+    // The original code had an unreachable `return ''` here, which is now removed.
+    // The next `if (!raw) return '';` is redundant but kept as per instruction to only apply the specific change.
     if (!raw) return '';
 
     const normalized = raw.replace(/-/g, '');
@@ -160,11 +170,13 @@ export const formatFileId = (value: unknown): string => {
 };
 
 export const parseFileId = (value: unknown): number | string | null => {
-    if (value === null || value === undefined) return null;
+    let raw: string | null = null;
 
-    if (typeof value === 'number') return value;
+    if (typeof value === 'string') raw = value.trim();
+    else if (typeof value === 'number') return value;
+    else if (typeof value === 'boolean') raw = String(value);
 
-    const raw = String(value).trim();
+    if (!raw) return null;
 
     if (!raw) return null;
 
@@ -266,7 +278,13 @@ export const parseId = (value: unknown): { id: number; type: string } => {
         return { id: NaN, type: 'unknown' };
     }
 
-    const raw = String(value).trim();
+    let raw = '';
+    if (typeof value === 'string') raw = value.trim();
+    else if (typeof value === 'number' || typeof value === 'boolean') raw = String(value);
+
+    if (!raw) {
+        return { id: NaN, type: 'unknown' };
+    }
 
     if (!raw) {
         return { id: NaN, type: 'unknown' };
@@ -315,26 +333,27 @@ export const parseId = (value: unknown): { id: number; type: string } => {
     };
 };
 
-type MediaItem = {
+export type MediaItem = {
     id: number | string;
-    movieName?: string;
-    seasonName?: string;
-    episodeName?: string;
-    seriesName?: string;
-    releaseDate?: string;
-    firstAired?: string;
-    rating?: string;
-    popularity?: number;
-    runtime?: number;
-    overview?: string;
-    airedSeason?: string;
-    airedEpisodeNumber?: string;
-    Series?: { id: number; seriesName?: string };
+    movieName?: string | null;
+    seasonName?: string | null;
+    episodeName?: string | null;
+    seriesName?: string | null;
+    releaseDate?: string | null;
+    firstAired?: string | null;
+    rating?: string | null;
+    popularity?: number | null;
+    runtime?: number | null;
+    overview?: string | null;
+    airedSeason?: string | number | null;
+    airedEpisodeNumber?: string | number | null;
+    Series?: { id: number; seriesName?: string | null };
     SeriesId?: number;
     indexNumber?: string | number;
     Files?: MediaFile[];
     TrackMovies?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
     TrackEpisodes?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
+    name?: string | null;
 };
 
 type EmbyEmulationLike = {
@@ -344,18 +363,18 @@ type EmbyEmulationLike = {
 export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: EmbyEmulationLike): Record<string, unknown> => {
     const id = formatId(item.id, type);
 
-    const res: Record<string, any> = {
-        'Name': item.movieName || item.seasonName || item.episodeName || item.seriesName,
+    const res: Record<string, unknown> = {
+        'Name': firstNonEmpty(item.movieName, item.seasonName, item.episodeName, item.seriesName),
         'ServerId': embyEmulation.serverId,
         'Id': id,
         'HasSubtitles': true,
         'Container': 'mkv',
-        'PremiereDate': item.releaseDate || item.firstAired,
+        'PremiereDate': firstNonEmpty(item.releaseDate, item.firstAired) || undefined,
         'CriticRating': 82,
         'OfficialRating': item.rating || 'PG-13',
-        'CommunityRating': item.popularity || 2.6,
+        'CommunityRating': item.popularity ?? 2.6,
         'RunTimeTicks': (item.runtime || 0) * 60 * 10000000,
-        'ProductionYear': (item.releaseDate || item.firstAired || '').substring(0, 4),
+        'ProductionYear': firstNonEmpty(item.releaseDate, item.firstAired).substring(0, 4),
         'IsFolder': type === 'series' || type === 'season',
         'Type': type.charAt(0).toUpperCase() + type.slice(1),
         'PrimaryImageAspectRatio': 0.6666666666666666,
@@ -381,15 +400,15 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
 
     if (type === 'episode') {
         const seriesId = item.Series ? item.Series.id : item.SeriesId;
-        const seasonNumber = parseInt(item.airedSeason ?? '0', 10);
+        const seasonNumber = parseInt(String(item.airedSeason ?? '0'), 10);
 
-        res.IndexNumber = parseInt(item.airedEpisodeNumber ?? '0', 10);
+        res.IndexNumber = parseInt(String(item.airedEpisodeNumber ?? '0'), 10);
         res.ParentIndexNumber = seasonNumber;
-        res.SeriesName = item.Series ? item.Series.seriesName : '';
+        res.SeriesName = item.Series?.seriesName ?? '';
         res.SeriesId = seriesId ? formatId(seriesId, 'series') : '';
         res.SeasonName = 'Season ' + item.airedSeason;
         res.PrimaryImageAspectRatio = 1.7777777777777777;
-        res.ImageTags = { ...res.ImageTags, Thumb: 'thumb' };
+        res.ImageTags = { ...(res.ImageTags as Record<string, string>), Thumb: 'thumb' };
 
         if (seriesId && Number.isFinite(seasonNumber)) {
             const seasonId = (seriesId * 1000) + seasonNumber;
@@ -416,16 +435,35 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
         res.MediaSources = createMediaSources(item.Files);
     }
 
-    const track = item.TrackMovies ? item.TrackMovies[0] : (item.TrackEpisodes ? item.TrackEpisodes[0] : null);
+    const track = item.TrackMovies?.[0] || item.TrackEpisodes?.[0];
 
     if (track) {
-        res.UserData.PlaybackPositionTicks = (track.time || 0) * 10000000;
-        res.UserData.Played = (track.progress ?? 0) >= 1;
-        res.UserData.PlayCount = res.UserData.Played ? 1 : 0;
+        const userData = res.UserData as Record<string, unknown>;
+        userData.PlaybackPositionTicks = (track.time ?? 0) * 10000000;
+        userData.Played = (track.progress ?? 0) >= 1;
+        userData.PlayCount = userData.Played ? 1 : 0;
         if (track.updatedAt) {
-            res.UserData.LastPlayedDate = track.updatedAt.toISOString();
+            userData.LastPlayedDate = track.updatedAt.toISOString();
         }
     }
 
     return res;
+};
+
+export const toSearchHint = (item: MediaItem, type: string): Record<string, unknown> => {
+    const id = formatId(item.id, type);
+    const name = firstNonEmpty(item.movieName, item.seasonName, item.episodeName, item.seriesName, item.name);
+
+    return {
+        'ItemId': id,
+        'Id': id,
+        'Name': name,
+        'MatchedTerm': name,
+        'Type': type.charAt(0).toUpperCase() + type.slice(1),
+        'MediaType': 'Video',
+        'ProductionYear': (firstNonEmpty(item.releaseDate, item.firstAired) || '').substring(0, 4),
+        'RunTimeTicks': (item.runtime || 0) * 10000000,
+        'PrimaryImageAspectRatio': 0.6666666666666666,
+        'IndexNumber': item.indexNumber,
+    };
 };

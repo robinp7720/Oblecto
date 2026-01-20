@@ -8,11 +8,10 @@ import type { File } from '../../models/file.js';
 import type Oblecto from '../oblecto/index.js';
 import type { FfmpegCommand } from 'fluent-ffmpeg';
 import type { Response } from 'express';
-import type { MediaSessionOptions,
+import type {MediaSessionOptions,
     StreamDestination,
     MediaSessionState,
-    MediaSessionInfo,
-    MediaSessionEvents, } from './types.js';
+    MediaSessionInfo,} from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 10000;
 
@@ -72,7 +71,7 @@ export class MediaSession extends EventEmitter {
         this.videoCodec = this.targetVideoCodecs[0] || 'h264';
         this.audioCodec = this.targetAudioCodecs[0] || 'aac';
 
-        this.offset = options.offset || 0;
+        this.offset = options.offset ?? 0;
 
         // Initialize streams
         this.inputStream = new Stream.PassThrough();
@@ -137,6 +136,11 @@ export class MediaSession extends EventEmitter {
      * Add a destination for the stream output
      * @param destination
      */
+    /**
+     * Add a destination for the stream output
+     * @param destination - The destination to add
+     */
+    // eslint-disable-next-line @typescript-eslint/require-await
     async addDestination(destination: StreamDestination): Promise<void> {
         this.clearTimeout();
         this.destinations.push(destination);
@@ -167,6 +171,10 @@ export class MediaSession extends EventEmitter {
      * Remove a destination
      * @param destination
      */
+    /**
+     * Remove a destination
+     * @param destination - The destination to remove
+     */
     protected removeDestination(destination: StreamDestination): void {
         const index = this.destinations.indexOf(destination);
 
@@ -183,6 +191,10 @@ export class MediaSession extends EventEmitter {
     /**
      * Start streaming - subclasses should override this
      */
+    /**
+     * Start streaming - subclasses should override this
+     */
+    // eslint-disable-next-line @typescript-eslint/require-await
     async startStream(): Promise<void> {
         this.clearTimeout();
         this.state = 'starting';

@@ -81,7 +81,7 @@ export class TranscodeStreamSession extends MediaSession {
     protected async selectStreams(): Promise<string[]> {
         try {
             // getStreams is a Sequelize association mixin
-            const streams = await (this.file as any).getStreams() as Stream[];
+            const streams = await this.file.getStreams();
 
             if (!streams || streams.length === 0) {
                 return [];
@@ -150,17 +150,17 @@ export class TranscodeStreamer implements Streamer {
         if (oblecto.config.transcoding?.transcodeEverything) return true;
 
         // Check if format/codec conversion is needed
-        const fileFormat = file.extension?.toLowerCase();
+        const fileFormat = file.extension?.toLowerCase() || '';
         const targetFormats = options.target.formats.map(f => f.toLowerCase());
 
         // Needs transcode if format doesn't match
-        if (fileFormat && !targetFormats.includes(fileFormat)) return true;
+        if (fileFormat.length > 0 && !targetFormats.includes(fileFormat)) return true;
 
         // Needs transcode if video codec doesn't match
-        if (file.videoCodec && !options.target.videoCodecs.includes(file.videoCodec)) return true;
+        if (file.videoCodec && file.videoCodec.length > 0 && !options.target.videoCodecs.includes(file.videoCodec)) return true;
 
         // Needs transcode if audio codec doesn't match
-        if (file.audioCodec && !options.target.audioCodecs.includes(file.audioCodec)) return true;
+        if (file.audioCodec && file.audioCodec.length > 0 && !options.target.audioCodecs.includes(file.audioCodec)) return true;
 
         return false;
     }

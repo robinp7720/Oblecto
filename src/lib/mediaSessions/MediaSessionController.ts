@@ -50,6 +50,10 @@ export class MediaSessionController {
      * Register a streamer plugin
      * @param streamer
      */
+    /**
+     * Register a streamer plugin
+     * @param streamer - The streamer to register
+     */
     registerStreamer(streamer: Streamer): void {
         if (this.streamers.has(streamer.type)) {
             logger.warn(`Streamer type "${streamer.type}" already registered, overwriting`);
@@ -61,6 +65,10 @@ export class MediaSessionController {
     /**
      * Unregister a streamer plugin
      * @param type
+     */
+    /**
+     * Unregister a streamer plugin
+     * @param type - The type string of the streamer to unregister
      */
     unregisterStreamer(type: string): boolean {
         return this.streamers.delete(type);
@@ -94,12 +102,12 @@ export class MediaSessionController {
 
     /**
      * Create a session using the appropriate streamer
-     * @param file
-     * @param options
+     * @param file - File to stream
+     * @param options - Session options
      */
     private createSession(file: File, options: MediaSessionOptions): MediaSession {
         // If explicit type requested, use that streamer
-        if (options.streamType) {
+        if (options.streamType && options.streamType.length > 0) {
             const streamer = this.streamers.get(options.streamType);
 
             if (streamer) {
@@ -118,8 +126,8 @@ export class MediaSessionController {
 
     /**
      * Select the best streamer for the given file and options
-     * @param file
-     * @param options
+     * @param file - File to stream
+     * @param options - Session options
      */
     private selectStreamer(file: File, options: MediaSessionOptions): Streamer {
         // Sort streamers by priority (lower = higher priority)
@@ -142,18 +150,10 @@ export class MediaSessionController {
         throw new Error('No suitable streamer found for file');
     }
 
-    /**
-     * Get an existing session by ID
-     * @param sessionId
-     */
     getSession(sessionId: string): MediaSession | undefined {
         return this.sessions[sessionId];
     }
 
-    /**
-     * Check if a session exists
-     * @param sessionId
-     */
     sessionExists(sessionId: string): boolean {
         return sessionId in this.sessions;
     }

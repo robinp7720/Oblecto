@@ -10,9 +10,12 @@ import { Op } from 'sequelize';
  * @param server
  * @param embyEmulation
  */
-export default (server, embyEmulation) => {
-    server.get('/shows/nextup', async (req, res) => {
-        const userIdParam = req.query.UserId || req.query.userId || req.query.userid;
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    server.get('/shows/nextup', async (req: Request, res: Response) => {
+        const userIdParam = String(req.query.UserId || req.query.userId || req.query.userid || '');
         const userId = userIdParam ? parseUuid(userIdParam) : null;
 
         if (!userId) {
@@ -34,10 +37,10 @@ export default (server, embyEmulation) => {
         });
 
         // 2. For each series, find the "next" episode
-        const seriesMap = new Map();
-        const nextEpisodes = [];
+        const seriesMap = new Map<number, boolean>();
+        const nextEpisodes: Episode[] = [];
 
-        for (const track of tracked) {
+        for (const track of tracked as any[]) {
             const seriesId = track.Episode.SeriesId;
 
             if (seriesMap.has(seriesId)) continue;
@@ -58,7 +61,7 @@ export default (server, embyEmulation) => {
                             },
                             { airedSeason: { [Op.gt]: track.Episode.airedSeason } }
                         ]
-                    },
+                    } as any,
                     include: [Series, { model: File, include: [{ model: Stream }] }],
                     order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
                 });
@@ -97,12 +100,12 @@ export default (server, embyEmulation) => {
             order: [['airedSeason', 'ASC']]
         });
 
-        const distinctSeasons = new Set();
+        const distinctSeasons = new Set<string>();
 
-        episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
+        episodes.forEach(ep => distinctSeasons.add(String(ep.airedSeason)));
 
-        const items = [];
-        const sortedSeasons = Array.from(distinctSeasons).sort((a, b) => a - b);
+        const items: any[] = [];
+        const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => a - b);
 
         for (const seasonNum of sortedSeasons) {
             const pseudoId = seriesId * 1000 + parseInt(seasonNum);
@@ -126,12 +129,12 @@ export default (server, embyEmulation) => {
 
     server.get('/shows/:seriesid/episodes', async (req, res) => {
         const { id } = parseId(req.params.seriesid);
-        const where = { SeriesId: id };
+        const where: any = { SeriesId: id };
 
         if (req.query.season) {
-            where.airedSeason = parseInt(req.query.season);
+            where.airedSeason = parseInt(String(req.query.season), 10);
         } else if (req.query.SeasonId || req.query.seasonid) {
-            const parsed = parseId(req.query.SeasonId || req.query.seasonid);
+            const parsed = parseId(String(req.query.SeasonId || req.query.seasonid));
 
             if (parsed.type === 'season') {
                 const seasonNum = parsed.id % 1000;
@@ -140,10 +143,10 @@ export default (server, embyEmulation) => {
             }
         }
 
-        const userIdParam = req.query.userid || req.query.UserId || req.query.userId;
+        const userIdParam = String(req.query.userid || req.query.UserId || req.query.userId || '');
         const parsedUserId = userIdParam ? parseUuid(userIdParam) : null;
 
-        const include = [Series, { model: File, include: [{ model: Stream }] }];
+        const include: any[] = [Series, { model: File, include: [{ model: Stream }] }];
 
         if (parsedUserId) {
             include.push({

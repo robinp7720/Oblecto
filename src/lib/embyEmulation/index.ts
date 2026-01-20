@@ -3,7 +3,7 @@ import EmbyServerAPI from './ServerAPI/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../models/user.js';
 import bcrypt from 'bcrypt';
-import Primus from 'primus';
+import Primus, { Spark } from 'primus';
 import { timeout } from 'async';
 import logger from '../../submodules/logger/index.js';
 
@@ -35,8 +35,8 @@ export default class EmbyEmulation {
     public primus: Primus;
 
     /**
-     *
-     * @param oblecto
+     * Create a new Emby emulation server
+     * @param oblecto - The main Oblecto instance
      */
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -57,7 +57,7 @@ export default class EmbyEmulation {
             authorization: function (req, done) {
                 const request = req as { query?: Record<string, string> };
 
-                if (!request.query?.api_key)
+                if (!request.query?.api_key || request.query.api_key.length === 0)
                     return done({ statusCode: 403, message: '' });
 
                 (this as { auth?: string }).auth = 'test';
@@ -66,11 +66,11 @@ export default class EmbyEmulation {
             }
         });
 
-        this.primus.on('connection', (spark: any) => {
+        this.primus.on('connection', (spark: Spark) => {
             const req = spark.request as { query?: Record<string, string> };
 
-            if (!req.query?.api_key)
-                return spark.disconnect();
+            if (!req.query?.api_key || req.query.api_key.length === 0)
+                return spark.end(undefined, { reconnect: false });
 
             this.websocketSessions[req.query.api_key] = spark;
 
@@ -109,15 +109,23 @@ export default class EmbyEmulation {
         });
     }
 
+    /**
+     * Handles user login by authenticating credentials and creating a session.
+     * @param username - The username for login.
+     * @param password - The password for login.
+     * @returns A promise that resolves with the session ID if login is successful.
+     * @throws If the username is incorrect or the password does not match.
+     */
     async handleLogin(username: string, password: string): Promise<string> {
         const user = await User.findOne({
             where: { username },
             attributes: ['username', 'name', 'email', 'password', 'id']
         });
 
-        if (!user) throw Error('Incorrect username');
+        if (!user?.password) throw Error('Incorrect username');
 
-        if (!await bcrypt.compare(password, user.password))
+        const match = await bcrypt.compare(password, user.password);
+        if (!match)
             throw Error('Password incorrect');
 
         const HasPassword = user.password !== '';

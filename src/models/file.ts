@@ -1,4 +1,5 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute } from 'sequelize';
+import type { Stream } from './stream.js';
 
 export class File extends Model<InferAttributes<File>, InferCreationAttributes<File>> {
     declare id: CreationOptional<number>;
@@ -24,12 +25,16 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
+
+    // Mixins
+    declare getStreams: HasManyGetAssociationsMixin<Stream>;
+    declare Streams?: NonAttribute<Stream[]>;
 }
 
 export const fileColumns = {
     id: {
- type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true 
-},
+        type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true
+    },
     host: DataTypes.STRING,
     path: DataTypes.STRING,
 
