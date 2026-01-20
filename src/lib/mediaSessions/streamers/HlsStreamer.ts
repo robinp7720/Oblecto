@@ -13,9 +13,9 @@ import type { FfmpegCommand } from 'fluent-ffmpeg';
 import type { Request, Response } from 'express';
 import type { Streamer, MediaSessionOptions, StreamDestination } from '../types.js';
 
-const PLAYLIST_WAIT_TIMEOUT_MS = 15000; // 15 seconds for playlist creation
+const PLAYLIST_WAIT_TIMEOUT_MS = 60000; // 60 seconds for playlist creation
 const PLAYLIST_POLL_INTERVAL_MS = 50;
-const SEGMENT_WAIT_TIMEOUT_MS = 10000; // 10 seconds for segments
+const SEGMENT_WAIT_TIMEOUT_MS = 30000; // 30 seconds for segments
 const HLS_SEGMENT_DURATION_SEC = 4;
 const HLS_TIMEOUT_BUFFER_MS = 10000;
 const HLS_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
