@@ -1,6 +1,9 @@
-export default (server, embyEmulation) => {
-    server.get('/web/configurationpages', async (req, res) => {
-        const enableInMainMenu = (req.query?.enableinmainmenu || req.query?.enableInMainMenu || '').toString().toLowerCase();
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+
+export default (server: Application, _embyEmulation: EmbyEmulation): void => {
+    server.get('/web/configurationpages', (req: Request, res: Response) => {
+        const enableInMainMenu = String((req.query.enableinmainmenu as string | undefined) ?? (req.query.enableInMainMenu as string | undefined) ?? '').toLowerCase();
         const includeInMenu = enableInMainMenu === '' || enableInMainMenu === 'true';
 
         res.send([
@@ -15,7 +18,7 @@ export default (server, embyEmulation) => {
         ]);
     });
 
-    server.get('/config.json', async (req, res) => {
+    server.get('/config.json', (_req: Request, res: Response) => {
         res.send({
             'includeCorsCredentials': false,
             'multiserver': false,
@@ -67,7 +70,7 @@ export default (server, embyEmulation) => {
             ]
         });
     });
-    server.get('/web/configurationpage', async (req, res) => {
+    server.get('/web/configurationpage', (_req: Request, res: Response) => {
         // Spec says ConfigurationPage, seemingly a file or specific page info?
         // Typically serves HTML or JS.
         res.status(404).send('Not Found');

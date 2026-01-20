@@ -367,8 +367,7 @@ export class HlsStreamSession extends MediaSession {
      * For HLS, we just track the destination but don't pipe the outputStream
      * @param destination - The destination to add
      */
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async addDestination(destination: StreamDestination): Promise<void> {
+    addDestination(destination: StreamDestination): Promise<void> {
         this.clearTimeout();
         this.destinations.push(destination);
 
@@ -391,6 +390,8 @@ export class HlsStreamSession extends MediaSession {
                 logger.error(`HlsSession ${this.sessionId} destination error:`, err);
                 handleDisconnect();
             });
+
+        return Promise.resolve();
     }
 
     /**
