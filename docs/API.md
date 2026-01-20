@@ -349,6 +349,62 @@ Get list of available identifiers and updaters.
   }
   ```
 
+## Status (V1)
+
+### Active Sessions
+Get a list of all active media streaming sessions on the server.
+
+- **URL:** `/api/v1/status/sessions`
+- **Method:** `GET`
+- **Permission:** Requires Authentication
+- **Response:** Array of MediaSession info objects.
+  ```json
+  [
+    {
+      "sessionId": "uuid",
+      "state": "streaming",
+      "file": {
+        "id": 123,
+        "path": "/path/to/file.mkv",
+        "videoCodec": "h264",
+        "audioCodec": "ac3"
+      },
+      "output": {
+        "format": "mp4",
+        "videoCodec": "h264",
+        "audioCodec": "aac"
+      },
+      "seekMode": "server",
+      "destinationCount": 1
+    }
+  ]
+  ```
+
+### Connected Clients
+Get a list of all connected realtime clients (e.g., Web UI, remote players).
+
+- **URL:** `/api/v1/status/clients`
+- **Method:** `GET`
+- **Permission:** Requires Authentication
+- **Response:** Array of connected clients.
+  ```json
+  [
+    {
+      "clientId": "socket_id",
+      "clientName": "Web Client",
+      "user": {
+        "id": 1
+      },
+      "connectedAt": "2023-01-01T00:00:00.000Z",
+      "address": "::1",
+      "activity": {
+        "series": [],
+        "movie": []
+      }
+    }
+  ]
+  ```
+
 ## Files
 
 ### Find Duplicates
