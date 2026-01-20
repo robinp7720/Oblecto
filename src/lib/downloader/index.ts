@@ -4,6 +4,12 @@ import logger from '../../submodules/logger/index.js';
 import DebugExtendableError from '../errors/DebugExtendableError.js';
 import Oblecto from '../oblecto/index.js';
 
+interface DownloadJob {
+    url: string;
+    dest: string;
+    overwrite?: boolean;
+}
+
 export default class Downloader {
     public oblecto: Oblecto;
 
@@ -14,7 +20,7 @@ export default class Downloader {
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.registerJob('downloadFile', async (job: any) => {
+        this.oblecto.queue.registerJob('downloadFile', async (job: DownloadJob) => {
             await Downloader.download(job.url, job.dest, job.overwrite);
         });
     }
@@ -28,10 +34,11 @@ export default class Downloader {
     static async download(url: string, dest: string, overwrite?: boolean): Promise<void> {
         let flags = 'wx';
 
-        if (overwrite) {
+        if (overwrite === true) {
             flags = 'w';
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
         const { data } = await axiosTimeout({
             method: 'get',
             url,
@@ -39,6 +46,7 @@ export default class Downloader {
             // responseEncoding: 'binary' // Axios types might not have responseEncoding on the config directly or it might be renamed
         } as any);
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
         await fs.writeFile(dest, data, { flag: flags } as any);
     }
 
@@ -56,7 +64,7 @@ export default class Downloader {
                 );
 
                 return;
-            } catch (err) {
+            } catch (_) {
                 logger.debug( `Error while downloading ${url}. Continuing to next url`);
             }
         }

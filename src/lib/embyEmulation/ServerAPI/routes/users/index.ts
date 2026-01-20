@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/no-floating-promises, @typescript-eslint/prefer-nullish-coalescing */
 import { Movie } from '../../../../../models/movie';
 import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
@@ -7,11 +8,13 @@ import { formatUuid, parseUuid, parseId, formatMediaItem, formatId, MediaItem } 
 import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
-import logger from '../../../../../submodules/logger';
+import logger from '../../../../../submodules/logger/index.js';
 import { Op } from 'sequelize';
 
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
+import { EmbyRequest } from '../../index.js';
+import { getRequestValue } from '../../requestUtils.js';
 
 const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, unknown> => {
     const HasPassword = user.password !== '';
@@ -87,6 +90,7 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, 
 };
 
 /**
+ *
  * @param server
  * @param embyEmulation
  */
@@ -101,11 +105,19 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(users.map((user) => buildUserDto(user, embyEmulation)));
     });
 
-    server.post('/users/authenticatebyname', async (req: Request, res: Response) => {
-        const sessionId = await embyEmulation.handleLogin(req.body.Username, req.body.Pw);
+    server.post('/users/authenticatebyname', async (req: EmbyRequest, res: Response) => {
+        const Username = getRequestValue(req, 'Username');
+        const Pw = getRequestValue(req, 'Pw');
+
+        if (!Username || !Pw) {
+            res.status(400).send('Missing Username or Pw');
+            return;
+        }
+
+        const sessionId = await embyEmulation.handleLogin(Username, Pw);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
-        logger.debug(embyEmulation.sessions[sessionId]);
+        logger.debug(JSON.stringify(embyEmulation.sessions[sessionId]));
 
         const session = embyEmulation.sessions[sessionId];
 
@@ -272,7 +284,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/users/:userid/items', async (req, res) => {
+    server.get('/users/:userid/items', async (req: EmbyRequest, res: Response) => {
         let items = [];
         const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
             const values: any[] = [];
@@ -296,10 +308,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         };
         const includeItemTypes = normalizeQueryList(req.query as Record<string, any>, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
             .map(value => value.toLowerCase());
-        const searchTerm = String(req.query.SearchTerm || req.query.searchTerm || req.query.searchterm || '');
-        const startIndex = parseInt(String(req.query.StartIndex || req.query.startIndex || req.query.startindex || '0'), 10) || 0;
-        const limit = parseInt(String(req.query.Limit || req.query.limit || '100'), 10) || 100;
-        const parentId = String(req.query.ParentId || req.query.parentId || req.query.parentid || '');
+        const searchTerm = getRequestValue(req, 'SearchTerm') || '';
+        const startIndex = parseInt(getRequestValue(req, 'StartIndex') || '0', 10) || 0;
+        const limit = parseInt(getRequestValue(req, 'Limit') || '100', 10) || 100;
+        const parentId = getRequestValue(req, 'ParentId') || '';
 
         let parsedParentId = null;
 
@@ -489,7 +501,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
-    server.get('/users/:userid/items/:mediaid', async (req, res) => {
+    server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
         const userId = parseUuid(req.params.userid);
@@ -601,8 +613,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    const getLatestItems = async (req: Request, res: Response): Promise<void> => {
-        const parentId = req.query.parentId || req.query.parentid;
+    const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const parentId = getRequestValue(req, 'ParentId');
 
         if (parentId === 'movies') {
             const results = await Movie.findAll({
@@ -713,8 +725,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     };
 
-    server.get('/users/:userid/items/latest', getLatestItems);
-    server.get('/items/latest', getLatestItems);
+    server.get('/users/:userid/items/latest', getLatestItems as any);
+    server.get('/items/latest', getLatestItems as any);
 
     server.get('/useritems/resume', async (req, res) => {
         res.send({

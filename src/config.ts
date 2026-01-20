@@ -23,7 +23,7 @@ const ConfigManager = {
         }
     },
     loadConfigFiles: function loadConfigs (): IConfig {
-        if (process.env.OBLECTO_CONFIG_PATH) {
+        if (process.env.OBLECTO_CONFIG_PATH && process.env.OBLECTO_CONFIG_PATH !== '') {
             return { ...this.loadFile(process.env.OBLECTO_CONFIG_PATH) } as IConfig;
         }
         if (fs.existsSync('./res/config.json')) {
@@ -32,7 +32,7 @@ const ConfigManager = {
         return { ...this.loadFile('/etc/oblecto/config.json') } as IConfig;
     },
     saveConfig: function saveConfig () {
-        const savePath = loadedConfigPath || '/etc/oblecto/config.json';
+        const savePath = loadedConfigPath ?? '/etc/oblecto/config.json';
 
         fs.writeFile(savePath, JSON.stringify(config, null, 4), (err) => {
             if (err) {

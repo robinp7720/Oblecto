@@ -21,7 +21,7 @@ export type EmbyRequest = Request & {
  *     Version: "1.12.0",
  *     Token: "…"
  *   }
- * @param headerStr
+ * @param headerStr - The raw MediaBrowser header string to parse
  */
 function parseMediaBrowserHeader(headerStr: string): Record<string, string> {
     // 1) Remove the leading "MediaBrowser " (everything up to the first space)
@@ -50,7 +50,7 @@ export default class EmbyServerAPI {
     public server: Application | ReturnType<Application['listen']>;
 
     /**
-     * @param embyEmulation
+     * @param embyEmulation - The EmbyEmulation instance
      */
     constructor(embyEmulation: EmbyEmulation) {
         this.embyEmulation = embyEmulation;
@@ -74,7 +74,7 @@ export default class EmbyServerAPI {
 
         // Parse Authorization header
         this.server.use((req: EmbyRequest, res: Response, next: NextFunction) => {
-            if (req.headers.authorization) {
+            if (req.headers.authorization !== undefined) {
                 const parts = req.headers.authorization.split(' ');
 
                 if (parts.length === 2) {
@@ -99,7 +99,7 @@ export default class EmbyServerAPI {
 
         // Parse Emby headers
         this.server.use((req: EmbyRequest, res: Response, next: NextFunction) => {
-            if (!req.headers.authorization) return next();
+            if (req.headers.authorization === undefined) return next();
 
             req.headers.emby = parseMediaBrowserHeader(req.headers.authorization);
 
@@ -116,10 +116,11 @@ export default class EmbyServerAPI {
         });
 
         // Error handling middleware
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
-            const statusCode = err.statusCode || 500;
+            const statusCode = err.statusCode ?? 500;
             const message = err.message || 'Internal Server Error';
 
             console.error(`HTTP ${statusCode} - ${message}`);

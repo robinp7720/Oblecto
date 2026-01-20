@@ -17,9 +17,9 @@ export default class FederationServerConnection {
     constructor(oblecto: Oblecto, socket: tls.TLSSocket) {
         this.oblecto = oblecto;
         this.socket = socket;
-        this.socket.on('data', chunk => this.dataHandler(chunk));
+        this.socket.on('data', (chunk: Buffer) => this.dataHandler(chunk));
         this.socket.on('close', () => this.closeHandler());
-        this.socket.on('error', error => this.errorHandler(error));
+        this.socket.on('error', (error: Error) => this.errorHandler(error));
         this.dataRead = '';
 
         this.clientId = '';
@@ -37,16 +37,16 @@ export default class FederationServerConnection {
             if (item === '') continue;
 
             this.dataRead = this.dataRead.replace(item + '\n', '');
-            this.headerHandler(item);
+            void this.headerHandler(item);
         }
     }
 
-    headerHandler(data: string): void {
+    async headerHandler(data: string): Promise<void> {
         const split = data.split(':');
 
         switch (split[0]) {
             case 'IAM':
-                this.clientIdHandler(split[1]);
+                await this.clientIdHandler(split[1]);
                 break;
             case 'CHALLENGE':
                 this.authHandler(split[1]);
@@ -64,13 +64,16 @@ export default class FederationServerConnection {
 
         // Check if the client server is known
         // If an unknown client is trying to connect, we should just ignore it
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!this.oblecto.config.federation.clients[clientId]) return;
 
         const key = await fs.readFile(this.oblecto.config.federation.clients[clientId].key);
 
-        this.key = NodeRSA(key);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call
+        this.key = new (NodeRSA as any)(key);
 
-        this.write('CHALLENGE', this.key.encrypt(this.challenge, 'base64') as string);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        this.write('CHALLENGE', (this.key as any).encrypt(this.challenge, 'base64') as string);
     }
 
     authHandler(data: string): void {
@@ -98,6 +101,6 @@ export default class FederationServerConnection {
     }
 
     close(): void {
-        this.socket.close();
+        this.socket.destroy();
     }
 }

@@ -34,7 +34,7 @@ export default class FanarttvSeriesArtworkRetriever {
             });
 
             return data as FanartResponse;
-        } catch (e) {
+        } catch (_) {
             throw new InfoExtendableError(`No artwork found for id ${id}`);
         }
     }
@@ -44,9 +44,9 @@ export default class FanarttvSeriesArtworkRetriever {
      * @param episode - Episode for which to retrieve banner URLs for
      * @returns - Array of poster urls
      */
-    async retrieveEpisodeBanner(episode: Episode): Promise<string[]> {
+    retrieveEpisodeBanner(episode: Episode): Promise<string[]> {
         void episode;
-        return [];
+        return Promise.resolve([]);
     }
 
     /**
@@ -55,7 +55,7 @@ export default class FanarttvSeriesArtworkRetriever {
      * @returns - Array of banner urls
      */
     async retrieveSeriesPoster(series: Series): Promise<string[]> {
-        if (!series.tvdbid) throw new DebugExtendableError(`No TVDBID for ${series.seriesName}`);
+        if (series.tvdbid === null || series.tvdbid === undefined) throw new DebugExtendableError(`No TVDBID for ${series.seriesName}`);
 
         const { tvposter } = await this.getArtwork(series.tvdbid);
 

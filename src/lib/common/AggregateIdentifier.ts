@@ -52,7 +52,7 @@ export default class AggregateIdentifier {
             if (identification[key] === '') delete identification[key];
         }
 
-        if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${args[0]}`);
+        if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${String(args[0])}`);
 
         return identification;
     }

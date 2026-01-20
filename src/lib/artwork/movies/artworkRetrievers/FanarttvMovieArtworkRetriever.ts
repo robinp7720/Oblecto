@@ -33,15 +33,15 @@ export default class FanarttvMovieArtworkRetriever {
             });
 
             return data as FanartMovieResponse;
-        } catch (e) {
+        } catch (_) {
             throw new InfoExtendableError(`No artwork found for id ${id}`);
         }
     }
 
     async retrieveFanart(movie: Movie): Promise<string[]> {
-        if (!(movie.tmdbid || movie.imdbid)) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
+        if (!((movie.tmdbid !== null && movie.tmdbid !== undefined) || (movie.imdbid !== null && movie.imdbid !== undefined && movie.imdbid !== ''))) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
 
-        const data = await this.getArtwork(movie.tmdbid || movie.imdbid);
+        const data = await this.getArtwork(movie.tmdbid ?? movie.imdbid);
 
         if (!data.moviebackground) return [];
 
@@ -49,9 +49,9 @@ export default class FanarttvMovieArtworkRetriever {
     }
 
     async retrievePoster(movie: Movie): Promise<string[]> {
-        if (!(movie.tmdbid || movie.imdbid)) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
+        if (!((movie.tmdbid !== null && movie.tmdbid !== undefined) || (movie.imdbid !== null && movie.imdbid !== undefined && movie.imdbid !== ''))) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
 
-        const data = await this.getArtwork(movie.tmdbid || movie.imdbid);
+        const data = await this.getArtwork(movie.tmdbid ?? movie.imdbid);
 
         if (!data.movieposter) return [];
 

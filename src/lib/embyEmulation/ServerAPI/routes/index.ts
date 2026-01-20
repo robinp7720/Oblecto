@@ -22,8 +22,8 @@ import type EmbyEmulation from '../../index.js';
 
 /**
  *
- * @param server
- * @param embyEmulation
+ * @param server - The Express application
+ * @param embyEmulation - The EmbyEmulation instance
  */
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     system(server, embyEmulation);

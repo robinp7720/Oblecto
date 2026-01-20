@@ -73,7 +73,7 @@ export default class FederationMediaServerConnection extends FederationServerCon
         await streamSession.startStream();
     }
 
-    async closeHandler(): Promise<void> {
+    closeHandler(): void {
         logger.info( 'Federation media stream has closed');
     }
 }

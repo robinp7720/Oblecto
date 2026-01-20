@@ -4,6 +4,7 @@ import { Episode } from '../../../../../models/episode';
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
 import { parseId } from '../../../helpers';
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/no-floating-promises, @typescript-eslint/prefer-nullish-coalescing */
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { deletePlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
 
@@ -11,11 +12,12 @@ import { deletePlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '..
  * @param server
  * @param embyEmulation
  */
-import type { Application, Request, Response } from 'express';
+import type { Application, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
+import { EmbyRequest } from '../../index.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.post('/sessions/capabilities/:type', async (req: Request, res: Response) => {
+    server.post('/sessions/capabilities/:type', async (req: EmbyRequest, res: Response) => {
         const token = getEmbyToken(req);
         if (token && embyEmulation.sessions[token]) {
             embyEmulation.sessions[token].capabilities = req.query;
@@ -24,7 +26,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send();
     });
 
-    server.post('/sessions/playing', async (req: Request, res: Response) => {
+    server.post('/sessions/playing', async (req: EmbyRequest, res: Response) => {
         const token = getEmbyToken(req);
         const params = { ...req.query, ...req.body };
 
@@ -56,7 +58,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send();
     });
 
-    server.post('/sessions/playing/progress', async (req: Request, res: Response) => {
+    server.post('/sessions/playing/progress', async (req: EmbyRequest, res: Response) => {
         const token = getEmbyToken(req);
 
         if (!token || !embyEmulation.sessions[token]) {
@@ -134,7 +136,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
     // Additional Session Routes
     server.post('/sessions/playing/ping', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/playing/stopped', async (req, res) => {
+    server.post('/sessions/playing/stopped', async (req: EmbyRequest, res) => {
         const token = getEmbyToken(req);
         const playSessionId = getRequestValue(req, 'PlaySessionId')
             || (token && embyEmulation.sessions?.[token] ? (embyEmulation.sessions[token] as any).playSession?.PlaySessionId : undefined);

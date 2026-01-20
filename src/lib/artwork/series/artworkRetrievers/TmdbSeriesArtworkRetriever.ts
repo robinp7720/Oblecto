@@ -21,15 +21,18 @@ export default class TmdbSeriesArtworkRetriever {
      * @returns - Array of poster urls
      */
     async retrieveEpisodeBanner(episode: Episode): Promise<string[]> {
-        if (!episode.tmdbid) throw new DebugExtendableError(`TMDB Episode banner retriever failed for ${episode.episodeName}`);
+        if (episode.tmdbid === null || episode.tmdbid === undefined) throw new DebugExtendableError(`TMDB Episode banner retriever failed for ${episode.episodeName}`);
 
-        const series = await episode.getSeries();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const series = await episode.getSeries() as any;
 
+        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
         const { stills } = await promiseTimeout(this.oblecto.tmdb.episodeImages({
             id: series.tmdbid,
             episode_number: episode.airedEpisodeNumber,
             season_number: episode.airedSeason
         }));
+        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
         return (stills as TmdbImage[]).map(image => `https://image.tmdb.org/t/p/original${image.file_path}`);
     }
@@ -40,9 +43,11 @@ export default class TmdbSeriesArtworkRetriever {
      * @returns - Array of banner urls
      */
     async retrieveSeriesPoster(series: Series): Promise<string[]> {
-        if (!series.tmdbid) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
+        if (series.tmdbid === null || series.tmdbid === undefined) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
 
+        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
         const { posters } = await promiseTimeout(this.oblecto.tmdb.tvImages({ id: series.tmdbid }));
+        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
         return (posters as TmdbImage[]).map(image => `https://image.tmdb.org/t/p/original${image.file_path}`);
     }

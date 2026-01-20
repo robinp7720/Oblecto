@@ -59,9 +59,9 @@ export default class FederationClient {
             ca: [readFileSync((this.oblecto.config.federation as FederationConfig).servers[this.serverName].ca)]
         });
 
-        this.socket.on('data', (chunk) => this.dataHandler(chunk));
+        this.socket.on('data', (chunk: Buffer) => this.dataHandler(chunk));
         this.socket.on('secureConnect', () => this.secureConnectHandler());
-        this.socket.on('error', (error) => this.errorHandler(error));
+        this.socket.on('error', (error: Error) => this.errorHandler(error));
         this.socket.on('close', () => this.closeHandler());
 
         if (!this.isSecure) await this.waitForSecure();
@@ -94,7 +94,7 @@ export default class FederationClient {
 
         switch (split[0]) {
             case 'CHALLENGE':
-                this.challengeHandler(split[1]);
+                void this.challengeHandler(split[1]);
                 break;
             case 'AUTH':
                 this.authAcceptHandler(split[1]);
@@ -103,15 +103,18 @@ export default class FederationClient {
     }
 
     async challengeHandler(data: string): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pemKey = await fs.readFile((this.oblecto.config.federation as FederationConfig).key);
-        const key = NodeRSA(pemKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call
+        const key = new (NodeRSA as any)(pemKey);
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const decrypted = key.decrypt(data, 'ascii');
 
         this.write('CHALLENGE', decrypted as string);
     }
 
-    async authAcceptHandler(data: string): Promise<void> {
+    authAcceptHandler(data: string): void {
         if (data === 'ACCEPTED') {
             this.authenticated = true;
             this.eventEmitter.emit('auth');

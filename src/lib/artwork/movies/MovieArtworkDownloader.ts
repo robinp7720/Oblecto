@@ -42,7 +42,8 @@ export default class MovieArtworkDownloader {
             this.oblecto.queue.pushJob('rescaleImage', {
                 from: this.oblecto.artworkUtils.moviePosterPath(movie),
                 to: this.oblecto.artworkUtils.moviePosterPath(movie, size),
-                width: this.oblecto.config.artwork.poster[size]
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+                width: (this.oblecto.config.artwork.poster as any)[size]
             } as RescaleJob);
         }
     }
@@ -56,7 +57,8 @@ export default class MovieArtworkDownloader {
             this.oblecto.queue.pushJob('rescaleImage', {
                 from: this.oblecto.artworkUtils.movieFanartPath(movie),
                 to: this.oblecto.artworkUtils.movieFanartPath(movie, size),
-                width: this.oblecto.config.artwork.fanart[size]
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+                width: (this.oblecto.config.artwork.fanart as any)[size]
             } as RescaleJob);
         }
     }

@@ -23,7 +23,7 @@ export default class TmdbMovieArtworkRetriever {
      * @returns - Array of fanart URLs
      */
     async retrieveFanart(movie: Movie): Promise<string[]> {
-        if (!movie.tmdbid) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
+        if (movie.tmdbid === null || movie.tmdbid === undefined) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
 
         const data = await this.oblecto.tmdb.movieImages({ id: movie.tmdbid }) as TmdbImageResponse;
 
@@ -36,7 +36,7 @@ export default class TmdbMovieArtworkRetriever {
      * @returns - Array of poster URLs
      */
     async retrievePoster(movie: Movie): Promise<string[]> {
-        if (!movie.tmdbid) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
+        if (movie.tmdbid === null || movie.tmdbid === undefined) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
 
         const data = await this.oblecto.tmdb.movieImages({ id: movie.tmdbid }) as TmdbImageResponse;
 

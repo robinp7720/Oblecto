@@ -28,7 +28,7 @@ export default class FileCleaner {
         for (const file of files) {
             try {
                 await fs.stat(file.path as string);
-            } catch (e) {
+            } catch (_) {
                 logger.info( file.path, 'not found. Removing from database');
 
                 await file.destroy();
@@ -43,10 +43,10 @@ export default class FileCleaner {
         logger.info( 'Removing files from the database without any attached media items');
         const results = await File.findAll({ include: [Movie, Episode] }) as FileWithAssociations[];
 
-        results.forEach((item) => {
+        for (const item of results) {
             if (item.Movies.length === 0 && item.Episodes.length === 0) {
-                item.destroy();
+                await item.destroy();
             }
-        });
+        }
     }
 }

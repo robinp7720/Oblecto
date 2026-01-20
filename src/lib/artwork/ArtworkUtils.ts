@@ -11,25 +11,29 @@ export default class ArtworkUtils {
     }
 
     episodeBannerPath(episode: Episode, size?: string): string {
-        if (size && this.oblecto.config.artwork.banner[size])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        if (size !== undefined && size !== '' && (this.oblecto.config.artwork.banner as any)[size] !== undefined)
             return `${this.oblecto.config.assets.episodeBannerLocation}/${size}/${episode.id}.jpg`;
         return `${this.oblecto.config.assets.episodeBannerLocation}/original/${episode.id}.jpg`;
     }
 
     seriesPosterPath(series: Series, size?: string): string {
-        if (size && this.oblecto.config.artwork.poster[size])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        if (size !== undefined && size !== '' && (this.oblecto.config.artwork.poster as any)[size] !== undefined)
             return `${this.oblecto.config.assets.showPosterLocation}/${size}/${series.id}.jpg`;
         return `${this.oblecto.config.assets.showPosterLocation}/original/${series.id}.jpg`;
     }
 
     moviePosterPath(movie: Movie, size?: string): string {
-        if (size && this.oblecto.config.artwork.poster[size])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        if (size !== undefined && size !== '' && (this.oblecto.config.artwork.poster as any)[size] !== undefined)
             return `${this.oblecto.config.assets.moviePosterLocation}/${size}/${movie.id}.jpg`;
         return `${this.oblecto.config.assets.moviePosterLocation}/original/${movie.id}.jpg`;
     }
 
     movieFanartPath(movie: Movie, size?: string): string {
-        if (size && this.oblecto.config.artwork.fanart[size])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        if (size !== undefined && size !== '' && (this.oblecto.config.artwork.fanart as any)[size] !== undefined)
             return `${this.oblecto.config.assets.movieFanartLocation}/${size}/${movie.id}.jpg`;
         return `${this.oblecto.config.assets.movieFanartLocation}/original/${movie.id}.jpg`;
     }

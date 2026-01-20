@@ -45,7 +45,8 @@ export default class SeriesArtworkDownloader {
             this.oblecto.queue.pushJob('rescaleImage', {
                 from: this.oblecto.artworkUtils.episodeBannerPath(episode),
                 to: this.oblecto.artworkUtils.episodeBannerPath(episode, size),
-                width: this.oblecto.config.artwork.banner[size]
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+                width: (this.oblecto.config.artwork.banner as any)[size]
             } as RescaleJob);
         }
     }
@@ -63,7 +64,8 @@ export default class SeriesArtworkDownloader {
             this.oblecto.queue.pushJob('rescaleImage', {
                 from: this.oblecto.artworkUtils.seriesPosterPath(series),
                 to: this.oblecto.artworkUtils.seriesPosterPath(series, size),
-                width: this.oblecto.config.artwork.poster[size]
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+                width: (this.oblecto.config.artwork.poster as any)[size]
             } as RescaleJob);
         }
     }
