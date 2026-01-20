@@ -1,6 +1,5 @@
 import * as os from 'os';
 import * as fs from 'fs';
-import { promises as pfs } from 'fs';
 import { mkdirp } from 'mkdirp';
 import ffmpeg from '../../../submodules/ffmpeg.js';
 import logger from '../../../submodules/logger/index.js';
@@ -162,8 +161,8 @@ export class HlsStreamSession extends MediaSession {
         super.endSession();
 
         // Cleanup segment directory asynchronously
-        pfs.rm(this.segmentDir, { recursive: true, force: true })
-            .catch((error) => {
+        fs.promises.rm(this.segmentDir, { recursive: true, force: true })
+            .catch((error: unknown) => {
                 logger.error(`HlsSession ${this.sessionId} cleanup error:`, error);
             });
     }
@@ -176,7 +175,7 @@ export class HlsStreamSession extends MediaSession {
         if (this.segmenterStarted) return;
 
         this.segmenterStarted = true;
-        (this.process).run();
+        this.process.run();
     }
 
     private pauseSegmenter(reason: string = 'lead', lead?: number): void {
@@ -233,7 +232,7 @@ export class HlsStreamSession extends MediaSession {
             }
 
             try {
-                await pfs.access(filePath, fs.constants.F_OK);
+                await fs.promises.access(filePath, fs.constants.F_OK);
                 return;
             } catch {
                 if (Date.now() >= deadline) {
@@ -333,7 +332,7 @@ export class HlsStreamSession extends MediaSession {
             // Wait for segment to be available
             await this.waitForSegment(segmentId, segmentPath);
 
-            const stat = await pfs.stat(segmentPath);
+            const stat = await fs.promises.stat(segmentPath);
 
             res.setHeader('Content-Type', 'video/MP2T');
             res.setHeader('Content-Length', stat.size);

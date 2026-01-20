@@ -4,12 +4,23 @@ import logger from '../logger/index.js';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import { Server } from 'http';
+import Oblecto from '../../lib/oblecto/index.js';
+
+export interface OblectoRequest extends Request {
+    authorization?: {
+        scheme: string;
+        credentials: string;
+        user?: any;
+    };
+    files?: any;
+    combined_params?: Record<string, any>;
+}
 
 export default class OblectoAPI {
-    public oblecto: any;
+    public oblecto: Oblecto;
     public server: Server;
 
-    constructor(oblecto: any) {
+    constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
 
         // Initialize REST based server
@@ -29,7 +40,7 @@ export default class OblectoAPI {
         }));
 
         // Parse Authorization header
-        app.use((req: any, res: Response, next: NextFunction) => {
+        app.use((req: OblectoRequest, res: Response, next: NextFunction) => {
             if (req.headers.authorization) {
                 const parts = req.headers.authorization.split(' ');
 
@@ -48,7 +59,7 @@ export default class OblectoAPI {
         app.use(express.json());
 
         // Map query and body params to req.combined_params for compatibility with existing code
-        app.use((req: any, res: Response, next: NextFunction) => {
+        app.use((req: OblectoRequest, res: Response, next: NextFunction) => {
             req.combined_params = { ...req.query, ...req.body };
             next();
         });
@@ -60,8 +71,8 @@ export default class OblectoAPI {
         app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
-            const statusCode = err.statusCode || 500;
-            const message = err.message || 'Internal Server Error';
+            const statusCode = (err.statusCode as number) || 500;
+            const message = (err.message as string) || 'Internal Server Error';
 
             logger.error( `HTTP ${statusCode} - ${message}`, err);
 

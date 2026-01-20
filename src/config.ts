@@ -5,14 +5,15 @@ import logger from './submodules/logger';
 let loadedConfigPath: string | null = null;
 
 const ConfigManager = {
-    loadFile: function loadFile (file: string) {
+    loadFile: function loadFile (file: string): Partial<IConfig> {
         try {
-            const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<IConfig>;
 
             loadedConfigPath = file;
             return data;
-        } catch (ex: any) {
-            if (ex.code === 'ENOENT') {
+        } catch (ex: unknown) {
+            const error = ex as { code?: string };
+            if (error.code === 'ENOENT') {
                 console.log(`No config file at ${file}, continuing to next file`);
 
                 return {};
@@ -23,12 +24,12 @@ const ConfigManager = {
     },
     loadConfigFiles: function loadConfigs (): IConfig {
         if (process.env.OBLECTO_CONFIG_PATH) {
-            return { ...this.loadFile(process.env.OBLECTO_CONFIG_PATH) };
+            return { ...this.loadFile(process.env.OBLECTO_CONFIG_PATH) } as IConfig;
         }
         if (fs.existsSync('./res/config.json')) {
-            return { ...this.loadFile('./res/config.json') };
+            return { ...this.loadFile('./res/config.json') } as IConfig;
         }
-        return { ...this.loadFile('/etc/oblecto/config.json') };
+        return { ...this.loadFile('/etc/oblecto/config.json') } as IConfig;
     },
     saveConfig: function saveConfig () {
         const savePath = loadedConfigPath || '/etc/oblecto/config.json';

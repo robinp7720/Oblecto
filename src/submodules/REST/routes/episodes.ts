@@ -9,26 +9,29 @@ import { Episode } from '../../../models/episode.js';
 import { Series } from '../../../models/series.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { File } from '../../../models/file.js';
+import Oblecto from '../../../lib/oblecto/index.js';
+import { OblectoRequest } from '../index.js';
 
-export default (server: Express, oblecto: any) => {
+export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
-    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/episodes/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         let limit = 20;
         let page = 0;
 
+        const combined_params = req.combined_params!;
         const AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
+        if (AllowedOrders.indexOf((combined_params.order as string).toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
         if (!(req.params.sorting in Episode.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
-        if (req.combined_params.count && Number.isInteger(parseInt(req.combined_params.count)))
-            limit = parseInt(req.combined_params.count);
+        if (combined_params.count && Number.isInteger(parseInt(combined_params.count as string)))
+            limit = parseInt(combined_params.count as string);
 
-        if (req.combined_params.page && Number.isInteger(parseInt(req.combined_params.page)))
-            page = parseInt(req.combined_params.page);
+        if (combined_params.page && Number.isInteger(parseInt(combined_params.page as string)))
+            page = parseInt(combined_params.page as string);
 
         const results = await Episode.findAll({
             include: [
@@ -36,10 +39,10 @@ export default (server: Express, oblecto: any) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization!.user.id }
                 }
             ],
-            order: [[req.params.sorting, req.combined_params.order]],
+            order: [[req.params.sorting, combined_params.order as string]],
             limit,
             offset: limit * page
         });
@@ -48,15 +51,15 @@ export default (server: Express, oblecto: any) => {
     });
 
     // Endpoint to get a banner image for an episode based on the local episode ID
-    server.get('/episode/:id/banner', async function (req: any, res: Response) {
+    server.get('/episode/:id/banner', async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 
-        const imagePath = oblecto.artworkUtils.episodeBannerPath(episode, req.combined_params.size || 'medium');
+        const imagePath = oblecto.artworkUtils.episodeBannerPath(episode, (req.combined_params?.size as string) || 'medium');
 
         res.sendFile(imagePath);
     });
 
-    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 
         if (!episode) {
@@ -91,7 +94,7 @@ export default (server: Express, oblecto: any) => {
                 oblecto.queue.pushJob('rescaleImage', {
                     from: oblecto.artworkUtils.episodeBannerPath(episode),
                     to: oblecto.artworkUtils.episodeBannerPath(episode, size),
-                    width: oblecto.config.artwork.poster[size]
+                    width: (oblecto.config.artwork.poster as any)[size]
                 });
             }
 
@@ -127,7 +130,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // Endpoint to retrieve episode details based on the local episode ID
-    server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
 
         const episode = await Episode.findByPk(req.params.id as string, {
@@ -137,7 +140,7 @@ export default (server: Express, oblecto: any) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization.user.id },
+                    where: { userId: req.authorization!.user.id },
                 }
             ]
         });
@@ -177,7 +180,7 @@ export default (server: Express, oblecto: any) => {
 
     });
 
-    server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
         const episode = await Episode.findAll({
             where: { episodeName: { [Op.like]: '%' + req.params.name + '%' } },
@@ -187,7 +190,7 @@ export default (server: Express, oblecto: any) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization!.user.id }
                 }
             ]
         });
@@ -197,7 +200,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // Endpoint to get the episodes currently being watched
-    server.get('/episodes/watching', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/episodes/watching', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
         const watching = await Episode.findAll({
             include: [
@@ -206,7 +209,7 @@ export default (server: Express, oblecto: any) => {
                     model: TrackEpisode,
                     required: true,
                     where: {
-                        userId: req.authorization.user.id,
+                        userId: req.authorization!.user.id,
                         progress: { [Op.lt]: 0.9 },
                         updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
                     },
@@ -218,7 +221,7 @@ export default (server: Express, oblecto: any) => {
         res.send(watching);
     });
 
-    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // Next episodes currently doesn't work on sqlite as the LPAD function doesn't exist
         // Todo: Fix next episodes endpoint to support sqlite
         if (oblecto.config.database.dialect === 'sqlite')
@@ -238,7 +241,7 @@ export default (server: Express, oblecto: any) => {
                     model: TrackEpisode,
                     required: true,
                     where: {
-                        userId: req.authorization.user.id,
+                        userId: req.authorization!.user.id,
                         progress: { [Op.gt]: 0.9 },
                         updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
                     },
@@ -257,7 +260,7 @@ export default (server: Express, oblecto: any) => {
                     Series,
                     {
                         model: TrackEpisode,
-                        where: { userId: req.authorization.user.id },
+                        where: { userId: req.authorization!.user.id },
                         required: false
                     }
                 ],

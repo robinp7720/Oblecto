@@ -15,8 +15,9 @@ import v1Libraries from './v1/libraries.js';
 import v1System from './v1/system.js';
 
 import { Express } from 'express';
+import Oblecto from '../../../lib/oblecto/index.js';
 
-export default (server: Express, oblecto: any) => {
+export default (server: Express, oblecto: Oblecto) => {
     if (oblecto.config.web.enabled) {
         web(server, oblecto);
     }

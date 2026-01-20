@@ -10,35 +10,38 @@ import { TrackMovie } from '../../../models/trackMovie.js';
 import { File } from '../../../models/file.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
+import Oblecto from '../../../lib/oblecto/index.js';
+import { OblectoRequest } from '../index.js';
 
-export default (server: Express, oblecto: any) => {
-    server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+export default (server: Express, oblecto: Oblecto) => {
+    server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         let limit = 20;
         let page = 0;
 
         const AllowedOrders = ['desc', 'asc'];
+        const params = req.combined_params!;
 
-        if (AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
+        if (AllowedOrders.indexOf((params.order as string).toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
         if (!(req.params.sorting in Movie.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
-        if (req.combined_params.count && Number.isInteger(parseInt(req.combined_params.count)))
-            limit = parseInt(req.combined_params.count);
+        if (params.count && Number.isInteger(parseInt(params.count as string)))
+            limit = parseInt(params.count as string);
 
-        if (req.combined_params.page && Number.isInteger(parseInt(req.combined_params.page)))
-            page = parseInt(req.combined_params.page);
+        if (params.page && Number.isInteger(parseInt(params.page as string)))
+            page = parseInt(params.page as string);
 
         const results = await Movie.findAll({
             include: [
                 {
                     model: TrackMovie,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization!.user.id }
                 }
             ],
-            order: [[req.params.sorting, req.combined_params.order]],
+            order: [[req.params.sorting, params.order]],
             limit,
             offset: limit * page
         });
@@ -52,13 +55,14 @@ export default (server: Express, oblecto: any) => {
         res.send(results);
     });
 
-    server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        const limit = parseInt(req.combined_params.count) || 20;
-        const page = parseInt(req.combined_params.page) || 0;
+    server.get('/movies/set/:id', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const params = req.combined_params!;
+        const limit = parseInt(params.count as string) || 20;
+        const page = parseInt(params.page as string) || 0;
 
         const AllowedOrders = ['desc', 'asc'];
 
-        if (req.combined_params.order && AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
+        if (params.order && AllowedOrders.indexOf((params.order as string).toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
         const results = await MovieSet.findAll({
@@ -69,7 +73,7 @@ export default (server: Express, oblecto: any) => {
                         {
                             model: TrackMovie,
                             required: false,
-                            where: { userId: req.authorization.user.id }
+                            where: { userId: req.authorization!.user.id }
                         }
                     ]
                 },
@@ -82,17 +86,17 @@ export default (server: Express, oblecto: any) => {
         res.send(results);
     });
 
-    server.get('/movie/:id/poster', async function (req: any, res: Response) {
+    server.get('/movie/:id/poster', async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string);
 
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
 
-        const path = oblecto.artworkUtils.moviePosterPath(movie, req.combined_params.size || 'medium');
+        const path = oblecto.artworkUtils.moviePosterPath(movie, (req.combined_params?.size as string) || 'medium');
 
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
@@ -125,24 +129,24 @@ export default (server: Express, oblecto: any) => {
             oblecto.queue.pushJob('rescaleImage', {
                 from: oblecto.artworkUtils.moviePosterPath(movie),
                 to: oblecto.artworkUtils.moviePosterPath(movie, size),
-                width: oblecto.config.artwork.poster[size]
+                width: (oblecto.config.artwork.poster as any)[size]
             });
         }
 
         res.send(['success']);
     });
 
-    server.get('/movie/:id/fanart', async function (req: any, res: Response) {
+    server.get('/movie/:id/fanart', async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string);
 
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
 
-        const path = oblecto.artworkUtils.movieFanartPath(movie, req.combined_params.size || 'large');
+        const path = oblecto.artworkUtils.movieFanartPath(movie, (req.combined_params?.size as string) || 'large');
 
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
@@ -175,21 +179,21 @@ export default (server: Express, oblecto: any) => {
             oblecto.queue.pushJob('rescaleImage', {
                 from: oblecto.artworkUtils.movieFanartPath(movie),
                 to: oblecto.artworkUtils.movieFanartPath(movie, size),
-                width: oblecto.config.artwork.poster[size]
+                width: (oblecto.config.artwork.poster as any)[size]
             });
         }
 
         res.send(['success']);
     });
 
-    server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, {
             include: [
                 File,
                 {
                     model: TrackMovie,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization!.user.id }
                 }
             ]
         });
@@ -209,7 +213,7 @@ export default (server: Express, oblecto: any) => {
         res.redirect(`/stream/${file.id}`);
     });
 
-    server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const sets: any = await Movie.findByPk(req.params.id as string, {
             attributes: [],
             include: [
@@ -222,7 +226,7 @@ export default (server: Express, oblecto: any) => {
                                 {
                                     model: TrackMovie,
                                     required: false,
-                                    where: { userId: req.authorization.user.id }
+                                    where: { userId: req.authorization!.user.id }
                                 }
                             ]
                         }
@@ -234,10 +238,11 @@ export default (server: Express, oblecto: any) => {
         res.send(sets ? sets.MovieSets : []);
     });
 
-    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         try {
             const movie = await Movie.findByPk(req.params.id as string);
-            const set = await MovieSet.findByPk(req.combined_params.setId);
+            const setId = req.combined_params?.setId;
+            const set = await MovieSet.findByPk(setId);
 
             if (!movie || !set) {
                 return res.status(404).send({ message: 'Movie or set not found' });
@@ -259,7 +264,7 @@ export default (server: Express, oblecto: any) => {
         res.send(movie);
     });
 
-    server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/movies/watching', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const tracks = await TrackMovie.findAll({
             include: [
                 {
@@ -269,13 +274,13 @@ export default (server: Express, oblecto: any) => {
                         {
                             model: TrackMovie,
                             required: false,
-                            where: { userId: req.authorization.user.id }
+                            where: { userId: req.authorization!.user.id }
                         }
                     ]
                 }
             ],
             where: {
-                userId: req.authorization.user.id,
+                userId: req.authorization!.user.id,
                 progress: { [Op.lt]: 0.9 },
                 updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
             },

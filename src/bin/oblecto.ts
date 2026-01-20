@@ -90,4 +90,7 @@ async function run(): Promise<void> {
     }
 }
 
-run();
+run().catch((e: unknown) => {
+    console.error('An error has occurred: ', e);
+    process.exit(1);
+});

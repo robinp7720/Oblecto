@@ -98,6 +98,7 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    ".mocharc.cjs"
   ]
 }

@@ -11,22 +11,25 @@ import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { SeriesSet } from '../../../models/seriesSet.js';
+import Oblecto from '../../../lib/oblecto/index.js';
+import { OblectoRequest } from '../index.js';
 
-export default (server: Express, oblecto: any) => {
-    server.get('/series/list/:sorting', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        const limit = parseInt(req.combined_params.count) || 20;
-        const page = parseInt(req.combined_params.page) || 0;
+export default (server: Express, oblecto: Oblecto) => {
+    server.get('/series/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const params = req.combined_params!;
+        const limit = parseInt(params.count as string) || 20;
+        const page = parseInt(params.page as string) || 0;
 
         const AllowedOrders = ['desc', 'asc'];
 
-        if (req.combined_params.order && AllowedOrders.indexOf(req.combined_params.order.toLowerCase()) === -1)
+        if (params.order && AllowedOrders.indexOf((params.order as string).toLowerCase()) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
         if (!(req.params.sorting in Series.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
         const results = await Series.findAll({
-            order: [[req.params.sorting, req.combined_params.order || 'asc']],
+            order: [[req.params.sorting, (params.order as string) || 'asc']],
             limit,
             offset: limit * page
         });
@@ -40,9 +43,10 @@ export default (server: Express, oblecto: any) => {
         res.send(results);
     });
 
-    server.get('/series/set/:id', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
-        const limit = parseInt(req.combined_params.count) || 20;
-        const page = parseInt(req.combined_params.page) || 0;
+    server.get('/series/set/:id', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const params = req.combined_params!;
+        const limit = parseInt(params.count as string) || 20;
+        const page = parseInt(params.page as string) || 0;
 
         const results = await SeriesSet.findAll({
             include: [{ model: Series }],
@@ -89,14 +93,14 @@ export default (server: Express, oblecto: any) => {
     });
 
     // Endpoint to get all episodes within a series
-    server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const show = await Episode.findAll({
             include: [
                 Series,
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization.user.id }
+                    where: { userId: req.authorization!.user.id }
                 }
             ],
             where: { SeriesId: req.params.id },
@@ -109,17 +113,17 @@ export default (server: Express, oblecto: any) => {
         res.send(show);
     });
 
-    server.get('/series/:id/poster', async function (req: any, res: Response) {
+    server.get('/series/:id/poster', async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
-        const imagePath = oblecto.artworkUtils.seriesPosterPath(show, req.combined_params.size || 'medium');
+        const imagePath = oblecto.artworkUtils.seriesPosterPath(show, (req.combined_params?.size as string) || 'medium');
 
         res.sendFile(imagePath);
     });
 
-    server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req: any, res: Response) {
+    server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) {
@@ -132,7 +136,7 @@ export default (server: Express, oblecto: any) => {
             const showPath = show.directory;
 
             if (showPath) {
-                posterPath = path.join(showPath, (show.seriesName || show.id) + '-poster.jpg');
+                posterPath = path.join(showPath, (show.seriesName || show.id.toString()) + '-poster.jpg');
             }
         }
 
