@@ -48,6 +48,7 @@ export class MediaSessionController {
 
     /**
      * Register a streamer plugin
+     * @param streamer
      */
     registerStreamer(streamer: Streamer): void {
         if (this.streamers.has(streamer.type)) {
@@ -59,6 +60,7 @@ export class MediaSessionController {
 
     /**
      * Unregister a streamer plugin
+     * @param type
      */
     unregisterStreamer(type: string): boolean {
         return this.streamers.delete(type);
@@ -73,7 +75,6 @@ export class MediaSessionController {
 
     /**
      * Create a new streaming session for a file
-     * 
      * @param file - File to stream
      * @param options - Session options
      * @returns The created session
@@ -93,11 +94,14 @@ export class MediaSessionController {
 
     /**
      * Create a session using the appropriate streamer
+     * @param file
+     * @param options
      */
     private createSession(file: File, options: MediaSessionOptions): MediaSession {
         // If explicit type requested, use that streamer
         if (options.streamType) {
             const streamer = this.streamers.get(options.streamType);
+
             if (streamer) {
                 logger.debug(`Creating session with explicit streamer: ${options.streamType}`);
                 return streamer.createSession(file, options, this.oblecto);
@@ -114,6 +118,8 @@ export class MediaSessionController {
 
     /**
      * Select the best streamer for the given file and options
+     * @param file
+     * @param options
      */
     private selectStreamer(file: File, options: MediaSessionOptions): Streamer {
         // Sort streamers by priority (lower = higher priority)
@@ -128,6 +134,7 @@ export class MediaSessionController {
 
         // Fallback to transcode streamer (should always be able to handle)
         const transcodeStreamer = this.streamers.get('transcode');
+
         if (transcodeStreamer) {
             return transcodeStreamer;
         }
@@ -137,6 +144,7 @@ export class MediaSessionController {
 
     /**
      * Get an existing session by ID
+     * @param sessionId
      */
     getSession(sessionId: string): MediaSession | undefined {
         return this.sessions[sessionId];
@@ -144,6 +152,7 @@ export class MediaSessionController {
 
     /**
      * Check if a session exists
+     * @param sessionId
      */
     sessionExists(sessionId: string): boolean {
         return sessionId in this.sessions;
@@ -166,6 +175,7 @@ export class MediaSessionController {
 
         // Ensure any leftover HLS session temp data is removed on shutdown.
         const sessionRoot = `${os.tmpdir()}/oblecto/sessions`;
+
         try {
             fs.rmSync(sessionRoot, { recursive: true, force: true });
         } catch (error) {

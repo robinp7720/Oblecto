@@ -36,6 +36,7 @@ export class DirectStreamSession extends MediaSession {
 
         try {
             const readStream = fs.createReadStream(this.file.path as string);
+
             readStream.pipe(this.outputStream);
 
             readStream.on('error', (err) => {

@@ -44,6 +44,7 @@ export class TranscodeStreamSession extends MediaSession {
 
         // Select audio/video streams
         const streamMapping = await this.selectStreams();
+
         if (streamMapping.length > 0) {
             outputOptions.push(...streamMapping);
         }

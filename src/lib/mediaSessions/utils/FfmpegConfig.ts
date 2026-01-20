@@ -17,12 +17,14 @@ export interface HardwareAccelConfig {
 export class FfmpegConfig {
     /**
      * Get input options for hardware acceleration
+     * @param config
      */
     static getHardwareAccelInputOptions(config: IConfig): string[] {
         const options: string[] = ['-noaccurate_seek'];
 
         if (config.transcoding?.hardwareAcceleration) {
             const accelerator = config.transcoding.hardwareAccelerator || 'cuda';
+
             options.push(`-hwaccel ${accelerator}`);
 
             if (accelerator === 'vaapi') {
@@ -35,6 +37,8 @@ export class FfmpegConfig {
 
     /**
      * Get the FFmpeg video codec string for the given target codec
+     * @param targetCodec
+     * @param config
      */
     static getVideoCodec(targetCodec: string | null, config: IConfig): string {
         if (!targetCodec || targetCodec === 'copy') {
@@ -83,6 +87,7 @@ export class FfmpegConfig {
 
     /**
      * Get output options for basic transcoding
+     * @param config
      */
     static getTranscodeOutputOptions(config: IConfig): string[] {
         const options = this.getFragmentedMp4Options();
@@ -99,6 +104,10 @@ export class FfmpegConfig {
 
     /**
      * Get output options for HLS streaming
+     * @param segmentDir
+     * @param segmentTemplate
+     * @param baseUrl
+     * @param maxSegments
      */
     static getHlsOptions(
         segmentDir: string,
@@ -118,6 +127,8 @@ export class FfmpegConfig {
 
     /**
      * Add stream mapping options for selected audio/video streams
+     * @param audioStreamIndex
+     * @param videoStreamIndex
      */
     static getStreamMappingOptions(
         audioStreamIndex?: number,
@@ -137,6 +148,8 @@ export class FfmpegConfig {
 
     /**
      * Check if video codec needs transcoding
+     * @param sourceCodec
+     * @param targetCodecs
      */
     static needsVideoTranscode(
         sourceCodec: string | null,
@@ -148,6 +161,8 @@ export class FfmpegConfig {
 
     /**
      * Check if audio codec needs transcoding
+     * @param sourceCodec
+     * @param targetCodecs
      */
     static needsAudioTranscode(
         sourceCodec: string | null,

@@ -1,5 +1,4 @@
 import { Express, Request, Response } from 'express';
-import errors from '../errors.js';
 import bcrypt from 'bcrypt';
 import config from '../../../config.js';
 import authMiddleWare from '../middleware/auth.js';

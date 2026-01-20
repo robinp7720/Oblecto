@@ -8,13 +8,11 @@ import type { File } from '../../models/file.js';
 import type Oblecto from '../oblecto/index.js';
 import type { FfmpegCommand } from 'fluent-ffmpeg';
 import type { Response } from 'express';
-import type {
-    MediaSessionOptions,
+import type { MediaSessionOptions,
     StreamDestination,
     MediaSessionState,
     MediaSessionInfo,
-    MediaSessionEvents,
-} from './types.js';
+    MediaSessionEvents, } from './types.js';
 
 const DEFAULT_TIMEOUT_MS = 10000;
 
@@ -137,6 +135,7 @@ export class MediaSession extends EventEmitter {
 
     /**
      * Add a destination for the stream output
+     * @param destination
      */
     async addDestination(destination: StreamDestination): Promise<void> {
         this.clearTimeout();
@@ -148,6 +147,7 @@ export class MediaSession extends EventEmitter {
         // Setup HTTP response headers if applicable
         if (destination.type === 'http') {
             const res = destination.stream as Response;
+
             res.setHeader('Content-Type', this.getOutputMimeType());
             res.setHeader('Transfer-Encoding', 'chunked');
             res.status(this.httpStatusCode);
@@ -165,9 +165,11 @@ export class MediaSession extends EventEmitter {
 
     /**
      * Remove a destination
+     * @param destination
      */
     protected removeDestination(destination: StreamDestination): void {
         const index = this.destinations.indexOf(destination);
+
         if (index > -1) {
             this.destinations.splice(index, 1);
         }

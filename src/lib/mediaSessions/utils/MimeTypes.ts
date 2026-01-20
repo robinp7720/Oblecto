@@ -1,5 +1,6 @@
 /**
  * Get MIME type for a container format
+ * @param format
  */
 export function getMimeType(format: string): string {
     const mimeTypes: Record<string, string> = {
@@ -21,6 +22,7 @@ export function getMimeType(format: string): string {
 
 /**
  * Get MIME type for an audio format
+ * @param format
  */
 export function getAudioMimeType(format: string): string {
     const mimeTypes: Record<string, string> = {

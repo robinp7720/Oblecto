@@ -13,7 +13,9 @@ export type {
 // Streamer exports
 export { DirectStreamer, DirectStreamSession } from './streamers/DirectStreamer.js';
 export { DirectHttpStreamer, DirectHttpStreamSession } from './streamers/DirectHttpStreamer.js';
-export { TranscodeStreamer, TranscodeStreamSession, RecodeStreamer } from './streamers/TranscodeStreamer.js';
+export {
+    TranscodeStreamer, TranscodeStreamSession, RecodeStreamer 
+} from './streamers/TranscodeStreamer.js';
 export { HlsStreamer, HlsStreamSession } from './streamers/HlsStreamer.js';
 export { FederationStreamer, FederationStreamSession } from './streamers/FederationStreamer.js';
 
