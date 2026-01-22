@@ -1,9 +1,14 @@
 import express, { type Request, type Response, type NextFunction, type Application } from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import routes from './routes/index.js';
 import cors from 'cors';
 import logger from '../../../submodules/logger/index.js';
 
 import type EmbyEmulation from '../index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export type EmbyRequest = Request & {
     authorization?: { scheme: string; credentials: string };
@@ -91,6 +96,14 @@ export default class EmbyServerAPI {
         this.server.use(express.urlencoded({ extended: true }));
         this.server.use(express.json());
 
+        // Serve web interface
+        const staticPath = resolve(__dirname, '../../../../jellyfin-web/dist');
+        this.server.use('/web', express.static(staticPath));
+
+        this.server.get('/', (req, res) => {
+            res.redirect('/web/index.html');
+        });
+
         // Convert URL to lowercase
         this.server.use((req: Request, res: Response, next: NextFunction) => {
             req.url = req.url.toLowerCase();
@@ -116,7 +129,7 @@ export default class EmbyServerAPI {
         });
 
         // Error handling middleware
-         
+
         this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
