@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "v0.2.9",
+  "version": "v0.3.1",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -18,7 +18,7 @@
   "type": "module",
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
-    "build": "npm run clean && npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external && npx esbuild src/bin/oblecto.ts --bundle --platform=node --format=esm --outfile=dist/bin/oblecto.js --packages=external && chmod +x ./dist/bin/oblecto.js",
+    "build": "npm run clean && npm run build:web && npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external && npx esbuild src/bin/oblecto.ts --bundle --platform=node --format=esm --outfile=dist/bin/oblecto.js --packages=external && chmod +x ./dist/bin/oblecto.js",
     "clean": "rm -rf dist/",
     "prepare": "npm run build",
     "start": "node dist/index.js",
