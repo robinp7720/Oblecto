@@ -14,7 +14,14 @@ const __dirname = dirname(__filename);
 export default async (args: string[]): Promise<void> => {
     if (args.length === 1) args[1] = 'oblecto';
 
-    const config = JSON.parse(await fs.readFile(path.join(process.cwd(), 'res/config.json'), 'utf8')) as Parameters<typeof generateAssetDirectories>[0] & {
+    let configPath = path.join(__dirname, '../../res/config.json');
+    try {
+        await fs.access(configPath);
+    } catch {
+        configPath = path.join(__dirname, '../../../../res/config.json');
+    }
+
+    const config = JSON.parse(await fs.readFile(configPath, 'utf8')) as Parameters<typeof generateAssetDirectories>[0] & {
         authentication: { secret?: string; saltRounds?: number };
         federation: { uuid?: string };
     };
