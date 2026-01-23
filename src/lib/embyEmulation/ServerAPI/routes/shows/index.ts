@@ -25,15 +25,23 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             });
         }
 
+        const seriesIdParam = String(req.query.SeriesId || req.query.seriesId || req.query.seriesid || '');
+        const seriesIdParsed = seriesIdParam ? parseId(seriesIdParam) : null;
+        const seriesIdFilter = (seriesIdParsed && seriesIdParsed.type === 'series') ? seriesIdParsed.id : null;
+
+        const episodeInclude: any = {
+            model: Episode,
+            include: [Series, { model: File, include: [{ model: Stream }] }]
+        };
+
+        if (seriesIdFilter) {
+            episodeInclude.where = { SeriesId: seriesIdFilter };
+        }
+
         // 1. Get all tracked episodes for this user
         const tracked = await TrackEpisode.findAll({
             where: { userId },
-            include: [
-                {
-                    model: Episode,
-                    include: [Series, { model: File, include: [{ model: Stream }] }]
-                }
-            ],
+            include: [episodeInclude],
             order: [['updatedAt', 'DESC']]
         });
 

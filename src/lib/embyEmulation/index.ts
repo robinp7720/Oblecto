@@ -7,7 +7,7 @@ import Primus, { Spark } from 'primus';
 import { timeout } from 'async';
 import logger from '../../submodules/logger/index.js';
 
-import type Oblecto from '../oblecto/index.js';
+import type Oblecto from '../oblecto/index.js'
 
 type SessionInfo = {
     Name: string | null;
@@ -46,7 +46,7 @@ export default class EmbyEmulation {
         this.websocketSessions = {};
 
         this.serverId = 'cadda85fd4f447b9ad3ccc3c83cf1cf6';
-        this.version = '10.6.4';
+        this.version = this.oblecto.version;
 
         this.serverName = 'Oblecto';
 

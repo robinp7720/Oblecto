@@ -92,9 +92,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                     const progress = duration > 0 ? time / duration : 0;
 
                     const [track, created] = await TrackEpisode.findOrCreate({
-                        where: { userId, EpisodeId: id } as any,
+                        where: { userId, episodeId: id } as any,
                         defaults: {
- time, progress, userId, EpisodeId: id 
+ time, progress, userId, episodeId: id 
 } as any
                     });
 
@@ -113,9 +113,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                     const progress = duration > 0 ? time / duration : 0;
 
                     const [track, created] = await TrackMovie.findOrCreate({
-                        where: { userId, MovieId: id } as any,
+                        where: { userId, movieId: id } as any,
                         defaults: {
- time, progress, userId, MovieId: id 
+ time, progress, userId, movieId: id 
 } as any
                     });
 

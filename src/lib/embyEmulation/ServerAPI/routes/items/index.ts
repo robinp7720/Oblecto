@@ -319,17 +319,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return { item, type: resolvedType };
     };
 
-    server.get('/items/:mediaid', async (req: EmbyRequest, res: Response) => {
-        const userId = getRequestValue(req as any, 'UserId') || '';
-        const parsedUserId = userId ? parseUuid(userId) : null;
-        const { item, type } = await resolveItemById(String(req.params.mediaid), parsedUserId as string | null);
-
-        if (item) {
-            res.send(formatMediaItem(item, String(type || ''), embyEmulation));
-        } else {
-            res.status(404).send('Item not found');
-        }
-    });
+    // Moved /items/:mediaid to the end to avoid shadowing specific routes
 
     server.get('/items', async (req: EmbyRequest, res: Response) => {
         let items: any[] = [];
@@ -969,5 +959,169 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             SearchHints: paged,
             TotalRecordCount: totalCount
         });
+    });
+
+    server.get('/items/:mediaid', async (req: EmbyRequest, res: Response) => {
+        const userId = getRequestValue(req as any, 'UserId') || '';
+        const parsedUserId = userId ? parseUuid(userId) : null;
+        const mediaId = String(req.params.mediaid);
+
+        if (mediaId === 'shows') {
+            return res.send({
+                'Name': 'Shows',
+                'ServerId': embyEmulation.serverId,
+                'Id': 'shows',
+                'Etag': 'show_etag',
+                'DateCreated': '2024-01-12T13:10:19.864503Z',
+                'CanDelete': false,
+                'CanDownload': false,
+                'SortName': 'shows',
+                'ExternalUrls': [],
+                'Path': '/var/lib/jellyfin/root/default/Shows',
+                'EnableMediaSourceDisplay': true,
+                'ChannelId': null,
+                'Taglines': [],
+                'Genres': [],
+                'PlayAccess': 'Full',
+                'RemoteTrailers': [],
+                'ProviderIds': {},
+                'IsFolder': true,
+                'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
+                'Type': 'CollectionFolder',
+                'People': [],
+                'Studios': [],
+                'GenreItems': [],
+                'LocalTrailerCount': 0,
+                'UserData': {
+                    'PlaybackPositionTicks': 0,
+                    'PlayCount': 0,
+                    'IsFavorite': false,
+                    'Played': false,
+                    'Key': 'a656b907-eb3a-7353-2e40-e44b968d0225',
+                    'ItemId': '00000000000000000000000000000000'
+                },
+                'ChildCount': 2,
+                'SpecialFeatureCount': 0,
+                'DisplayPreferencesId': 'a656b907eb3a73532e40e44b968d0225',
+                'Tags': [],
+                'PrimaryImageAspectRatio': 1.7777777777777777,
+                'CollectionType': 'tvshows',
+                'ImageTags': { 'Primary': '49b4446f155951fdf5253ec5d0b793fb' },
+                'BackdropImageTags': [],
+                'ImageBlurHashes': { 'Primary': { '49b4446f155951fdf5253ec5d0b793fb': 'WD8W]gRi0LkDxZxatkaeRQs:oIW=8_SO-;xZRjR\u002BM|jZt7bGa~WC' } },
+                'LocationType': 'FileSystem',
+                'MediaType': 'Unknown',
+                'LockedFields': [],
+                'LockData': false
+            });
+        }
+
+        if (mediaId === 'movies') {
+            return res.send({
+                'Name': 'Movies',
+                'ServerId': embyEmulation.serverId,
+                'Id': 'movies',
+                'Etag': 'movies_etag',
+                'DateCreated': '2024-01-12T13:09:59.8045143Z',
+                'CanDelete': false,
+                'CanDownload': false,
+                'SortName': 'movies',
+                'ExternalUrls': [],
+                'Path': '/var/lib/jellyfin/root/default/Movies',
+                'EnableMediaSourceDisplay': true,
+                'ChannelId': null,
+                'Taglines': [],
+                'Genres': [],
+                'PlayAccess': 'Full',
+                'RemoteTrailers': [],
+                'ProviderIds': {},
+                'IsFolder': true,
+                'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
+                'Type': 'CollectionFolder',
+                'People': [],
+                'Studios': [],
+                'GenreItems': [],
+                'LocalTrailerCount': 0,
+                'UserData': {
+                    'PlaybackPositionTicks': 0,
+                    'PlayCount': 0,
+                    'IsFavorite': false,
+                    'Played': false,
+                    'Key': 'f137a2dd-21bb-c1b9-9aa5-c0f6bf02a805',
+                    'ItemId': '00000000000000000000000000000000'
+                },
+                'ChildCount': 3,
+                'SpecialFeatureCount': 0,
+                'DisplayPreferencesId': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
+                'Tags': [],
+                'PrimaryImageAspectRatio': 1.7777777777777777,
+                'CollectionType': 'movies',
+                'ImageTags': { 'Primary': '7242804fea84f197cc99d0be14caf89f' },
+                'BackdropImageTags': [],
+                'ImageBlurHashes': { 'Primary': { '7242804fea84f197cc99d0be14caf89f': 'WCB_|~t60eaeN_kCxboejYWVkCWX0KWB-;ofoyfir=WCs:ofj]oc' } },
+                'LocationType': 'FileSystem',
+                'MediaType': 'Unknown',
+                'LockedFields': [],
+                'LockData': false
+            });
+        }
+
+        if (mediaId === 'collections') {
+            return res.send({
+                'Name': 'Collections',
+                'ServerId': embyEmulation.serverId,
+                'Id': 'collections',
+                'Etag': 'collections_etag',
+                'DateCreated': '2024-01-28T17:40:02.5928961Z',
+                'CanDelete': false,
+                'CanDownload': false,
+                'SortName': 'collections',
+                'ExternalUrls': [],
+                'Path': '/var/lib/jellyfin/root/default/Collections',
+                'EnableMediaSourceDisplay': true,
+                'ChannelId': null,
+                'Taglines': [],
+                'Genres': [],
+                'PlayAccess': 'Full',
+                'RemoteTrailers': [],
+                'ProviderIds': {},
+                'IsFolder': true,
+                'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
+                'Type': 'CollectionFolder',
+                'People': [],
+                'Studios': [],
+                'GenreItems': [],
+                'LocalTrailerCount': 0,
+                'UserData': {
+                    'PlaybackPositionTicks': 0,
+                    'PlayCount': 0,
+                    'IsFavorite': false,
+                    'Played': false,
+                    'Key': '9d7ad6af-e9af-a2da-b1a2-f6e00ad28fa6',
+                    'ItemId': '00000000000000000000000000000000'
+                },
+                'ChildCount': 3,
+                'SpecialFeatureCount': 0,
+                'DisplayPreferencesId': '9d7ad6afe9afa2dab1a2f6e00ad28fa6',
+                'Tags': [],
+                'PrimaryImageAspectRatio': 1.7777777777777777,
+                'CollectionType': 'boxsets',
+                'ImageTags': { 'Primary': 'd2378e1f91138a4bc46aeb10c0af5cd4' },
+                'BackdropImageTags': [],
+                'ImageBlurHashes': { 'Primary': { 'd2378e1f91138a4bc46aeb10c0af5cd4': 'WNAwM6ITRjxuWBj[M{t7j[WBWBj[00t7t7WBt7WBofRjj[ofoffP' } },
+                'LocationType': 'FileSystem',
+                'MediaType': 'Unknown',
+                'LockedFields': [],
+                'LockData': false
+            });
+        }
+
+        const { item, type } = await resolveItemById(mediaId, parsedUserId as string | null);
+
+        if (item) {
+            res.send(formatMediaItem(item, String(type || ''), embyEmulation));
+        } else {
+            res.status(404).send('Item not found');
+        }
     });
 };

@@ -7,7 +7,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             'LocalAddress': 'http://oblecto:8096',
             'ServerName': embyEmulation.serverName,
             'Version': '10.11.5',
-            'ProductName': 'Jellyfin Server',
+            'ProductName': 'Oblecto Server',
             'OperatingSystem': 'Linux',
             'Id': embyEmulation.serverId,
             'StartupWizardCompleted': true

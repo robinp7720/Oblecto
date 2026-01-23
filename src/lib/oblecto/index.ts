@@ -1,3 +1,5 @@
+// @ts-ignore
+import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
 
@@ -49,6 +51,8 @@ import { IConfig } from '../../interfaces/config.js';
 import { Sequelize } from 'sequelize';
 
 export default class Oblecto {
+    public version = pkg.version;
+
     public config: IConfig;
     public database: Sequelize;
     public tvdb: InstanceType<typeof TVDB>;
