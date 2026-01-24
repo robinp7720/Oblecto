@@ -105,6 +105,28 @@ Emitted by the server when new content is added or identified in the library.
 - `type`: The type of item added.
 - `id`: The internal ID of the added item.
 
+### Server -> Client: `seedbox`
+
+Emitted by the server to report the status of seedbox imports.
+
+**Payload:**
+
+```json
+{
+  "event": "import_start" | "import_success" | "import_error",
+  "seedbox": "Seedbox Name",
+  "origin": "/remote/path/file.mkv",
+  "destination": "/local/path/file.mkv",
+  "error": "Error message" // Only present if event is "import_error"
+}
+```
+
+- `event`: Status of the import operation.
+- `seedbox`: Name of the seedbox source.
+- `origin`: Remote path of the file being imported.
+- `destination`: Local destination path.
+- `error`: Error message string (optional).
+
 ## Example Interaction
 
 ```javascript

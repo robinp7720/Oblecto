@@ -69,6 +69,13 @@ export default class SeedboxController {
     async importFile(seedbox: Seedbox, origin: string, destination: string): Promise<void> {
         logger.info( `Downloading file from ${seedbox.name}: ${origin}. Saving to ${destination}`);
 
+        this.oblecto.realTimeController.broadcast('seedbox', {
+            event: 'import_start',
+            seedbox: seedbox.name,
+            origin,
+            destination
+        });
+
         mkdirp.sync(dirname(destination));
 
         try {
@@ -78,8 +85,23 @@ export default class SeedboxController {
             await rename(destination + '.oblectoimport', destination);
 
             logger.info( `${origin} successfully downloaded`);
+
+            this.oblecto.realTimeController.broadcast('seedbox', {
+                event: 'import_success',
+                seedbox: seedbox.name,
+                origin,
+                destination
+            });
         } catch (e) {
             logger.error( `Could not download ${origin}:`, e);
+            
+            this.oblecto.realTimeController.broadcast('seedbox', {
+                event: 'import_error',
+                seedbox: seedbox.name,
+                origin,
+                destination,
+                error: (e as Error).message
+            });
         }
     }
 
