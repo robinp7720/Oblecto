@@ -74,4 +74,63 @@ describe('FileUpdater', function () {
 
         expect(indexJob).to.not.be.ok();
     });
+
+    describe('getPrimaryVideoStream', function() {
+        it('should return null if no streams', async function() {
+            const result = await FileUpdater.getPrimaryVideoStream({ streams: [] });
+            expect(result).to.be(null);
+        });
+
+        it('should return null if no video streams', async function() {
+            const result = await FileUpdater.getPrimaryVideoStream({ 
+                streams: [{ codec_type: 'audio', index: 0 }] 
+            });
+            expect(result).to.be(null);
+        });
+
+        it('should return the video stream with longest duration', async function() {
+            const streams = [
+                { codec_type: 'video', index: 0, duration: 100 },
+                { codec_type: 'video', index: 1, duration: 200 }, // Winner
+                { codec_type: 'audio', index: 2, duration: 500 }
+            ];
+            const result = await FileUpdater.getPrimaryVideoStream({ streams });
+            expect(result).to.be.ok();
+            expect(result.index).to.be(1);
+        });
+        
+        it('should handle missing duration by assuming 0', async function() {
+             const streams = [
+                { codec_type: 'video', index: 0 }, // undefined duration -> 0
+                { codec_type: 'video', index: 1, duration: 10 }
+            ];
+            const result = await FileUpdater.getPrimaryVideoStream({ streams });
+            expect(result.index).to.be(1);
+        });
+    });
+
+    describe('getPrimaryAudioStream', function() {
+        it('should return null if no streams', async function() {
+            const result = await FileUpdater.getPrimaryAudioStream({ streams: [] });
+            expect(result).to.be(null);
+        });
+
+        it('should return null if no audio streams', async function() {
+            const result = await FileUpdater.getPrimaryAudioStream({ 
+                streams: [{ codec_type: 'video', index: 0 }] 
+            });
+            expect(result).to.be(null);
+        });
+
+        it('should return the audio stream with longest duration', async function() {
+            const streams = [
+                { codec_type: 'audio', index: 0, duration: 100 },
+                { codec_type: 'audio', index: 1, duration: 200 }, // Winner
+                { codec_type: 'video', index: 2, duration: 500 }
+            ];
+            const result = await FileUpdater.getPrimaryAudioStream({ streams });
+            expect(result).to.be.ok();
+            expect(result.index).to.be(1);
+        });
+    });
 });
