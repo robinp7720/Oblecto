@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default tseslint.config(
-    { ignores: ['dist/', 'Oblecto-Web/', 'logs/', 'images/', '.idea/', 'coverage/'] },
+    { ignores: ['dist/', 'Oblecto-Web/', 'logs/', 'images/', '.idea/', 'coverage/' ,'jellyfin-web'] },
     js.configs.recommended,
 
     // Type-aware TypeScript linting for .ts files
