@@ -35,8 +35,7 @@ jobs:
     - name: Report coverage to DeepSource
       if: matrix.node-version == '25.x'
       run: |
-        curl -sL https://github.com/deepsource/cli/releases/latest/download/ds -o ds
-        chmod +x ds
-        ./ds report --analyzer test-coverage --key javascript --value-file ./coverage/lcov.info
+        curl https://deepsource.io/cli | sh
+        ./bin/deepsource report --analyzer test-coverage --key javascript --value-file ./coverage/lcov.info
       env:
         DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
