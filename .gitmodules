@@ -3,4 +3,4 @@
 	url = https://github.com/robinp7720/Oblecto-Web
 [submodule "jellyfin-web"]
 	path = jellyfin-web
-	url = https://github.com/jellyfin/jellyfin.git
+	url = https://github.com/jellyfin/jellyfin-web.git
