@@ -8,3 +8,6 @@ name = "javascript"
     "nodejs",
     "mocha"
   ]
+
+[[analyzers]]
+name = "test-coverage"

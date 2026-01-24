@@ -27,7 +27,7 @@
     "oblecto:dev": "tsx src/bin/oblecto.ts",
     "debug": "node --inspect=0.0.0.0 --loader tsx src/index.ts",
     "test:mocha": "mocha --extension ts --require tsx tests/mocha",
-    "test:coverage": "c8 npm run test:mocha",
+    "test:coverage": "c8 --reporter=lcov --reporter=text npm run test:mocha",
     "test:startup": "scripts/test.sh",
     "test": "npm run test:mocha",
     "lint": "eslint .",

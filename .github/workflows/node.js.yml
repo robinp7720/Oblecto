@@ -21,12 +21,22 @@ jobs:
     steps:
     - name: Install dependancies
       run: sudo apt-get update && sudo apt-get install libavahi-compat-libdnssd-dev python3-guessit
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
     - name: Checkout submodules
       run: git submodule update --init --recursive
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
-    - run: npm test
+    - run: npm run test:coverage
+    - name: Report coverage to DeepSource
+      if: matrix.node-version == '25.x'
+      run: |
+        curl -sL https://github.com/deepsource/cli/releases/latest/download/ds -o ds
+        chmod +x ds
+        ./ds report --analyzer test-coverage --key javascript --value-file ./coverage/lcov.info
+      env:
+        DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
