@@ -1,4 +1,4 @@
-import SeedboxImportDriver, { SeedboxListEntry, SeedboxStorageDriverConfig } from '../SeedboxImportDriver.js';
+import SeedboxImportDriver, { SeedboxListEntry, SeedboxStorageDriverConfig, ProgressCallback } from '../SeedboxImportDriver.js';
 import logger from '../../../submodules/logger/index.js';
 
 import * as ftp from 'basic-ftp';
@@ -39,7 +39,7 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
         });
     }
 
-    async copy(origin: string, destination: string): Promise<void> {
+    async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
         const client =  new ftp.Client();
 
         await client.access({
@@ -48,6 +48,20 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
             password: this.config.password,
             secure: this.config.secure || false
         });
+
+        if (callback) {
+            try {
+                const size = await client.size(origin);
+                client.trackProgress(info => {
+                    callback(info.bytes, size);
+                });
+            } catch (e) {
+                // Ignore size fetch errors, maybe pass 0 as total
+                client.trackProgress(info => {
+                    callback(info.bytes, 0);
+                });
+            }
+        }
 
         await client.downloadTo(destination, origin);
     }

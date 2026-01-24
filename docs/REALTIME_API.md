@@ -113,10 +113,13 @@ Emitted by the server to report the status of seedbox imports.
 
 ```json
 {
-  "event": "import_start" | "import_success" | "import_error",
+  "event": "import_start" | "import_progress" | "import_success" | "import_error",
   "seedbox": "Seedbox Name",
   "origin": "/remote/path/file.mkv",
   "destination": "/local/path/file.mkv",
+  "transferred": 102400, // Bytes (Only for import_progress)
+  "total": 104857600,    // Bytes (Only for import_progress)
+  "progress": 0.001,     // 0.0 - 1.0 (Only for import_progress)
   "error": "Error message" // Only present if event is "import_error"
 }
 ```
@@ -125,6 +128,9 @@ Emitted by the server to report the status of seedbox imports.
 - `seedbox`: Name of the seedbox source.
 - `origin`: Remote path of the file being imported.
 - `destination`: Local destination path.
+- `transferred`: Number of bytes transferred so far.
+- `total`: Total size of the file in bytes.
+- `progress`: Completion fraction (0.0 to 1.0).
 - `error`: Error message string (optional).
 
 ## Example Interaction

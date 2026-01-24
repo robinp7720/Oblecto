@@ -78,10 +78,27 @@ export default class SeedboxController {
 
         mkdirp.sync(dirname(destination));
 
+        let lastUpdate = 0;
+        const progressCallback = (transferred: number, total: number) => {
+            const now = Date.now();
+            if (now - lastUpdate > 1000) {
+                this.oblecto.realTimeController.broadcast('seedbox', {
+                    event: 'import_progress',
+                    seedbox: seedbox.name,
+                    origin,
+                    destination,
+                    transferred,
+                    total,
+                    progress: total > 0 ? transferred / total : 0
+                });
+                lastUpdate = now;
+            }
+        };
+
         try {
             // Add a suffix to the file while downloading to prevent potential errors while running an import
             // and also to know if a file was successfully downloaded or not
-            await seedbox.storageDriver.copy(origin, destination + '.oblectoimport');
+            await seedbox.storageDriver.copy(origin, destination + '.oblectoimport', progressCallback);
             await rename(destination + '.oblectoimport', destination);
 
             logger.info( `${origin} successfully downloaded`);

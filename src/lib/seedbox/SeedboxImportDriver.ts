@@ -11,6 +11,8 @@ export type SeedboxListEntry = {
     type: number;
 };
 
+export type ProgressCallback = (transferred: number, total: number) => void;
+
 export default class SeedboxImportDriver {
     public config: SeedboxStorageDriverConfig;
 
@@ -27,8 +29,9 @@ export default class SeedboxImportDriver {
         return [];
     }
 
-    async copy(origin: string, destination: string): Promise<void> {
+    async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
         void origin;
         void destination;
+        void callback;
     }
 }

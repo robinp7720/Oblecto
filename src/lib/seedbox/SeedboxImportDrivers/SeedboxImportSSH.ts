@@ -1,4 +1,4 @@
-import SeedboxImportDriver, { SeedboxListEntry, SeedboxStorageDriverConfig } from '../SeedboxImportDriver.js';
+import SeedboxImportDriver, { SeedboxListEntry, SeedboxStorageDriverConfig, ProgressCallback } from '../SeedboxImportDriver.js';
 import logger from '../../../submodules/logger/index.js';
 
 import Client from 'ssh2-sftp-client';
@@ -42,7 +42,7 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
         });
     }
 
-    async copy(origin: string, destination: string): Promise<void> {
+    async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
         const client =  new (Client as any)();
 
@@ -56,8 +56,8 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         await client.fastGet(origin, destination, {
-            step: () => {
-                // console.log(transfered, chunk, total, transfered/total);
+            step: (transferred: any, chunk: any, total: any) => {
+                if (callback) callback(transferred, total);
             }
         });
 
