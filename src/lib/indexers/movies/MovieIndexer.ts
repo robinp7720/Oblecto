@@ -99,6 +99,8 @@ export default class MovieIndexer {
 
         if (!movieCreated && !doReindex) return;
 
+        this.oblecto.realTimeController.broadcast('indexer', { event: 'added', type: 'movie', id: movie.id });
+
         this.oblecto.queue.queueJob('updateMovie', movie);
         this.oblecto.queue.queueJob('downloadMovieFanart', movie);
         this.oblecto.queue.pushJob('downloadMoviePoster', movie);

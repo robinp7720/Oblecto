@@ -87,6 +87,24 @@ Emitted by the server to command the client to start playback of a specific item
 }
 ```
 
+### Server -> Client: `indexer`
+
+Emitted by the server when new content is added or identified in the library.
+
+**Payload:**
+
+```json
+{
+  "event": "added",
+  "type": "series" | "episode" | "movie",
+  "id": "string"
+}
+```
+
+- `event`: Currently always `"added"`.
+- `type`: The type of item added.
+- `id`: The internal ID of the added item.
+
 ## Example Interaction
 
 ```javascript

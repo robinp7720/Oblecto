@@ -121,6 +121,7 @@ export default class SeriesIndexer {
             });
 
         if (seriesCreated) {
+            this.oblecto.realTimeController.broadcast('indexer', { event: 'added', type: 'series', id: series.id });
             this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.queueJob('downloadSeriesPoster', series);
         }
@@ -210,6 +211,7 @@ export default class SeriesIndexer {
         await episode.addFile(file);
 
         if (episodeCreated) {
+            this.oblecto.realTimeController.broadcast('indexer', { event: 'added', type: 'episode', id: episode.id });
             this.oblecto.queue.pushJob('updateEpisode', episode);
             this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
         }

@@ -38,6 +38,10 @@ export default class RealtimeController {
         });
     }
 
+    broadcast(event: string, payload: unknown): void {
+        this.server.emit(event, payload);
+    }
+
     close(): void {
         for (const client of Object.keys(this.clients)) {
             this.clients[client].disconnect();
