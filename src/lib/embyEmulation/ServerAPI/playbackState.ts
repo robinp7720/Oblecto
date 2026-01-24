@@ -22,12 +22,10 @@ type EmbyEmulationLike = {
 const DEFAULT_TTL_MS = 2 * 60 * 60 * 1000;
 
 const ensurePlaybackState = (session: EmbySession): PlaybackState => {
-    if (!session.playbackState) {
-        session.playbackState = {
-            playSessions: new Map(),
-            lastMediaSourceByItem: new Map()
-        };
-    }
+    session.playbackState ??= {
+        playSessions: new Map(),
+        lastMediaSourceByItem: new Map()
+    };
     return session.playbackState;
 };
 
@@ -40,23 +38,23 @@ const prunePlaySessions = (playbackState: PlaybackState, now: number): void => {
 };
 
 export const getPlaybackState = (embyEmulation: EmbyEmulationLike, token?: string): PlaybackState | null => {
-    if (!token) return null;
+    if (token === undefined || token === '') return null;
     const session = embyEmulation.sessions?.[token];
 
-    if (!session) return null;
+    if (session === undefined) return null;
     return ensurePlaybackState(session);
 };
 
 export const getPlaybackEntry = (embyEmulation: EmbyEmulationLike, token: string, playSessionId?: string): PlaybackEntry | null => {
     const playbackState = getPlaybackState(embyEmulation, token);
 
-    if (!playbackState || !playSessionId) return null;
+    if (playbackState === null || playSessionId === undefined || playSessionId === '') return null;
     const now = Date.now();
 
     prunePlaySessions(playbackState, now);
     const entry = playbackState.playSessions.get(playSessionId);
 
-    if (!entry) return null;
+    if (entry === undefined) return null;
     if (now - entry.updatedAt > DEFAULT_TTL_MS) {
         playbackState.playSessions.delete(playSessionId);
         return null;
@@ -65,14 +63,14 @@ export const getPlaybackEntry = (embyEmulation: EmbyEmulationLike, token: string
 };
 
 export const upsertPlaybackEntry = (embyEmulation: EmbyEmulationLike, token: string, entry: Partial<PlaybackEntry> & { playSessionId?: string }): PlaybackEntry | null => {
-    if (!entry?.playSessionId) return null;
+    if (entry?.playSessionId === undefined || entry?.playSessionId === '') return null;
     const playbackState = getPlaybackState(embyEmulation, token);
 
-    if (!playbackState) return null;
+    if (playbackState === null) return null;
     const now = Date.now();
 
     prunePlaySessions(playbackState, now);
-    const existing = playbackState.playSessions.get(entry.playSessionId) || { playSessionId: entry.playSessionId, updatedAt: now };
+    const existing = playbackState.playSessions.get(entry.playSessionId) ?? { playSessionId: entry.playSessionId, updatedAt: now };
     const next = {
         ...existing,
         itemId: entry.itemId ?? existing.itemId,
@@ -86,23 +84,23 @@ export const upsertPlaybackEntry = (embyEmulation: EmbyEmulationLike, token: str
 };
 
 export const setLastMediaSource = (embyEmulation: EmbyEmulationLike, token: string, itemId?: string | number, mediaSourceId?: string | number): void => {
-    if (!itemId || mediaSourceId === undefined || mediaSourceId === null) return;
+    if (itemId === undefined || itemId === '' || mediaSourceId === undefined || mediaSourceId === null) return;
     const playbackState = getPlaybackState(embyEmulation, token);
 
-    if (!playbackState) return;
+    if (playbackState === null) return;
     playbackState.lastMediaSourceByItem.set(itemId, mediaSourceId);
 };
 
 export const getLastMediaSource = (embyEmulation: EmbyEmulationLike, token: string, itemId?: string | number): string | number | null => {
     const playbackState = getPlaybackState(embyEmulation, token);
 
-    if (!playbackState || !itemId) return null;
-    return playbackState.lastMediaSourceByItem.get(itemId) || null;
+    if (playbackState === null || itemId === undefined || itemId === '') return null;
+    return playbackState.lastMediaSourceByItem.get(itemId) ?? null;
 };
 
 export const deletePlaybackEntry = (embyEmulation: EmbyEmulationLike, token: string, playSessionId?: string): boolean => {
     const playbackState = getPlaybackState(embyEmulation, token);
 
-    if (!playbackState || !playSessionId) return false;
+    if (playbackState === null || playSessionId === undefined || playSessionId === '') return false;
     return playbackState.playSessions.delete(playSessionId);
 };

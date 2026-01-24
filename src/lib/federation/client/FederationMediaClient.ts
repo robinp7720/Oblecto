@@ -32,13 +32,13 @@ export default class FederationMediaClient extends FederationClient {
 
     }
 
-    async startStreamFile(fileId: string): Promise<void> {
+    startStreamFile(fileId: string): void {
         this.fileId = fileId;
 
         this.socket.write(`FILEID:${fileId}\n`);
     }
 
-    async setStreamDestination(dest: StreamDestination): Promise<void> {
+    setStreamDestination(dest: StreamDestination): void {
         this.streamDestination = dest;
 
         dest.on('close', () => {
@@ -46,7 +46,7 @@ export default class FederationMediaClient extends FederationClient {
         });
     }
 
-    async readyHandler(data: string): Promise<void> {
+    readyHandler(data: string): void {
         if (data !== this.fileId) {
             // The server didn't respect the file id
             // This really shouldn't happen so we destroy the client
@@ -58,20 +58,20 @@ export default class FederationMediaClient extends FederationClient {
 
         this.socket.pipe(this.streamDestination);
 
-        await this.startStream();
+        this.startStream();
     }
 
-    async startStream(): Promise<void> {
+    startStream(): void {
         if (!this.streamDestination) throw new Error('No destination');
 
         this.socket.write('START:START\n');
     }
 
-    async setStreamOffset(offset: number): Promise<void> {
+    setStreamOffset(offset: number): void {
         this.socket.write(`OFFSET:${offset}\n`);
     }
 
-    async closeConnection(): Promise<void> {
+    closeConnection(): void {
         this.socket.destroy();
     }
 }

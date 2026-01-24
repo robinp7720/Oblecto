@@ -23,7 +23,7 @@ const ConfigManager = {
         }
     },
     loadConfigFiles: function loadConfigs (): IConfig {
-        if (process.env.OBLECTO_CONFIG_PATH && process.env.OBLECTO_CONFIG_PATH !== '') {
+        if (process.env.OBLECTO_CONFIG_PATH !== undefined && process.env.OBLECTO_CONFIG_PATH !== '') {
             return { ...this.loadFile(process.env.OBLECTO_CONFIG_PATH) } as IConfig;
         }
         if (fs.existsSync('./res/config.json')) {

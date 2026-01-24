@@ -17,7 +17,7 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
     async identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification> {
         const query: { query: string; primary_release_year?: number } = { query: guessitIdentification.title };
 
-        if (guessitIdentification.year) {
+        if (guessitIdentification.year !== undefined && guessitIdentification.year !== null) {
             query.primary_release_year = guessitIdentification.year;
         }
 
@@ -29,11 +29,15 @@ export default class TmdbMovieIdentifier extends MovieIdentifier {
             }>;
         };
 
-        const identifiedMovie = res.results[0];
+        const identifiedMovie = res.results[0] as {
+            id: number;
+            title: string;
+            overview?: string;
+        } | undefined;
 
-        if (!identifiedMovie) {
+        if (identifiedMovie === undefined) {
             throw new IdentificationError(
-                `Could not identify movie "${guessitIdentification.title}"${guessitIdentification.year ? ` (${guessitIdentification.year})` : ''} using TMDB`
+                `Could not identify movie "${guessitIdentification.title}"${(guessitIdentification.year !== undefined && guessitIdentification.year !== null) ? ` (${guessitIdentification.year})` : ''} using TMDB`
             );
         }
 

@@ -27,7 +27,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
         const seriesIdParam = String(req.query.SeriesId || req.query.seriesId || req.query.seriesid || '');
         const seriesIdParsed = seriesIdParam ? parseId(seriesIdParam) : null;
-        const seriesIdFilter = (seriesIdParsed && seriesIdParsed.type === 'series') ? seriesIdParsed.id : null;
+        const seriesIdFilter = seriesIdParsed?.type === 'series' ? seriesIdParsed.id : null;
 
         const episodeInclude: any = {
             model: Episode,

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-floating-promises, jsdoc/require-returns-description */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, jsdoc/require-returns-description */
 import recursive from 'recursive-readdir';
 import { extname } from 'path';
 
@@ -40,7 +40,7 @@ export default class SeriesCollector {
      * @param file - File path to add to the index queue
      * @returns
      */
-    async collectFile(file: string): Promise<void> {
+    collectFile(file: string): void {
         const extension = extname(file).toLowerCase().replace('.','');
 
         if (this.oblecto.config.fileExtensions.video.indexOf(extension) !== -1) {
@@ -52,9 +52,9 @@ export default class SeriesCollector {
      * Index all TV Show libraries
      * @returns
      */
-    async collectAll(): Promise<void> {
+    collectAll(): void {
         this.oblecto.config.tvshows.directories.forEach(directory => {
-            this.collectDirectory(directory.path);
+            void this.collectDirectory(directory.path);
         });
     }
 }

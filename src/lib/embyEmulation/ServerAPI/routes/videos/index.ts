@@ -11,26 +11,26 @@ import logger from '../../../../../submodules/logger';
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { getLastMediaSource, getPlaybackEntry, upsertPlaybackEntry } from '../../playbackState.js';
 
-const normalizeBool = (value) => {
+const normalizeBool = (value: unknown): boolean => {
     if (value === undefined || value === null) return false;
     if (typeof value === 'boolean') return value;
-    return ['true', '1', 'yes', 'on'].includes(String(value).toLowerCase());
+    return ['true', '1', 'yes', 'on'].includes(String(value as any).toLowerCase());
 };
 
-const normalizeContainer = (value) => {
-    if (!value) return null;
-    const container = String(value).toLowerCase();
+const normalizeContainer = (value: unknown): string | null => {
+    if (value === undefined || value === null || value === '') return null;
+    const container = String(value as any).toLowerCase();
 
     if (container === 'ts') return 'mpegts';
     return container;
 };
 
-const resolveFileForItem = async (embyEmulation, req, itemId) => {
-    const token = getEmbyToken(req);
-    const mediaSourceId = getRequestValue(req, 'MediaSourceId');
-    const playSessionId = getRequestValue(req, 'PlaySessionId');
-    const playbackSession = playSessionId ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
-    const lastMediaSource = getLastMediaSource(embyEmulation, token, itemId);
+const resolveFileForItem = async (embyEmulation: EmbyEmulation, req: Request, itemId: string): Promise<File | null> => {
+    const token = getEmbyToken(req as any);
+    const mediaSourceId = getRequestValue(req as any, 'MediaSourceId');
+    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
+    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
+    const lastMediaSource = token ? getLastMediaSource(embyEmulation, token, itemId) : null;
     const resolvedMediaSourceId = mediaSourceId ?? playbackSession?.mediaSourceId ?? lastMediaSource;
 
     if (resolvedMediaSourceId) {
@@ -43,13 +43,13 @@ const resolveFileForItem = async (embyEmulation, req, itemId) => {
     const numericId = parsed.id;
     const type = parsed.type;
 
-    if (type === 'movie') {
+    if (type === 'movie' && Number.isFinite(numericId)) {
         const movie = await Movie.findByPk(numericId, { include: [File] });
 
         return movie?.Files?.[0] || null;
     }
 
-    if (type === 'episode') {
+    if (type === 'episode' && Number.isFinite(numericId)) {
         const episode = await Episode.findByPk(numericId, { include: [File] });
 
         logger.debug('Jellyfin emulation: episode stream lookup', {
@@ -86,13 +86,13 @@ const resolveFileForItem = async (embyEmulation, req, itemId) => {
     return null;
 };
 
-const buildStreamTarget = (req, file, fallbackContainer) => {
-    const container = normalizeContainer(getRequestValue(req, 'Container') || fallbackContainer || file?.extension);
-    const segmentContainer = normalizeContainer(getRequestValue(req, 'SegmentContainer'));
+const buildStreamTarget = (req: Request, file: File | null, fallbackContainer: string | undefined): any => {
+    const container = normalizeContainer(getRequestValue(req as any, 'Container') || fallbackContainer || file?.extension);
+    const segmentContainer = normalizeContainer(getRequestValue(req as any, 'SegmentContainer'));
     const formats = (segmentContainer || container || 'mp4').toString().split(',');
 
-    const rawVideoCodec = getRequestValue(req, 'VideoCodec') || file?.videoCodec || 'h264';
-    const rawAudioCodec = getRequestValue(req, 'AudioCodec') || file?.audioCodec || 'aac';
+    const rawVideoCodec = getRequestValue(req as any, 'VideoCodec') || file?.videoCodec || 'h264';
+    const rawAudioCodec = getRequestValue(req as any, 'AudioCodec') || file?.audioCodec || 'aac';
 
     return {
         formats,
@@ -101,8 +101,8 @@ const buildStreamTarget = (req, file, fallbackContainer) => {
     };
 };
 
-const getOffsetSeconds = (req) => {
-    const startTicks = getRequestValue(req, 'StartTimeTicks');
+const getOffsetSeconds = (req: Request): number => {
+    const startTicks = getRequestValue(req as any, 'StartTimeTicks');
 
     if (!startTicks) return 0;
 
@@ -113,11 +113,11 @@ const getOffsetSeconds = (req) => {
     return parsed / 10000000;
 };
 
-const resolveStreamSession = (embyEmulation, req, file, streamType, fallbackContainer) => {
+const resolveStreamSession = (embyEmulation: EmbyEmulation, req: Request, file: File, streamType: string, fallbackContainer: string | undefined): any => {
     const controller = embyEmulation.oblecto.streamSessionController;
-    const playSessionId = getRequestValue(req, 'PlaySessionId');
-    const token = getEmbyToken(req);
-    const playbackSession = playSessionId ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
+    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
+    const token = getEmbyToken(req as any);
+    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
     const existingSessionId = playbackSession?.streamSessionId || playSessionId;
 
     if (existingSessionId && controller.sessionExists(existingSessionId)) {
@@ -139,7 +139,7 @@ const resolveStreamSession = (embyEmulation, req, file, streamType, fallbackCont
         offset,
     });
 
-    if (playSessionId) {
+    if (playSessionId && token) {
         upsertPlaybackEntry(embyEmulation, token, {
             playSessionId,
             streamSessionId: session.sessionId
@@ -148,11 +148,11 @@ const resolveStreamSession = (embyEmulation, req, file, streamType, fallbackCont
     return session;
 };
 
-const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
+const ensureHlsSession = (embyEmulation: EmbyEmulation, req: Request, file: File | null, itemId: string, playlistId: string | undefined): any => {
     const controller = embyEmulation.oblecto.streamSessionController;
-    const playSessionId = getRequestValue(req, 'PlaySessionId');
-    const token = getEmbyToken(req);
-    const playbackSession = playSessionId ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
+    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
+    const token = getEmbyToken(req as any);
+    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
     const existingSessionId = playbackSession?.streamSessionId || playSessionId;
 
     if (existingSessionId && controller.sessionExists(existingSessionId)) {
@@ -188,7 +188,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
     if (playlistId) {
         embyEmulation.hlsSessionsByPlaylistId[playlistId] = session.sessionId;
     }
-    if (playSessionId) {
+    if (playSessionId && token) {
         upsertPlaybackEntry(embyEmulation, token, {
             playSessionId,
             streamSessionId: session.sessionId
@@ -198,7 +198,7 @@ const ensureHlsSession = (embyEmulation, req, file, itemId, playlistId) => {
     return session;
 };
 
-const sendHead = async (res, file) => {
+const sendHead = async (res: Response, file: File | string): Promise<void> => {
     const path = file instanceof File ? file.path : file;
     let size = file instanceof File ? file.size : null;
 
@@ -216,8 +216,8 @@ const sendHead = async (res, file) => {
     res.end();
 };
 
-export default (server, embyEmulation) => {
-    server.get('/hls/:sessionid/segment/:id', async (req, res, next) => {
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
+    server.get('/hls/:sessionid/segment/:id', async (req: Request, res: Response, next) => {
         try {
             const sessionId = req.params.sessionid;
 
@@ -243,7 +243,7 @@ export default (server, embyEmulation) => {
         }
     });
 
-    const handleStreamRequest = async (req, res, next, fallbackContainer) => {
+    const handleStreamRequest = async (req: Request, res: Response, next: (err?: unknown) => void, fallbackContainer?: string): Promise<void> => {
         try {
             const file = await resolveFileForItem(embyEmulation, req, req.params.itemid || req.params.mediaid);
 
@@ -251,8 +251,8 @@ export default (server, embyEmulation) => {
                 throw errors.NotFoundError('Media source not found');
             }
 
-            const staticRequested = normalizeBool(getRequestValue(req, 'Static'));
-            const container = normalizeContainer(getRequestValue(req, 'Container') || fallbackContainer);
+            const staticRequested = normalizeBool(getRequestValue(req as any, 'Static'));
+            const container = normalizeContainer(getRequestValue(req as any, 'Container') || fallbackContainer);
             const fileContainer = normalizeContainer(file.extension || file.container);
 
             let streamType = 'directhttp';
@@ -275,7 +275,7 @@ export default (server, embyEmulation) => {
         }
     };
 
-    const handleStreamHead = async (req, res, next) => {
+    const handleStreamHead = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
         try {
             const file = await resolveFileForItem(embyEmulation, req, req.params.itemid || req.params.mediaid);
 
@@ -289,7 +289,7 @@ export default (server, embyEmulation) => {
         }
     };
 
-    const handleHlsPlaylist = async (req, res, next) => {
+    const handleHlsPlaylist = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
         try {
             const itemId = req.params.itemid;
             const playlistId = req.params.playlistid;
@@ -313,7 +313,7 @@ export default (server, embyEmulation) => {
         }
     };
 
-    const handleHlsSegment = async (req, res, next) => {
+    const handleHlsSegment = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
         try {
             const itemId = req.params.itemid;
             const playlistId = req.params.playlistid;

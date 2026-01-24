@@ -110,7 +110,7 @@ export default class SeriesIndexer {
         const seriesQuery: Array<Record<string, unknown>> = [];
 
         for (const identifier of identifiers) {
-            if (!seriesIdentification[identifier]) continue;
+            if (seriesIdentification[identifier] === null || seriesIdentification[identifier] === undefined) continue;
             seriesQuery.push({ [identifier]: seriesIdentification[identifier] });
         }
 
@@ -121,7 +121,9 @@ export default class SeriesIndexer {
             });
 
         if (seriesCreated) {
-            this.oblecto.realTimeController.broadcast('indexer', { event: 'added', type: 'series', id: series.id });
+            this.oblecto.realTimeController.broadcast('indexer', {
+ event: 'added', type: 'series', id: series.id 
+});
             this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.queueJob('downloadSeriesPoster', series);
         }
@@ -143,9 +145,7 @@ export default class SeriesIndexer {
 
                 // Some single season shows usually don't have a season in the title,
                 // therefore whe should set it to 1 by default.
-                if (!guessitIdentification.season) {
-                    guessitIdentification.season = 1;
-                }
+                guessitIdentification.season ??= 1;
 
                 seriesIdentification = await this.seriesIdentifier.identify(name, guessitIdentification);
 
@@ -200,7 +200,7 @@ export default class SeriesIndexer {
         const [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 where: {
-                    airedSeason: episodeIdentification.airedSeason || 1,
+                    airedSeason: episodeIdentification.airedSeason ?? 1,
                     airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
 
                     SeriesId: series.id
@@ -211,7 +211,9 @@ export default class SeriesIndexer {
         await episode.addFile(file);
 
         if (episodeCreated) {
-            this.oblecto.realTimeController.broadcast('indexer', { event: 'added', type: 'episode', id: episode.id });
+            this.oblecto.realTimeController.broadcast('indexer', {
+ event: 'added', type: 'episode', id: episode.id 
+});
             this.oblecto.queue.pushJob('updateEpisode', episode);
             this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);
         }

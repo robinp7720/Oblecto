@@ -17,7 +17,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
      * @returns - Identification object
      */
     async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification> {
-        if (!series.tmdbid) throw new IdentificationError('Series does not have a TMDB ID');
+        if (series.tmdbid === null || series.tmdbid === undefined) throw new IdentificationError('Series does not have a TMDB ID');
         const tmdbid = series.tmdbid;
 
         let episode: {
@@ -32,7 +32,7 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
         try {
             episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
                 id: tmdbid,
-                season_number: guessitIdentification.season || 1,
+                season_number: guessitIdentification.season ?? 1,
                 episode_number: guessitIdentification.episode
             }, { timeout: 5000 })) as typeof episode;
         } catch (e) {

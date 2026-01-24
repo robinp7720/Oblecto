@@ -19,7 +19,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
      * @param guessitIdentification - Guessit identification object
      * @returns - Best result match
      */
-    retrieveSeries(tmdbSearch: Array<{ first_air_date?: string }>, guessitIdentification: GuessitIdentification) {
+    retrieveSeries(tmdbSearch: Array<{ id: number; name: string; overview: string; first_air_date?: string }>, guessitIdentification: GuessitIdentification): { id: number; name: string; overview: string; first_air_date?: string } {
         // If TMDB only found one series that matches, we'll just ignore the date
         // This fixes some releases where the episode release year is included in
         // the file name instead of the first series release year
@@ -28,8 +28,8 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
         // If more then one possible match was found, use the one where the date is an exact match
         // TODO: We might want to also match to the most similar name
         for (const series of tmdbSearch) {
-            if (!series.first_air_date) continue;
-            if (guessitIdentification.year!.toString() !== series.first_air_date.substr(0, 4).toString()) continue;
+            if (series.first_air_date === undefined || series.first_air_date === '') continue;
+            if (guessitIdentification.year!.toString() !== series.first_air_date.substring(0, 4)) continue;
 
             return series;
         }
@@ -52,11 +52,11 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
         let cacheId = title;
 
-        if (guessitIdentification.year) {
+        if (guessitIdentification.year !== undefined && guessitIdentification.year !== null) {
             cacheId += guessitIdentification.year;
         }
 
-        if (this.tvShowCache[cacheId]) {
+        if (this.tvShowCache[cacheId] !== undefined) {
             return this.tvShowCache[cacheId];
         }
 
@@ -73,7 +73,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
 
         let series = tmdbSearch[0];
 
-        if (guessitIdentification.year) {
+        if (guessitIdentification.year !== undefined && guessitIdentification.year !== null) {
             series = this.retrieveSeries(tmdbSearch, guessitIdentification);
         }
 

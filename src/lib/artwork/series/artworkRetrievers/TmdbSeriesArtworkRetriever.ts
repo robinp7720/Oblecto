@@ -25,11 +25,11 @@ export default class TmdbSeriesArtworkRetriever {
 
         const series = await episode.getSeries();
 
-        if (!series) {
+        if (series === null || series === undefined) {
             throw new DebugExtendableError(`Could not find series for episode ${episode.id}`);
         }
 
-        if (!series.tmdbid) {
+        if (series.tmdbid === null || series.tmdbid === undefined) {
             throw new DebugExtendableError(`Series ${series.seriesName} has no tmdbid`);
         }
 

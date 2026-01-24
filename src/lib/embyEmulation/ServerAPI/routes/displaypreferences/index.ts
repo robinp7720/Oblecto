@@ -4,10 +4,10 @@ import type EmbyEmulation from '../../index.js';
 
 /**
  * @param server - The Express application
- * @param embyEmulation - The EmbyEmulation instance
+ * @param _embyEmulation - The EmbyEmulation instance
  */
 export default (server: Application, _embyEmulation: EmbyEmulation): void => {
-    server.get('/displaypreferences/usersettings', async (req, res) => {
+    server.get('/displaypreferences/usersettings', (req, res) => {
         res.send(
             {
                 'Id':'3ce5b65d-e116-d731-65d1-efc4a30ec35c',
@@ -27,12 +27,12 @@ export default (server: Application, _embyEmulation: EmbyEmulation): void => {
             });
     });
 
-    server.get('/LiveTv/Programs/Recommended', async (req, res) => {
+    server.get('/LiveTv/Programs/Recommended', (req, res) => {
         res.send(
             {
                 'Items':[],'TotalRecordCount':0,'StartIndex':0 
             });
     });
 
-    server.post('/displaypreferences/:displaypreferencesid', async (req, res) => { res.status(204).send(); });
+    server.post('/displaypreferences/:displaypreferencesid', (req, res) => { res.status(204).send(); });
 };

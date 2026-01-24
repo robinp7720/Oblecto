@@ -13,7 +13,10 @@ type EmbyRequest = Request & {
 
 export const getRequestValue = (req: EmbyRequest, ...keys: string[]): string | undefined => {
     const lowered = keys.map(key => String(key).toLowerCase());
-    const sources = [req.query || {}, req.body || {}];
+    const sources: Record<string, unknown>[] = [
+        (req.query as Record<string, unknown>) ?? {},
+        (req.body as Record<string, unknown>) ?? {}
+    ];
 
     for (const source of sources) {
         for (const [name, value] of Object.entries(source)) {
@@ -27,13 +30,13 @@ export const getRequestValue = (req: EmbyRequest, ...keys: string[]): string | u
 };
 
 export const getEmbyToken = (req: EmbyRequest): string | undefined => {
-    if (req?.headers?.emby?.Token) return req.headers.emby.Token;
+    if (req?.headers?.emby?.Token !== undefined && req?.headers?.emby?.Token !== '') return req.headers.emby.Token;
 
     const headerToken = req?.headers?.['x-emby-token']
-        || req?.headers?.['x-mediabrowser-token']
-        || req?.headers?.['x-emby-authorization'];
+        ?? req?.headers?.['x-mediabrowser-token']
+        ?? req?.headers?.['x-emby-authorization'];
 
-    if (headerToken && typeof headerToken === 'string' && headerToken.trim()) {
+    if (headerToken !== undefined && headerToken !== '') {
         return headerToken.trim();
     }
 

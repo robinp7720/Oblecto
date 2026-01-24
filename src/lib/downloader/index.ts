@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs';
+import { AxiosRequestConfig } from 'axios';
 import axiosTimeout from '../../submodules/axiosTimeout.js';
 import logger from '../../submodules/logger/index.js';
 import DebugExtendableError from '../errors/DebugExtendableError.js';
@@ -38,13 +39,11 @@ export default class Downloader {
             flags = 'w';
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const { data } = await axiosTimeout({
             method: 'get',
             url,
             responseType: 'arraybuffer',
-            // responseEncoding: 'binary' // Axios types might not have responseEncoding on the config directly or it might be renamed
-        } as any);
+        } as AxiosRequestConfig);
 
         await fs.writeFile(dest, data as Buffer, { flag: flags });
     }

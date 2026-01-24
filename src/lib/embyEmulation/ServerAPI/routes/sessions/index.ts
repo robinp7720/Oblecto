@@ -17,7 +17,7 @@ import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.post('/sessions/capabilities/:type', async (req: EmbyRequest, res: Response) => {
+    server.post('/sessions/capabilities/:type', (req: EmbyRequest, res: Response) => {
         const token = getEmbyToken(req);
         if (token && embyEmulation.sessions[token]) {
             embyEmulation.sessions[token].capabilities = req.query;
@@ -26,7 +26,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send();
     });
 
-    server.post('/sessions/playing', async (req: EmbyRequest, res: Response) => {
+    server.post('/sessions/playing', (req: EmbyRequest, res: Response) => {
         const token = getEmbyToken(req);
         const params = { ...req.query, ...req.body };
 
@@ -135,8 +135,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // Additional Session Routes
-    server.post('/sessions/playing/ping', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/playing/stopped', async (req: EmbyRequest, res) => {
+    server.post('/sessions/playing/ping', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/playing/stopped', (req: EmbyRequest, res) => {
         const token = getEmbyToken(req);
         const playSessionId = getRequestValue(req, 'PlaySessionId')
             || (token && embyEmulation.sessions?.[token] ? (embyEmulation.sessions[token] as any).playSession?.PlaySessionId : undefined);
@@ -146,48 +146,48 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
         res.status(204).send();
     });
-    server.get('/sessions', async (req, res) => { res.send([]); });
-    server.post('/sessions/:sessionid/command', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/command/:command', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/message', async (req, res) => { res.status(204).send(); });
-    server.delete('/sessions/:sessionid/playing', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/playing/:command', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/system/:command', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/user/:userid', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/:sessionid/viewing', async (req, res) => { res.status(204).send(); });
-    server.get('/sessions/capabilities', async (req, res) => { res.send({}); });
-    server.post('/sessions/capabilities/full', async (req, res) => { res.status(204).send(); });
-    server.post('/sessions/logout', async (req, res) => { res.status(204).send(); });
-    server.get('/sessions/viewing', async (req, res) => { res.send([]); });
+    server.get('/sessions', (req, res) => { res.send([]); });
+    server.post('/sessions/:sessionid/command', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/command/:command', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/message', (req, res) => { res.status(204).send(); });
+    server.delete('/sessions/:sessionid/playing', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/playing/:command', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/system/:command', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/user/:userid', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/:sessionid/viewing', (req, res) => { res.status(204).send(); });
+    server.get('/sessions/capabilities', (req, res) => { res.send({}); });
+    server.post('/sessions/capabilities/full', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/logout', (req, res) => { res.status(204).send(); });
+    server.get('/sessions/viewing', (req, res) => { res.send([]); });
 
     // SyncPlay
-    server.get('/syncplay/:id', async (req, res) => { res.status(404).send('Not Found'); });
-    server.post('/syncplay/buffering', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/join', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/leave', async (req, res) => { res.status(204).send(); });
-    server.get('/syncplay/list', async (req, res) => { res.send([]); });
-    server.post('/syncplay/moveplaylistitem', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/new', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/nextitem', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/pause', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/ping', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/previousitem', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/queue', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/ready', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/removefromplaylist', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/seek', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/setignorewait', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/setnewqueue', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/setplaylistitem', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/setrepeatmode', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/setshufflemode', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/stop', async (req, res) => { res.status(204).send(); });
-    server.post('/syncplay/unpause', async (req, res) => { res.status(204).send(); });
+    server.get('/syncplay/:id', (req, res) => { res.status(404).send('Not Found'); });
+    server.post('/syncplay/buffering', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/join', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/leave', (req, res) => { res.status(204).send(); });
+    server.get('/syncplay/list', (req, res) => { res.send([]); });
+    server.post('/syncplay/moveplaylistitem', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/new', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/nextitem', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/pause', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/ping', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/previousitem', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/queue', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/ready', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/removefromplaylist', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/seek', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/setignorewait', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/setnewqueue', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/setplaylistitem', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/setrepeatmode', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/setshufflemode', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/stop', (req, res) => { res.status(204).send(); });
+    server.post('/syncplay/unpause', (req, res) => { res.status(204).send(); });
 
     // Playback
-    server.get('/playback/bitratetest', async (req, res) => { res.send('0'); });
+    server.get('/playback/bitratetest', (req, res) => { res.send('0'); });
 
     // PlayingItems
-    server.delete('/playingitems/:itemid', async (req, res) => { res.status(204).send(); });
-    server.post('/playingitems/:itemid/progress', async (req, res) => { res.status(204).send(); });
+    server.delete('/playingitems/:itemid', (req, res) => { res.status(204).send(); });
+    server.post('/playingitems/:itemid/progress', (req, res) => { res.status(204).send(); });
 };

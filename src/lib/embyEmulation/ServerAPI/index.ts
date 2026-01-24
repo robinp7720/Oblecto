@@ -131,10 +131,10 @@ export default class EmbyServerAPI {
         // Error handling middleware
 
         this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
-            if (!err) return next();
+            if (err === null || err === undefined) return next();
 
             const statusCode = err.statusCode ?? 500;
-            const message = err.message || 'Internal Server Error';
+            const message = err.message !== '' ? err.message : 'Internal Server Error';
 
             console.error(`HTTP ${statusCode} - ${message}`);
 

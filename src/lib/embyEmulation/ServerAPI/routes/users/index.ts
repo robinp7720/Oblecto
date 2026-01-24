@@ -91,11 +91,11 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, 
 
 /**
  *
- * @param server
- * @param embyEmulation
+ * @param server - The Express application
+ * @param embyEmulation - The EmbyEmulation instance
  */
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.get('/users/public', async (req: Request, res: Response) => {
+    server.get('/users/public', (req: Request, res: Response) => {
         res.send([]);
     });
 
@@ -186,7 +186,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(buildUserDto(user, embyEmulation));
     });
 
-    server.get('/users/:userid/views', async (req, res) => {
+    server.get('/users/:userid/views', (req: Request, res: Response) => {
         res.send({
             'Items': [
                 {
@@ -597,7 +597,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
-    server.get('/users/:userid/items/:mediaid/intros', async (req, res) => {
+    server.get('/users/:userid/items/:mediaid/intros', (req, res) => {
         res.send({
             'Items': [],
             'TotalRecordCount': 0,
@@ -605,7 +605,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/users/:userid/items/resume', async (req, res) => {
+    server.get('/users/:userid/items/resume', (req, res) => {
         res.send({
             'Items': [],
             'TotalRecordCount': 0,
@@ -728,7 +728,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/:userid/items/latest', getLatestItems as any);
     server.get('/items/latest', getLatestItems as any);
 
-    server.get('/useritems/resume', async (req, res) => {
+    server.get('/useritems/resume', (req, res) => {
         res.send({
             'Items': [],
             'TotalRecordCount': 0,
@@ -737,56 +737,56 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // TODO: Implement Auth routes
-    server.get('/auth/keys', async (req, res) => {
+    server.get('/auth/keys', (req, res) => {
         // TODO: Implement
         res.status(501).send('Not Implemented');
     });
 
-    server.post('/auth/keys', async (req, res) => {
+    server.post('/auth/keys', (req, res) => {
         // TODO: Implement
         res.status(501).send('Not Implemented');
     });
 
-    server.delete('/auth/keys/:key', async (req, res) => {
+    server.delete('/auth/keys/:key', (req, res) => {
         // TODO: Implement
         res.status(501).send('Not Implemented');
     });
 
-    server.get('/auth/passwordresetproviders', async (req, res) => {
+    server.get('/auth/passwordresetproviders', (req, res) => {
         // TODO: Implement
         res.send([]); // Return empty list for now
     });
 
-    server.get('/auth/providers', async (req, res) => {
+    server.get('/auth/providers', (req, res) => {
         // TODO: Implement
         res.send([]); // Return empty list for now
     });
 
     // Additional User Routes
-    server.get('/users/:userid/policy', async (req, res) => { res.send({}); });
-    server.post('/users/authenticatewithquickconnect', async (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/configuration', async (req, res) => { res.send([]); });
-    server.post('/users/forgotpassword', async (req, res) => { res.status(501).send('Not Implemented'); });
-    server.post('/users/forgotpassword/pin', async (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/me', async (req, res) => { res.status(401).send('Unauthorized'); }); // Needs auth middleware
-    server.post('/users/new', async (req, res) => { res.status(501).send('Not Implemented'); });
-    server.post('/users/password', async (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/users/:userid/policy', (req, res) => { res.send({}); });
+    server.post('/users/authenticatewithquickconnect', (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/users/configuration', (req, res) => { res.send([]); });
+    server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
+    server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
+    server.get('/users/me', (req, res) => { res.status(401).send('Unauthorized'); }); // Needs auth middleware
+    server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
+    server.post('/users/password', (req, res) => { res.status(501).send('Not Implemented'); });
 
     // UserImage
-    server.get('/userimage', async (req, res) => { res.status(404).send('Not Found'); }); // This seems to be POST in some docs or GET specific image? Spec says GET /UserImage (truncated?)
+    server.get('/userimage', (req, res) => { res.status(404).send('Not Found'); }); // This seems to be POST in some docs or GET specific image? Spec says GET /UserImage (truncated?)
 
     // UserItems
-    server.get('/useritems/:itemid/userdata', async (req, res) => { res.send({}); });
-    server.post('/useritems/:itemid/rating', async (req, res) => { res.send({}); });
+    server.get('/useritems/:itemid/userdata', (req, res) => { res.send({}); });
+    server.post('/useritems/:itemid/rating', (req, res) => { res.send({}); });
 
     // UserPlayedItems
-    server.post('/userplayeditems/:itemid', async (req, res) => { res.send({}); });
-    server.delete('/userplayeditems/:itemid', async (req, res) => { res.send({}); });
+    server.post('/userplayeditems/:itemid', (req, res) => { res.send({}); });
+    server.delete('/userplayeditems/:itemid', (req, res) => { res.send({}); });
 
     // UserFavoriteItems
-    server.post('/userfavoriteitems/:itemid', async (req, res) => { res.send({}); });
-    server.delete('/userfavoriteitems/:itemid', async (req, res) => { res.send({}); });
+    server.post('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
+    server.delete('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
 
     // UserViews
-    server.get('/userviews/groupingoptions', async (req, res) => { res.send([]); });
+    server.get('/userviews/groupingoptions', (req, res) => { res.send([]); });
 };

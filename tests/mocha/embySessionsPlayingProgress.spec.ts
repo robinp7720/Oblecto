@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
 import assert from 'node:assert/strict';
 import { Sequelize } from 'sequelize';
 import sessionsRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/sessions/index.js';
@@ -92,13 +92,7 @@ describe('Emby sessions playing progress route', () => {
 
     it('updates progress for an episode', async () => {
         const server = makeServer();
-        const embyEmulation = {
-            sessions: {
-                [token]: {
-                    Id: userId
-                }
-            }
-        };
+        const embyEmulation = {sessions: {[token]: {Id: userId}}};
 
         sessionsRoutes(server, embyEmulation);
 
@@ -113,9 +107,7 @@ describe('Emby sessions playing progress route', () => {
         const positionTicks = 900 * 10000000;
 
         const req = {
-            headers: {
-                'x-emby-token': token
-            },
+            headers: {'x-emby-token': token},
             query: {
                 ItemId: episodeEmbyId,
                 PositionTicks: positionTicks.toString(),
@@ -145,13 +137,7 @@ describe('Emby sessions playing progress route', () => {
 
     it('updates progress for a movie', async () => {
         const server = makeServer();
-        const embyEmulation = {
-            sessions: {
-                [token]: {
-                    Id: userId
-                }
-            }
-        };
+        const embyEmulation = {sessions: {[token]: {Id: userId}}};
 
         sessionsRoutes(server, embyEmulation);
 
@@ -162,9 +148,7 @@ describe('Emby sessions playing progress route', () => {
         const positionTicks = 30 * 60 * 10000000;
 
         const req = {
-            headers: {
-                'x-emby-token': token
-            },
+            headers: {'x-emby-token': token},
             query: {},
             body: {
                 ItemId: movieEmbyId,
@@ -192,9 +176,7 @@ describe('Emby sessions playing progress route', () => {
 
         const handler = server.handlers.get('POST /sessions/playing/progress');
         const req = {
-            headers: {
-                'x-emby-token': 'invalid-token'
-            },
+            headers: {'x-emby-token': 'invalid-token'},
             query: {},
             body: {}
         };
@@ -206,18 +188,12 @@ describe('Emby sessions playing progress route', () => {
 
     it('returns 400 if missing ItemId', async () => {
         const server = makeServer();
-        const embyEmulation = {
-            sessions: {
-                [token]: { Id: userId }
-            }
-        };
+        const embyEmulation = {sessions: {[token]: { Id: userId }}};
         sessionsRoutes(server, embyEmulation);
 
         const handler = server.handlers.get('POST /sessions/playing/progress');
         const req = {
-            headers: {
-                'x-emby-token': token
-            },
+            headers: {'x-emby-token': token},
             query: {},
             body: {
                 // ItemId missing

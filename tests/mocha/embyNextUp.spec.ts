@@ -122,11 +122,7 @@ describe('Emby shows nextup route', () => {
         showsRoutes(server, embyEmulation);
 
         const handler = server.handlers.get('GET /shows/nextup');
-        const req = {
-            query: {
-                userId: userIdUuid
-            }
-        };
+        const req = {query: {userId: userIdUuid}};
         const res = makeRes();
 
         await handler(req, res);

@@ -49,7 +49,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.redirect('web/');
     });
 
-    server.get('/scheduledtasks', async (req: Request, res: Response) => {
+    server.get('/scheduledtasks', (req: Request, res: Response) => {
         res.send({});
     });
 };

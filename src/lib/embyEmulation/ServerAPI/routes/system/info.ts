@@ -2,7 +2,7 @@ import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.get('/system/info/public', async (req: Request, res: Response) => {
+    server.get('/system/info/public', (req: Request, res: Response) => {
         res.send({
             'LocalAddress': 'http://oblecto:8096',
             'ServerName': embyEmulation.serverName,
@@ -14,7 +14,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/system/info', async (req: Request, res: Response) => {
+    server.get('/system/info', (req: Request, res: Response) => {
         res.send({
             'OperatingSystemDisplayName': 'Linux',
             'HasPendingRestart': false,
@@ -42,7 +42,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/system/info/storage', async (req: Request, res: Response) => {
+    server.get('/system/info/storage', (req: Request, res: Response) => {
         const baseStorage = {
             DeviceId: 'oblecto',
             StorageType: 'FileSystem',

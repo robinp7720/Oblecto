@@ -20,8 +20,8 @@ import { EmbyRequest } from '../../index.js';
 
 /**
  *
- * @param server
- * @param embyEmulation
+ * @param server - The Express application
+ * @param embyEmulation - The EmbyEmulation instance
  */
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     const sendImageIfExists = async (res: Response, imagePath: string | null | undefined): Promise<boolean> => {
@@ -545,7 +545,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/items/:mediaid/similar', async (req, res) => {
+    server.get('/items/:mediaid/similar', (req, res) => {
         res.send({
             Items: [],
             TotalRecordCount: 0,
@@ -553,7 +553,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/items/:mediaid/thememedia', async (req, res) => {
+    server.get('/items/:mediaid/thememedia', (req, res) => {
         res.send({
             'ThemeVideosResult': {
                 'Items': [],
@@ -574,11 +574,11 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/items/:mediaid/images/primary', async (req, res) => {
-        return handleItemImageRequest(req, res, 'primary');
+        return await handleItemImageRequest(req, res, 'primary');
     });
 
     server.get('/items/:mediaid/images/backdrop/:artworkid', async (req, res) => {
-        return handleItemImageRequest(req, res, 'backdrop');
+        return await handleItemImageRequest(req, res, 'backdrop');
     });
 
     server.post('/items/:mediaid/playbackinfo', async (req: EmbyRequest, res: Response) => {
@@ -632,7 +632,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/userviews', async (req, res) => {
+    server.get('/userviews', (req, res) => {
         res.send(
             {
                 'Items': [
@@ -783,106 +783,106 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // Additional Items Routes
-    server.get('/items/filters', async (req, res) => { res.send({}); });
-    server.get('/items/filters2', async (req, res) => { res.send({}); });
-    server.get('/items/:itemid/images', async (req, res) => { res.send([]); });
-    server.get('/items/:mediaid/images/:imagetype', async (req: Request, res: Response) => handleItemImageRequest(req, res));
-    server.get('/items/:mediaid/images/:imagetype/:imageindex', async (req: Request, res: Response) => handleItemImageRequest(req, res));
-    server.get('/items/:itemid/images/:imagetype/:imageindex/index', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/instantmix', async (req, res) => {
+    server.get('/items/filters', (req, res) => { res.send({}); });
+    server.get('/items/filters2', (req, res) => { res.send({}); });
+    server.get('/items/:itemid/images', (req, res) => { res.send([]); });
+    server.get('/items/:mediaid/images/:imagetype', (req: Request, res: Response) => handleItemImageRequest(req, res));
+    server.get('/items/:mediaid/images/:imagetype/:imageindex', (req: Request, res: Response) => handleItemImageRequest(req, res));
+    server.get('/items/:itemid/images/:imagetype/:imageindex/index', (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/instantmix', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/:itemid/externalidinfos', async (req, res) => { res.send([]); });
+    server.get('/items/:itemid/externalidinfos', (req, res) => { res.send([]); });
 
-    server.post('/items/remotesearch/apply/:itemid', async (req, res) => { res.status(204).send(); });
-    server.post('/items/remotesearch/book', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/boxset', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/movie', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/musicalbum', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/musicartist', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/musicvideo', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/person', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/series', async (req, res) => { res.send([]); });
-    server.post('/items/remotesearch/trailer', async (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/apply/:itemid', (req, res) => { res.status(204).send(); });
+    server.post('/items/remotesearch/book', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/boxset', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/movie', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicalbum', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicartist', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/musicvideo', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/person', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/series', (req, res) => { res.send([]); });
+    server.post('/items/remotesearch/trailer', (req, res) => { res.send([]); });
 
-    server.post('/items/:itemid/refresh', async (req, res) => { res.status(204).send(); });
-    server.get('/items/:itemid/contenttype', async (req, res) => { res.send({}); }); // Guessing response
-    server.get('/items/:itemid/metadataeditor', async (req, res) => { res.send({}); });
-    server.get('/items/:itemid/ancestors', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/criticreviews', async (req, res) => {
+    server.post('/items/:itemid/refresh', (req, res) => { res.status(204).send(); });
+    server.get('/items/:itemid/contenttype', (req, res) => { res.send({}); }); // Guessing response
+    server.get('/items/:itemid/metadataeditor', (req, res) => { res.send({}); });
+    server.get('/items/:itemid/ancestors', (req, res) => { res.send([]); });
+    server.get('/items/:itemid/criticreviews', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/:itemid/download', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/file', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/themesongs', async (req, res) => {
+    server.get('/items/:itemid/download', (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/file', (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/themesongs', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/:itemid/themevideos', async (req, res) => {
+    server.get('/items/:itemid/themevideos', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/counts', async (req, res) => { res.send({}); });
-    server.get('/items/:itemid/remoteimages', async (req, res) => {
+    server.get('/items/counts', (req, res) => { res.send({}); });
+    server.get('/items/:itemid/remoteimages', (req, res) => {
         res.send({
             Images: [], TotalRecordCount: 0, Providers: []
         });
     });
-    server.get('/items/:itemid/remoteimages/download', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/:itemid/remoteimages/providers', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/remotesearch/subtitles/:language', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/remotesearch/subtitles/:subtitleid', async (req, res) => { res.status(404).send('Not Found'); });
-    server.get('/items/suggestions', async (req, res) => {
+    server.get('/items/:itemid/remoteimages/download', (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/:itemid/remoteimages/providers', (req, res) => { res.send([]); });
+    server.get('/items/:itemid/remotesearch/subtitles/:language', (req, res) => { res.send([]); });
+    server.get('/items/:itemid/remotesearch/subtitles/:subtitleid', (req, res) => { res.status(404).send('Not Found'); });
+    server.get('/items/suggestions', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/:itemid/intros', async (req, res) => {
+    server.get('/items/:itemid/intros', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/:itemid/localtrailers', async (req, res) => { res.send([]); });
-    server.get('/items/:itemid/specialfeatures', async (req, res) => { res.send([]); });
-    server.get('/items/root', async (req, res) => {
+    server.get('/items/:itemid/localtrailers', (req, res) => { res.send([]); });
+    server.get('/items/:itemid/specialfeatures', (req, res) => { res.send([]); });
+    server.get('/items/root', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
 
     // Movies
-    server.get('/movies/:itemid/similar', async (req, res) => {
+    server.get('/movies/:itemid/similar', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/movies/recommendations', async (req, res) => { res.send([]); });
+    server.get('/movies/recommendations', (req, res) => { res.send([]); });
 
     // Shows
-    server.get('/shows/:itemid/similar', async (req, res) => {
+    server.get('/shows/:itemid/similar', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/shows/upcoming', async (req, res) => {
+    server.get('/shows/upcoming', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
 
     // Trailers
-    server.get('/trailers', async (req, res) => {
+    server.get('/trailers', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/trailers/:itemid/similar', async (req, res) => {
+    server.get('/trailers/:itemid/similar', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
