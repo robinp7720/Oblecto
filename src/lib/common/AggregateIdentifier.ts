@@ -36,7 +36,7 @@ export default class AggregateIdentifier {
             try {
                 currentIdentification = await identifier.identify(...args);
             } catch (e) {
-                logger.debug(e);
+                logger.debug("Failed to identify", args, e);
                 continue;
             }
 
@@ -52,7 +52,10 @@ export default class AggregateIdentifier {
             if (identification[key] === '') delete identification[key];
         }
 
-        if (Object.keys(identification).length === 0) throw new IdentificationError(`Could not identify: ${String(args[0])}`);
+        if (Object.keys(identification).length === 0) {
+            logger.info(`Could not identify: ${String(args[0])}`);
+            throw new IdentificationError(`Could not identify: ${String(args[0])}`);
+        }
 
         return identification;
     }
