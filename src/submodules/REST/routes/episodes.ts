@@ -10,6 +10,7 @@ import { Episode } from '../../../models/episode.js';
 import { Series } from '../../../models/series.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { File } from '../../../models/file.js';
+import { Stream } from '../../../models/stream.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 
@@ -136,7 +137,10 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const episode = await Episode.findByPk(req.params.id as string, {
             include: [
-                File,
+                {
+                    model: File,
+                    include: [Stream]
+                },
                 Series,
                 {
                     model: TrackEpisode,

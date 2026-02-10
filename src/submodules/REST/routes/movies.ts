@@ -9,6 +9,7 @@ import authMiddleWare from '../middleware/auth.js';
 
 import { TrackMovie } from '../../../models/trackMovie.js';
 import { File } from '../../../models/file.js';
+import { Stream } from '../../../models/stream.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 import Oblecto from '../../../lib/oblecto/index.js';
@@ -402,7 +403,10 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, {
             include: [
-                File,
+                {
+                    model: File,
+                    include: [Stream]
+                },
                 {
                     model: TrackMovie,
                     required: false,
