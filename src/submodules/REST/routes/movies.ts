@@ -13,41 +13,253 @@ import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+
+const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
+const BROWSE_SORT_FIELDS = new Set([
+    'movieName',
+    'releaseDate',
+    'createdAt',
+    'updatedAt',
+    'popularity',
+    'runtime'
+]);
+
+const normalizeGenres = (raw: unknown): string[] => {
+    if (!raw || typeof raw !== 'string') return [];
+
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+
+    try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+            return parsed.map(entry => String(entry).trim()).filter(Boolean);
+        }
+    } catch (error) {
+        // Fall back to comma-separated parsing.
+    }
+
+    return trimmed.split(',').map(entry => entry.trim()).filter(Boolean);
+};
 
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        let limit = 20;
-        let page = 0;
+        const params = req.combined_params || {};
 
-        const AllowedOrders = ['desc', 'asc'];
-        const params = req.combined_params!;
+        let browseParams;
+        try {
+            browseParams = parseBrowseParams(params);
+        } catch (error: any) {
+            return res.status(400).send({ message: error.message || 'Invalid browse query' });
+        }
 
-        if (AllowedOrders.indexOf((params.order as string).toLowerCase()) === -1)
-            return res.status(400).send({ message: 'Sorting order is invalid' });
+        if (browseParams.mode !== 'browse') {
+            let limit = 20;
+            let page = 0;
 
-        if (!(req.params.sorting in Movie.rawAttributes))
+            const legacyOrder = (params.order as string)?.toLowerCase();
+
+            if (!legacyOrder || LEGACY_ALLOWED_ORDERS.indexOf(legacyOrder) === -1) {
+                return res.status(400).send({ message: 'Sorting order is invalid' });
+            }
+
+            if (!(req.params.sorting in Movie.rawAttributes))
+                return res.status(400).send({ message: 'Sorting method is invalid' });
+
+            if (params.count && Number.isInteger(parseInt(params.count as string)))
+                limit = parseInt(params.count as string);
+
+            if (params.page && Number.isInteger(parseInt(params.page as string)))
+                page = parseInt(params.page as string);
+
+            const results = await Movie.findAll({
+                include: [
+                    {
+                        model: TrackMovie,
+                        required: false,
+                        where: { userId: req.authorization!.user.id }
+                    }
+                ],
+                order: [[req.params.sorting, params.order]],
+                limit,
+                offset: limit * page
+            });
+
+            return res.send(results);
+        }
+
+        const sorting = req.params.sorting;
+
+        if (!BROWSE_SORT_FIELDS.has(sorting)) {
             return res.status(400).send({ message: 'Sorting method is invalid' });
+        }
 
-        if (params.count && Number.isInteger(parseInt(params.count as string)))
-            limit = parseInt(params.count as string);
+        const whereClauses: any[] = [];
+        const includeClauses: any[] = [];
 
-        if (params.page && Number.isInteger(parseInt(params.page as string)))
-            page = parseInt(params.page as string);
+        if (browseParams.q) {
+            const query = `%${escapeLike(browseParams.q)}%`;
+            whereClauses.push({
+                [Op.or]: [
+                    { movieName: { [Op.like]: query } },
+                    { originalName: { [Op.like]: query } }
+                ]
+            });
+        }
 
-        const results = await Movie.findAll({
-            include: [
-                {
-                    model: TrackMovie,
-                    required: false,
-                    where: { userId: req.authorization!.user.id }
+        if (browseParams.genres.length > 0) {
+            whereClauses.push({
+                [Op.or]: browseParams.genres.map((genre: string) => {
+                    return { genres: { [Op.like]: `%${escapeLike(genre)}%` } };
+                })
+            });
+        }
+
+        if (browseParams.yearFrom !== null || browseParams.yearTo !== null) {
+            const releaseDateFilter: any = {};
+
+            if (browseParams.yearFrom !== null) {
+                releaseDateFilter[Op.gte] = `${browseParams.yearFrom.toString().padStart(4, '0')}-01-01`;
+            }
+
+            if (browseParams.yearTo !== null) {
+                releaseDateFilter[Op.lte] = `${browseParams.yearTo.toString().padStart(4, '0')}-12-31`;
+            }
+
+            whereClauses.push({ releaseDate: releaseDateFilter });
+        }
+
+        const trackInclude: any = {
+            model: TrackMovie,
+            required: false,
+            where: { userId: req.authorization!.user.id }
+        };
+
+        if (browseParams.watched === 'watched') {
+            trackInclude.required = true;
+            trackInclude.where.progress = { [Op.gte]: 0.9 };
+        } else if (browseParams.watched === 'inprogress') {
+            trackInclude.required = true;
+            trackInclude.where.progress = { [Op.gt]: 0, [Op.lt]: 0.9 };
+        } else if (browseParams.watched === 'unwatched') {
+            whereClauses.push({
+                [Op.or]: [
+                    { '$TrackMovies.id$': null },
+                    { '$TrackMovies.progress$': { [Op.lte]: 0 } }
+                ]
+            });
+        }
+
+        includeClauses.push(trackInclude);
+
+        if (browseParams.libraryPath) {
+            includeClauses.push({
+                model: File,
+                attributes: [],
+                through: { attributes: [] },
+                required: true,
+                where: {
+                    path: {
+                        [Op.like]: `${escapeLike(browseParams.libraryPath)}%`
+                    }
                 }
-            ],
-            order: [[req.params.sorting, params.order]],
-            limit,
-            offset: limit * page
-        });
+            });
+        }
 
-        res.send(results);
+        const baseWhereClauses = [...whereClauses];
+
+        const facetQueryOptions: any = {
+            attributes: ['genres', 'releaseDate'],
+            include: includeClauses,
+            distinct: true,
+            subQuery: false
+        };
+
+        if (baseWhereClauses.length > 0) {
+            facetQueryOptions.where = { [Op.and]: baseWhereClauses };
+        }
+
+        const facetRows = await Movie.findAll(facetQueryOptions);
+        const genres = Array.from(new Set(facetRows.flatMap(item => normalizeGenres((item as any).genres))));
+        const years = Array.from(new Set(facetRows
+            .map(item => {
+                const value = (item as any).releaseDate;
+                if (!value) return null;
+
+                const parsed = parseInt(String(value).slice(0, 4), 10);
+                return Number.isInteger(parsed) ? parsed : null;
+            })
+            .filter(Boolean) as number[])).sort((a, b) => a - b);
+
+        if (browseParams.cursor) {
+            try {
+                const parsedCursor = decodeCursor(
+                    browseParams.cursor,
+                    sorting,
+                    browseParams.order,
+                    browseParams.filterHash
+                );
+                whereClauses.push(buildCursorWhere(sorting, browseParams.order, parsedCursor.sortValue, parsedCursor.id));
+            } catch (error: any) {
+                return res.status(400).send({ message: error.message || 'cursor is invalid' });
+            }
+        }
+
+        const queryOptions: any = {
+            include: includeClauses,
+            order: [[sorting, browseParams.order], ['id', browseParams.order]],
+            limit: browseParams.count + 1,
+            distinct: true,
+            subQuery: false
+        };
+
+        if (whereClauses.length > 0) {
+            queryOptions.where = { [Op.and]: whereClauses };
+        }
+
+        if (!browseParams.cursor && browseParams.page > 0) {
+            queryOptions.offset = browseParams.count * browseParams.page;
+        }
+
+        const results = await Movie.findAll(queryOptions);
+
+        const hasNextPage = results.length > browseParams.count;
+        const items = hasNextPage ? results.slice(0, browseParams.count) : results;
+
+        let nextCursor: string | null = null;
+
+        if (hasNextPage && items.length > 0) {
+            const lastItem: any = items[items.length - 1];
+            nextCursor = encodeCursor(
+                sorting,
+                browseParams.order,
+                lastItem[sorting as keyof Movie] ?? null,
+                Number(lastItem.id),
+                browseParams.filterHash
+            );
+        }
+
+        return res.send({
+            items,
+            pageInfo: {
+                hasNextPage,
+                nextCursor,
+                count: items.length
+            },
+            appliedFilters: {
+                q: browseParams.q,
+                genre: browseParams.genres,
+                yearFrom: browseParams.yearFrom,
+                yearTo: browseParams.yearTo,
+                watched: browseParams.watched,
+                libraryPath: browseParams.libraryPath
+            },
+            facets: {
+                genres,
+                years
+            }
+        });
     });
 
     server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
