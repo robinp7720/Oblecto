@@ -106,6 +106,20 @@ export class HlsStreamSession extends MediaSession {
             '-ac 2',
         ];
 
+        const hasExplicitAudio = this.selectedAudioStreamIndex !== null;
+        const hasExplicitSubtitle = this.selectedSubtitleStreamIndex !== null;
+
+        if (hasExplicitAudio || hasExplicitSubtitle) {
+            hlsOptions.push(...FfmpegConfig.getExplicitStreamMappingOptions(
+                this.selectedAudioStreamIndex,
+                this.subtitleMode === 'off' ? null : this.selectedSubtitleStreamIndex
+            ));
+        }
+
+        if (this.subtitleMode === 'off') {
+            hlsOptions.push('-sn');
+        }
+
         if (videoCodec !== 'copy') {
             hlsOptions.push('-pix_fmt yuv420p');
             hlsOptions.push(`-force_key_frames expr:gte(t,n_forced*${HLS_SEGMENT_DURATION_SEC})`);

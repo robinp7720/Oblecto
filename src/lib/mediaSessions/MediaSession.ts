@@ -35,6 +35,9 @@ export class MediaSession extends EventEmitter {
     public format: string;
     public videoCodec: string | null;
     public audioCodec: string | null;
+    public selectedAudioStreamIndex: number | null;
+    public selectedSubtitleStreamIndex: number | null;
+    public subtitleMode: 'off' | 'auto' | 'forced';
 
     // Stream state
     public offset: number;
@@ -72,6 +75,13 @@ export class MediaSession extends EventEmitter {
         this.audioCodec = this.targetAudioCodecs[0] || 'aac';
 
         this.offset = options.offset ?? 0;
+        this.selectedAudioStreamIndex = Number.isInteger(options.audioStreamIndex)
+            ? options.audioStreamIndex as number
+            : null;
+        this.selectedSubtitleStreamIndex = Number.isInteger(options.subtitleStreamIndex as number)
+            ? options.subtitleStreamIndex as number
+            : null;
+        this.subtitleMode = options.subtitleMode || 'auto';
 
         // Initialize streams
         this.inputStream = new Stream.PassThrough();
@@ -114,6 +124,11 @@ export class MediaSession extends EventEmitter {
                 format: this.format,
                 videoCodec: this.videoCodec,
                 audioCodec: this.audioCodec,
+            },
+            selectedTracks: {
+                audioStreamIndex: this.selectedAudioStreamIndex,
+                subtitleStreamIndex: this.selectedSubtitleStreamIndex,
+                subtitleMode: this.subtitleMode,
             },
             seekMode: this.seekMode,
             destinationCount: this.destinations.length,

@@ -43,10 +43,25 @@ export class TranscodeStreamSession extends MediaSession {
         const outputOptions = FfmpegConfig.getTranscodeOutputOptions(this.oblecto.config);
 
         // Select audio/video streams
-        const streamMapping = await this.selectStreams();
+        let streamMapping: string[] = [];
+        const hasExplicitAudio = this.selectedAudioStreamIndex !== null;
+        const hasExplicitSubtitle = this.selectedSubtitleStreamIndex !== null;
+
+        if (hasExplicitAudio || hasExplicitSubtitle) {
+            streamMapping = FfmpegConfig.getExplicitStreamMappingOptions(
+                this.selectedAudioStreamIndex,
+                this.subtitleMode === 'off' ? null : this.selectedSubtitleStreamIndex
+            );
+        } else {
+            streamMapping = await this.selectStreams();
+        }
 
         if (streamMapping.length > 0) {
             outputOptions.push(...streamMapping);
+        }
+
+        if (this.subtitleMode === 'off') {
+            outputOptions.push('-sn');
         }
 
         const videoCodec = this.videoCodec === 'copy'
@@ -108,6 +123,7 @@ export class TranscodeStreamSession extends MediaSession {
             }
 
             if (selectedVideoIndex !== undefined && selectedAudioIndex !== undefined) {
+                this.selectedAudioStreamIndex = selectedAudioIndex;
                 return FfmpegConfig.getStreamMappingOptions(selectedAudioIndex, selectedVideoIndex);
             }
         } catch (error) {

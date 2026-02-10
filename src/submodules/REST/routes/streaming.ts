@@ -3,9 +3,27 @@ import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import authMiddleWare from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
+import { Stream } from '../../../models/stream.js';
 import { DirectHttpStreamSession, HlsStreamSession } from '../../../lib/mediaSessions/index.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+
+const parseOptionalInteger = (value: unknown, fieldName: string): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    const normalized = String(value).trim();
+
+    if (!/^-?\d+$/.test(normalized)) {
+        throw new errors.BadRequestError(`${fieldName} is invalid`);
+    }
+
+    const parsed = Number(normalized);
+
+    if (!Number.isSafeInteger(parsed)) {
+        throw new errors.BadRequestError(`${fieldName} is invalid`);
+    }
+
+    return parsed;
+};
 
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req: Request, res: Response, next: NextFunction) {
@@ -37,14 +55,43 @@ export default (server: Express, oblecto: Oblecto) => {
             const formats = ((params.formats as string) || 'mp4').split(',');
             const videoCodecs = ((params.videoCodecs as string) || 'h264').split(',');
             const audioCodecs = ((params.audioCodec as string) || 'aac').split(',');
+            const subtitleModeRaw = ((params.subtitleMode as string) || 'auto').toLowerCase();
+            const subtitleMode = ['off', 'auto', 'forced'].includes(subtitleModeRaw)
+                ? subtitleModeRaw as 'off' | 'auto' | 'forced'
+                : null;
+            const requestedAudioStreamIndex = parseOptionalInteger(params.audioStreamIndex, 'audioStreamIndex');
+            const requestedSubtitleStreamIndex = parseOptionalInteger(params.subtitleStreamIndex, 'subtitleStreamIndex');
 
             try {
-                file = await File.findByPk(req.params.id);
+                file = await File.findByPk(req.params.id, { include: [Stream] });
             } catch (ex) {
                 throw new errors.NotFoundError('File does not exist');
             }
 
             if (!file) throw new errors.NotFoundError('File does not exist');
+            if (!subtitleMode) throw new errors.BadRequestError('subtitleMode is invalid');
+
+            const streams: any[] = Array.isArray((file as any).Streams) ? (file as any).Streams : [];
+            const audioStreams = streams.filter((stream: any) => stream.codec_type === 'audio');
+            const subtitleStreams = streams.filter((stream: any) => stream.codec_type === 'subtitle');
+
+            if (requestedAudioStreamIndex !== null && !audioStreams.some((stream: any) => stream.index === requestedAudioStreamIndex)) {
+                throw new errors.BadRequestError('audioStreamIndex is invalid');
+            }
+
+            if (requestedSubtitleStreamIndex !== null && requestedSubtitleStreamIndex !== -1 &&
+                !subtitleStreams.some((stream: any) => stream.index === requestedSubtitleStreamIndex)) {
+                throw new errors.BadRequestError('subtitleStreamIndex is invalid');
+            }
+
+            const resolvedAudioStreamIndex = requestedAudioStreamIndex !== null
+                ? requestedAudioStreamIndex
+                : (audioStreams[0]?.index ?? null);
+            const resolvedSubtitleStreamIndex = subtitleMode === 'off' || requestedSubtitleStreamIndex === -1
+                ? null
+                : (requestedSubtitleStreamIndex !== null
+                    ? requestedSubtitleStreamIndex
+                    : (subtitleStreams[0]?.index ?? null));
 
             let streamType = 'recode';
 
@@ -60,8 +107,10 @@ export default (server: Express, oblecto: Oblecto) => {
                 target: {
                     formats, videoCodecs, audioCodecs
                 },
-
-                offset: (params.offset as number) || 0
+                offset: parseOptionalInteger(params.offset, 'offset') || 0,
+                audioStreamIndex: resolvedAudioStreamIndex ?? undefined,
+                subtitleStreamIndex: resolvedSubtitleStreamIndex,
+                subtitleMode
             });
 
             res.send({
@@ -71,7 +120,12 @@ export default (server: Express, oblecto: Oblecto) => {
                     video: streamSession.videoCodec,
                     audio: streamSession.audioCodec
                 },
-                inputCodec: { video: streamSession.file.videoCodec, audio: streamSession.file.audioCodec }
+                inputCodec: { video: streamSession.file.videoCodec, audio: streamSession.file.audioCodec },
+                selectedTracks: {
+                    audioStreamIndex: streamSession.selectedAudioStreamIndex,
+                    subtitleStreamIndex: streamSession.selectedSubtitleStreamIndex,
+                    subtitleMode: streamSession.subtitleMode
+                }
             });
         } catch (error) {
             next(error);

@@ -17,6 +17,12 @@ export interface MediaSessionOptions {
     offset?: number;
     /** Explicit streamer type to use */
     streamType?: string;
+    /** Explicitly selected audio stream index from ffprobe metadata */
+    audioStreamIndex?: number;
+    /** Explicitly selected subtitle stream index from ffprobe metadata; null disables subtitles */
+    subtitleStreamIndex?: number | null;
+    /** Subtitle mode preference */
+    subtitleMode?: 'off' | 'auto' | 'forced';
 }
 
 /**
@@ -69,6 +75,11 @@ export interface MediaSessionInfo {
         format: string;
         videoCodec: string | null;
         audioCodec: string | null;
+    };
+    selectedTracks: {
+        audioStreamIndex: number | null;
+        subtitleStreamIndex: number | null;
+        subtitleMode: 'off' | 'auto' | 'forced';
     };
     seekMode: 'client' | 'server';
     destinationCount: number;

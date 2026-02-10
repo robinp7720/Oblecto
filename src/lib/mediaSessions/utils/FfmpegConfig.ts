@@ -132,7 +132,8 @@ export class FfmpegConfig {
      */
     static getStreamMappingOptions(
         audioStreamIndex?: number,
-        videoStreamIndex?: number
+        videoStreamIndex?: number,
+        subtitleStreamIndex?: number | null
     ): string[] {
         const options: string[] = [];
 
@@ -141,6 +142,33 @@ export class FfmpegConfig {
         }
         if (videoStreamIndex !== undefined) {
             options.push(`-map 0:${videoStreamIndex}`);
+        }
+        if (subtitleStreamIndex !== undefined && subtitleStreamIndex !== null) {
+            options.push(`-map 0:${subtitleStreamIndex}`);
+        }
+
+        return options;
+    }
+
+    /**
+     * Get explicit stream mapping with deterministic primary video and selected audio/subtitle.
+     * @param audioStreamIndex - Absolute audio stream index
+     * @param subtitleStreamIndex - Absolute subtitle stream index
+     */
+    static getExplicitStreamMappingOptions(
+        audioStreamIndex?: number | null,
+        subtitleStreamIndex?: number | null
+    ): string[] {
+        const options: string[] = ['-map 0:v:0'];
+
+        if (audioStreamIndex !== undefined && audioStreamIndex !== null) {
+            options.push(`-map 0:${audioStreamIndex}`);
+        } else {
+            options.push('-map 0:a:0');
+        }
+
+        if (subtitleStreamIndex !== undefined && subtitleStreamIndex !== null) {
+            options.push(`-map 0:${subtitleStreamIndex}`);
         }
 
         return options;
