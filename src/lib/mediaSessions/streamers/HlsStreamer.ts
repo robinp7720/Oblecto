@@ -125,6 +125,15 @@ export class HlsStreamSession extends MediaSession {
             hlsOptions.push('-pix_fmt yuv420p');
             hlsOptions.push(`-force_key_frames expr:gte(t,n_forced*${HLS_SEGMENT_DURATION_SEC})`);
             hlsOptions.push('-sc_threshold 0');
+
+            if (videoCodec === 'libx264') {
+                hlsOptions.push('-preset ultrafast');
+                hlsOptions.push('-tune zerolatency');
+                hlsOptions.push('-crf 23');
+                hlsOptions.push('-profile:v main');
+                hlsOptions.push('-level 4.1');
+                hlsOptions.push('-vf scale=w=min(1920\\,iw):h=-2');
+            }
         }
 
         // Add hardware acceleration options if configured
@@ -260,6 +269,16 @@ export class HlsStreamSession extends MediaSession {
         }
     }
 
+    private async segmentExists(segmentId: number, segmentPath: string): Promise<boolean> {
+        try {
+            await fs.promises.access(segmentPath, fs.constants.F_OK);
+            this.lastGeneratedSegmentId = Math.max(this.lastGeneratedSegmentId ?? segmentId, segmentId);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     /**
      * Wait for the playlist file to be created
      */
@@ -277,6 +296,10 @@ export class HlsStreamSession extends MediaSession {
         const deadline = Date.now() + SEGMENT_WAIT_TIMEOUT_MS;
 
         while (true) {
+            if (await this.segmentExists(segmentId, segmentPath)) {
+                return;
+            }
+
             if (this.segmenterError) {
                 throw this.segmenterError;
             }

@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
 import assert from 'node:assert/strict';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { Sequelize } from 'sequelize';
 import streamingRoutes from '../../src/submodules/REST/routes/streaming.js';
 import { File, fileColumns } from '../../src/models/file.js';
 import { Stream, streamColumns } from '../../src/models/stream.js';
+import { HlsStreamSession } from '../../src/lib/mediaSessions/index.js';
 
 const makeServer = () => {
     const handlers = new Map();
@@ -342,5 +345,34 @@ describe('Streaming session create route', () => {
         assert.equal(createdOptions.subtitleStreamIndex, null);
         assert.equal(res.body.selectedTracks.audioStreamIndex, null);
         assert.equal(res.body.selectedTracks.subtitleStreamIndex, null);
+    });
+
+    it('serves an HLS segment that exists even before ffmpeg progress is parsed', async () => {
+        const file = await File.findByPk(1);
+        assert.ok(file);
+
+        const session = new HlsStreamSession(file, {
+            streamType: 'hls',
+            target: {
+                formats: ['mp4'],
+                videoCodecs: ['h264'],
+                audioCodecs: ['aac']
+            }
+        }, {
+            config: {
+                streaming: {},
+                transcoding: {}
+            }
+        } as any);
+
+        const segmentPath = path.join(session.segmentDir, '000.ts');
+
+        try {
+            await fs.writeFile(segmentPath, 'segment-data');
+            await session.waitForSegment(0, segmentPath);
+        } finally {
+            (session as any).clearTimeout();
+            await fs.rm(session.segmentDir, { recursive: true, force: true });
+        }
     });
 });
