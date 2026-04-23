@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-misused-promises */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 import expect from 'expect.js';
 
 import Queue from '../../src/lib/queue/index.js';
@@ -7,27 +7,28 @@ import guessit from '../../src/submodules/guessit.js';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
 
-const oblecto = {
-    tvdb: new TVDB( '4908EBCEE2556E3D'),
-    tmdb: new MovieDb('b06b4917705eeed4e4b273d4c90fe158'),
+function createOblectoFixture() {
+    return {
+        tvdb: new TVDB( '4908EBCEE2556E3D'),
+        tmdb: new MovieDb('b06b4917705eeed4e4b273d4c90fe158'),
 
-    queue: new Queue(1),
-    config: {
-        tvshows: {
-            seriesIdentifiers: ['tmdb', 'tvdb'],
-            episodeIdentifiers: ['tmdb', 'tvdb']
+        queue: new Queue(1),
+        config: {
+            tvshows: {
+                seriesIdentifiers: ['tmdb', 'tvdb'],
+                episodeIdentifiers: ['tmdb', 'tvdb']
+            }
         }
-    }
-};
+    };
+}
 
 describe('SeriesIndexer', function () {
-    describe('Aggregate Series Identifier', async function () {
+    describe('Aggregate Series Identifier', function () {
         this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
             const identification = await seriesIndexer.seriesIdentifier.identify('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', await guessit.identify('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv'));
-
-            console.log(identification);
 
             expect(identification.tmdbid).to.be(80986);
             expect(identification.seriesName).to.be('Stargirl');
@@ -35,10 +36,9 @@ describe('SeriesIndexer', function () {
         });
 
         it('/mnt/SMB/TV Shows/The Flash (2014)/The Flash (2014) S5E8.mp4', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
             const identification = await seriesIndexer.seriesIdentifier.identify('/mnt/SMB/TV Shows/The Flash (2014)/The Flash (2014) S5E8.mp4', await guessit.identify('/mnt/SMB/TV Shows/The Flash (2014)/The Flash (2014) S5E8.mp4'));
-
-            console.log(identification);
 
             expect(identification.tmdbid).to.be(60735);
             expect(identification.seriesName).to.be('The Flash (2014)');
@@ -46,24 +46,22 @@ describe('SeriesIndexer', function () {
         });
 
         it('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
-            const identification = await seriesIndexer.seriesIdentifier.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', await guessit.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv'));
-
-            console.log(identification);
+            await seriesIndexer.seriesIdentifier.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', await guessit.identify('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv'));
         });
     });
 
-    describe('Aggregate Episode Identifier', async function () {
+    describe('Aggregate Episode Identifier', function () {
         this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
             const path = '/mnt/smb/tv shows/stargirl.s02e03.1080p.web.h264-cakes.mkv';
             const guessitIdentification = await guessit.identify(path);
 
             const seriesIdentification = await seriesIndexer.seriesIdentifier.identify(path, guessitIdentification);
             const identification = await seriesIndexer.episodeIdentifer.identify(path, guessitIdentification, seriesIdentification);
-
-            console.log(identification);
 
             expect(identification.tmdbid).to.be(3099451);
             expect(identification.airedEpisodeNumber).to.be(3);
@@ -73,14 +71,13 @@ describe('SeriesIndexer', function () {
         });
 
         it('/mnt/SMB/TV Shows/The Flash (2014)/The Flash (2014) S5E8.mp4', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
             const path = '/mnt/SMB/TV Shows/The Flash (2014)/The Flash (2014) S5E8.mp4';
             const guessitIdentification = await guessit.identify(path);
 
             const seriesIdentification = await seriesIndexer.seriesIdentifier.identify(path, guessitIdentification);
             const identification = await seriesIndexer.episodeIdentifer.identify(path, guessitIdentification, seriesIdentification);
-
-            console.log(identification);
 
             expect(identification.tmdbid).to.be(1620866);
             expect(identification.airedEpisodeNumber).to.be(8);
@@ -89,13 +86,19 @@ describe('SeriesIndexer', function () {
             expect(identification.imdbid).to.be('tt8312898');
         });
         it('/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv', async function () {
+            const oblecto = createOblectoFixture();
             const seriesIndexer = new SeriesIndexer(oblecto);
             const path = '/mnt/Media/Series/Catch-22/Catch-22.S01E06.2160p.HULU.WEB-DL.DDP5.1.DV.H.265-NTb.mkv';
 
             const identification = await seriesIndexer.identify(path);
 
-            console.log(identification);
-
+            expect(identification.series.tmdbid).to.be(82744);
+            expect(identification.series.seriesName).to.be('Catch-22');
+            expect(identification.series.tvdbid).to.be(357558);
+            expect(identification.episode.tmdbid).to.be(1664030);
+            expect(identification.episode.airedEpisodeNumber).to.be(6);
+            expect(identification.episode.airedSeason).to.be(1);
+            expect(identification.episode.tvdbid).to.be(6972688);
         });
     });
 
