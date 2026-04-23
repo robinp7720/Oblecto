@@ -20,9 +20,12 @@ export default class RealtimeController {
         this.clients = {};
 
         this.server = new Server(oblecto.oblectoAPI.server, {
-            log: false,
-            agent: false,
-            origins: '*:*',
+            cors: {
+                origin: '*',
+                methods: ['GET', 'POST'],
+                allowedHeaders: ['Authorization', 'Content-Type'],
+                credentials: false
+            },
             transports: ['websocket', 'polling']
         });
 

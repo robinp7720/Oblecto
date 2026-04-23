@@ -7,6 +7,7 @@ import { Stream } from '../../../models/stream.js';
 import { DirectHttpStreamSession, HlsStreamSession } from '../../../lib/mediaSessions/index.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+import logger from '../../logger/index.js';
 
 const parseOptionalInteger = (value: unknown, fieldName: string): number | null => {
     if (value === undefined || value === null || value === '') return null;
@@ -25,10 +26,23 @@ const parseOptionalInteger = (value: unknown, fieldName: string): number | null 
     return parsed;
 };
 
+const parseOptionalNumber = (value: unknown, fieldName: string): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+
+    const parsed = Number(String(value).trim());
+
+    if (!Number.isFinite(parsed)) {
+        throw new errors.BadRequestError(`${fieldName} is invalid`);
+    }
+
+    return parsed;
+};
+
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/HLS/:sessionId/segment/:id', async function (req: Request, res: Response, next: NextFunction) {
         try {
             const sessionId = req.params.sessionId;
+            logger.debug(`HLS segment request session=${sessionId} segment=${req.params.id}`);
 
             if (!oblecto.streamSessionController.sessionExists(sessionId)) {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
@@ -40,7 +54,11 @@ export default (server: Express, oblecto: Oblecto) => {
                 throw new errors.BadRequestError('Invalid stream session type');
             }
 
-            const segmentId = parseInt(req.params.id);
+            const segmentId = parseInt(req.params.id, 10);
+
+            if (Number.isNaN(segmentId)) {
+                throw new errors.BadRequestError('Invalid segment id');
+            }
 
             await streamSession.streamSegment(req, res, segmentId);
         } catch (error) {
@@ -84,14 +102,12 @@ export default (server: Express, oblecto: Oblecto) => {
                 throw new errors.BadRequestError('subtitleStreamIndex is invalid');
             }
 
-            const resolvedAudioStreamIndex = requestedAudioStreamIndex !== null
-                ? requestedAudioStreamIndex
-                : (audioStreams[0]?.index ?? null);
+            const resolvedAudioStreamIndex = requestedAudioStreamIndex;
             const resolvedSubtitleStreamIndex = subtitleMode === 'off' || requestedSubtitleStreamIndex === -1
                 ? null
                 : (requestedSubtitleStreamIndex !== null
                     ? requestedSubtitleStreamIndex
-                    : (subtitleStreams[0]?.index ?? null));
+                    : null);
 
             let streamType = 'recode';
 
@@ -107,7 +123,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 target: {
                     formats, videoCodecs, audioCodecs
                 },
-                offset: parseOptionalInteger(params.offset, 'offset') || 0,
+                offset: parseOptionalNumber(params.offset, 'offset') || 0,
                 audioStreamIndex: resolvedAudioStreamIndex ?? undefined,
                 subtitleStreamIndex: resolvedSubtitleStreamIndex,
                 subtitleMode
@@ -134,6 +150,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
     server.get('/session/stream/:sessionId', async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
+            logger.debug(`Session stream request session=${req.params.sessionId}`);
             if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
                 throw new errors.InvalidCredentialsError('Stream session token does not exist');
             }

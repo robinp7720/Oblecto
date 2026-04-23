@@ -257,4 +257,90 @@ describe('Streaming session create route', () => {
         assert.equal(res.statusCode, 400);
         assert.match(String(res.body.message), /subtitleMode/i);
     });
+
+    it('accepts numeric offset values with decimals', async () => {
+        const server = makeServer();
+        const mockOblecto = {
+            streamSessionController: {
+                sessionExists: () => false,
+                sessions: {},
+                newSession: (file: any, options: any) => {
+                    createdOptions = options;
+                    return {
+                        sessionId: 'session-789',
+                        videoCodec: 'h264',
+                        audioCodec: 'aac',
+                        file,
+                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
+                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
+                        subtitleMode: options.subtitleMode ?? 'auto'
+                    };
+                }
+            }
+        };
+
+        streamingRoutes(server as any, mockOblecto as any);
+
+        const handler = server.handlers.get('GET /session/create/:id');
+        const res = makeRes();
+        const req = {
+            params: { id: '1' },
+            combined_params: {
+                type: 'hls',
+                offset: '123.45',
+                subtitleMode: 'auto'
+            }
+        };
+
+        await handler(req, res, (error: any) => {
+            throw error;
+        });
+
+        assert.equal(res.statusCode, 200);
+        assert.equal(createdOptions.offset, 123.45);
+    });
+
+    it('does not force explicit track mapping when track indexes are not provided', async () => {
+        const server = makeServer();
+        const mockOblecto = {
+            streamSessionController: {
+                sessionExists: () => false,
+                sessions: {},
+                newSession: (_file: any, options: any) => {
+                    createdOptions = options;
+                    return {
+                        sessionId: 'session-987',
+                        videoCodec: 'h264',
+                        audioCodec: 'aac',
+                        file: _file,
+                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
+                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
+                        subtitleMode: options.subtitleMode ?? 'auto'
+                    };
+                }
+            }
+        };
+
+        streamingRoutes(server as any, mockOblecto as any);
+
+        const handler = server.handlers.get('GET /session/create/:id');
+        const res = makeRes();
+        const req = {
+            params: { id: '1' },
+            combined_params: {
+                type: 'hls',
+                subtitleMode: 'auto'
+            }
+        };
+
+        await handler(req, res, (error: any) => {
+            throw error;
+        });
+
+        assert.equal(res.statusCode, 200);
+        assert.equal(createdOptions.audioStreamIndex, undefined);
+        assert.equal(createdOptions.subtitleStreamIndex, null);
+        assert.equal(res.body.selectedTracks.audioStreamIndex, null);
+        assert.equal(res.body.selectedTracks.subtitleStreamIndex, null);
+    });
 });

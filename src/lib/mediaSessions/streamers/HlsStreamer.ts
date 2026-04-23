@@ -28,6 +28,7 @@ const HLS_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
  */
 export class HlsStreamSession extends MediaSession {
     public segmenterStarted: boolean = false;
+    public segmenterFinished: boolean = false;
     public segmenterError: Error | null = null;
     public readonly segmentDir: string;
     public readonly segmentTemplate: string;
@@ -35,7 +36,7 @@ export class HlsStreamSession extends MediaSession {
     public readonly maxSegments: number = 20;
     private readonly maxLeadSegments: number;
     private segmenterPaused: boolean = false;
-    private lastRequestedSegmentId: number | null = null;
+    private lastRequestedSegmentId: number = 0;
     private lastGeneratedSegmentId: number | null = null;
 
     constructor(file: File, options: MediaSessionOptions, oblecto: Oblecto) {
@@ -92,9 +93,9 @@ export class HlsStreamSession extends MediaSession {
         // hls.js will poll for playlist updates as FFmpeg produces segments
         const hlsOptions: string[] = [
             `-hls_time ${HLS_SEGMENT_DURATION_SEC}`,
-            `-hls_delete_threshold ${this.maxSegments + 5}`,
-            `-hls_list_size ${this.maxSegments}`,
-            '-hls_flags delete_segments+independent_segments+temp_file',
+            '-hls_list_size 0',
+            '-hls_playlist_type event',
+            '-hls_flags independent_segments+temp_file',
             `-hls_base_url /HLS/${this.sessionId}/segment/`,
             `-hls_segment_filename ${this.segmentTemplate}`,
             '-fflags +genpts',
@@ -164,7 +165,8 @@ export class HlsStreamSession extends MediaSession {
             })
             .on('end', () => {
                 logger.info(`HlsSession ${this.sessionId} segmenter ended`);
-                this.endSession();
+                this.segmenterFinished = true;
+                this.onActivityEnd();
             });
     }
 
@@ -187,6 +189,7 @@ export class HlsStreamSession extends MediaSession {
     startSegmenter(): void {
         if (!this.process) return;
         if (this.segmenterStarted) return;
+        if (this.segmenterFinished) return;
 
         this.segmenterStarted = true;
         this.process.run();
@@ -225,7 +228,6 @@ export class HlsStreamSession extends MediaSession {
 
     private applyLeadLimit(): void {
         if (this.lastGeneratedSegmentId === null) return;
-        if (this.lastRequestedSegmentId === null) return;
         const lead = this.lastGeneratedSegmentId - this.lastRequestedSegmentId;
 
         logger.debug(`HlsSession ${this.sessionId} lead=${lead} max=${this.maxLeadSegments} requested=${this.lastRequestedSegmentId} generated=${this.lastGeneratedSegmentId}`);
@@ -262,7 +264,8 @@ export class HlsStreamSession extends MediaSession {
      * Wait for the playlist file to be created
      */
     async waitForPlaylist(): Promise<void> {
-        await this.waitForFile(this.playlistPath, PLAYLIST_WAIT_TIMEOUT_MS, 'Timeout waiting for HLS playlist');
+        const timeoutMs = this.segmenterFinished ? PLAYLIST_POLL_INTERVAL_MS : PLAYLIST_WAIT_TIMEOUT_MS;
+        await this.waitForFile(this.playlistPath, timeoutMs, 'Timeout waiting for HLS playlist');
     }
 
     /**
@@ -281,6 +284,10 @@ export class HlsStreamSession extends MediaSession {
             if (this.lastGeneratedSegmentId !== null && this.lastGeneratedSegmentId >= segmentId) {
                 await this.waitForFile(segmentPath, SEGMENT_WAIT_TIMEOUT_MS, `Timeout waiting for segment: ${segmentPath}`);
                 return;
+            }
+
+            if (this.segmenterFinished) {
+                throw new Error(`Segment ${segmentId} not available`);
             }
 
             if (Date.now() >= deadline) {
@@ -336,7 +343,7 @@ export class HlsStreamSession extends MediaSession {
     async streamSegment(req: Request, res: Response, segmentId: number): Promise<void> {
         this.onActivityStart();
 
-        if (this.lastRequestedSegmentId === null || segmentId > this.lastRequestedSegmentId)
+        if (segmentId > this.lastRequestedSegmentId)
             this.lastRequestedSegmentId = segmentId;
         this.applyLeadLimit();
 

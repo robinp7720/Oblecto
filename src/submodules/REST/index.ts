@@ -31,7 +31,7 @@ export default class OblectoAPI {
         app.use(cors({
             origin: '*',
             maxAge: 5,
-            allowedHeaders: ['API-Token'],
+            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type'],
             exposedHeaders: ['API-Token-Expiry']
         }));
 
