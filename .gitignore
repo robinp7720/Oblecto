@@ -5,7 +5,13 @@ node_modules
 .vscode-upload.json
 dist/
 build/
+coverage/
 .vscode/launch.json
 Oblecto-Web/
 logs/
 *.tsbuildinfo
+*.tgz
+lint_output.txt
+*.log
+.qodana/
+qodana.sarif.json
