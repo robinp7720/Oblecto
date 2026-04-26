@@ -38,6 +38,8 @@ const firstNonEmpty = (...args: (string | undefined | null)[]): string => {
     return args.find(arg => arg !== null && arg !== undefined && arg.length > 0) || '';
 };
 
+const maxSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
+
 const resolveDefaultStreamIndex = (streams: MediaStream[], codecType: string): number => {
     const matching = streams.filter((stream) => stream.codec_type === codecType);
 
@@ -142,20 +144,12 @@ export const formatFileId = (value: unknown): string => {
     if (typeof value === 'string') raw = value.trim();
     else if (typeof value === 'number' || typeof value === 'boolean') raw = String(value);
 
-    if (!raw) return '';
-
-    // The original code had an unreachable `return ''` here, which is now removed.
-    // The next `if (!raw) return '';` is redundant but kept as per instruction to only apply the specific change.
-    if (!raw) return '';
+    if (raw === '') return '';
 
     const normalized = raw.replace(/-/g, '');
 
     if (/^\d+$/.test(raw)) {
-        const numeric = Number(raw);
-
-        if (Number.isFinite(numeric)) {
-            return numeric.toString(16).padStart(32, '0');
-        }
+        return BigInt(raw).toString(16).padStart(32, '0');
     }
 
     if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
@@ -176,20 +170,24 @@ export const parseFileId = (value: unknown): number | string | null => {
     else if (typeof value === 'number') return value;
     else if (typeof value === 'boolean') raw = String(value);
 
-    if (!raw) return null;
-
-    if (!raw) return null;
+    if (raw === null || raw === '') return null;
 
     const normalized = raw.replace(/-/g, '');
 
     if (/^[0-9a-fA-F]{32}$/.test(normalized)) {
-        const parsed = parseInt(normalized, 16);
+        const parsed = BigInt(`0x${normalized}`);
 
-        return Number.isNaN(parsed) ? null : parsed;
+        return parsed <= maxSafeInteger
+            ? Number(parsed)
+            : parsed.toString(10);
     }
 
     if (/^\d+$/.test(raw)) {
-        return parseInt(raw, 10);
+        const parsed = BigInt(raw);
+
+        return parsed <= maxSafeInteger
+            ? Number(parsed)
+            : raw;
     }
 
     return raw;
