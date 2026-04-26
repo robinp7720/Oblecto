@@ -52,6 +52,20 @@ describe('Emby Emulation Helpers', () => {
 
             assert.strictEqual(parsed, parseInt(raw, 16));
         });
+
+        it('should format large decimal string ids without precision loss', () => {
+            const raw = '9007199254740993';
+            const formatted = formatFileId(raw);
+
+            assert.strictEqual(formatted, '00000000000000000020000000000001');
+        });
+
+        it('should return large parsed ids as strings when they exceed safe integer range', () => {
+            const formatted = '00000000000000000020000000000001';
+            const parsed = parseFileId(formatted);
+
+            assert.strictEqual(parsed, '9007199254740993');
+        });
     });
 
     describe('Integration', () => {
