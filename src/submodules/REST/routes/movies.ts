@@ -160,11 +160,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 attributes: [],
                 through: { attributes: [] },
                 required: true,
-                where: {
-                    path: {
-                        [Op.like]: `${escapeLike(browseParams.libraryPath)}%`
-                    }
-                }
+                where: {path: {[Op.like]: `${escapeLike(browseParams.libraryPath)}%`}}
             });
         }
 
@@ -416,18 +412,6 @@ export default (server: Express, oblecto: Oblecto) => {
         });
 
         res.send(movie);
-    });
-
-    server.get('/movie/:id/play', async function (req: Request, res: Response) {
-        const movie: any = await Movie.findByPk(req.params.id as string, { include: [{ model: File }] });
-
-        if (!movie?.Files || movie.Files.length === 0) {
-            return res.status(404).send({ message: 'No files found for this movie' });
-        }
-
-        const file = movie.Files[0];
-
-        res.redirect(`/stream/${file.id}`);
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

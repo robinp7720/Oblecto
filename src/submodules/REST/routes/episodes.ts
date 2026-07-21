@@ -91,7 +91,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         try {
             await fs.copyFile(uploadPath, thumbnailPath);
-            
+
             for (const size of Object.keys(oblecto.config.artwork.poster)) {
                 oblecto.queue.pushJob('rescaleImage', {
                     from: oblecto.artworkUtils.episodeBannerPath(episode),
@@ -112,23 +112,6 @@ export default (server: Express, oblecto: Oblecto) => {
         const episode: any = await Episode.findByPk(req.params.id as string, { include: [File] });
 
         res.send(episode.Files);
-    });
-
-    // Endpoint to send episode video file to the client
-    // TODO: move this to the file route and use file id to play, abstracting this from episodes
-    server.get('/episode/:id/play', async function (req: Request, res: Response) {
-        // search for attributes
-        const episode: any = await Episode.findByPk(req.params.id as string, { include: [File] });
-
-        if (!episode?.Files || episode.Files.length === 0) {
-            res.status(404).send({ message: 'No files found for this episode' });
-            return;
-        }
-
-        const file = episode.Files[0];
-
-        res.redirect(`/stream/${file.id}`);
-
     });
 
     // Endpoint to retrieve episode details based on the local episode ID
