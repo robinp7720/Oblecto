@@ -140,7 +140,7 @@ describe('RealtimeClient', () => {
             assert.equal(await TrackEpisode.count(), 0);
         });
 
-        it('creates a track row on save, but leaves it queued for the next save', async () => {
+        it('creates a track row scoped to the user+episode on first save, but leaves it queued for the next save', async () => {
             const socket = new FakeSocket();
             const client = new RealtimeClient(makeOblecto(), socket as any);
             client.authenticationHandler({ token: jwt.sign({ id: 1 }, 'test-secret') });
@@ -151,24 +151,14 @@ describe('RealtimeClient', () => {
             const rows = await TrackEpisode.findAll();
             assert.equal(rows.length, 1);
             assert.equal(rows[0].time, 5);
+            assert.equal(rows[0].userId, 1);
+            assert.equal(rows[0].episodeId, 10);
             // Documents actual behavior: entries are only cleared from
             // storage on update, not on initial creation.
             assert.ok(client.storage.series['10']);
         });
 
-        // BUG: saveEpisodeTrack/saveMovieTrack query and create by
-        // `UserId`/`EpisodeId` (and `UserId`/`MovieId`), but the actual
-        // columns declared on TrackEpisode/TrackMovie are lowercase
-        // `userId`/`episodeId`/`movieId`. Sequelize silently drops unknown
-        // where/defaults keys rather than erroring, so findOrCreate's
-        // `where` clause never matches anything - every save creates a
-        // fresh row with userId/episodeId left null instead of finding and
-        // updating the existing one for that user+episode. The intended
-        // "update on repeat save" branch below is therefore dead code in
-        // production: playback progress is never actually persisted against
-        // a real user/episode, and repeated calls (this runs on a 10s
-        // interval) accumulate orphaned rows indefinitely.
-        it('never matches an existing row, so repeat saves accumulate duplicate orphaned rows instead of updating', async () => {
+        it('matches the existing row for the same user+episode on a repeat save, updates it, and clears storage', async () => {
             const socket = new FakeSocket();
             const client = new RealtimeClient(makeOblecto(), socket as any);
             client.authenticationHandler({ token: jwt.sign({ id: 1 }, 'test-secret') });
@@ -180,9 +170,29 @@ describe('RealtimeClient', () => {
             await client.saveEpisodeTrack('10');
 
             const rows = await TrackEpisode.findAll();
-            assert.equal(rows.length, 2);
-            assert.deepEqual(rows.map(r => r.userId), [null, null]);
-            assert.deepEqual(rows.map(r => r.episodeId), [null, null]);
+            assert.equal(rows.length, 1);
+            assert.equal(rows[0].time, 99);
+            assert.equal(rows[0].progress, 0.9);
+            assert.equal(client.storage.series['10'], undefined);
+        });
+
+        it('scopes movie tracking to user+movie the same way', async () => {
+            const socket = new FakeSocket();
+            const client = new RealtimeClient(makeOblecto(), socket as any);
+            client.authenticationHandler({ token: jwt.sign({ id: 3 }, 'test-secret') });
+
+            client.storage.movie['20'] = { movieId: '20', time: 1, progress: 0.01, type: 'movie' };
+            await client.saveMovieTrack('20');
+
+            client.storage.movie['20'] = { movieId: '20', time: 50, progress: 0.5, type: 'movie' };
+            await client.saveMovieTrack('20');
+
+            const rows = await TrackMovie.findAll();
+            assert.equal(rows.length, 1);
+            assert.equal(rows[0].userId, 3);
+            assert.equal(rows[0].movieId, 20);
+            assert.equal(rows[0].time, 50);
+            assert.equal(client.storage.movie['20'], undefined);
         });
 
         it('saveAllTracks processes every queued series and movie entry', async () => {

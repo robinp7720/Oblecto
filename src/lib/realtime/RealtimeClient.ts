@@ -102,8 +102,8 @@ export default class RealtimeClient extends EventEmitter {
 
         const [item, created] = await TrackEpisode.findOrCreate({
             where: {
-                UserId: this.user.id,
-                EpisodeId: id
+                userId: this.user.id,
+                episodeId: id
             },
             defaults: {
                 time: payload.time,
@@ -130,8 +130,8 @@ export default class RealtimeClient extends EventEmitter {
 
         const [item, created] = await TrackMovie.findOrCreate({
             where: {
-                UserId: this.user.id,
-                MovieId: id
+                userId: this.user.id,
+                movieId: id
             },
             defaults: {
                 time: payload.time,

@@ -280,14 +280,32 @@ describe('Movie/Series updaters', () => {
             await assert.rejects(() => retriever.retrieveInformation({ tvdbid: null } as any), DebugExtendableError);
         });
 
-        it('returns raw TVDB episode info for a valid tvdbid', async () => {
-            const rawInfo = { episodeName: 'Pilot', airedEpisodeNumber: 1, airedSeason: 1, imdbId: 'tt9' };
+        it('returns a normalized data object for a valid tvdbid', async () => {
+            const rawInfo = {
+                episodeName: 'Pilot', airedEpisodeNumber: 1, airedSeason: 1,
+                overview: 'x', firstAired: '2020-01-01', dvdEpisodeNumber: 1, dvdSeason: 1,
+                absoluteNumber: 1, imdbId: 'tt9'
+            };
             const oblecto = makeOblecto({ tvdb: { getEpisodeById: async () => rawInfo } });
             const retriever = new TvdbEpisodeRetriever(oblecto);
 
-            const result = await retriever.retrieveInformation({ tvdbid: 5 } as any);
+            const result = await retriever.retrieveInformation({ tvdbid: 5 } as any) as Record<string, unknown>;
 
-            assert.deepEqual(result, rawInfo);
+            assert.equal(result.episodeName, 'Pilot');
+            assert.equal(result.airedEpisodeNumber, 1);
+            assert.equal(result.imdbid, 'tt9');
+            // The raw TVDB field name is `imdbId`; only the normalized `imdbid` should be present.
+            assert.equal(result.imdbId, undefined);
+        });
+
+        it('omits imdbid when the TVDB response has none', async () => {
+            const rawInfo = { episodeName: 'Pilot', airedEpisodeNumber: 1, airedSeason: 1 };
+            const oblecto = makeOblecto({ tvdb: { getEpisodeById: async () => rawInfo } });
+            const retriever = new TvdbEpisodeRetriever(oblecto);
+
+            const result = await retriever.retrieveInformation({ tvdbid: 5 } as any) as Record<string, unknown>;
+
+            assert.equal(result.imdbid, undefined);
         });
     });
 });

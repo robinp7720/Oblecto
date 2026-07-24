@@ -17,7 +17,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
+    "build:web": "if [ -f Oblecto-Web/package.json ]; then cd Oblecto-Web && npm install --unsafe-perms --legacy-peer-deps && npm run build; else echo 'Oblecto-Web submodule not initialized, skipping web build' >&2; fi",
     "build": "npm run clean && npm run build:web && npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external && npx esbuild src/bin/oblecto.ts --bundle --platform=node --format=esm --outfile=dist/bin/oblecto.js --packages=external && chmod +x ./dist/bin/oblecto.js",
     "clean": "rm -rf dist/",
     "prepare": "npm run build",

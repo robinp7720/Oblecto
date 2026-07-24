@@ -43,6 +43,6 @@ export default class TvdbEpisodeRetriever {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         if (episodeInfo.imdbId) data.imdbid = episodeInfo.imdbId;
 
-        return episodeInfo;
+        return data;
     }
 }

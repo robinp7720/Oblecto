@@ -66,14 +66,14 @@ function initAssociations(): void {
     Stream.belongsTo(File);
     File.hasMany(Stream);
 
-    TrackEpisode.belongsTo(User);
-    TrackEpisode.belongsTo(Episode);
+    TrackEpisode.belongsTo(User, { foreignKey: 'userId' });
+    TrackEpisode.belongsTo(Episode, { foreignKey: 'episodeId' });
 
-    TrackMovie.belongsTo(User);
-    TrackMovie.belongsTo(Movie);
+    TrackMovie.belongsTo(User, { foreignKey: 'userId' });
+    TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
 
-    Episode.hasMany(TrackEpisode);
-    Movie.hasMany(TrackMovie);
+    Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
+    Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
 }
 
 /**
