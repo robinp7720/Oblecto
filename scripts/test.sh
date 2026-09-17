@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-if [ ! -d "/etc/oblecto" ]; then
-  sudo mkdir /etc/oblecto
-  sudo chown $(whoami) /etc/oblecto
-
-  dist/bin/oblecto.js init
-  dist/bin/oblecto.js init database
-fi
-
-node tests/startup.js
-node tests/startupTui.js
+# Use temporary configuration and databases; never initialize the live library.
+node --import tsx tests/startup.ts
+node --import tsx tests/startupTui.ts

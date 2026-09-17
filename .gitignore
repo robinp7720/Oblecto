@@ -15,3 +15,7 @@ lint_output.txt
 *.log
 .qodana/
 qodana.sarif.json
+
+# Playback browser test artifacts
+/test-results/
+/playwright-report/

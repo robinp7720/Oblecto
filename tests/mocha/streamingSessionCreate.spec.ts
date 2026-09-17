@@ -1,378 +1,57 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
 import assert from 'node:assert/strict';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import { Sequelize } from 'sequelize';
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import type { Server } from 'node:http';
+import { File } from '../../src/models/file.js';
+import config from '../../src/config.js';
 import streamingRoutes from '../../src/submodules/REST/routes/streaming.js';
-import { File, fileColumns } from '../../src/models/file.js';
-import { Stream, streamColumns } from '../../src/models/stream.js';
-import { HlsStreamSession } from '../../src/lib/mediaSessions/index.js';
+import { PlaybackService } from '../../src/lib/playback/PlaybackService.js';
+import type Oblecto from '../../src/lib/oblecto/index.js';
+import type { OblectoRequest } from '../../src/submodules/REST/index.js';
 
-const makeServer = () => {
-    const handlers = new Map();
-
-    const register = (method: string) => (route: string, ...routeHandlers: any[]) => {
-        handlers.set(`${method} ${route}`, routeHandlers[routeHandlers.length - 1]);
-    };
-
-    return {
-        handlers,
-        get: register('GET'),
-        post: register('POST'),
-        put: register('PUT'),
-        delete: register('DELETE')
-    };
-};
-
-const makeRes = () => ({
-    statusCode: 200,
-    body: null as any,
-    headers: {} as Record<string, string>,
-    setHeader(key: string, value: string) {
-        this.headers[key] = value;
-    },
-    status(code: number) {
-        this.statusCode = code;
-        return this;
-    },
-    send(payload: any) {
-        this.body = payload;
-        return this;
-    }
-});
-
-describe('Streaming session create route', () => {
-    let sequelize: Sequelize;
-    let createdOptions: any = null;
-
+describe('Playback session REST API', () => {
+    let server: Server; let service: PlaybackService; let base: string;
+    const findFile = File.findByPk;
+    const token = (id = 1) => jwt.sign({ id }, config.authentication.secret);
+    const headers = (id = 1) => ({ Authorization: `Bearer ${token(id)}`, 'Content-Type': 'application/json' });
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
-
-        File.init(fileColumns, { sequelize, modelName: 'File' });
-        Stream.init(streamColumns, { sequelize, modelName: 'Stream' });
-
-        File.hasMany(Stream);
-        Stream.belongsTo(File);
-
-        await sequelize.sync({ force: true });
-
-        const file = await File.create({
-            path: '/tmp/movie.mkv',
-            host: 'local',
-            videoCodec: 'h264',
-            audioCodec: 'aac'
-        });
-
-        await Stream.create({ FileId: file.id, index: 0, codec_type: 'video', codec_name: 'h264' });
-        await Stream.create({ FileId: file.id, index: 1, codec_type: 'audio', codec_name: 'aac', tags_language: 'eng' });
-        await Stream.create({ FileId: file.id, index: 2, codec_type: 'audio', codec_name: 'aac', tags_language: 'jpn' });
-        await Stream.create({ FileId: file.id, index: 3, codec_type: 'subtitle', codec_name: 'subrip', tags_language: 'eng' });
+        service = new PlaybackService({ config: { ffmpeg: {}, streaming: {}, transcoding: {} } } as unknown as Oblecto);
+        service.probe = async () => ({ path: '/not-used.mp4', duration: 90, size: 100000, container: 'mp4', streams: [{ index: 0, codec_type: 'video', codec_name: 'h264' }, { index: 1, codec_type: 'audio', codec_name: 'aac' }] });
+        File.findByPk = (async (id: number) => id === 1 ? { id: 1, path: '/not-used.mp4', host: 'local', extension: 'mp4' } as File : null) as typeof File.findByPk;
+        const app = express(); app.use(express.json());
+        app.use((req: OblectoRequest, _res, next) => { if (req.headers.authorization) req.authorization = { scheme: 'Bearer', credentials: req.headers.authorization.split(' ')[1] }; next(); });
+        streamingRoutes(app, { playback: service } as unknown as Oblecto);
+        app.use((error: { statusCode?: number; message: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => res.status(error.statusCode ?? 500).send({ message: error.message }));
+        server = app.listen(0); await new Promise<void>(resolve => server.once('listening', resolve));
+        base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
     });
-
-    it('creates session with explicit audio/subtitle indexes and returns selectedTracks', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: (file: any, options: any) => {
-                    createdOptions = options;
-                    return {
-                        sessionId: 'session-123',
-                        videoCodec: 'h264',
-                        audioCodec: 'aac',
-                        file,
-                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
-                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
-                        subtitleMode: options.subtitleMode ?? 'auto'
-                    };
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                formats: 'mp4',
-                videoCodecs: 'h264',
-                audioCodec: 'aac',
-                audioStreamIndex: '2',
-                subtitleStreamIndex: '3',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            throw error;
-        });
-
-        assert.equal(res.statusCode, 200);
-        assert.equal(createdOptions.audioStreamIndex, 2);
-        assert.equal(createdOptions.subtitleStreamIndex, 3);
-        assert.equal(createdOptions.subtitleMode, 'auto');
-        assert.equal(res.body.selectedTracks.audioStreamIndex, 2);
-        assert.equal(res.body.selectedTracks.subtitleStreamIndex, 3);
-        assert.equal(res.body.selectedTracks.subtitleMode, 'auto');
+    after(async () => { File.findByPk = findFile; await service.close(); await new Promise<void>(resolve => server.close(() => resolve())); });
+    it('requires authentication and removes legacy session routes', async () => {
+        assert.equal((await fetch(`${base}/playback/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"fileId":1}' })).status, 401);
+        assert.equal((await fetch(`${base}/session/create/1`, { headers: headers() })).status, 404);
     });
-
-    it('disables subtitles when subtitleStreamIndex is -1', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: (_file: any, options: any) => {
-                    createdOptions = options;
-                    return {
-                        sessionId: 'session-456',
-                        videoCodec: 'h264',
-                        audioCodec: 'aac',
-                        file: _file,
-                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
-                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
-                        subtitleMode: options.subtitleMode ?? 'auto'
-                    };
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                subtitleStreamIndex: '-1',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            throw error;
-        });
-
-        assert.equal(res.statusCode, 200);
-        assert.equal(createdOptions.subtitleStreamIndex, null);
-        assert.equal(res.body.selectedTracks.subtitleStreamIndex, null);
+    it('negotiates a session, validates selections, and protects ownership', async () => {
+        const response = await fetch(`${base}/playback/sessions`, { method: 'POST', headers: headers(), body: JSON.stringify({ fileId: 1, position: 12.5 }) });
+        assert.equal(response.status, 201);
+        const session = await response.json();
+        assert.equal(session.method, 'direct'); assert.equal(session.position, 12.5);
+        assert.equal(session.selectedTracks.audioStreamIndex, 1); assert.ok(session.mediaUrl.includes('token='));
+        assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}`, { headers: headers(2) })).status, 404);
+        assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}`, { method: 'DELETE', headers: headers(2) })).status, 404);
+        assert.equal((await fetch(`${base}/playback/media/${session.sessionId}/1/original`)).status, 401);
+        assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}`, { method: 'PATCH', headers: headers(), body: JSON.stringify({ revision: 1, audioStreamIndex: 900 }) })).status, 400);
+        assert.equal(service.get(session.sessionId).revision, 1);
+        const updated = await fetch(`${base}/playback/sessions/${session.sessionId}`, { method: 'PATCH', headers: headers(), body: JSON.stringify({ revision: 1, subtitleMode: 'off', position: 15 }) });
+        assert.equal(updated.status, 200); assert.equal((await updated.json()).revision, 2);
+        const stale = await fetch(`${base}/playback/sessions/${session.sessionId}/progress`, { method: 'POST', headers: headers(), body: JSON.stringify({ revision: 1, position: 15 }) });
+        assert.equal(stale.status, 409);
+        for (let i = 0; i < 2; i++) assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}`, { method: 'DELETE', headers: headers() })).status, 204);
+        assert.equal((await fetch(`${base}${session.mediaUrl}`)).status, 404);
     });
-
-    it('returns bad request when track index is invalid', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: () => {
-                    throw new Error('should not be called');
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                audioStreamIndex: '999',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            res.status(error.statusCode || 500).send({ message: error.message });
-        });
-
-        assert.equal(res.statusCode, 400);
-        assert.match(String(res.body.message), /audioStreamIndex/i);
-    });
-
-    it('returns bad request when track index is not an integer', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: () => {
-                    throw new Error('should not be called');
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                audioStreamIndex: '2abc',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            res.status(error.statusCode || 500).send({ message: error.message });
-        });
-
-        assert.equal(res.statusCode, 400);
-        assert.match(String(res.body.message), /audioStreamIndex/i);
-    });
-
-    it('returns bad request when subtitleMode is invalid', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: () => {
-                    throw new Error('should not be called');
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                subtitleMode: 'maybe'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            res.status(error.statusCode || 500).send({ message: error.message });
-        });
-
-        assert.equal(res.statusCode, 400);
-        assert.match(String(res.body.message), /subtitleMode/i);
-    });
-
-    it('accepts numeric offset values with decimals', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: (file: any, options: any) => {
-                    createdOptions = options;
-                    return {
-                        sessionId: 'session-789',
-                        videoCodec: 'h264',
-                        audioCodec: 'aac',
-                        file,
-                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
-                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
-                        subtitleMode: options.subtitleMode ?? 'auto'
-                    };
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                offset: '123.45',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            throw error;
-        });
-
-        assert.equal(res.statusCode, 200);
-        assert.equal(createdOptions.offset, 123.45);
-    });
-
-    it('does not force explicit track mapping when track indexes are not provided', async () => {
-        const server = makeServer();
-        const mockOblecto = {
-            streamSessionController: {
-                sessionExists: () => false,
-                sessions: {},
-                newSession: (_file: any, options: any) => {
-                    createdOptions = options;
-                    return {
-                        sessionId: 'session-987',
-                        videoCodec: 'h264',
-                        audioCodec: 'aac',
-                        file: _file,
-                        selectedAudioStreamIndex: options.audioStreamIndex ?? null,
-                        selectedSubtitleStreamIndex: options.subtitleStreamIndex ?? null,
-                        subtitleMode: options.subtitleMode ?? 'auto'
-                    };
-                }
-            }
-        };
-
-        streamingRoutes(server as any, mockOblecto as any);
-
-        const handler = server.handlers.get('GET /session/create/:id');
-        const res = makeRes();
-        const req = {
-            params: { id: '1' },
-            combined_params: {
-                type: 'hls',
-                subtitleMode: 'auto'
-            }
-        };
-
-        await handler(req, res, (error: any) => {
-            throw error;
-        });
-
-        assert.equal(res.statusCode, 200);
-        assert.equal(createdOptions.audioStreamIndex, undefined);
-        assert.equal(createdOptions.subtitleStreamIndex, null);
-        assert.equal(res.body.selectedTracks.audioStreamIndex, null);
-        assert.equal(res.body.selectedTracks.subtitleStreamIndex, null);
-    });
-
-    it('serves an HLS segment that exists even before ffmpeg progress is parsed', async () => {
-        const file = await File.findByPk(1);
-        assert.ok(file);
-
-        const session = new HlsStreamSession(file, {
-            streamType: 'hls',
-            target: {
-                formats: ['mp4'],
-                videoCodecs: ['h264'],
-                audioCodecs: ['aac']
-            }
-        }, {
-            config: {
-                streaming: {},
-                transcoding: {}
-            }
-        } as any);
-
-        const segmentPath = path.join(session.segmentDir, '000.ts');
-
-        try {
-            await fs.writeFile(segmentPath, 'segment-data');
-            await session.waitForSegment(0, segmentPath);
-        } finally {
-            (session as any).clearTimeout();
-            await fs.rm(session.segmentDir, { recursive: true, force: true });
+    it('rejects negative/fractional tracks, offsets and malformed capability lists', async () => {
+        for (const extra of [{ position: -1 }, { audioStreamIndex: 1.5 }, { subtitleStreamIndex: -1 }, { subtitleMode: 'invalid' }, { capabilities: { containers: 'mp4' } }]) {
+            const response = await fetch(`${base}/playback/sessions`, { method: 'POST', headers: headers(), body: JSON.stringify({ fileId: 1, ...extra }) });
+            assert.equal(response.status, 400);
         }
     });
 });
