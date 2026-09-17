@@ -32,7 +32,8 @@
     "test": "npm run test:mocha",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test:playback:browser": "playwright test"
+    "test:playback:browser": "playwright test --project=chromium --project=firefox --project=webkit",
+    "test:player:ui": "playwright test --project=player-desktop --project=player-phone"
   },
   "dependencies": {
     "async": "^3.2.6",
