@@ -6,7 +6,6 @@ import tvshows from './tvshows.js';
 import users from './users.js';
 import web from './web.js';
 import sets from './sets.js';
-import clients from './clients.js';
 import files from './files.js';
 
 // V1 Routes
@@ -31,7 +30,6 @@ export default (server: Express, oblecto: Oblecto): void => {
     tvshows(server, oblecto);
     users(server, oblecto);
     sets(server, oblecto);
-    clients(server, oblecto);
 
     // Initialize V1 Routes
     v1Settings(server, oblecto);
