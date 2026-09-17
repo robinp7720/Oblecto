@@ -26,42 +26,37 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     /**
-     * @api {get} /api/v1/status/clients Get connected realtime clients
+     * @api {get} /api/v1/status/clients Get the caller's connected devices
      * @apiName GetClients
      * @apiGroup Status
      * @apiVersion 1.0.0
-     * @apiPermission admin
+     * @apiPermission user
      *
-     * @apiSuccess {Object[]} clients List of connected clients
+     * @apiSuccess {Object[]} clients List of the authenticated user's connected devices
      */
     server.get('/api/v1/status/clients', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
-        const clients = [];
-        const realtimeClients = oblecto.realTimeController.clients;
+        // Scoped to the caller. There is no role system to gate an all-users
+        // view on, and the previous unfiltered listing was an enumeration
+        // oracle for other people's devices.
+        const user = (req as OblectoRequest).authorization?.user as { id?: number } | undefined;
+        const userId = user?.id;
 
-        for (const clientId in realtimeClients) {
-            const client = realtimeClients[clientId];
-            
-            // Extract pending playback info if any
-            const playbackActivity = {
-                series: Object.values(client.storage.series),
-                movie: Object.values(client.storage.movie)
-            };
+        if (userId === undefined) {
+            res.send([]);
 
-            clients.push({
-                clientId: clientId,
-                clientName: client.clientName,
-                user: client.user ? {
-                    // Add other non-sensitive user fields if available in user object
-                    // unknown structure of user record, safely returning id and any explicit fields if we knew them.
-                    // client.user is typed as { id: number } & Record<string, unknown>
-                    // so we pass it through but maybe should sanitize?
-                    ...client.user
-                } : null,
-                connectedAt: client.socket.handshake.time, // Socket.io handshake time
-                address: client.socket.handshake.address,
-                activity: playbackActivity
-            });
+            return;
         }
+
+        const clients = oblecto.realTimeController.registry.listFor(userId).map(device => ({
+            deviceId: device.deviceId,
+            name: device.name,
+            capabilities: device.capabilities,
+            // Only the id: the JWT payload also carries the name and email,
+            // and spreading it here leaked both.
+            user: { id: device.userId },
+            connectedAt: device.connectedAt,
+            state: device.state
+        }));
 
         res.send(clients);
     });

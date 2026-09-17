@@ -1,33 +1,101 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import type { Socket } from 'socket.io';
-import type Oblecto from '../../src/lib/oblecto/index.js';
+
+import DeviceRegistry from '../../src/lib/realtime/DeviceRegistry.js';
 import RealtimeClient from '../../src/lib/realtime/RealtimeClient.js';
 import RealtimeController from '../../src/lib/realtime/RealtimeController.js';
 
-describe('Realtime playback shutdown', () => {
-    it('awaits one final progress flush before closing the socket server', async () => {
-        const socket = new EventEmitter() as EventEmitter & { disconnect: () => void };
-        socket.disconnect = () => { socket.emit('disconnect'); };
-        const client = new RealtimeClient({} as Oblecto, socket as unknown as Socket);
-        let release!: () => void;
-        let saves = 0;
-        client.saveAllTracks = () => {
-            saves++;
-            return new Promise<void>(resolve => { release = resolve; });
-        };
+import type { Socket } from 'socket.io';
+import type Oblecto from '../../src/lib/oblecto/index.js';
+
+type FakeSocket = EventEmitter & { id: string; disconnect: () => void };
+
+function fakeSocket(id: string): FakeSocket {
+    const socket = new EventEmitter() as FakeSocket;
+
+    socket.id = id;
+    socket.disconnect = () => { socket.emit('disconnect'); };
+
+    return socket;
+}
+
+describe('Realtime shutdown', () => {
+    it('disconnects every device and empties the registry before closing the server', async () => {
+        const controller = Object.create(RealtimeController.prototype) as RealtimeController;
+
+        controller.oblecto = {} as Oblecto;
+        controller.clients = {};
+        controller.registry = new DeviceRegistry<Socket>();
+
+        for (const [id, name] of [['tv', 'Living room TV'], ['phone', 'Phone']]) {
+            const socket = fakeSocket(`socket-${id}`);
+            const identity = {
+                deviceId: id,
+                name,
+                capabilities: ['control', 'playback'] as const
+            };
+
+            const client = new RealtimeClient(
+                controller.oblecto,
+                controller,
+                socket as unknown as Socket,
+                { id: 1 },
+                {
+                    ...identity,
+                    capabilities: [...identity.capabilities]
+                }
+            );
+
+            controller.clients[socket.id] = client;
+            client.on('disconnect', () => { delete controller.clients[socket.id]; });
+            controller.registry.register(1, client.identity, socket as unknown as Socket);
+        }
+
+        assert.equal(controller.registry.listFor(1).length, 2);
+
         let closed = false;
-        const controller = {
-            clients: { client },
-            server: { close: (callback: () => void) => { closed = true; callback(); return Promise.resolve(); } }
-        } as unknown as RealtimeController;
-        const closing = RealtimeController.prototype.close.call(controller);
-        assert.equal(closed, false);
-        assert.equal(saves, 1);
-        release();
-        await closing;
+
+        controller.server = {
+            close: (callback: () => void) => {
+                closed = true;
+                callback();
+
+                return Promise.resolve();
+            }
+        } as unknown as RealtimeController['server'];
+
+        await controller.close();
+
         assert.equal(closed, true);
-        await client.disconnect();
-        assert.equal(saves, 1);
+        assert.equal(Object.keys(controller.clients).length, 0, 'every client is torn down');
+        assert.equal(controller.registry.listFor(1).length, 0, 'the registry is emptied');
+    });
+
+    it('removes a device from the registry when its socket drops', () => {
+        const controller = Object.create(RealtimeController.prototype) as RealtimeController;
+
+        controller.oblecto = {} as Oblecto;
+        controller.clients = {};
+        controller.registry = new DeviceRegistry<Socket>();
+
+        const socket = fakeSocket('socket-tv');
+        const client = new RealtimeClient(
+            controller.oblecto,
+            controller,
+            socket as unknown as Socket,
+            { id: 1 },
+            {
+                deviceId: 'tv',
+                name: 'Living room TV',
+                capabilities: ['control', 'playback']
+            }
+        );
+
+        controller.clients[socket.id] = client;
+        controller.registry.register(1, client.identity, socket as unknown as Socket);
+
+        socket.emit('disconnect');
+
+        assert.equal(controller.registry.listFor(1).length, 0);
     });
 });

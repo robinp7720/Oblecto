@@ -5,11 +5,6 @@ import Oblecto from '../lib/oblecto/index.js';
 import config from '../config.js';
 import logger from '../submodules/logger/index.js';
 
-type ClientSession = {
-    user: unknown;
-    storage: unknown;
-};
-
 type Task = {
     id: string;
     attr: Record<string, unknown> & {
@@ -187,21 +182,20 @@ const graphical = {
 
         this.sessionBox.clearItems();
 
-        const clients = this.oblecto.realTimeController.clients as Record<string, ClientSession>;
+        const devices = this.oblecto.realTimeController.registry.all();
 
-        this.sessionBox.setLabel('Web Socket sessions: ' + Object.keys(clients).length);
+        this.sessionBox.setLabel('Connected devices: ' + devices.length);
 
-        for (const sessionId of Object.keys(clients)) {
-            const client = clients[sessionId];
+        for (const device of devices) {
+            this.sessionBox.addItem(device.name + ' (' + device.deviceId + ')');
+            this.sessionBox.addItem('User: ' + device.userId + ' | Can play: ' + (device.capabilities.includes('playback') ? 'yes' : 'no'));
 
-            this.sessionBox.addItem('Session Id: ' + sessionId);
+            const state = device.state;
 
-            if (client.user === null)
-                this.sessionBox.addItem('Session is not authenticated');
+            if (state.status === 'idle' || !state.media)
+                this.sessionBox.addItem('Idle');
             else
-                this.sessionBox.addItem('User:' + JSON.stringify(client.user));
-
-            this.sessionBox.addItem('Details:' + JSON.stringify(client.storage));
+                this.sessionBox.addItem(state.status + ': ' + (state.media.title ?? state.media.kind + ' ' + state.media.id) + ' @ ' + Math.round(state.position) + 's');
 
             this.sessionBox.addItem(' ');
         }

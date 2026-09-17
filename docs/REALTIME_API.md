@@ -1,115 +1,151 @@
 # Realtime API Documentation
 
-The Realtime API in Oblecto is built on top of [Socket.IO](https://socket.io/). It enables real-time communication between the Oblecto server and connected clients, primarily for tracking playback progress and remote controlling playback.
-
-## Connection
-
-The Socket.IO server is attached to the main Oblecto HTTP server.
+The Realtime API in Oblecto is built on top of [Socket.IO](https://socket.io/). It carries library notifications, seedbox import progress, and the whole of remote play: device discovery, playback commands, and the playback state devices report back.
 
 - **Transports:** `websocket`, `polling`
 - **Origins:** `*:*` (All origins allowed)
 
-### Lifecycle
+## Connection and authentication
 
-1.  **Connect:** Client establishes a Socket.IO connection.
-2.  **Authenticate:** Client **MUST** emit the `authenticate` event with a valid JWT token immediately after connection.
-3.  **Interaction:** Client sends playback updates; Server may send playback commands.
-4.  **Disconnect:** Connection is closed by either party.
+Authentication happens in the **handshake**, not in a post-connect event. A socket that fails to authenticate never reaches the server's connection handler, so there is no window in which a connected socket has no user.
 
-## Authentication
+```javascript
+import { io } from "socket.io-client";
 
-Authentication is required to associate the socket connection with a user account. If authentication fails, the server disconnects the socket.
-
-### Client -> Server: `authenticate`
-
-Emitted by the client to authenticate the connection.
-
-**Payload:**
-
-```json
-{
-  "token": "YOUR_JWT_TOKEN"
-}
+const socket = io("http://localhost:8080", {
+  auth: cb => cb({
+    token: "eyJhbG...",
+    device: {
+      id: "5f1c…",                          // stable, persisted by the client
+      name: "Firefox on Linux",
+      capabilities: ["control", "playback"]
+    }
+  })
+});
 ```
 
-- `token`: A valid JWT string obtained via the REST API login.
+### `auth.token`
 
-## Events
+A valid JWT obtained from `POST /auth/login`. A missing, malformed or unverifiable token fails the handshake with `connect_error`.
 
-### Client -> Server: `playing`
+### `auth.device`
 
-Legacy clients may emit this event to report playback progress. The server buffers data, persists it every ten seconds through the shared progress writer, and flushes on disconnect. The default web player now uses the authenticated `/playback/sessions/:id/progress` REST API, which validates session ownership and revision; it does not also emit `playing`.
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | **Required.** Client-generated and persisted (Oblecto-Web keeps a UUID in `localStorage`). This, not the Socket.IO socket id, is how a device is addressed — it must survive reloads, or a selected playback target goes stale every time the target refreshes. Truncated to 128 characters. |
+| `name` | string | Human-meaningful, shown in the device picker. Trimmed and truncated to 64 characters; defaults to `"Unnamed device"` when absent. |
+| `capabilities` | string[] | Any of `"control"`, `"playback"`. `"control"` is always implied. **Only devices declaring `"playback"` are offered as playback targets**, which is what keeps headless integrations out of the picker. |
 
-**Payload (Episode):**
+Reconnecting with a known `id` rebinds the existing device rather than creating a new one, preserving its name and last reported state. If two sockets claim the same `id`, the newest wins and the older is disconnected.
 
-```json
-{
-  "type": "tv",
-  "episodeId": "string",
-  "time": 12345,
-  "progress": 0.5
-}
-```
+Because `auth` is re-evaluated by Socket.IO on every reconnect, changing the stored name and reconnecting is enough to rename a device.
 
-**Payload (Movie):**
+## Remote play
 
-```json
-{
-  "type": "movie",
-  "movieId": "string",
-  "time": 12345,
-  "progress": 0.5
-}
-```
+### Server → Client: `devices`
 
-- `type`: Literal `"tv"` or `"movie"`.
-- `episodeId` / `movieId`: The UUID of the media item.
-- `time`: Absolute playback position in seconds.
-- `progress`: Floating point number representing completion percentage (0.0 to 1.0).
-
-### Server -> Client: `play`
-
-Emitted by the server to command the client to start playback of a specific item. This is typically triggered via the REST API (`POST /client/:clientId/playback`).
-
-**Payload (Episode):**
+The caller's own devices, pushed on connect and again whenever anything changes — a device joining or leaving, a rename, or a state report. There is no subscription to manage and nothing to poll.
 
 ```json
-{
-  "episodeId": "string"
-}
+[
+  {
+    "deviceId": "5f1c…",
+    "name": "Living room TV",
+    "capabilities": ["control", "playback"],
+    "isSelf": false,
+    "connectedAt": 1758057600000,
+    "state": {
+      "status": "playing",
+      "media": { "kind": "episode", "id": "1421", "title": "Blink", "subtitle": "Doctor Who" },
+      "position": 61.5,
+      "duration": 2700,
+      "volume": 0.8,
+      "muted": false,
+      "canSeek": true,
+      "canSetVolume": true,
+      "hasNext": true,
+      "updatedAt": 1758057600000
+    }
+  }
+]
 ```
 
-**Payload (Movie):**
+A device only ever appears in its own owner's list.
+
+### Client → Server: `playback:state`
+
+Reported by a playing device. The payload is a `PlaybackState` **without** `updatedAt` — the server stamps that itself, because device clocks disagree and a controller extrapolates the position from it between reports.
+
+| Field | Type | Notes |
+|---|---|---|
+| `status` | string | `idle`, `playing`, `paused`, `buffering`, `blocked`, `error`. `blocked` means the browser refused autoplay and needs a gesture on that device — without it, that failure is invisible from another room. |
+| `media` | object \| null | `{ kind: "episode" \| "movie", id, title?, subtitle? }`. Null when idle. |
+| `position`, `duration` | number | Seconds. |
+| `volume` | number | 0.0–1.0. |
+| `muted` | boolean | |
+| `canSeek`, `canSetVolume`, `hasNext` | boolean | Let a controller hide controls the target cannot honour. `canSetVolume` is false where the browser ignores `video.volume`, iOS Safari among them. |
+| `error` | string | Optional, for `status: "error"`. |
+
+Reports are rate limited to **10 per second per device**; the excess is dropped. Report on every transition, and about once a second while playing.
+
+### Client → Server: `remote:command`
+
+Sends a command to another of *your own* devices. Takes a Socket.IO acknowledgement.
+
+```javascript
+socket.emit("remote:command", {
+  targetDeviceId: "5f1c…",
+  command: { type: "play", media: { kind: "movie", id: "42" } }
+}, ack => {
+  if (!ack.ok) console.error(ack.code, ack.error);
+});
+```
+
+| Command | Payload |
+|---|---|
+| `play` | `{ type, media: { kind, id }, position? }` |
+| `pause` / `resume` / `stop` / `next` | `{ type }` |
+| `seek` | `{ type, position }` — seconds |
+| `setVolume` | `{ type, volume }` — 0.0–1.0 |
+| `setMuted` | `{ type, muted }` |
+| `rename` | `{ type, name }` — the target persists it and re-announces |
+
+The acknowledgement is `{ ok: true }`, or `{ ok: false, code, error }` with `code` one of:
+
+| Code | Meaning |
+|---|---|
+| `invalid` | The envelope or command failed validation. |
+| `unknown_device` | No such device **among the caller's own**. Another user's device reports this too: targets are resolved inside the caller's own device map, so cross-user addressing is indistinguishable from addressing nothing. |
+| `unsupported` | The target did not declare the `playback` capability. |
+| `timeout` | The target did not answer within 5 seconds. |
+| `failed` | The target rejected the command. |
+
+`ok: true` means the **target device** accepted the command, not merely that the server relayed it.
+
+### Server → Client: `remote:command`
+
+Delivered to the target. Answer the acknowledgement callback with a `CommandAck` — that answer is what the controlling device sees.
+
+```javascript
+socket.on("remote:command", ({ from, command }, ack) => {
+  // from: { deviceId, name } — who is driving this device
+  ack({ ok: true });
+});
+```
+
+## Library and import events
+
+### Server → Client: `indexer`
+
+Emitted when new content is added or identified in the library.
 
 ```json
-{
-  "movieId": "string"
-}
+{ "event": "added", "type": "series" | "episode" | "movie", "id": "string" }
 ```
 
-### Server -> Client: `indexer`
+### Server → Client: `seedbox`
 
-Emitted by the server when new content is added or identified in the library.
-
-**Payload:**
-
-```json
-{
-  "event": "added",
-  "type": "series" | "episode" | "movie",
-  "id": "string"
-}
-```
-
-- `event`: Currently always `"added"`.
-- `type`: The type of item added.
-- `id`: The internal ID of the added item.
-
-### Server -> Client: `seedbox`
-
-Emitted by the server to report the status of seedbox imports.
-
-**Payload:**
+Status of seedbox imports.
 
 ```json
 {
@@ -117,58 +153,29 @@ Emitted by the server to report the status of seedbox imports.
   "seedbox": "Seedbox Name",
   "origin": "/remote/path/file.mkv",
   "destination": "/local/path/file.mkv",
-  "transferred": 102400, // Bytes (Only for import_progress)
-  "total": 104857600,    // Bytes (Only for import_progress)
-  "progress": 0.001,     // 0.0 - 1.0 (Only for import_progress)
-  "error": "Error message" // Only present if event is "import_error"
+  "transferred": 102400,
+  "total": 104857600,
+  "progress": 0.001,
+  "error": "Error message"
 }
 ```
 
-- `event`: Status of the import operation.
-- `seedbox`: Name of the seedbox source.
-- `origin`: Remote path of the file being imported.
-- `destination`: Local destination path.
-- `transferred`: Number of bytes transferred so far.
-- `total`: Total size of the file in bytes.
-- `progress`: Completion fraction (0.0 to 1.0).
-- `error`: Error message string (optional).
+`transferred`, `total` and `progress` appear only on `import_progress`; `error` only on `import_error`.
 
-## Example Interaction
+## Removed
 
-```javascript
-import { io } from "socket.io-client";
+These were part of the previous remote play implementation and no longer exist:
 
-const socket = io("http://localhost:8080");
+| Removed | Replacement |
+|---|---|
+| `authenticate` (C→S) | Handshake `auth`. |
+| `play` (S→C) | `remote:command` with `{ type: "play" }`. |
+| `playing` (C→S) | Progress is persisted through `POST /playback/sessions/:id/progress`; `playback:state` reports live state but is not written to the database. |
+| `GET /clients` | The `devices` event. |
+| `POST /client/:clientId/playback` | `remote:command`. |
 
-socket.on("connect", () => {
-  console.log("Connected");
-  
-  // Authenticate
-  socket.emit("authenticate", { token: "eyJhbG..." });
-});
+## Error handling
 
-// Handle remote play commands
-socket.on("play", (data) => {
-  if (data.episodeId) {
-    console.log("Remote play episode:", data.episodeId);
-    // Start playback logic...
-  } else if (data.movieId) {
-    console.log("Remote play movie:", data.movieId);
-  }
-});
-
-// Report progress while playing
-setInterval(() => {
-  socket.emit("playing", {
-    type: "movie",
-    movieId: "123-456",
-    time: 60,
-    progress: 0.05
-  });
-}, 5000);
-```
-
-## Error Handling
-
-- If `authenticate` fails (invalid token), the server logs a warning ("An unauthorized user attempted connection...") and disconnects the socket.
-- No specific error events are emitted by the server application logic; standard Socket.IO error handling applies.
+- A failed handshake surfaces as `connect_error` on the client, with a message explaining which part was rejected.
+- Malformed `playback:state` payloads are logged and dropped.
+- Malformed commands are answered with `{ ok: false, code: "invalid" }`.

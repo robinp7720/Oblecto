@@ -1,136 +1,209 @@
-import { saveProgress } from '../playback/progress.js';
-import jwt from 'jsonwebtoken';
 import { EventEmitter } from 'events';
+
 import logger from '../../submodules/logger/index.js';
+import { COMMAND_TIMEOUT_MS, MAX_STATE_REPORTS_PER_SECOND, parseCommandEnvelope, parsePlaybackState } from './types.js';
 
 import type { Socket } from 'socket.io';
+import type { CommandAck, DeliveredCommand, DeviceIdentity, RemoteCommand } from './types.js';
 import type Oblecto from '../oblecto/index.js';
+import type RealtimeController from './RealtimeController.js';
 
-type AuthUser = {
+export type AuthUser = {
     id: number;
 } & Record<string, unknown>;
 
-type EpisodePlayback = {
-    episodeId: string;
-    time: number;
-    progress: number;
-    type: 'tv';
-};
-
-type MoviePlayback = {
-    movieId: string;
-    time: number;
-    progress: number;
-    type: 'movie';
-};
-
-type PlaybackData = EpisodePlayback | MoviePlayback;
-
+/**
+ * One authenticated socket.
+ *
+ * Authentication happens in the controller's handshake middleware, so a client
+ * only ever exists in an authenticated state — there is no window in which
+ * `user` is null and every consumer has to remember to guard it.
+ */
 export default class RealtimeClient extends EventEmitter {
-    public clientName: string;
     public oblecto: Oblecto;
     public socket: Socket;
-    public user: AuthUser | null;
-    private saveTimer: NodeJS.Timeout;
-    private disconnectSave?: Promise<void>;
-    public storage: {
-        series: Record<string, EpisodePlayback>;
-        movie: Record<string, MoviePlayback>;
-    };
+    public user: AuthUser;
+    public identity: DeviceIdentity;
+
+    private controller: RealtimeController;
+    private stateWindowStart: number;
+    private stateReportsInWindow: number;
 
     /**
-     * @param oblecto - Oblecto server instance
-     * @param socket - Realtime socket.io socket
+     * @param oblecto - Oblecto server instance.
+     * @param controller - Realtime controller owning the device registry.
+     * @param socket - Authenticated socket.io socket.
+     * @param user - Verified JWT payload.
+     * @param identity - Device identity from the handshake.
      */
-    constructor(oblecto: Oblecto, socket: Socket) {
+    constructor(
+        oblecto: Oblecto,
+        controller: RealtimeController,
+        socket: Socket,
+        user: AuthUser,
+        identity: DeviceIdentity
+    ) {
         super();
 
-        this.clientName = 'default';
-
         this.oblecto = oblecto;
+        this.controller = controller;
         this.socket = socket;
-        this.user = null;
+        this.user = user;
+        this.identity = identity;
 
-        this.storage = {
-            series: {},
-            movie: {}
-        };
+        this.stateWindowStart = 0;
+        this.stateReportsInWindow = 0;
 
-        this.socket.on('authenticate', (data: { token: string }) => this.authenticationHandler(data));
-        this.socket.on('playing', (data: PlaybackData) => this.playingHandler(data));
+        this.socket.on('playback:state', (data: unknown) => this.stateHandler(data));
+        this.socket.on('remote:command', (data: unknown, ack?: (result: CommandAck) => void) => {
+            void this.commandHandler(data, ack);
+        });
         this.socket.on('disconnect', () => this.disconnectHandler());
-
-        this.saveTimer = setInterval(() => {
-            void this.saveAllTracks().catch(error => logger.warn("Progress save failed", error));
-        }, 10000);
     }
 
-    authenticationHandler(data: { token: string }): void {
-        try {
-            this.user = jwt.verify(data.token, this.oblecto.config.authentication.secret) as AuthUser;
-        } catch (e) {
-            logger.warn( 'An unauthorized user attempted connection to realtime server');
-            logger.warn( 'Disconnecting client...');
+    get deviceId(): string {
+        return this.identity.deviceId;
+    }
 
-            this.socket.disconnect();
+    get name(): string {
+        return this.identity.name;
+    }
+
+    /** @returns Whether this device is a usable remote playback target. */
+    canPlay(): boolean {
+        return this.identity.capabilities.includes('playback');
+    }
+
+    /**
+     * Handles a state report from this device.
+     * @param data - Untrusted `playback:state` payload.
+     */
+    stateHandler(data: unknown): void {
+        if (!this.withinStateRateLimit()) return;
+
+        const state = parsePlaybackState(data);
+
+        if (!state) {
+            logger.warn(`Discarding malformed playback state from device ${this.deviceId}`);
+
+            return;
+        }
+
+        this.controller.registry.updateState(this.user.id, this.deviceId, this.socket, state);
+    }
+
+    /**
+     * Handles a command this device wants to send to another of the user's
+     * devices.
+     * @param data - Untrusted `remote:command` payload.
+     * @param ack - Socket.IO acknowledgement callback, when the caller supplied one.
+     */
+    async commandHandler(data: unknown, ack?: (result: CommandAck) => void): Promise<void> {
+        const envelope = parseCommandEnvelope(data);
+
+        if (!envelope) {
+            ack?.({
+                ok: false,
+                code: 'invalid',
+                error: 'Malformed command'
+            });
+
+            return;
+        }
+
+        const result = await this.controller.dispatchCommand(this.user.id, this.identity, envelope);
+
+        ack?.(result);
+    }
+
+    /**
+     * Delivers a command to this device and waits for it to accept.
+     *
+     * The ack is the target's own, relayed back to whoever sent the command,
+     * so a controller learns that playback actually started rather than only
+     * that the server forwarded a message.
+     * @param command - Command to run.
+     * @param from - Device that issued it.
+     * @param from.deviceId - Issuing device's id.
+     * @param from.name - Issuing device's name.
+     * @returns The target's acknowledgement.
+     */
+    async deliver(command: RemoteCommand, from: { deviceId: string; name: string }): Promise<CommandAck> {
+        const payload: DeliveredCommand = {
+            from,
+            command
+        };
+
+        try {
+            const result = await this.socket
+                .timeout(COMMAND_TIMEOUT_MS)
+                .emitWithAck('remote:command', payload) as CommandAck | undefined;
+
+            if (result && typeof result === 'object' && result.ok === true) return { ok: true };
+
+            return {
+                ok: false,
+                code: 'failed',
+                error: typeof result?.error === 'string' ? result.error : 'The device rejected the command'
+            };
+        } catch {
+            return {
+                ok: false,
+                code: 'timeout',
+                error: 'The device did not respond'
+            };
         }
     }
 
-    playingHandler(data: PlaybackData): void {
-        if (this.user == null) return;
-        if (data.type === 'tv') return this.playingEpisodeHandler(data);
-        if (data.type === 'movie') return this.playingMovieHandler(data);
+    /**
+     * Applies a rename to this device's own identity, so a subsequent
+     * reconnect is not required for the new name to be visible.
+     * @param name - Normalised new name.
+     */
+    applyName(name: string): void {
+        this.identity = {
+            ...this.identity,
+            name
+        };
     }
 
-    playingEpisodeHandler(data: EpisodePlayback): void {
-        this.storage.series[data.episodeId] = data;
-    }
-
-    playingMovieHandler(data: MoviePlayback): void {
-        this.storage.movie[data.movieId] = data;
+    /** Sends this device the current view of its owner's devices. */
+    sendDeviceList(): void {
+        this.socket.emit('devices', this.controller.registry.snapshotFor(this.user.id, this.deviceId));
     }
 
     async disconnect(): Promise<void> {
         this.socket.disconnect();
-        await this.disconnectHandler();
+        this.disconnectHandler();
+
+        return Promise.resolve();
     }
 
-    disconnectHandler(): Promise<void> {
-        if (this.disconnectSave) return this.disconnectSave;
-        clearInterval(this.saveTimer);
-        this.disconnectSave = this.saveAllTracks().catch(error => { logger.warn('Progress save failed', error); });
+    disconnectHandler(): void {
+        this.controller.registry.unregister(this.user.id, this.deviceId, this.socket);
         this.emit('disconnect');
-        return this.disconnectSave;
     }
 
-    async saveEpisodeTrack(id: string): Promise<void> {
-        const payload = this.storage.series[id];
-        if (!this.user || !payload || !Number.isFinite(payload.time) || payload.time < 0) return;
-        await saveProgress(this.user.id, 'episode', Number(id), payload.time, payload.progress > 0 ? payload.time / payload.progress : 0);
-        if (this.storage.series[id] === payload) delete this.storage.series[id];
-    }
-    async saveMovieTrack(id: string): Promise<void> {
-        const payload = this.storage.movie[id];
-        if (!this.user || !payload || !Number.isFinite(payload.time) || payload.time < 0) return;
-        await saveProgress(this.user.id, 'movie', Number(id), payload.time, payload.progress > 0 ? payload.time / payload.progress : 0);
-        if (this.storage.movie[id] === payload) delete this.storage.movie[id];
-    }
+    /**
+     * @returns Whether this report falls within the per-second allowance.
+     */
+    private withinStateRateLimit(): boolean {
+        const now = Date.now();
 
-    async saveAllTracks(): Promise<void> {
-        for (const i of Object.keys(this.storage.series)) {
-            await this.saveEpisodeTrack(i);
+        if (now - this.stateWindowStart >= 1000) {
+            this.stateWindowStart = now;
+            this.stateReportsInWindow = 0;
         }
 
-        for (const i of Object.keys(this.storage.movie)) {
-            await this.saveMovieTrack(i);
+        this.stateReportsInWindow += 1;
+
+        if (this.stateReportsInWindow > MAX_STATE_REPORTS_PER_SECOND) {
+            if (this.stateReportsInWindow === MAX_STATE_REPORTS_PER_SECOND + 1)
+                logger.warn(`Rate limiting playback state reports from device ${this.deviceId}`);
+
+            return false;
         }
-    }
 
-    async playEpisode(episodeId: string): Promise<void> {
-        this.socket.emit('play', { episodeId });
-    }
-
-    async playMovie(movieId: string): Promise<void> {
-        this.socket.emit('play', { movieId });
+        return true;
     }
 }
