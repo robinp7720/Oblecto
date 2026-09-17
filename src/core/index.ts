@@ -10,8 +10,8 @@ const core = {
         // are already set up in the Oblecto constructor
     },
 
-    close(): void {
-        this.oblecto.close();
+    async close(): Promise<void> {
+        await this.oblecto.close();
     },
 };
 

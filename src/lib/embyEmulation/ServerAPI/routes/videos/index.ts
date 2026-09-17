@@ -1,365 +1,42 @@
-import { promises as fs } from 'fs';
-import mimeTypes from 'mime-types';
-import errors from '../../errors';
-import { Movie } from '../../../../../models/movie';
-import { Episode } from '../../../../../models/episode';
-import { File } from '../../../../../models/file';
-import { parseFileId, parseId } from '../../../helpers';
-import { HlsStreamSession } from '../../../../mediaSessions/index.js';
-import logger from '../../../../../submodules/logger';
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/prefer-nullish-coalescing */
-import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
-import { getLastMediaSource, getPlaybackEntry, upsertPlaybackEntry } from '../../playbackState.js';
+import { randomUUID } from 'node:crypto';
+import type { Application, Request, Response } from 'express';
+import type EmbyEmulation from '../../../index.js';
+import { File } from '../../../../../models/file.js';
+import { Movie } from '../../../../../models/movie.js';
+import { Episode } from '../../../../../models/episode.js';
+import { parseId, parseFileId } from '../../../helpers.js';
+import { getRequestValue } from '../../requestUtils.js';
+import { getPlaybackEntry } from '../../playbackState.js';
+import { embyIdentity, embyPlayback } from '../../playback.js';
+import { PlaybackError } from '../../../../playback/types.js';
 
-const normalizeBool = (value: unknown): boolean => {
-    if (value === undefined || value === null) return false;
-    if (typeof value === 'boolean') return value;
-    return ['true', '1', 'yes', 'on'].includes(String(value as any).toLowerCase());
-};
-
-const normalizeContainer = (value: unknown): string | null => {
-    if (value === undefined || value === null || value === '') return null;
-    const container = String(value as any).toLowerCase();
-
-    if (container === 'ts') return 'mpegts';
-    return container;
-};
-
-const resolveFileForItem = async (embyEmulation: EmbyEmulation, req: Request, itemId: string): Promise<File | null> => {
-    const token = getEmbyToken(req as any);
-    const mediaSourceId = getRequestValue(req as any, 'MediaSourceId');
-    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
-    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
-    const lastMediaSource = token ? getLastMediaSource(embyEmulation, token, itemId) : null;
-    const resolvedMediaSourceId = mediaSourceId ?? playbackSession?.mediaSourceId ?? lastMediaSource;
-
-    if (resolvedMediaSourceId) {
-        const parsedMediaSourceId = parseFileId(resolvedMediaSourceId);
-
-        return await File.findByPk(parsedMediaSourceId ?? resolvedMediaSourceId);
-    }
-
-    const parsed = parseId(itemId);
-    const numericId = parsed.id;
-    const type = parsed.type;
-
-    if (type === 'movie' && Number.isFinite(numericId)) {
-        const movie = await Movie.findByPk(numericId, { include: [File] });
-
-        return movie?.Files?.[0] || null;
-    }
-
-    if (type === 'episode' && Number.isFinite(numericId)) {
-        const episode = await Episode.findByPk(numericId, { include: [File] });
-
-        logger.debug('Jellyfin emulation: episode stream lookup', {
-            episodeId: numericId,
-            fileCount: episode?.Files?.length || 0
-        });
-
-        if (!episode?.Files?.[0]) {
-            logger.warn('Jellyfin emulation: episode media source not found', { episodeId: numericId });
-        }
-
-        return episode?.Files?.[0] || null;
-    }
-
-    if (type === 'unknown' && Number.isFinite(numericId)) {
-        const movie = await Movie.findByPk(numericId, { include: [File] });
-
-        if (movie?.Files?.[0]) return movie.Files[0];
-
-        const episode = await Episode.findByPk(numericId, { include: [File] });
-
-        logger.debug('Jellyfin emulation: unknown item stream lookup', {
-            itemId: numericId,
-            episodeFileCount: episode?.Files?.length || 0
-        });
-
-        if (!episode?.Files?.[0]) {
-            logger.warn('Jellyfin emulation: unknown item media source not found', { itemId: numericId });
-        }
-
-        return episode?.Files?.[0] || null;
-    }
-
-    return null;
-};
-
-const buildStreamTarget = (req: Request, file: File | null, fallbackContainer: string | undefined): any => {
-    const container = normalizeContainer(getRequestValue(req as any, 'Container') || fallbackContainer || file?.extension);
-    const segmentContainer = normalizeContainer(getRequestValue(req as any, 'SegmentContainer'));
-    const formats = (segmentContainer || container || 'mp4').toString().split(',');
-
-    const rawVideoCodec = getRequestValue(req as any, 'VideoCodec') || file?.videoCodec || 'h264';
-    const rawAudioCodec = getRequestValue(req as any, 'AudioCodec') || file?.audioCodec || 'aac';
-
-    return {
-        formats,
-        videoCodecs: rawVideoCodec.toString().split(','),
-        audioCodecs: rawAudioCodec.toString().split(','),
+export default (server: Application, emby: EmbyEmulation): void => {
+    const handle = async (req: Request, res: Response) => {
+        const identity = embyIdentity(emby, req);
+        const itemId = String(req.params.itemid ?? req.params.mediaid);
+        const { id, type } = parseId(itemId);
+        const item = type === 'episode' ? await Episode.findByPk(id, { include: [File] }) : await Movie.findByPk(id, { include: [File] });
+        const files = (item?.get('Files') ?? []) as File[];
+        const playId = String(getRequestValue(req, 'PlaySessionId') ?? randomUUID());
+        const entry = getPlaybackEntry(emby, identity.token, playId);
+        const requestedFile = getRequestValue(req, 'MediaSourceId') ?? entry?.mediaSourceId;
+        const fileId = requestedFile === undefined ? undefined : parseFileId(String(requestedFile)) ?? Number(requestedFile);
+        const file = fileId === undefined ? files[0] : files.find(f => f.id === fileId);
+        if (!file) throw new PlaybackError('MEDIA_NOT_FOUND', 'Media source does not belong to this item', 404);
+        const session = await embyPlayback(emby, req, file, playId, req.path.endsWith('.m3u8'));
+        const description = emby.oblecto.playback.describe(session, '/playback/media');
+        // The scoped URL is on this Emby server; no REST-server origin or filesystem path leaks.
+        res.redirect(307, description.mediaUrl);
     };
-};
-
-const getOffsetSeconds = (req: Request): number => {
-    const startTicks = getRequestValue(req as any, 'StartTimeTicks');
-
-    if (!startTicks) return 0;
-
-    const parsed = Number(startTicks);
-
-    if (!Number.isFinite(parsed)) return 0;
-
-    return parsed / 10000000;
-};
-
-const resolveStreamSession = (embyEmulation: EmbyEmulation, req: Request, file: File, streamType: string, fallbackContainer: string | undefined): any => {
-    const controller = embyEmulation.oblecto.streamSessionController;
-    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
-    const token = getEmbyToken(req as any);
-    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
-    const existingSessionId = playbackSession?.streamSessionId || playSessionId;
-
-    if (existingSessionId && controller.sessionExists(existingSessionId)) {
-        const existingSession = controller.sessions[existingSessionId];
-
-        if (streamType === 'hls') {
-            if (existingSession instanceof HlsStreamSession) return existingSession;
-        } else if (!(existingSession instanceof HlsStreamSession)) {
-            return existingSession;
-        }
+    for (const kind of ['videos', 'audio']) {
+        server.get(`/${kind}/:itemid/stream`, handle);
+        server.get(`/${kind}/:itemid/stream.:container`, handle);
+        for (const playlist of ['master', 'main', 'live']) server.get(`/${kind}/:itemid/${playlist}.m3u8`, handle);
     }
-
-    const target = buildStreamTarget(req, file, fallbackContainer);
-    const offset = getOffsetSeconds(req);
-
-    const session = controller.newSession(file, {
-        streamType,
-        target,
-        offset,
-    });
-
-    if (playSessionId && token) {
-        upsertPlaybackEntry(embyEmulation, token, {
-            playSessionId,
-            streamSessionId: session.sessionId
-        });
-    }
-    return session;
-};
-
-const ensureHlsSession = (embyEmulation: EmbyEmulation, req: Request, file: File | null, itemId: string, playlistId: string | undefined): any => {
-    const controller = embyEmulation.oblecto.streamSessionController;
-    const playSessionId = getRequestValue(req as any, 'PlaySessionId');
-    const token = getEmbyToken(req as any);
-    const playbackSession = (playSessionId && token) ? getPlaybackEntry(embyEmulation, token, playSessionId) : null;
-    const existingSessionId = playbackSession?.streamSessionId || playSessionId;
-
-    if (existingSessionId && controller.sessionExists(existingSessionId)) {
-        const existingSession = controller.sessions[existingSessionId];
-
-        if (existingSession instanceof HlsStreamSession) return existingSession;
-    }
-
-    embyEmulation.hlsSessionsByItemId = embyEmulation.hlsSessionsByItemId || {};
-    embyEmulation.hlsSessionsByPlaylistId = embyEmulation.hlsSessionsByPlaylistId || {};
-
-    const mappedId = (playlistId && embyEmulation.hlsSessionsByPlaylistId[playlistId])
-        || embyEmulation.hlsSessionsByItemId[itemId];
-
-    if (mappedId && controller.sessionExists(mappedId)) {
-        const existingSession = controller.sessions[mappedId];
-
-        if (existingSession instanceof HlsStreamSession) return existingSession;
-    }
-
-    if (!file) return null;
-
-    const target = buildStreamTarget(req, file, 'mpegts');
-    const offset = getOffsetSeconds(req);
-
-    const session = controller.newSession(file, {
-        streamType: 'hls',
-        target,
-        offset,
-    });
-
-    embyEmulation.hlsSessionsByItemId[itemId] = session.sessionId;
-    if (playlistId) {
-        embyEmulation.hlsSessionsByPlaylistId[playlistId] = session.sessionId;
-    }
-    if (playSessionId && token) {
-        upsertPlaybackEntry(embyEmulation, token, {
-            playSessionId,
-            streamSessionId: session.sessionId
-        });
-    }
-
-    return session;
-};
-
-const sendHead = async (res: Response, file: File | string): Promise<void> => {
-    const path = file instanceof File ? file.path : file;
-    let size = file instanceof File ? file.size : null;
-
-    if (!size) {
-        size = (await fs.stat(path)).size;
-    }
-    const mimeType = mimeTypes.lookup(path) || 'application/octet-stream';
-
-    res.writeHead(200, {
-        'Content-Length': size,
-        'Accept-Ranges': 'bytes',
-        'Content-Type': mimeType,
-    });
-
-    res.end();
-};
-
-export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.get('/hls/:sessionid/segment/:id', async (req: Request, res: Response, next) => {
-        try {
-            const sessionId = req.params.sessionid;
-
-            if (!embyEmulation.oblecto.streamSessionController.sessionExists(sessionId)) {
-                throw errors.InvalidCredentialsError('Stream session token does not exist');
-            }
-
-            const streamSession = embyEmulation.oblecto.streamSessionController.sessions[sessionId];
-
-            if (!(streamSession instanceof HlsStreamSession)) {
-                throw errors.BadRequestError('Invalid stream session type');
-            }
-
-            const segmentId = parseInt(req.params.id, 10);
-
-            if (Number.isNaN(segmentId)) {
-                throw errors.BadRequestError('Invalid segment id');
-            }
-
-            await streamSession.streamSegment(req, res, segmentId);
-        } catch (error) {
-            next(error);
-        }
-    });
-
-    const handleStreamRequest = async (req: Request, res: Response, next: (err?: unknown) => void, fallbackContainer?: string): Promise<void> => {
-        try {
-            const file = await resolveFileForItem(embyEmulation, req, req.params.itemid || req.params.mediaid);
-
-            if (!file) {
-                throw errors.NotFoundError('Media source not found');
-            }
-
-            const staticRequested = normalizeBool(getRequestValue(req as any, 'Static'));
-            const container = normalizeContainer(getRequestValue(req as any, 'Container') || fallbackContainer);
-            const fileContainer = normalizeContainer(file.extension || file.container);
-
-            let streamType = 'directhttp';
-
-            if (!staticRequested && container && fileContainer && container !== fileContainer) {
-                streamType = 'recode';
-            }
-
-            const streamSession = resolveStreamSession(embyEmulation, req, file, streamType, container);
-
-            await streamSession.addDestination({
-                request: req,
-                stream: res,
-                type: 'http',
-            });
-
-            await streamSession.startStream();
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    const handleStreamHead = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
-        try {
-            const file = await resolveFileForItem(embyEmulation, req, req.params.itemid || req.params.mediaid);
-
-            if (!file) {
-                throw errors.NotFoundError('Media source not found');
-            }
-
-            await sendHead(res, file);
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    const handleHlsPlaylist = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
-        try {
-            const itemId = req.params.itemid;
-            const playlistId = req.params.playlistid;
-            const file = await resolveFileForItem(embyEmulation, req, itemId);
-
-            if (!file) {
-                throw errors.NotFoundError('Media source not found');
-            }
-
-            const streamSession = ensureHlsSession(embyEmulation, req, file, itemId, playlistId);
-
-            await streamSession.addDestination({
-                request: req,
-                stream: res,
-                type: 'http',
-            });
-
-            await streamSession.startStream();
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    const handleHlsSegment = async (req: Request, res: Response, next: (err?: any) => void): Promise<void> => {
-        try {
-            const itemId = req.params.itemid;
-            const playlistId = req.params.playlistid;
-            const segmentId = parseInt(req.params.segmentid, 10);
-
-            if (Number.isNaN(segmentId)) {
-                throw errors.BadRequestError('Invalid segment id');
-            }
-
-            const streamSession = ensureHlsSession(embyEmulation, req, null, itemId, playlistId);
-
-            if (!streamSession || !(streamSession instanceof HlsStreamSession)) {
-                throw errors.BadRequestError('Invalid stream session type');
-            }
-
-            await streamSession.streamSegment(req, res, segmentId);
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    server.get('/videos/:itemid/stream', (req, res, next) => handleStreamRequest(req, res, next));
-    server.head('/videos/:itemid/stream', handleStreamHead);
-
-    server.get('/videos/:itemid/stream.:container', (req, res, next) => handleStreamRequest(req, res, next, req.params.container));
-    server.head('/videos/:itemid/stream.:container', handleStreamHead);
-
-    server.get('/audio/:itemid/stream', (req, res, next) => handleStreamRequest(req, res, next));
-    server.head('/audio/:itemid/stream', handleStreamHead);
-
-    server.get('/audio/:itemid/stream.:container', (req, res, next) => handleStreamRequest(req, res, next, req.params.container));
-    server.head('/audio/:itemid/stream.:container', handleStreamHead);
-
-    server.get('/audio/:itemid/main.m3u8', handleHlsPlaylist);
-    server.get('/audio/:itemid/master.m3u8', handleHlsPlaylist);
-    server.get('/audio/:itemid/hls1/:playlistid/:segmentid.:container', handleHlsSegment);
-
-    server.get('/videos/:itemid/main.m3u8', handleHlsPlaylist);
-    server.get('/videos/:itemid/master.m3u8', handleHlsPlaylist);
-    server.get('/videos/:itemid/live.m3u8', handleHlsPlaylist);
-    server.get('/videos/:itemid/hls/:playlistid/stream.m3u8', handleHlsPlaylist);
-
-    server.get('/videos/:itemid/hls/:playlistid/:segmentid.:segmentcontainer', handleHlsSegment);
-    server.get('/videos/:itemid/hls1/:playlistid/:segmentid.:container', handleHlsSegment);
-
-    server.get('/videos/:mediaid/stream/:ext', async (req, res, next) => {
-        await handleStreamRequest(req, res, next, req.params.ext);
+    server.get('/videos/:mediaid/stream/:ext', handle);
+    server.get('/playback/media/:id/:revision/:asset', async (req, res) => {
+        const session = emby.oblecto.playback.get(String(req.params.id));
+        if (req.query.token !== session.token) throw new PlaybackError('UNAUTHORIZED', 'Invalid media token', 401);
+        await emby.oblecto.playback.serve(session, Number(req.params.revision), String(req.params.asset), req, res);
     });
 };

@@ -114,7 +114,13 @@ string
     },
     'streaming': {
         'defaultTargetLanguageCode': string,
-        'hlsMaxSegmentLead'?: number
+        'hlsMaxSegmentLead'?: number;
+        encodingConcurrency?: number;
+        maxQueue?: number;
+        cacheBytes?: number;
+        cacheDirectory?: string;
+        idleTimeoutMs?: number;
+        vaapiDevice?: string
     },
     'federation': {
         'key': string,

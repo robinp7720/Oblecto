@@ -1,0 +1,48 @@
+import type { Model } from 'sequelize';
+import { TrackMovie } from '../../models/trackMovie.js';
+import { TrackEpisode } from '../../models/trackEpisode.js';
+/** Serialize writes for each viewer/item so slower database writes cannot restore stale positions. */
+const pending = new Map<string, Promise<void>>();
+export async function saveProgress(
+    userId: number,
+    type: 'movie' | 'episode',
+    itemId: number,
+    time: number,
+    duration: number
+): Promise<void> {
+    const key = `${userId}:${type}:${itemId}`;
+    const save = async () => {
+        const values = {
+            time,
+            progress: duration > 0 ? Math.min(1, time / duration) : 0
+        };
+        const [track, created] =
+            type === 'movie'
+                ? await TrackMovie.findOrCreate({
+                      where: { userId, movieId: itemId },
+                      defaults: {
+                          ...values,
+                          userId,
+                          movieId: itemId
+                      }
+                  })
+                : await TrackEpisode.findOrCreate({
+                      where: { userId, episodeId: itemId },
+                      defaults: {
+                          ...values,
+                          userId,
+                          episodeId: itemId
+                      }
+                  });
+        if (!created) await (track as Model).update(values);
+    };
+    const promise = (pending.get(key) ?? Promise.resolve())
+        .catch(() => {})
+        .then(save);
+    pending.set(key, promise);
+    try {
+        await promise;
+    } finally {
+        if (pending.get(key) === promise) pending.delete(key);
+    }
+}

@@ -1,0 +1,31 @@
+import express from 'express';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { build } from 'esbuild';
+import jwt from 'jsonwebtoken';
+import config from '../../src/config.js';
+import { File } from '../../src/models/file.js';
+import { PlaybackService } from '../../src/lib/playback/PlaybackService.js';
+import { run } from '../../src/lib/playback/process.js';
+import streamingRoutes from '../../src/submodules/REST/routes/streaming.js';
+import type Oblecto from '../../src/lib/oblecto/index.js';
+import type { OblectoRequest } from '../../src/submodules/REST/index.js';
+
+const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'oblecto-browser-'));
+await run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-threads', '2', '-g', '120', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(directory, 'source.mp4')]);
+const service = new PlaybackService({ config: { ffmpeg: {}, streaming: { cacheDirectory: path.join(directory, 'cache') }, transcoding: {} } } as unknown as Oblecto);
+const create = service.create.bind(service);
+service.create = (file, owner, _userId, options) => create(file, owner, null, options);
+File.findByPk = (async () => ({ id: 1, path: path.join(directory, 'source.mp4'), extension: 'mp4', host: 'local' })) as typeof File.findByPk;
+await build({ entryPoints: ['tests/browser/entry.js'], bundle: true, format: 'esm', outfile: path.join(directory, 'entry.js') });
+const app = express(); app.use(express.json());
+app.use((req: OblectoRequest, _res, next) => { if (req.headers.authorization) req.authorization = { scheme: 'Bearer', credentials: req.headers.authorization.split(' ')[1] }; next(); });
+streamingRoutes(app, { playback: service } as unknown as Oblecto);
+app.get('/debug', (_req, res) => res.json(service.diagnostics()));
+app.get('/entry.js', (_req, res) => res.sendFile(path.join(directory, 'entry.js')));
+app.get('/', (_req, res) => res.type('html').send(`<!doctype html><video id="video" muted playsinline controls></video><button id="start">Play</button><button id="stop">Stop</button><div role="alert" id="error"></div><script>window.token=${JSON.stringify(jwt.sign({ id: 1 }, config.authentication.secret))}</script><script type="module" src="/entry.js"></script>`));
+app.use((error: { statusCode?: number; message: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => { if (!res.headersSent) res.status(error.statusCode ?? 500).json({ message: error.message }); });
+const server = app.listen(Number(process.env.PLAYBACK_TEST_PORT ?? 4187), '127.0.0.1');
+async function close() { await service.close(); server.close(); await fs.rm(directory, { recursive: true, force: true }); }
+process.on('SIGTERM', () => { void close(); }); process.on('SIGINT', () => { void close(); });

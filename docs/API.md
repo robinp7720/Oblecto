@@ -184,56 +184,69 @@ Redirects to the stream URL for the episode's file.
 
 ## Streaming
 
-The REST streaming API uses a two-step flow: create a session, then request the stream.
-HLS is served via the same session stream endpoint for playlists plus a segment endpoint.
+Playback uses a viewer-owned session and a server-negotiated delivery method. Positions and durations are **absolute seconds**, including HLS playback; clients must not add a seek offset to media-element timestamps.
 
-### Create Session
-Initialize a streaming session for a file. Requires authentication.
+### Session control
 
-- **URL:** `/session/create/:id`
-- **Method:** `GET`
-- **Auth:** `Authorization: Bearer <token>`
-- **Query Params:**
-  - `formats`: Comma-separated list (default: `mp4`).
-  - `videoCodecs`: Comma-separated list (default: `h264`).
-  - `audioCodec`: Comma-separated list (default: `aac`).
-  - `type`: `recode`, `directhttp`, or `hls` (default: `recode`).
-  - `offset`: Start time in seconds (default: `0`).
-  - `noremux`: If present, force direct playback (`directhttp`).
-- **Response:**
-  ```json
-  {
-    "sessionId": "uuid",
-    "seeking": "client" | "server",
-    "outputCodec": {
-      "video": "h264",
-      "audio": "aac"
-    },
-    "inputCodec": {
-      "video": "h264",
-      "audio": "aac"
-    }
-  }
-  ```
+All control requests require `Authorization: Bearer <token>` and JSON request bodies.
 
-### Stream (Direct or HLS Playlist)
-Start the actual data stream or (for HLS) receive the `.m3u8` playlist.
+| Method | URL | Purpose |
+| --- | --- | --- |
+| POST | `/playback/sessions` | Create a session; returns 201 and its descriptor. |
+| GET | `/playback/sessions/:id` | Read the current descriptor; does not extend idle expiry. |
+| PATCH | `/playback/sessions/:id` | Reconfigure output; requires the current `revision`. |
+| POST | `/playback/sessions/:id/progress` | Save absolute position and refresh the session lease; returns 204. |
+| DELETE | `/playback/sessions/:id` | Revoke media access, cancel work, and release resources; returns 204, including repeated deletion. |
 
-- **URL:** `/session/stream/:sessionId`
-- **Method:** `GET`
-- **Query Params:**
-  - `offset`: Seek offset in seconds (server-side seek).
-  - `nostart`: If present, set up the destination but do not start the stream immediately.
-- **Notes:**
-  - For `directhttp` and `recode`, this returns the media stream directly.
-  - For `hls`, this returns the playlist (`Content-Type: application/x-mpegURL`).
-  - HLS clients should re-request this endpoint to refresh the playlist.
+Creation requires a positive integer `fileId`. Optional fields:
 
-### HLS Segment
-Fetch a specific HLS segment referenced by the playlist.
+- `position`: nonnegative seconds, default 0; starting positions beyond the duration are clamped to the end.
+- `quality`: `original` (default), `auto`, or a height of `360`, `480`, `720`, or `1080`. Original prefers compatible direct playback, then remux, then adaptive transcoding. Auto explicitly requests adaptive HLS. Fixed height selects the highest available rendition at or below that height.
+- `maxBitrate`: total bandwidth ceiling in bits/second, at least 200000. Supplying a limit selects adaptive output.
+- `audioStreamIndex`, `subtitleStreamIndex`: absolute ffprobe stream indexes, or `null` to disable that track. Omission applies language/default/forced selection. Invalid or negative indexes return 400.
+- `subtitleMode`: `off`, `auto` (default), or `forced`.
+- `forceHls`: request HLS instead of original delivery, including decoder recovery.
+- `capabilities`: `containers`, `videoCodecs`, `audioCodecs`, `profiles` (arrays); `maxLevel`, `maxBitDepth`, `maxAudioChannels`, `maxHeight` (positive numbers); `hdr`, `nativeTracks`, `hls` (booleans). Omitted values use conservative H.264/AAC stereo SDR defaults. Codec levels use ffprobe's numeric convention.
 
-- **URL:** `/HLS/:sessionId/segment/:id`
-- **Method:** `GET`
+Example descriptor:
+
+```json
+{
+  "sessionId": "uuid",
+  "revision": 1,
+  "state": "ready",
+  "duration": 7200,
+  "position": 123.5,
+  "paused": true,
+  "method": "transcode",
+  "reason": "Adaptive quality requested",
+  "mediaUrl": "/playback/media/uuid/1/master.m3u8?token=opaque",
+  "selectedTracks": { "audioStreamIndex": 1, "subtitleStreamIndex": null, "subtitleMode": "off" },
+  "tracks": [],
+  "qualities": [{ "id": "720", "height": 720, "bitrate": 2800000 }],
+  "subtitleUrl": null
+}
+```
+
+`method` is `direct`, `remux`, or `transcode`. `tracks` contains probed audio/subtitle metadata, including indexes, codecs, language tags and dispositions. Quality bitrates describe video; transcoded audio adds 128 kbps. `subtitleUrl` points to WebVTT when a separate text track is selected. ASS/SSA and bitmap subtitles are rendered into video when required.
+
+PATCH accepts the creation options except `fileId`, plus the current integer `revision`. Successful reconfiguration increments the revision and returns replacement URLs. Reject obsolete responses in clients; old media URLs return 409. Create a new session to change files. Supplying `subtitleMode` without an explicit subtitle index reapplies language/default/forced selection. Explicitly pass `forceHls: false` to return to original playback after fallback.
+
+Progress body: `{ "revision": 1, "position": 123.5, "paused": false, "buffering": false }`. Send every ten seconds and on pause, seek completion, stop, and end. Send the final progress update before deleting the session. Progress is saved using existing movie/episode tracking records; stale revisions return 409. Positions beyond duration plus one second are rejected.
+
+### Media delivery
+
+`GET`/`HEAD /playback/media/:id/:revision/:asset` requires the session-scoped `token` query parameter. Use the returned URLs rather than constructing them. Tokens are revoked on deletion, server restart, or idle expiry (30 minutes by default). They grant access to that session's assets, not control operations or other sessions.
+
+Original delivery supports concurrent single byte ranges, suffix ranges, HEAD, 206 and 416 responses. Multiple ranges are rejected with 416. HLS provides full-duration VOD manifests with on-demand segments, enabling immediate arbitrary seeking and quality changes. All advertised segment URLs remain regenerable after cache eviction. No indexing-time preprocessing is required.
+
+Errors use `{ "code": "INVALID_SELECTION", "message": "..." }`: invalid options (400), invalid media token (401), unavailable/foreign session or file (404), stale revision (409), unsupported media (422), unsatisfiable range (416), capacity/storage/encoder failures (503), preparation timeout (504). Capacity responses include `Retry-After: 2`. Once response headers are sent, transport failures close that response.
+
+### Breaking migration
+
+The old `/session/create/:id`, `/session/stream/:id`, and `/HLS/:id/segment/:segment` contracts are removed. Replace codec CSV lists and `noremux` with capabilities and quality preferences. Replace `seeking`, `inputCodec`, and `outputCodec` response handling with the new descriptor. Replace `-1` track sentinels with `null`. Update backend and bundled web/client-library submodules together; restart discards active sessions but retains library and watch-progress data.
+
+Federation media peers must both support protocol version 1; older peers are rejected. Federation metadata synchronization remains unchanged. See [streaming operations and testing](STREAMING.md).
 
 ## Users
 
@@ -352,33 +365,8 @@ Get list of available identifiers and updaters.
 ## Status (V1)
 
 ### Active Sessions
-Get a list of all active media streaming sessions on the server.
 
-- **URL:** `/api/v1/status/sessions`
-- **Method:** `GET`
-- **Permission:** Requires Authentication
-- **Response:** Array of MediaSession info objects.
-  ```json
-  [
-    {
-      "sessionId": "uuid",
-      "state": "streaming",
-      "file": {
-        "id": 123,
-        "path": "/path/to/file.mkv",
-        "videoCodec": "h264",
-        "audioCodec": "ac3"
-      },
-      "output": {
-        "format": "mp4",
-        "videoCodec": "h264",
-        "audioCodec": "aac"
-      },
-      "seekMode": "server",
-      "destinationCount": 1
-    }
-  ]
-  ```
+`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
 
 ### Connected Clients
 Get a list of all connected realtime clients (e.g., Web UI, remote players).

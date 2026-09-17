@@ -45,11 +45,10 @@ export default class RealtimeController {
         this.server.emit(event, payload);
     }
 
-    close(): void {
-        for (const client of Object.keys(this.clients)) {
-            this.clients[client].disconnect();
-        }
-
-        this.server.close();
+    async close(): Promise<void> {
+        await Promise.all(Object.values(this.clients).map(client => client.disconnect()));
+        await new Promise<void>((resolve, reject) => {
+            void this.server.close(() => resolve()).catch(reject);
+        });
     }
 }

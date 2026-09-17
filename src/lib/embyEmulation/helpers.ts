@@ -1,6 +1,13 @@
 import path from 'path';
 
 type MediaStream = {
+    profile?: string;
+    bit_rate?: number | string;
+    bits_per_raw_sample?: number | string;
+    channels?: number;
+    sample_rate?: number | string;
+    disposition_forced?: number | boolean;
+    avg_frame_rate?: string;
     codec_type?: string;
     codec_name?: string;
     tags_language?: string;
@@ -50,6 +57,12 @@ const resolveDefaultStreamIndex = (streams: MediaStream[], codecType: string): n
     return (defaultStream || matching[0]).index ?? -1;
 };
 
+const frameRate = (value?: string): number | undefined => {
+    const [numerator, denominator = '1'] = (value ?? '').split('/');
+    const result = Number(numerator) / Number(denominator);
+    return Number.isFinite(result) && result > 0 ? result : undefined;
+};
+
 export const createStreamsList = (streams: MediaStream[]): Record<string, unknown>[] => {
     const mediaStreams: Record<string, unknown>[] = [];
 
@@ -68,16 +81,16 @@ export const createStreamsList = (streams: MediaStream[]): Record<string, unknow
                     'NalLengthSize': '0',
                     'IsInterlaced': false,
                     'IsAVC': false,
-                    'BitRate': 9253220,
-                    'BitDepth': 8,
+                    'BitRate': Number(stream.bit_rate) || undefined,
+                    'BitDepth': Number(stream.bits_per_raw_sample) || 8,
                     'RefFrames': 1,
-                    'IsDefault': true,
-                    'IsForced': false,
+                    'IsDefault': normalizeBoolean(stream.disposition_default),
+                    'IsForced': normalizeBoolean(stream.disposition_forced),
                     'Height': stream.height,
                     'Width': stream.width,
-                    'AverageFrameRate': 23.976025,
-                    'RealFrameRate': 23.976025,
-                    'Profile': 'High',
+                    'AverageFrameRate': frameRate(stream.avg_frame_rate),
+                    'RealFrameRate': frameRate(stream.avg_frame_rate),
+                    'Profile': stream.profile,
                     'Type': 'Video',
                     'AspectRatio': stream.display_aspect_ratio,
                     'Index': stream.index,
@@ -85,7 +98,7 @@ export const createStreamsList = (streams: MediaStream[]): Record<string, unknow
                     'IsTextSubtitleStream': false,
                     'SupportsExternalStream': false,
                     'PixelFormat': stream.pix_fmt,
-                    'Level': 40
+                    'Level': stream.level
                 });
                 break;
             case 'audio':
@@ -97,10 +110,10 @@ export const createStreamsList = (streams: MediaStream[]): Record<string, unknow
                     'Title': stream.tags_title || stream.tags_language,
                     'DisplayTitle': stream.tags_title || `${stream.tags_language} ${stream.codec_name}`,
                     'IsInterlaced': false,
-                    'Channels': 6,
-                    'SampleRate': 48000,
-                    'IsDefault': true,
-                    'IsForced': false,
+                    'Channels': stream.channels,
+                    'SampleRate': Number(stream.sample_rate) || undefined,
+                    'IsDefault': normalizeBoolean(stream.disposition_default),
+                    'IsForced': normalizeBoolean(stream.disposition_forced),
                     'Type': 'Audio',
                     'Index': stream.index,
                     'IsExternal': false,
@@ -121,8 +134,8 @@ export const createStreamsList = (streams: MediaStream[]): Record<string, unknow
                     'localizedForced': 'Forced',
                     'DisplayTitle': stream.tags_title || stream.tags_language,
                     'IsInterlaced': false,
-                    'IsDefault': false,
-                    'IsForced': false,
+                    'IsDefault': normalizeBoolean(stream.disposition_default),
+                    'IsForced': normalizeBoolean(stream.disposition_forced),
                     'Type': 'Subtitle',
                     'Index': stream.index,
                     'IsExternal': false,
@@ -206,7 +219,7 @@ export const createMediaSources = (files: MediaFile[]): Record<string, unknown>[
             || (file.path ? path.basename(file.path, path.extname(file.path)) : 'Unknown');
         const runtimeTicks = Number.isFinite(file.duration) ? (file.duration as number) * 10000000 : 0;
         const bitrate = Number.isFinite(file.size) && Number.isFinite(file.duration) && (file.duration as number) > 0
-            ? Math.floor((file.size as number) / (file.duration as number))
+            ? Math.floor((file.size as number) * 8 / (file.duration as number))
             : 0;
         const defaultAudioStreamIndex = resolveDefaultStreamIndex(streams, 'audio');
         const defaultSubtitleStreamIndex = resolveDefaultStreamIndex(streams, 'subtitle');
@@ -219,7 +232,7 @@ export const createMediaSources = (files: MediaFile[]): Record<string, unknown>[
             'Container': container,
             'Size': file.size,
             'Name': name,
-            'IsRemote': Boolean(file.host),
+            'IsRemote': Boolean(file.host && file.host !== 'local'),
             'ETag': file.hash || `${file.id}`,
             'RunTimeTicks': runtimeTicks,
             'ReadAtNativeFramerate': false,

@@ -38,7 +38,7 @@ Emitted by the client to authenticate the connection.
 
 ### Client -> Server: `playing`
 
-Emitted by the client to report playback progress. The server buffers this data and persists it to the database periodically (every 10 seconds).
+Legacy clients may emit this event to report playback progress. The server buffers data, persists it every ten seconds through the shared progress writer, and flushes on disconnect. The default web player now uses the authenticated `/playback/sessions/:id/progress` REST API, which validates session ownership and revision; it does not also emit `playing`.
 
 **Payload (Episode):**
 
@@ -64,7 +64,7 @@ Emitted by the client to report playback progress. The server buffers this data 
 
 - `type`: Literal `"tv"` or `"movie"`.
 - `episodeId` / `movieId`: The UUID of the media item.
-- `time`: Current playback position in seconds (or milliseconds, depending on client implementation - codebase implies a number stored as `time`).
+- `time`: Absolute playback position in seconds.
 - `progress`: Floating point number representing completion percentage (0.0 to 1.0).
 
 ### Server -> Client: `play`

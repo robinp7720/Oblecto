@@ -31,8 +31,8 @@ export default class OblectoAPI {
         app.use(cors({
             origin: '*',
             maxAge: 5,
-            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type'],
-            exposedHeaders: ['API-Token-Expiry']
+            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range'],
+            exposedHeaders: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
         }));
 
         app.use(fileUpload({
@@ -72,6 +72,7 @@ export default class OblectoAPI {
         app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
+            if (res.headersSent) return next(err);
             const statusCode = (err.statusCode as number) || 500;
             const message = (err.message as string) || 'Internal Server Error';
 

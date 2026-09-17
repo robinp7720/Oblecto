@@ -43,7 +43,8 @@ import FileCleaner from '../cleaners/FileCleaner.js';
 import FileIndexer from '../indexers/files/FileIndexer.js';
 
 import { initDatabase } from '../../submodules/database.js';
-import { MediaSessionController } from '../mediaSessions/index.js';
+import { PlaybackService } from '../playback/PlaybackService.js';
+import { connectPlaybackPeer } from '../playback/federation.js';
 import SeedboxController from '../seedbox/SeedboxController.js';
 import EmbyEmulation from '../embyEmulation/index.js';
 
@@ -79,7 +80,7 @@ export default class Oblecto {
     public fileCleaner: FileCleaner;
     public movieCleaner: MovieCleaner;
     public seriesCleaner: SeriesCleaner;
-    public streamSessionController: MediaSessionController;
+    public playback: PlaybackService;
     public seedboxController: SeedboxController;
     public federationController?: FederationController;
     public federationClientController?: FederationClientController;
@@ -129,7 +130,8 @@ export default class Oblecto {
         this.movieCleaner = new MovieCleaner(this);
         this.seriesCleaner = new SeriesCleaner(this);
 
-        this.streamSessionController = new MediaSessionController(this);
+        this.playback = new PlaybackService(this);
+        this.playback.remoteFactory = host => connectPlaybackPeer(this, host);
 
         this.seedboxController = new SeedboxController(this);
         void this.seedboxController.loadAllSeedboxes();
@@ -151,16 +153,20 @@ export default class Oblecto {
         this.embyServer = new EmbyEmulation(this);
     }
 
-    close(): void {
+    async close(): Promise<void> {
+        await this.playback.close();
+        const closing: Promise<unknown>[] = [];
         for (const item of Object.keys(this)) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
             const member = (this as any)[item];
 
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions
-            if (member?.close) {
+            if (member?.close && member !== this.playback && member !== this.database) {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-                member.close();
+                closing.push(Promise.resolve(member.close()));
             }
         }
+        await Promise.allSettled(closing);
+        await this.database.close();
     }
 }

@@ -71,7 +71,7 @@ Core playback works, but controls are missing compared to modern media clients.
 - `Oblecto-Web/src/components/playBar.vue`
 - `Oblecto-Web/src/components/files/FileList.vue`
 - `src/submodules/REST/routes/streaming.ts`
-- `src/lib/mediaSessions/MediaSessionController.ts`
+- `src/lib/playback/PlaybackService.ts`
 
 ### Deliverables
 - Volume/mute controls.
@@ -344,3 +344,7 @@ Unit tests exist, but API integration and frontend e2e coverage are thin.
 - Date: 2026-02-10
 - Plan owner: Repository maintainers and contributing agents
 - Current state: Backlog defined, implementation not started in this file
+
+## Streaming overhaul — 2026-09-17
+
+Shared playback planning, revisioned session APIs, on-demand adaptive HLS, subtitle rendering, scoped media access, and federation media protocol v1 replace the original streamers. See `docs/STREAMING.md` for defaults, migration and acceptance checks. Existing controls now use the playback controller; unrelated frontend work is retained.

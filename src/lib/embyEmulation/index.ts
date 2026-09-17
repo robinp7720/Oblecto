@@ -1,15 +1,16 @@
+import type { PlaybackState } from './ServerAPI/playbackState.js';
 import EmbyServerAPI from './ServerAPI/index.js';
 
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../models/user.js';
 import bcrypt from 'bcrypt';
 import Primus, { Spark } from 'primus';
-import { timeout } from 'async';
 import logger from '../../submodules/logger/index.js';
 
 import type Oblecto from '../oblecto/index.js'
 
 type SessionInfo = {
+    playbackState?: PlaybackState;
     Name: string | null;
     ServerId: string;
     Id: number;
@@ -54,13 +55,11 @@ export default class EmbyEmulation {
 
         this.primus = new Primus(this.serverAPI.server, {
             pathname: '/socket',
-            authorization: function (req, done) {
+            authorization: (req, done) => {
                 const request = req as { query?: Record<string, string> };
 
-                if (!request.query?.api_key || request.query.api_key.length === 0)
+                if (!request.query?.api_key || !this.sessions[request.query.api_key])
                     return done({ statusCode: 403, message: '' });
-
-                (this as { auth?: string }).auth = 'test';
 
                 done();
             }
@@ -69,44 +68,23 @@ export default class EmbyEmulation {
         this.primus.on('connection', (spark: Spark) => {
             const req = spark.request as { query?: Record<string, string> };
 
-            if (!req.query?.api_key || req.query.api_key.length === 0)
+            if (!req.query?.api_key || !this.sessions[req.query.api_key])
                 return spark.end(undefined, { reconnect: false });
 
             this.websocketSessions[req.query.api_key] = spark;
 
-            console.log('jellyfin ws client connected');
-
-            timeout(() => {
-                console.log('sending');
-                spark.write({
-                    MessageType: 'Play',
-                    Data: {
-                        VolumeLevel: 100,
-                        IsMuted: false,
-                        IsPaused: false,
-                        RepeatMode: 'RepeatNone',
-                        ShuffleMode: 'Sorted',
-                        MaxStreamingBitrate: 140000000,
-                        PositionTicks: 0,
-                        PlaybackStartTimeTicks: 15999190139560000,
-                        SubtitleStreamIndex: 2,
-                        AudioStreamIndex: 1,
-                        BufferedRanges: [],
-                        PlayMethod: 'DirectStream',
-                        PlaySessionId: 'Thisisafuckingtest',
-                        PlaylistItemId: 'playlistItem1',
-                        MediaSourceId: 2725,
-                        CanSeek: true,
-                        ItemId: 'movie16',
-                        NowPlayingQueue: [{ Id: 'movie16', PlaylistItemId: 'playlistItem1' }]
-                    }
-                });
-            }, 2000);
+            spark.on('end', () => {
+                if (this.websocketSessions[req.query!.api_key!] === spark) delete this.websocketSessions[req.query!.api_key!];
+            });
 
             spark.on('data', function message(data: unknown) {
                 logger.debug('jellyfin ws recevied:', data);
             });
         });
+    }
+
+    close(): Promise<void> {
+        return new Promise(resolve => this.primus.destroy({ close: true, reconnect: false, timeout: 1000 }, resolve));
     }
 
     /**

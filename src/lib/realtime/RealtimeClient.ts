@@ -1,7 +1,6 @@
+import { saveProgress } from '../playback/progress.js';
 import jwt from 'jsonwebtoken';
 import { EventEmitter } from 'events';
-import { TrackEpisode } from '../../models/trackEpisode.js';
-import { TrackMovie } from '../../models/trackMovie.js';
 import logger from '../../submodules/logger/index.js';
 
 import type { Socket } from 'socket.io';
@@ -32,6 +31,8 @@ export default class RealtimeClient extends EventEmitter {
     public oblecto: Oblecto;
     public socket: Socket;
     public user: AuthUser | null;
+    private saveTimer: NodeJS.Timeout;
+    private disconnectSave?: Promise<void>;
     public storage: {
         series: Record<string, EpisodePlayback>;
         movie: Record<string, MoviePlayback>;
@@ -59,8 +60,8 @@ export default class RealtimeClient extends EventEmitter {
         this.socket.on('playing', (data: PlaybackData) => this.playingHandler(data));
         this.socket.on('disconnect', () => this.disconnectHandler());
 
-        setInterval(() => {
-            this.saveAllTracks();
+        this.saveTimer = setInterval(() => {
+            void this.saveAllTracks().catch(error => logger.warn("Progress save failed", error));
         }, 10000);
     }
 
@@ -89,64 +90,30 @@ export default class RealtimeClient extends EventEmitter {
         this.storage.movie[data.movieId] = data;
     }
 
-    disconnectHandler(): void {
+    async disconnect(): Promise<void> {
+        this.socket.disconnect();
+        await this.disconnectHandler();
+    }
+
+    disconnectHandler(): Promise<void> {
+        if (this.disconnectSave) return this.disconnectSave;
+        clearInterval(this.saveTimer);
+        this.disconnectSave = this.saveAllTracks().catch(error => { logger.warn('Progress save failed', error); });
         this.emit('disconnect');
+        return this.disconnectSave;
     }
 
     async saveEpisodeTrack(id: string): Promise<void> {
-        if (this.user === null) return;
-
         const payload = this.storage.series[id];
-
-        if (!payload) return;
-
-        const [item, created] = await TrackEpisode.findOrCreate({
-            where: {
-                UserId: this.user.id,
-                EpisodeId: id
-            },
-            defaults: {
-                time: payload.time,
-                progress: payload.progress
-            }
-        });
-
-        if (created) return;
-
-        await item.update({
-            time: payload.time,
-            progress: payload.progress
-        });
-
-        delete this.storage.series[id];
+        if (!this.user || !payload || !Number.isFinite(payload.time) || payload.time < 0) return;
+        await saveProgress(this.user.id, 'episode', Number(id), payload.time, payload.progress > 0 ? payload.time / payload.progress : 0);
+        if (this.storage.series[id] === payload) delete this.storage.series[id];
     }
-
     async saveMovieTrack(id: string): Promise<void> {
-        if (this.user == null) return;
-
         const payload = this.storage.movie[id];
-
-        if (!payload) return;
-
-        const [item, created] = await TrackMovie.findOrCreate({
-            where: {
-                UserId: this.user.id,
-                MovieId: id
-            },
-            defaults: {
-                time: payload.time,
-                progress: payload.progress
-            }
-        });
-
-        if (created) return;
-
-        await item.update({
-            time: payload.time,
-            progress: payload.progress
-        });
-
-        delete this.storage.movie[id];
+        if (!this.user || !payload || !Number.isFinite(payload.time) || payload.time < 0) return;
+        await saveProgress(this.user.id, 'movie', Number(id), payload.time, payload.progress > 0 ? payload.time / payload.progress : 0);
+        if (this.storage.movie[id] === payload) delete this.storage.movie[id];
     }
 
     async saveAllTracks(): Promise<void> {

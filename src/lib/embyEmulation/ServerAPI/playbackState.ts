@@ -6,7 +6,7 @@ type PlaybackEntry = {
     updatedAt: number;
 };
 
-type PlaybackState = {
+export type PlaybackState = {
     playSessions: Map<string, PlaybackEntry>;
     lastMediaSourceByItem: Map<string | number, string | number>;
 };

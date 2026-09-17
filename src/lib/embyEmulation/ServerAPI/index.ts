@@ -65,7 +65,7 @@ export default class EmbyServerAPI {
 
         // Log requests
         this.server.use((req: Request, res: Response, next: NextFunction) => {
-            logger.debug(req.url, req.query, req.method);
+            logger.debug(req.path, req.method);
             next();
         });
 
@@ -73,8 +73,8 @@ export default class EmbyServerAPI {
         this.server.use(cors({
             origin: '*',
             maxAge: 5,
-            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type'],
-            exposedHeaders: ['API-Token-Expiry']
+            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range', 'X-Emby-Authorization', 'X-Emby-Token'],
+            exposedHeaders: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
         }));
 
         // Parse Authorization header
@@ -106,7 +106,8 @@ export default class EmbyServerAPI {
 
         // Convert URL to lowercase
         this.server.use((req: Request, res: Response, next: NextFunction) => {
-            req.url = req.url.toLowerCase();
+            const split = req.url.indexOf('?');
+            req.url = split === -1 ? req.url.toLowerCase() : req.url.slice(0, split).toLowerCase() + req.url.slice(split);
             next();
         });
 
@@ -133,6 +134,7 @@ export default class EmbyServerAPI {
         this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
             if (err === null || err === undefined) return next();
 
+            if (res.headersSent) return next(err);
             const statusCode = err.statusCode ?? 500;
             const message = err.message !== '' ? err.message : 'Internal Server Error';
 

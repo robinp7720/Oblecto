@@ -5,14 +5,6 @@ import Oblecto from '../lib/oblecto/index.js';
 import config from '../config.js';
 import logger from '../submodules/logger/index.js';
 
-type SessionMap = Record<string, {
-    constructor: { name: string };
-    file: { path: string };
-    videoCodec?: string | null;
-    audioCodec?: string | null;
-    offset?: number | null;
-}>;
-
 type ClientSession = {
     user: unknown;
     storage: unknown;
@@ -133,8 +125,8 @@ const graphical = {
         }, 1000);
     },
 
-    close(): void {
-        this.oblecto?.close();
+    async close(): Promise<void> {
+        await this.oblecto?.close();
         if (this.updater) {
             clearInterval(this.updater);
         }
@@ -146,18 +138,10 @@ const graphical = {
 
         this.streamerSessionsBox.clearItems();
 
-        const sessions = this.oblecto.streamSessionController.sessions as SessionMap;
-
-        this.streamerSessionsBox.setLabel('Active Streaming Sessions: ' + Object.keys(sessions).length);
-
-        for (const sessionId of Object.keys(sessions)) {
-            const session = sessions[sessionId];
-
-            this.streamerSessionsBox.addItem(session.constructor.name + ':');
-            this.streamerSessionsBox.addItem(sessionId);
-            this.streamerSessionsBox.addItem(session.file.path);
-            this.streamerSessionsBox.addItem('VideoCodec: ' + session.videoCodec + ', AudioCodec: ' + session.audioCodec + ', Offset:' + session.offset);
-            this.streamerSessionsBox.addItem(' ');
+        const sessions = this.oblecto.playback.diagnostics();
+        this.streamerSessionsBox.setLabel('Active Streaming Sessions: ' + sessions.length);
+        for (const session of sessions) {
+            this.streamerSessionsBox.addItem(`${session.sessionId}: ${session.method} (${session.state})`);
         }
     },
 

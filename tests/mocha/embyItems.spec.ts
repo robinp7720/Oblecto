@@ -62,6 +62,11 @@ describe('Emby items routes', () => {
         serverId: 'test-server-id',
         sessions: {},
         oblecto: {
+            playback: {
+                sessions: new Map(),
+                create: async (file: any, owner: string) => ({ sessionId: 'playback-test', owner, file, media: { duration: 120, streams: [{ index: 0, codec_type: 'video', codec_name: 'h264', width: 640, height: 480 }, { index: 2, codec_type: 'subtitle', codec_name: 'subrip', tags: { language: 'eng' } }] }, plan: { method: 'transcode', audio: { index: 1 }, subtitle: null } }),
+                describe: () => ({ mediaUrl: '/playback/media/playback-test/1/master.m3u8?token=scoped' })
+            },
             artworkUtils: mockArtworkUtils,
             config: {
                 artwork: {
@@ -216,6 +221,14 @@ describe('Emby items routes', () => {
 
             assert.ok(res.body.MediaSources);
             assert.equal(res.body.MediaSources.length, 1);
+            assert.equal(res.body.MediaSources[0].SupportsDirectPlay, false);
+            assert.match(res.body.MediaSources[0].TranscodingUrl, /playback\/media/);
+            assert.equal(res.body.MediaSources[0].Path, undefined);
+            assert.equal(res.body.MediaSources[0].MediaStreams[0].Width, 640);
+            const subtitle = res.body.MediaSources[0].MediaStreams.find((stream: any) => stream.Type === 'Subtitle');
+            assert.equal(subtitle.Language, 'eng');
+            assert.equal(subtitle.DeliveryMethod, 'External');
+            assert.equal(subtitle.DeliveryUrl, '/playback/media/playback-test/1/subtitle-2.vtt?token=scoped');
         });
     });
 

@@ -2,7 +2,7 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import Oblecto from '../../../../lib/oblecto/index.js';
-import { MediaSession } from '../../../../lib/mediaSessions/MediaSession.js';
+import type { OblectoRequest } from '../../index.js';
 
 export default (server: Express, oblecto: Oblecto) => {
 
@@ -20,11 +20,7 @@ export default (server: Express, oblecto: Oblecto) => {
         // For now, requiresAuth is standard, assuming all auth users can see this or logic elsewhere handles roles.
         // Current existing routes don't seem to have role-based middleware visible here, usually just requiresAuth.
 
-        const sessions = oblecto.streamSessionController.getSessions().map((session: MediaSession) => {
-            const info = session.getInfo();
-            // Add any extra info if needed that isn't in getInfo but is safe to expose
-            return info;
-        });
+        const sessions = oblecto.playback.diagnostics(`user:${(req as OblectoRequest).authorization?.user?.id}`);
 
         res.send(sessions);
     });
