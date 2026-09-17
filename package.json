@@ -20,7 +20,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
+    "build:web": "cd Oblecto-Web; npm install; npm run build; cd ..;",
     "build:jellyfin-web": "npm ci --prefix jellyfin-web --legacy-peer-deps && npm run build:production --prefix jellyfin-web",
     "copy:jellyfin-web": "tsx src/scripts/copyJellyfinWeb.ts",
     "build": "npm run clean && npm run build:web && npm run build:jellyfin-web && npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --packages=external && npx esbuild src/bin/oblecto.ts --bundle --platform=node --format=esm --outfile=dist/bin/oblecto.js --packages=external && npm run copy:jellyfin-web && chmod +x ./dist/bin/oblecto.js",
