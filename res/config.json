@@ -106,7 +106,11 @@
     "enabled": true
   },
   "streaming": {
-    "defaultTargetLanguageCode":  "eng"
+    "defaultTargetLanguageCode": "eng",
+    "encodingConcurrency": 2,
+    "maxQueue": 64,
+    "cacheBytes": 10737418240,
+    "idleTimeoutMs": 1800000
   },
   "federation": {
     "key": "/etc/oblecto/id_rsa",

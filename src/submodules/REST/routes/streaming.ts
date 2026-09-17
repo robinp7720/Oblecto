@@ -1,185 +1,158 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/unbound-method, @typescript-eslint/no-unused-vars */
-import { Express, Request, Response, NextFunction } from 'express';
-import errors from '../errors.js';
-import authMiddleWare from '../middleware/auth.js';
+import type { Express, Request, Response, NextFunction } from 'express';
+import auth from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
-import { Stream } from '../../../models/stream.js';
-import { DirectHttpStreamSession, HlsStreamSession } from '../../../lib/mediaSessions/index.js';
-import Oblecto from '../../../lib/oblecto/index.js';
-import { OblectoRequest } from '../index.js';
-import logger from '../../logger/index.js';
+import type Oblecto from '../../../lib/oblecto/index.js';
+import type { OblectoRequest } from '../index.js';
+import type { PlaybackOptions } from '../../../lib/playback/types.js';
+import { PlaybackError } from '../../../lib/playback/types.js';
 
-const parseOptionalInteger = (value: unknown, fieldName: string): number | null => {
-    if (value === undefined || value === null || value === '') return null;
-    const normalized = String(value).trim();
-
-    if (!/^-?\d+$/.test(normalized)) {
-        throw new errors.BadRequestError(`${fieldName} is invalid`);
+export const playbackError = (
+    error: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction
+): void => {
+    if (res.headersSent) {
+        next(error);
+        return;
     }
-
-    const parsed = Number(normalized);
-
-    if (!Number.isSafeInteger(parsed)) {
-        throw new errors.BadRequestError(`${fieldName} is invalid`);
-    }
-
-    return parsed;
+    if (error instanceof PlaybackError) {
+        if (error.code === 'SERVER_CAPACITY') res.setHeader('Retry-After', '2');
+        res.status(error.statusCode).send({
+            code: error.code,
+            message: error.message
+        });
+    } else next(error);
 };
-
-const parseOptionalNumber = (value: unknown, fieldName: string): number | null => {
-    if (value === undefined || value === null || value === '') return null;
-
-    const parsed = Number(String(value).trim());
-
-    if (!Number.isFinite(parsed)) {
-        throw new errors.BadRequestError(`${fieldName} is invalid`);
-    }
-
-    return parsed;
-};
-
-export default (server: Express, oblecto: Oblecto) => {
-    server.get('/HLS/:sessionId/segment/:id', async function (req: Request, res: Response, next: NextFunction) {
-        try {
-            const sessionId = req.params.sessionId;
-            logger.debug(`HLS segment request session=${sessionId} segment=${req.params.id}`);
-
-            if (!oblecto.streamSessionController.sessionExists(sessionId)) {
-                throw new errors.InvalidCredentialsError('Stream session token does not exist');
-            }
-
-            const streamSession = oblecto.streamSessionController.sessions[sessionId];
-
-            if (!(streamSession instanceof HlsStreamSession)) {
-                throw new errors.BadRequestError('Invalid stream session type');
-            }
-
-            const segmentId = parseInt(req.params.id, 10);
-
-            if (Number.isNaN(segmentId)) {
-                throw new errors.BadRequestError('Invalid segment id');
-            }
-
-            await streamSession.streamSegment(req, res, segmentId);
-        } catch (error) {
-            next(error);
+export default (server: Express, oblecto: Oblecto): void => {
+    const owner = (req: OblectoRequest): string => {
+        const id = (req.authorization?.user as { id?: unknown } | undefined)
+            ?.id;
+        if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
+            throw new PlaybackError(
+                'UNAUTHORIZED',
+                'Authentication required',
+                401
+            );
+        return `user:${Number(id)}`;
+    };
+    const requiresAuth = auth.requiresAuth.bind(auth);
+    const body = (
+        req: Request
+    ): PlaybackOptions & {
+        fileId: number;
+        revision: number;
+        position: number;
+        paused?: boolean;
+        buffering?: boolean;
+    } => {
+        if (
+            !req.body ||
+            typeof req.body !== 'object' ||
+            Array.isArray(req.body)
+        )
+            throw new PlaybackError(
+                'INVALID_SELECTION',
+                'Expected a JSON object'
+            );
+        return req.body as PlaybackOptions & {
+            fileId: number;
+            revision: number;
+            position: number;
+        };
+    };
+    server.post(
+        '/playback/sessions',
+        requiresAuth,
+        async (req: OblectoRequest, res) => {
+            const identity = owner(req);
+            if (
+                !Number.isSafeInteger(body(req).fileId) ||
+                body(req).fileId <= 0
+            )
+                throw new PlaybackError('INVALID_SELECTION', 'Invalid fileId');
+            const file = await File.findByPk(body(req).fileId);
+            if (!file)
+                throw new PlaybackError(
+                    'MEDIA_NOT_FOUND',
+                    'Media file does not exist',
+                    404
+                );
+            const { fileId: _fileId, ...options } = body(req);
+            const session = await oblecto.playback.create(
+                file,
+                identity,
+                Number(identity.slice(5)),
+                options
+            );
+            res.status(201).send(oblecto.playback.describe(session));
         }
-    });
-
-    server.get('/session/create/:id', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response, next: NextFunction) {
-        try {
-            let file;
-            const params = req.combined_params!;
-            const formats = ((params.formats as string) || 'mp4').split(',');
-            const videoCodecs = ((params.videoCodecs as string) || 'h264').split(',');
-            const audioCodecs = ((params.audioCodec as string) || 'aac').split(',');
-            const subtitleModeRaw = ((params.subtitleMode as string) || 'auto').toLowerCase();
-            const subtitleMode = ['off', 'auto', 'forced'].includes(subtitleModeRaw)
-                ? subtitleModeRaw as 'off' | 'auto' | 'forced'
-                : null;
-            const requestedAudioStreamIndex = parseOptionalInteger(params.audioStreamIndex, 'audioStreamIndex');
-            const requestedSubtitleStreamIndex = parseOptionalInteger(params.subtitleStreamIndex, 'subtitleStreamIndex');
-
-            try {
-                file = await File.findByPk(req.params.id, { include: [Stream] });
-            } catch (ex) {
-                throw new errors.NotFoundError('File does not exist');
-            }
-
-            if (!file) throw new errors.NotFoundError('File does not exist');
-            if (!subtitleMode) throw new errors.BadRequestError('subtitleMode is invalid');
-
-            const streams: any[] = Array.isArray((file as any).Streams) ? (file as any).Streams : [];
-            const audioStreams = streams.filter((stream: any) => stream.codec_type === 'audio');
-            const subtitleStreams = streams.filter((stream: any) => stream.codec_type === 'subtitle');
-
-            if (requestedAudioStreamIndex !== null && !audioStreams.some((stream: any) => stream.index === requestedAudioStreamIndex)) {
-                throw new errors.BadRequestError('audioStreamIndex is invalid');
-            }
-
-            if (requestedSubtitleStreamIndex !== null && requestedSubtitleStreamIndex !== -1 &&
-                !subtitleStreams.some((stream: any) => stream.index === requestedSubtitleStreamIndex)) {
-                throw new errors.BadRequestError('subtitleStreamIndex is invalid');
-            }
-
-            const resolvedAudioStreamIndex = requestedAudioStreamIndex;
-            const resolvedSubtitleStreamIndex = subtitleMode === 'off' || requestedSubtitleStreamIndex === -1
-                ? null
-                : (requestedSubtitleStreamIndex !== null
-                    ? requestedSubtitleStreamIndex
-                    : null);
-
-            let streamType = 'recode';
-
-            if (params.type && ['recode', 'directhttp', 'hls'].indexOf(params.type as string) > -1) {
-                streamType = params.type as string;
-            }
-
-            if (params.noremux) streamType = 'directhttp';
-
-            const streamSession = oblecto.streamSessionController.newSession(file, {
-                streamType,
-
-                target: {
-                    formats, videoCodecs, audioCodecs
-                },
-                offset: parseOptionalNumber(params.offset, 'offset') || 0,
-                audioStreamIndex: resolvedAudioStreamIndex ?? undefined,
-                subtitleStreamIndex: resolvedSubtitleStreamIndex,
-                subtitleMode
-            });
-
-            res.send({
-                sessionId: streamSession.sessionId,
-                seeking: streamSession instanceof DirectHttpStreamSession ? 'client' : 'server',
-                outputCodec: {
-                    video: streamSession.videoCodec,
-                    audio: streamSession.audioCodec
-                },
-                inputCodec: { video: streamSession.file.videoCodec, audio: streamSession.file.audioCodec },
-                selectedTracks: {
-                    audioStreamIndex: streamSession.selectedAudioStreamIndex,
-                    subtitleStreamIndex: streamSession.selectedSubtitleStreamIndex,
-                    subtitleMode: streamSession.subtitleMode
-                }
-            });
-        } catch (error) {
-            next(error);
+    );
+    server.get(
+        '/playback/sessions/:id',
+        requiresAuth,
+        (req: OblectoRequest, res) => {
+            const session = oblecto.playback.get(
+                String(req.params.id),
+                owner(req)
+            );
+            res.send(oblecto.playback.describe(session));
         }
-    });
-
-    server.get('/session/stream/:sessionId', async function (req: OblectoRequest, res: Response, next: NextFunction) {
-        try {
-            logger.debug(`Session stream request session=${req.params.sessionId}`);
-            if (!oblecto.streamSessionController.sessionExists(req.params.sessionId)) {
-                throw new errors.InvalidCredentialsError('Stream session token does not exist');
-            }
-
-            const streamSession = oblecto.streamSessionController.sessions[req.params.sessionId];
-
-            // For HLS sessions, if the segmenter is already started, this is a playlist poll request
-            // Just serve the fresh playlist without adding destinations or restarting
-            if (streamSession instanceof HlsStreamSession && streamSession.segmenterStarted) {
-                await streamSession.sendPlaylistFile(res);
-                return;
-            }
-
-            if (req.combined_params?.offset) {
-                streamSession.offset = req.combined_params.offset as number;
-            }
-
-            await streamSession.addDestination({
-                request: req,
-                stream: res,
-
-                type: 'http'
-            });
-
-            if (req.combined_params?.nostart) return;
-
-            await streamSession.startStream();
-        } catch (error) {
-            next(error);
+    );
+    server.patch(
+        '/playback/sessions/:id',
+        requiresAuth,
+        async (req: OblectoRequest, res) => {
+            const session = oblecto.playback.get(
+                String(req.params.id),
+                owner(req)
+            );
+            const { revision, ...options } = body(req);
+            await oblecto.playback.update(session, options, revision);
+            res.send(oblecto.playback.describe(session));
         }
+    );
+    server.post(
+        '/playback/sessions/:id/progress',
+        requiresAuth,
+        async (req: OblectoRequest, res) => {
+            const session = oblecto.playback.get(
+                String(req.params.id),
+                owner(req)
+            );
+            await oblecto.playback.report(session, body(req));
+            res.status(204).end();
+        }
+    );
+    server.delete(
+        '/playback/sessions/:id',
+        requiresAuth,
+        async (req: OblectoRequest, res) => {
+            const identity = owner(req);
+            const existing = oblecto.playback.sessions.get(
+                String(req.params.id)
+            );
+            if (existing)
+                await oblecto.playback.stop(
+                    oblecto.playback.get(String(req.params.id), identity)
+                );
+            res.status(204).end();
+        }
+    );
+    server.get('/playback/media/:id/:revision/:asset', async (req, res) => {
+        const session = oblecto.playback.get(String(req.params.id));
+        if (
+            typeof req.query.token !== 'string' ||
+            req.query.token !== session.token
+        )
+            throw new PlaybackError('UNAUTHORIZED', 'Invalid media token', 401);
+        await oblecto.playback.serve(
+            session,
+            Number(req.params.revision),
+            String(req.params.asset),
+            req,
+            res
+        );
     });
+    server.use('/playback', playbackError);
 };
