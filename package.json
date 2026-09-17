@@ -16,6 +16,9 @@
     "images/"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build:web": "cd Oblecto-Web; npm install --unsafe-perms --legacy-peer-deps; npm run build; cd ..;",
     "build:jellyfin-web": "npm ci --prefix jellyfin-web --legacy-peer-deps && npm run build:production --prefix jellyfin-web",
