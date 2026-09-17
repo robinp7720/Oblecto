@@ -37,7 +37,8 @@ export const getEmbyToken = (req: EmbyRequest): string | undefined => {
         ?? req?.headers?.['x-emby-authorization'];
 
     if (headerToken !== undefined && headerToken !== '') {
-        return headerToken.trim();
+        const match = /(?:^|[, ])Token="([^"]+)"/i.exec(headerToken);
+        return match ? match[1] : headerToken.trim();
     }
 
     return getRequestValue(req, 'ApiKey', 'api_key', 'apikey');

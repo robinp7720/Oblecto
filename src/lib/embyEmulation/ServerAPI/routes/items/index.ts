@@ -1,3 +1,5 @@
+import { createStreamsList } from '../../../helpers.js';
+import { embyIdentity, embyPlayback } from '../../playback.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
@@ -581,8 +583,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return await handleItemImageRequest(req, res, 'backdrop');
     });
 
-    server.post('/items/:mediaid/playbackinfo', async (req: EmbyRequest, res: Response) => {
-        const { item, type } = await resolveItemById(req.params.mediaid);
+    const playbackInfo = async (req: EmbyRequest, res: Response) => {
+        embyIdentity(embyEmulation, req);
+        const { item, type } = await resolveItemById(String(req.params.mediaid));
         let files = [];
 
         if (type === 'movie' && item) {
@@ -603,7 +606,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const mediaSourceId = getRequestValue(req as any, 'MediaSourceId');
         const playSessionId = getRequestValue(req as any, 'PlaySessionId') || uuidv4();
         const existingPlayback = getPlaybackEntry(embyEmulation as any, token, playSessionId);
-        const lastMediaSource = getLastMediaSource(embyEmulation as any, token, req.params.mediaid);
+        const lastMediaSource = getLastMediaSource(embyEmulation as any, token, String(req.params.mediaid));
 
         const resolvedMediaSourceId = mediaSourceId ?? existingPlayback?.mediaSourceId ?? lastMediaSource;
 
@@ -620,17 +623,38 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
         upsertPlaybackEntry(embyEmulation as any, token, {
             playSessionId,
-            itemId: req.params.mediaid,
+            itemId: String(req.params.mediaid),
             mediaSourceId: file?.id ?? null
         });
-        setLastMediaSource(embyEmulation as any, token, req.params.mediaid, file?.id ?? null);
+        setLastMediaSource(embyEmulation as any, token, String(req.params.mediaid), file?.id ?? null);
 
-        res.send({
-            'MediaSources': createMediaSources(files),
-            'PlaySessionId': playSessionId,
-            'MediaSourceId': formatFileId(file?.id)
-        });
-    });
+        const session = await embyPlayback(embyEmulation, req, file, playSessionId);
+        const playback = embyEmulation.oblecto.playback.describe(session);
+        const sources = createMediaSources([file]).map(source => ({
+            ...source,
+            Path: undefined,
+            Protocol: 'Http',
+            RunTimeTicks: session.media.duration * 10000000,
+            MediaStreams: createStreamsList(session.media.streams.map(track => ({ ...track, tags_language: track.tags?.language, tags_title: track.tags?.title, disposition_default: track.disposition?.default, disposition_forced: track.disposition?.forced }))).map(stream => {
+                if (stream.Type !== 'Subtitle') return stream;
+                const text = ['subrip', 'webvtt', 'mov_text', 'text'].includes(String(stream.Codec));
+                const url = playback.mediaUrl.replace(/\/[^/?]+\?token=/, `/subtitle-${String(stream.Index)}.vtt?token=`);
+                return { ...stream, DeliveryMethod: text ? 'External' : 'Encode', DeliveryUrl: text ? url : undefined, IsExternal: text, IsTextSubtitleStream: text, SupportsExternalStream: text };
+            }),
+            SupportsDirectPlay: session.plan.method === 'direct',
+            SupportsDirectStream: session.plan.method === 'direct',
+            SupportsTranscoding: true,
+            DirectStreamUrl: session.plan.method === 'direct' ? playback.mediaUrl : undefined,
+            TranscodingUrl: session.plan.method !== 'direct' ? playback.mediaUrl : undefined,
+            TranscodingSubProtocol: 'hls',
+            TranscodingContainer: 'ts',
+            DefaultAudioStreamIndex: session.plan.audio?.index ?? -1,
+            DefaultSubtitleStreamIndex: session.plan.subtitle?.index ?? -1
+        }));
+        res.send({ MediaSources: sources, PlaySessionId: playSessionId, MediaSourceId: formatFileId(file.id) });
+    };
+    server.post('/items/:mediaid/playbackinfo', playbackInfo);
+    server.get('/items/:mediaid/playbackinfo', playbackInfo);
 
     server.get('/userviews', (req, res) => {
         res.send(
