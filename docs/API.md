@@ -274,20 +274,9 @@ Federation media peers must both support protocol version 1; older peers are rej
 
 ## Clients (Remote Control)
 
-### List Clients
-List connected clients for the current user.
+Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/playback` were removed: device discovery, playback commands and playback state all travel over the realtime socket, which is the only transport that can acknowledge a command and stream state back. See [REALTIME_API.md](REALTIME_API.md).
 
-- **URL:** `/clients`
-- **Method:** `GET`
-
-### Remote Playback
-Control playback on another client.
-
-- **URL:** `/client/:clientId/playback`
-- **Method:** `POST`
-- **Body:**
-  - `type`: `episode` or `movie`
-  - `id`: ID of the media to play.
+`GET /api/v1/status/clients` remains, as a read-only diagnostic view of the caller's own connected devices.
 
 ## Settings & System (V1)
 
@@ -369,29 +358,39 @@ Get list of available identifiers and updaters.
 `GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
 
 ### Connected Clients
-Get a list of all connected realtime clients (e.g., Web UI, remote players).
+Get the authenticated user's connected realtime devices. Scoped to the caller — there is no role system to gate an all-users view on, and an unfiltered listing was an enumeration oracle for other people's devices. `user` carries the id and nothing else.
 
 - **URL:** `/api/v1/status/clients`
 - **Method:** `GET`
 - **Permission:** Requires Authentication
-- **Response:** Array of connected clients.
+- **Response:** Array of the caller's connected devices.
   ```json
   [
     {
-      "clientId": "socket_id",
-      "clientName": "Web Client",
+      "deviceId": "5f1c…",
+      "name": "Living room TV",
+      "capabilities": ["control", "playback"],
       "user": {
         "id": 1
       },
-      "connectedAt": "2023-01-01T00:00:00.000Z",
-      "address": "::1",
-      "activity": {
-        "series": [],
-        "movie": []
+      "connectedAt": 1758057600000,
+      "state": {
+        "status": "playing",
+        "media": { "kind": "episode", "id": "1421", "title": "Blink" },
+        "position": 61.5,
+        "duration": 2700,
+        "volume": 0.8,
+        "muted": false,
+        "canSeek": true,
+        "canSetVolume": true,
+        "hasNext": true,
+        "updatedAt": 1758057600000
       }
     }
   ]
   ```
+
+  `state` mirrors the realtime `PlaybackState`; see [REALTIME_API.md](REALTIME_API.md). For a live view, listen for the `devices` event rather than polling this.
 
 ### Seedbox Status
 Get the status of the seedbox importer, including configured seedboxes and import queue statistics.
