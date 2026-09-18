@@ -16,25 +16,25 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [25.x, 24.x]
+        node-version: [26.x, 24.x]
 
     steps:
     - name: Install dependancies
-      run: sudo apt-get update && sudo apt-get install libavahi-compat-libdnssd-dev python3-guessit
-    - uses: actions/checkout@v3
+      run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev python3-guessit
+    - uses: actions/checkout@v4
       with:
         ref: ${{ github.event.pull_request.head.sha }}
     - name: Checkout submodules
       run: git submodule update --init --recursive
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     - run: npm run build
     - run: npm run test:coverage
     - name: Report coverage to DeepSource
-      if: matrix.node-version == '25.x'
+      if: matrix.node-version == '24.x'
       run: |
         curl https://deepsource.io/cli | sh
         ./bin/deepsource report --analyzer test-coverage --key javascript --value-file ./coverage/lcov.info
