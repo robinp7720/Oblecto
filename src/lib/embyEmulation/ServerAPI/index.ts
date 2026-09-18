@@ -1,8 +1,10 @@
 import express, { type Request, type Response, type NextFunction, type Application } from 'express';
 import routes from './routes/index.js';
 import { resolveJellyfinWebPath } from './webPath.js';
+import { sessionGuard } from './sessionGuard.js';
 import cors from 'cors';
 import type { Server } from 'http';
+import type { AddressInfo } from 'net';
 import logger from '../../../submodules/logger/index.js';
 
 import type EmbyEmulation from '../index.js';
@@ -10,15 +12,18 @@ import type EmbyEmulation from '../index.js';
 export type EmbyRequest = Request & {
     authorization?: { scheme: string; credentials: string };
     headers: Request['headers'] & { emby?: Record<string, string> };
+    // The signed-in user, set by the session check for every non-public route
+    embyUserId?: number;
+    embyToken?: string;
 };
 
 /**
  * Parses a header/string of the form:
- *   MediaBrowser Client="Jellyfin Media Player", Device="Tria", DeviceId="…", Version="1.12.0", Token="…"
+ *   MediaBrowser Client="Jellyfin Media Player", Device="Living room", DeviceId="…", Version="1.12.0", Token="…"
  * into a plain JavaScript object:
  *   {
  *     Client: "Jellyfin Media Player",
- *     Device: "Tria",
+ *     Device: "Living room",
  *     DeviceId: "…",
  *     Version: "1.12.0",
  *     Token: "…"
@@ -63,7 +68,7 @@ export default class EmbyServerAPI {
 
         // Log requests
         this.app.use((req: Request, res: Response, next: NextFunction) => {
-            logger.debug(req.path, req.method);
+            logger.debug('Jellyfin', req.method, req.path);
             next();
         });
 
@@ -110,20 +115,24 @@ export default class EmbyServerAPI {
         });
 
         // Parse Emby headers
+        // Clients send it as Authorization or, older ones and jellyfin-web, as X-Emby-Authorization
         this.app.use((req: EmbyRequest, res: Response, next: NextFunction) => {
-            if (req.headers.authorization === undefined) return next();
+            const header = req.headers.authorization ?? req.headers['x-emby-authorization'];
 
-            req.headers.emby = parseMediaBrowserHeader(req.headers.authorization);
+            if (typeof header === 'string' && /^\s*(MediaBrowser|Emby)\b/i.test(header)) req.headers.emby = parseMediaBrowserHeader(header);
 
             next();
         });
 
+        // Everything past this point needs a signed-in session
+        this.app.use(sessionGuard(this.embyEmulation));
+
         // Add routes
         routes(this.app, this.embyEmulation);
 
-        // Log unmatched routes
+        // Log unmatched routes. The path only: query strings carry api_key tokens.
         this.app.use((req: Request, res: Response, next: NextFunction) => {
-            logger.debug('Route remained unmatched:', req.url, (res.locals as { _data?: unknown })._data);
+            logger.debug('Jellyfin route not implemented:', req.method, req.path);
             next();
         });
 
@@ -136,7 +145,7 @@ export default class EmbyServerAPI {
             const statusCode = err.statusCode ?? 500;
             const message = err.message !== '' ? err.message : 'Internal Server Error';
 
-            console.error(`HTTP ${statusCode} - ${message}`);
+            logger.error(`Jellyfin ${req.method} ${req.path}: HTTP ${statusCode} - ${message}`);
 
             res.status(statusCode).json({
                 code: statusCode,
@@ -145,8 +154,15 @@ export default class EmbyServerAPI {
         });
 
         // Start express server
-        this.server = this.app.listen(8096, () => {
-            logger.info('Jellyfin emulation server listening at http://localhost:8096');
+        const { port, host } = embyEmulation.oblecto.config.jellyfin;
+
+        this.server = this.app.listen(port, host, () => {
+            logger.info(`Jellyfin emulation server listening at http://${host}:${(this.server.address() as AddressInfo).port}`);
+        });
+
+        // A port already in use should not take the rest of Oblecto down with it.
+        this.server.on('error', (error: NodeJS.ErrnoException) => {
+            logger.error(`Jellyfin emulation server could not listen on ${host}:${port}: ${error.code ?? error.message}`);
         });
     }
 }

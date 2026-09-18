@@ -43,6 +43,12 @@ export interface IConfig {
     'server': {
         'port': number
     },
+    // The Jellyfin-compatible API for Jellyfin apps
+    'jellyfin': {
+        'enabled': boolean,
+        'port': number,
+        'host': string
+    },
     'tvshows': {
         'seriesIdentifiers': [
             string

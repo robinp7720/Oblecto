@@ -43,6 +43,11 @@
   "server": {
     "port": 8080
   },
+  "jellyfin": {
+    "enabled": true,
+    "port": 8096,
+    "host": "0.0.0.0"
+  },
   "tvshows": {
     "seriesIdentifiers": [
       "tmdb"

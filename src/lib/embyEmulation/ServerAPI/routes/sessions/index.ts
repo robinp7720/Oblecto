@@ -108,7 +108,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.post('/sessions/:sessionid/viewing', (req, res) => { res.status(204).send(); });
     server.get('/sessions/capabilities', (req, res) => { res.send({}); });
     server.post('/sessions/capabilities/full', (req, res) => { res.status(204).send(); });
-    server.post('/sessions/logout', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/logout', (req: EmbyRequest, res: Response) => {
+        if (req.embyToken) embyEmulation.endSession(req.embyToken, true);
+        res.status(204).send();
+    });
     server.get('/sessions/viewing', (req, res) => { res.send([]); });
 
     // SyncPlay

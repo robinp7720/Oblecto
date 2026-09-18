@@ -24,6 +24,9 @@ import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.
 // Jellyfin clients show their admin dashboard to administrators.
 const isAdministrator = async (user: User | null): Promise<boolean> => user !== null && (await permissionsOf(user)).includes('settings.manage');
 
+// Oblecto does not track sign-ins; the last change to the account is the closest honest date.
+const lastChanged = (user: User): string => new Date((user as unknown as { updatedAt?: Date }).updatedAt ?? Date.now()).toISOString();
+
 const JELLYFIN_SUBTITLE_MODES: Record<SubtitleMode, string> = {
     off: 'None',
     auto: 'Default',
@@ -42,8 +45,8 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
         HasConfiguredPassword: HasPassword,
         HasConfiguredEasyPassword: false,
         EnableAutoLogin: false,
-        LastLoginDate: '2020-09-11T23:37:27.3042432Z',
-        LastActivityDate: '2020-09-11T23:37:27.3042432Z',
+        LastLoginDate: lastChanged(user),
+        LastActivityDate: lastChanged(user),
         Configuration: {
             PlayDefaultAudioTrack: preferences.audioLanguage === null,
             AudioLanguagePreference: preferences.audioLanguage ?? '',
@@ -155,32 +158,38 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         const local = isLocalRequest(req, embyEmulation.oblecto.config.authentication);
-        const sessionId = await embyEmulation.handleLogin(Username, Pw, local);
+        const client = req.headers.emby ?? {};
+        let accessToken: string;
 
-        logger.debug('Jellyfin Session ID: ' + sessionId);
-        logger.debug(JSON.stringify(embyEmulation.sessions[sessionId]));
+        try {
+            accessToken = await embyEmulation.handleLogin(Username, Pw, local, {
+                Client: client.Client,
+                Device: client.Device,
+                DeviceId: client.DeviceId,
+                Version: client.Version,
+                RemoteEndPoint: req.ip
+            });
+        } catch {
+            // Jellyfin answers a failed sign-in with 401, which clients show as "wrong username or password"
+            res.status(401).send('Invalid username or password');
+            return;
+        }
 
-        const session = embyEmulation.sessions[sessionId];
-        const IsAdministrator = await isAdministrator(await User.findByPk(session.Id));
+        const session = embyEmulation.sessions[accessToken];
+        const user = await User.findByPk(session.Id);
+
+        if (!user) {
+            res.status(401).send('Invalid username or password');
+            return;
+        }
+
+        const userDto = buildUserDto(user, embyEmulation, session.HasPassword, await isAdministrator(user));
 
         res.send({
             'User': {
-                'Name': session.Name,
-                'ServerId': session.ServerId,
-                'Id': formatUuid(session.Id),
-                'PrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
-                'HasPassword': session.HasPassword,
-                'HasConfiguredPassword': session.HasConfiguredPassword,
-                'HasConfiguredEasyPassword': session.HasConfiguredEasyPassword,
-                'EnableAutoLogin': session.EnableAutoLogin,
-                'LastLoginDate': session.LastLoginDate,
-                'LastActivityDate': session.LastActivityDate,
-                'Configuration': {
-                    'AudioLanguagePreference': '', 'PlayDefaultAudioTrack': true, 'SubtitleLanguagePreference': '', 'DisplayMissingEpisodes': false, 'GroupedFolders': [], 'SubtitleMode': 'Default', 'DisplayCollectionsView': false, 'EnableLocalPassword': true, 'OrderedViews': ['9d7ad6afe9afa2dab1a2f6e00ad28fa6', 'f137a2dd21bbc1b99aa5c0f6bf02a805', 'a656b907eb3a73532e40e44b968d0225'], 'LatestItemsExcludes': [], 'MyMediaExcludes': [], 'HidePlayedInLatest': false, 'RememberAudioSelections': true, 'RememberSubtitleSelections': true, 'EnableNextEpisodeAutoPlay': true, 'CastReceiverId': 'F007D354'
-                },
-                'Policy': {
-                    IsAdministrator, 'IsHidden': false, 'EnableCollectionManagement': true, 'EnableSubtitleManagement': true, 'EnableLyricManagement': false, 'IsDisabled': false, 'BlockedTags': [], 'AllowedTags': [], 'EnableUserPreferenceAccess': true, 'AccessSchedules': [], 'BlockUnratedItems': [], 'EnableRemoteControlOfOtherUsers': true, 'EnableSharedDeviceControl': true, 'EnableRemoteAccess': true, 'EnableLiveTvManagement': true, 'EnableLiveTvAccess': true, 'EnableMediaPlayback': true, 'EnableAudioPlaybackTranscoding': true, 'EnableVideoPlaybackTranscoding': true, 'EnablePlaybackRemuxing': true, 'ForceRemoteSourceTranscoding': false, 'EnableContentDeletion': true, 'EnableContentDeletionFromFolders': [], 'EnableContentDownloading': true, 'EnableSyncTranscoding': true, 'EnableMediaConversion': true, 'EnabledDevices': [], 'EnableAllDevices': true, 'EnabledChannels': [], 'EnableAllChannels': true, 'EnabledFolders': [], 'EnableAllFolders': true, 'InvalidLoginAttemptCount': 0, 'LoginAttemptsBeforeLockout': -1, 'MaxActiveSessions': 0, 'EnablePublicSharing': true, 'BlockedMediaFolders': [], 'BlockedChannels': [], 'RemoteClientBitrateLimit': 0, 'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider', 'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider', 'SyncPlayAccess': 'CreateAndJoinGroups'
-                }
+                ...userDto,
+                LastLoginDate: session.LastLoginDate,
+                LastActivityDate: session.LastActivityDate
             },
             'SessionInfo': {
                 'PlayState': {
@@ -190,17 +199,17 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'Capabilities': {
                     'PlayableMediaTypes': [], 'SupportedCommands': [], 'SupportsMediaControl': false, 'SupportsPersistentIdentifier': true
                 },
-                'RemoteEndPoint': '192.168.176.206',
+                'RemoteEndPoint': session.client.RemoteEndPoint ?? '',
                 'PlayableMediaTypes': [],
-                'Id': sessionId,
+                'Id': session.client.DeviceId ?? accessToken.slice(0, 16),
                 'UserId': formatUuid(session.Id),
                 'UserName': session.Name,
-                'Client': 'Delfin',
+                'Client': session.client.Client ?? '',
                 'LastActivityDate': session.LastActivityDate,
                 'LastPlaybackCheckIn': '0001-01-01T00:00:00.0000000Z',
-                'DeviceName': 'tria',
-                'DeviceId': 'd0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
-                'ApplicationVersion': '0.4.8',
+                'DeviceName': session.client.Device ?? '',
+                'DeviceId': session.client.DeviceId ?? '',
+                'ApplicationVersion': session.client.Version ?? '',
                 'IsActive': true,
                 'SupportsMediaControl': false,
                 'SupportsRemoteControl': false,
@@ -208,17 +217,17 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'NowPlayingQueueFullItems': [],
                 'HasCustomDeviceName': false,
                 'ServerId': session.ServerId,
-                'UserPrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'UserPrimaryImageTag': user.avatar ?? undefined,
                 'SupportedCommands': []
             },
-            'AccessToken': sessionId,
+            'AccessToken': accessToken,
             'ServerId': session.ServerId
         });
     });
 
-    server.get('/users/:userid', async (req: Request, res: Response) => {
-        // let user = await User.findByPk(parseUuid(req.query.userid));
-        const user = await User.findByPk(1);
+    // Always the signed-in user: the session guard pins :userid to them, and "me" resolves the same way.
+    server.get('/users/:userid', async (req: EmbyRequest, res: Response) => {
+        const user = await User.findByPk(req.embyUserId);
 
         if (!user) {
             res.status(404).send('User not found');
@@ -810,7 +819,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/configuration', (req, res) => { res.send([]); });
     server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/me', (req, res) => { res.status(401).send('Unauthorized'); }); // Needs auth middleware
     server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/password', (req, res) => { res.status(501).send('Not Implemented'); });
 

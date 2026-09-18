@@ -90,7 +90,7 @@ export default class Oblecto {
     public federationMovieIndexer?: FederationMovieIndexer;
     public oblectoAPI: OblectoAPI;
     public realTimeController: RealtimeController;
-    public embyServer: EmbyEmulation;
+    public embyServer?: EmbyEmulation;
 
     constructor(config: IConfig) {
         this.config = config;
@@ -155,8 +155,8 @@ export default class Oblecto {
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);
 
-        // Emby Server emulation
-        this.embyServer = new EmbyEmulation(this);
+        // Jellyfin-compatible API for Jellyfin apps
+        if (this.config.jellyfin.enabled) this.embyServer = new EmbyEmulation(this);
     }
 
     private async prepareGroups(): Promise<void> {
@@ -179,7 +179,7 @@ export default class Oblecto {
         const closers: (() => unknown)[] = [
             () => this.oblectoAPI.close(),
             () => this.realTimeController.close(),
-            () => this.embyServer.close(),
+            () => this.embyServer?.close(),
             () => this.federationController?.close(),
             () => this.federationClientController?.close()
         ];

@@ -2,7 +2,7 @@ import { parseSubnet } from '../network/localNetwork.js';
 
 export const allowedSections = [
     'indexer', 'cleaner', 'mdns', 'queue', 'tvdb', 'themoviedb', 'fanart.tv',
-    'assets', 'server', 'files', 'artwork', 'fileExtensions', 'tracker',
+    'assets', 'server', 'jellyfin', 'files', 'artwork', 'fileExtensions', 'tracker',
     'transcoding', 'web', 'streaming', 'authentication', 'federation',
     'seedboxes', 'movies', 'tvshows'
 ];
@@ -29,10 +29,12 @@ export function validateSettings(updates: unknown): Record<string, string> {
             }
             if (section === 'assets' && field.endsWith('Location') && (typeof entry !== 'string' || !entry.trim() || entry.includes('\0'))) errors[key] = 'Enter a non-empty path without null characters.';
             if (['tvdb', 'themoviedb', 'fanart.tv'].includes(section) && field === 'key' && typeof entry !== 'string') errors[key] = 'Enter a text API key.';
-            if (['runAtBoot', 'doHash', 'storeWithFile', 'doReIndex', 'indexBroken', 'ignoreSeriesMismatch', 'enable'].includes(field) && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';
+            if (['runAtBoot', 'doHash', 'storeWithFile', 'doReIndex', 'indexBroken', 'ignoreSeriesMismatch', 'enable', 'enabled'].includes(field) && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';
             if (section === 'authentication' && ['allowPasswordlessLogin', 'profilePicker', 'localPasswordlessLogin', 'trustProxy'].includes(field) && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';
             if (section === 'authentication' && field === 'tokenLifetimeDays' && (!Number.isInteger(entry) || Number(entry) < 1 || Number(entry) > 3650)) errors[key] = 'Enter a number of days from 1 to 3650.';
             if (section === 'authentication' && field === 'localSubnets' && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !parseSubnet(item)))) errors[key] = 'Enter subnets like 192.168.1.0/24.';
+            if (((section === 'server' || section === 'jellyfin') && field === 'port') && (!Number.isInteger(entry) || Number(entry) < 0 || Number(entry) > 65535)) errors[key] = 'Enter a port from 0 to 65535.';
+            if (section === 'jellyfin' && field === 'host' && (typeof entry !== 'string' || !entry.trim())) errors[key] = 'Enter an address to listen on, such as 0.0.0.0.';
             if (section === 'federation' && ['dataPort', 'mediaPort'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1 || Number(entry) > 65535)) errors[key] = 'Enter a port from 1 to 65535.';
             if ((field.endsWith('Identifiers') || field.endsWith('Updaters') || (section === 'fileExtensions' && field === 'video')) && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !item.trim()))) errors[key] = 'Choose a list of non-empty values.';
         }
