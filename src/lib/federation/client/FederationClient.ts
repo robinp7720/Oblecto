@@ -109,7 +109,7 @@ export default class FederationClient {
         const key = new (NodeRSA)(pemKey);
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const decrypted = key.decrypt(data, 'ascii') as string;
+        const decrypted = key.decrypt(data, 'ascii');
 
         this.write('CHALLENGE', decrypted);
     }

@@ -64,8 +64,8 @@ export default class FederationEpisodeIndexer {
         const [episode, episodeInserted] = await Episode.findOrCreate({
             where: episodeQuery,
             defaults: {
-                airedEpisodeNumber: file.fileInfo.episode,
-                airedSeason: file.fileInfo.season
+                airedEpisodeNumber: String(file.fileInfo.episode),
+                airedSeason: String(file.fileInfo.season)
             }
         });
 

@@ -21,7 +21,7 @@ export default class SeriesIdentifier extends MediaIdentifier {
      * @returns - Series identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification | undefined> {
-
+    identify(path: string, guessitIdentification: GuessitIdentification): Promise<SeriesIdentification | undefined> {
+        return Promise.reject(new Error(`${this.constructor.name} does not implement identify`));
     }
 }

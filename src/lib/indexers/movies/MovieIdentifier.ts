@@ -20,7 +20,7 @@ export default class MovieIdentifier extends MediaIdentifier {
      * @returns - Movie identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification | undefined> {
-
+    identify(moviePath: string, guessitIdentification: GuessitIdentification): Promise<MovieIdentification | undefined> {
+        return Promise.reject(new Error(`${this.constructor.name} does not implement identify`));
     }
 }

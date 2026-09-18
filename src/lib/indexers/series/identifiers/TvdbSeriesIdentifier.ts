@@ -6,6 +6,8 @@ import SeriesIdentifier, { SeriesIdentification } from '../SeriesIdentifer.js';
 import type { GuessitIdentification } from '../../../../submodules/guessit.js';
 import type Oblecto from '../../../oblecto/index.js';
 
+type TvdbSeries = { id: number; seriesName: string; overview?: string; firstAired?: string };
+
 export default class TvdbSeriesIdentifier extends SeriesIdentifier {
     public tvShowCache: Record<string, SeriesIdentification>;
     /**
@@ -17,7 +19,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         this.tvShowCache = {};
     }
 
-    findMatch(found: Array<{ seriesName: string }>, guessitId: GuessitIdentification) {
+    findMatch(found: TvdbSeries[], guessitId: GuessitIdentification): TvdbSeries {
         let title: string | string[] = guessitId.title;
 
         if (Array.isArray(title)) {
@@ -28,7 +30,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         // When the tvdb identifier attempts to index "Doctor Who", it will identify it as "Doctor Who Confidential"
         // if we use the first search result. Finding for the closest named match seems like the best solution
         let shortestDistance = -1;
-        let shortestItem;
+        let shortestItem: TvdbSeries | undefined;
 
         for (const item of found) {
             const currentDistance = distance(title, item.seriesName);
@@ -39,10 +41,12 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             }
         }
 
+        if (!shortestItem) throw new IdentificationError(`No series found matching "${title}"`);
+
         return shortestItem;
     }
 
-    async searchSeries(guessitIdentification: GuessitIdentification) {
+    async searchSeries(guessitIdentification: GuessitIdentification): Promise<TvdbSeries> {
         let title: string | string[] = guessitIdentification.title;
 
         if (Array.isArray(title)) {
@@ -50,11 +54,11 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const tvdbSearch = await promiseTimeout(this.oblecto.tvdb.getSeriesByName(title));
+        const tvdbSearch = await promiseTimeout<TvdbSeries[]>(this.oblecto.tvdb.getSeriesByName(title));
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);
 
-        const candidates: Array<{ id: number; seriesName: string; overview?: string; firstAired?: string }> = [];
+        const candidates: TvdbSeries[] = [];
 
         for (const series of tvdbSearch) {
             if (!series.firstAired) continue;

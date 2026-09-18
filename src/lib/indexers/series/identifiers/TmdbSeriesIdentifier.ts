@@ -34,7 +34,7 @@ export default class TmdbSeriesIdentifier extends SeriesIdentifer {
             return series;
         }
 
-        throw new IdentificationError();
+        throw new IdentificationError(`${tmdbSearch.length} series match, none first aired in ${guessitIdentification.year}`);
     }
 
     /**

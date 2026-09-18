@@ -1,7 +1,10 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToManyAddAssociationMixin } from 'sequelize';
+import type { File } from './file.js';
 
 export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes<Movie>> {
     declare id: CreationOptional<number>;
+
+    declare addFile: BelongsToManyAddAssociationMixin<File, number>;
 
     declare tmdbid: number | null;
     declare imdbid: string | null;

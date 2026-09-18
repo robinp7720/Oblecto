@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, WhereOptions, CreationAttributes } from 'sequelize';
 import path from 'path';
 
 import AggregateIdentifier from '../../common/AggregateIdentifier.js';
@@ -223,13 +223,14 @@ export default class SeriesIndexer {
          
         const [episode, episodeCreated] = await Episode.findOrCreate(
             {
+                // The columns are strings but identifiers return numbers; the database compares them as before.
                 where: {
                     airedSeason: episodeIdentification.airedSeason ?? 1,
                     airedEpisodeNumber: episodeIdentification.airedEpisodeNumber,
 
                     SeriesId: series.id
-                },
-                defaults: episodeIdentification,
+                } as unknown as WhereOptions<Episode>,
+                defaults: episodeIdentification as unknown as CreationAttributes<Episode>,
             });
 
         await episode.addFile(file);

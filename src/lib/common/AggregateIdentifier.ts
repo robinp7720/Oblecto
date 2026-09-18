@@ -1,9 +1,9 @@
 import IdentificationError from '../errors/IdentificationError';
 import logger from '../../submodules/logger';
-import MediaIdentifier from '../indexers/MediaIdentifier';
 
-type Identifier = MediaIdentifier & {
-    identify: (...args: unknown[]) => Promise<Record<string, unknown>>;
+type Identifier = {
+    // Method syntax on purpose: each identifier narrows the arguments it accepts.
+    identify(...args: unknown[]): Promise<object | undefined>;
 };
 
 // TODO: Combine this with the AggregateUpdateRetriever
@@ -35,7 +35,7 @@ export default class AggregateIdentifier {
             let currentIdentification: Record<string, unknown>;
 
             try {
-                currentIdentification = await identifier.identify(...args);
+                currentIdentification = { ...(await identifier.identify(...args)) } as Record<string, unknown>;
             } catch (e) {
                 logger.debug("Failed to identify", args, e);
                 failures.push(AggregateIdentifier.describeFailure(identifier, e));

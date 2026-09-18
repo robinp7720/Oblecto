@@ -57,7 +57,7 @@ export default class FederationDataServerConnection extends FederationServerConn
         for (const result of results) {
             if (this.socket.destroyed) return;
              
-            const file = result.toJSON();
+            const file = result;
 
             const fileInfo: Record<string, unknown> = {};
 
