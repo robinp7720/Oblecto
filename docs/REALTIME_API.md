@@ -143,6 +143,18 @@ Emitted when new content is added or identified in the library.
 { "event": "added", "type": "series" | "episode" | "movie", "id": "string" }
 ```
 
+It is also emitted when a file is flagged as problematic, or when its problem clears after a successful retry or rescan:
+
+```json
+{
+  "event": "problem",
+  "fileId": 42,
+  "problematic": true,
+  "problemStage": "identify" | "probe" | null,
+  "error": "Could not identify: /media/Movies/zzqx.mkv (TmdbMovie: ...)"
+}
+```
+
 ### Server → Client: `seedbox`
 
 Status of seedbox imports.

@@ -420,3 +420,37 @@ Get the status of the seedbox importer, including configured seedboxes and impor
 - **URL:** `/files/duplicates`
 - **Method:** `GET`
 - **Response:** List of files with duplicate hashes.
+
+### Problematic Files
+Files that failed indexing. `problemStage` says where they failed: `identify` (no movie or episode matched, so nothing is linked to the file) or `probe` (ffprobe could not read it). Rows flagged before stages were recorded have `problemStage: null`. The flag clears itself when the failed stage later succeeds.
+
+- **URL:** `/files/problematic`
+- **Method:** `GET`
+- **Query Parameters:**
+  - `stage` (optional): `identify` or `probe`.
+  - `includeIgnored` (optional): `true` to include files marked as ignored.
+- **Response:** List of files, newest first, with `id`, `path`, `name`, `directory`, `error`, `problemStage`, `problemIgnored`, `updatedAt`, and the linked `Movies` / `Episodes` (with `Series`).
+
+### Retry Problematic File
+Queues the job for the stage that failed: stream analysis for `probe`, identification for `identify`. The file stays problematic until that job succeeds; a failed retry updates `error`. Progress arrives as `indexer` `problem` events (see [REALTIME_API.md](REALTIME_API.md)).
+
+- **URL:** `/files/:id/retry`
+- **Method:** `POST`
+- **Response (202):** `{ "queued": true, "jobs": ["identifyMovieFile"] }`
+- **Errors:** `404` unknown file, `409` file is not problematic, `400` file is outside every library directory, `410` file no longer exists on disk (e.g. it was renamed) and has been removed. A rescan picks up the new name.
+
+### Retry All Problematic Files
+Retries every problematic file that is not ignored.
+
+- **URL:** `/files/problematic/retry`
+- **Method:** `POST`
+- **Body:** `{ "stage": "identify" }` (optional; limits the retry to one stage)
+- **Response (202):** `{ "queued": 12, "removedIds": [7], "skippedIds": [42] }`. Removed files no longer existed on disk; skipped files are outside every library directory.
+
+### Ignore Problematic File
+Hides a problematic file from the default listing and from Retry All, e.g. samples or extras that will never be identified.
+
+- **URL:** `/files/:id`
+- **Method:** `PATCH`
+- **Body:** `{ "problemIgnored": true }`
+- **Response:** `{ "id": 42, "problemIgnored": true }`

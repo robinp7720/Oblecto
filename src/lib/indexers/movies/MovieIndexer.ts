@@ -1,7 +1,7 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier.js';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier.js';
 import { Movie } from '../../../models/movie.js';
-import type { File } from '../../../models/file.js';
+import { File } from '../../../models/file.js';
 import { clearProblem, markProblematic } from '../files/problems.js';
 import logger from '../../../submodules/logger/index.js';
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, jsdoc/require-returns-description */
@@ -46,6 +46,14 @@ export default class MovieIndexer {
         // Register task availability to Oblecto queue
         this.oblecto.queue.registerJob('indexMovie', async (job: { path: string; doReIndex?: boolean }) => {
             await this.indexFile(job.path, job.doReIndex);
+        });
+
+        // Re-identify a file that is already in the database, e.g. to retry a
+        // file that could not be identified before
+        this.oblecto.queue.registerJob('identifyMovieFile', async (job: { fileId: number }) => {
+            const file = await File.findByPk(job.fileId);
+
+            if (file) await this.identifyFile(file, true);
         });
     }
 

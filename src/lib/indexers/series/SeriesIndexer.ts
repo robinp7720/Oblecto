@@ -96,6 +96,14 @@ export default class SeriesIndexer {
         this.oblecto.queue.registerJob('indexEpisode', async (job: { path: string }) => {
             await this.indexFile(job.path);
         });
+
+        // Re-identify a file that is already in the database, e.g. to retry a
+        // file that could not be identified before
+        this.oblecto.queue.registerJob('identifyEpisodeFile', async (job: { fileId: number }) => {
+            const file = await File.findByPk(job.fileId);
+
+            if (file) await this.identifyFile(file);
+        });
     }
 
     /**
