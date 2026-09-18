@@ -6,7 +6,7 @@ process.env.OBLECTO_CONFIG_PATH = config.file;
 const timer = setTimeout(() => { console.error('TUI startup/shutdown timed out'); process.exit(1); }, 25000);
 try {
     const { default: core } = await import('../src/core/graphical.js');
-    core.start();
+    await core.start();
     await new Promise(resolve => setTimeout(resolve, 250));
     assert.ok(core.oblecto);
     await core.close();

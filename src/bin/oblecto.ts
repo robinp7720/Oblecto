@@ -27,7 +27,7 @@ async function run(): Promise<void> {
                 const { installLifecycle } = await import('../core/lifecycle.js');
 
                 installLifecycle(() => core.close());
-                core.start();
+                await core.start();
                 break;
             }
             case 'start-tui': {
@@ -35,13 +35,19 @@ async function run(): Promise<void> {
                 const { installLifecycle } = await import('../core/lifecycle.js');
 
                 installLifecycle(() => graphical.close());
-                graphical.start();
+                await graphical.start();
                 break;
             }
             case 'init': {
                 const { default: init } = await import('./scripts/init/index.js');
 
                 await (init as Runner)(args);
+                break;
+            }
+            case 'migrate': {
+                const { default: migrate } = await import('./scripts/migrate.js');
+
+                await (migrate as Runner)(args);
                 break;
             }
             case 'adduser': {
@@ -93,10 +99,12 @@ async function run(): Promise<void> {
                 console.log('  oblecto usergroup USERNAME GROUP     (e.g. Administrators)');
                 console.log();
                 console.log('Server maintenance:');
+                console.log('  oblecto migrate [--status]  (update the database after an upgrade; also runs at start)');
                 console.log('  oblecto init assets');
         }
     } catch (e) {
-        console.error('An error has occurred: ', e);
+        // Startup and CLI failures carry a readable message; the stack only helps when debugging.
+        console.error(e instanceof Error && !process.env.OBLECTO_DEBUG ? e.message : e);
         process.exit(1);
     }
 }

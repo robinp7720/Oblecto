@@ -38,7 +38,8 @@
     "host": "localhost",
     "username": "",
     "password": "",
-    "database": "Oblecto"
+    "database": "Oblecto",
+    "migrateOnStart": true
   },
   "server": {
     "port": 8080

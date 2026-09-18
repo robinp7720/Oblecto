@@ -3,6 +3,7 @@ import blessed from 'neo-blessed';
 import Oblecto from '../lib/oblecto/index.js';
 import config, { ConfigManager } from '../config.js';
 import { startupProblems } from '../lib/settings/startupChecks.js';
+import { prepareDatabase } from './database.js';
 import logger from '../submodules/logger/index.js';
 
 type TaskAttr = {
@@ -84,14 +85,13 @@ const graphical = {
         this.screen.render();
     },
 
-    start(): void {
+    async start(): Promise<void> {
         const problems = startupProblems(config, ConfigManager.loadProblem());
 
-        if (problems.length) {
-            console.error('Oblecto cannot start:');
-            for (const problem of problems) console.error(`  - ${problem}`);
-            process.exit(1);
-        }
+        if (problems.length) throw new Error(`Oblecto cannot start:\n  - ${problems.join('\n  - ')}`);
+
+        // Before the screen takes over the terminal, so a database problem is readable.
+        await prepareDatabase(config);
 
         this.initScreen();
 

@@ -38,7 +38,9 @@ export interface IConfig {
         'username': string,
         'password': string,
         'database': string,
-        'storage'?: string
+        'storage'?: string,
+        // Update the schema when Oblecto starts; off means refuse to start until `oblecto migrate` has run
+        'migrateOnStart'?: boolean
     },
     'server': {
         'port': number

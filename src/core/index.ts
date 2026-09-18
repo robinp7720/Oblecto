@@ -1,26 +1,24 @@
 import Oblecto from '../lib/oblecto/index.js';
 import config, { ConfigManager } from '../config.js';
 import { startupProblems } from '../lib/settings/startupChecks.js';
-
-const problems = startupProblems(config, ConfigManager.loadProblem());
-
-if (problems.length) {
-    console.error('Oblecto cannot start:');
-    for (const problem of problems) console.error(`  - ${problem}`);
-    process.exit(1);
-}
+import { prepareDatabase } from './database.js';
 
 const core = {
-    oblecto: new Oblecto(config),
+    oblecto: undefined as Oblecto | undefined,
 
-    start(): void {
-        // The Oblecto instance is already initialized in the constructor
-        // No additional initialization needed as the REST API and other components
-        // are already set up in the Oblecto constructor
+    /** Check the configuration, bring the database up to date, then start every service. */
+    async start(): Promise<void> {
+        const problems = startupProblems(config, ConfigManager.loadProblem());
+
+        if (problems.length) throw new Error(`Oblecto cannot start:\n  - ${problems.join('\n  - ')}`);
+
+        await prepareDatabase(config);
+
+        this.oblecto = new Oblecto(config);
     },
 
     async close(): Promise<void> {
-        await this.oblecto.close();
+        await this.oblecto?.close();
     },
 };
 

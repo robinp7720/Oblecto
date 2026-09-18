@@ -1,15 +1,9 @@
-import { initDatabase } from '../../../submodules/database.js';
+import migrate from '../migrate.js';
 
+// Creating a database is running every migration on an empty one.
 export default async (args: string[]): Promise<void> => {
-    const sequelize = initDatabase();
-
-    let options: { alter?: boolean } = {};
-
     if (args.includes('--alter'))
-        options = { alter: true };
+        console.log('--alter is no longer needed: the database is created and updated by migrations.');
 
-    await sequelize.authenticate();
-    await sequelize.sync(options);
-
-    await sequelize.close();
+    await migrate(args.filter(arg => arg !== '--alter'));
 };
