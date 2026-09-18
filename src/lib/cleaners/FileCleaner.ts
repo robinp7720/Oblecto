@@ -37,13 +37,18 @@ export default class FileCleaner {
     }
 
     /**
-     * Remove all files from the database which no longer have any attached media items
+     * Remove all files from the database which no longer have any attached media items.
+     * Problematic files are kept: they are unattached because they could not be
+     * identified, and deleting them would only drop their error and ignored
+     * state until the next scan adds them again.
      */
     async removeAssoclessFiles(): Promise<void> {
         logger.info( 'Removing files from the database without any attached media items');
         const results = await File.findAll({ include: [Movie, Episode] }) as FileWithAssociations[];
 
         for (const item of results) {
+            if (item.problematic) continue;
+
             if (item.Movies.length === 0 && item.Episodes.length === 0) {
                 await item.destroy();
             }

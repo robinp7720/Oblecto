@@ -108,5 +108,26 @@ describe('FileCleaner', function () {
             expect(destroyedIds).to.not.contain(2);
             expect(destroyedIds.length).to.be(1);
         });
+
+        it('should keep problematic files so their error and ignored state survive', async function () {
+            const destroyedIds: number[] = [];
+
+            const mockFiles = [
+                {
+                    id: 1,
+                    problematic: true,
+                    Movies: [],
+                    Episodes: [],
+                    destroy: async () => { destroyedIds.push(1); }
+                }
+            ];
+
+            // @ts-ignore
+            File.findAll = async () => mockFiles;
+
+            await fileCleaner.removeAssoclessFiles();
+
+            expect(destroyedIds.length).to.be(0);
+        });
     });
 });

@@ -1,5 +1,14 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute, HasManyCountAssociationsMixin } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute, HasManyCountAssociationsMixin, BelongsToManyCountAssociationsMixin } from 'sequelize';
 import type { Stream } from './stream.js';
+import type { Movie } from './movie.js';
+import type { Episode } from './episode.js';
+
+/**
+ * Which step of indexing a problematic file failed at, which also decides how
+ * it is retried: `identify` means no movie/episode could be matched (so the
+ * file has nothing linked to it), `probe` means ffprobe could not read it.
+ */
+export type ProblemStage = 'identify' | 'probe';
 
 export class File extends Model<InferAttributes<File>, InferCreationAttributes<File>> {
     declare id: CreationOptional<number>;
@@ -20,8 +29,10 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
     declare hash: string | null;
     declare size: number | null; // BIGINT is usually returned as string in JS, but Sequelize might handle number if safe. Type as number | string to be safe or number if configured. Defaulting to number | null for now.
 
-    declare problematic: boolean;
-    declare error: string | null;
+    declare problematic: CreationOptional<boolean>;
+    declare problemStage: CreationOptional<ProblemStage | null>;
+    declare problemIgnored: CreationOptional<boolean>;
+    declare error: CreationOptional<string | null>;
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
@@ -30,6 +41,10 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
     declare getStreams: HasManyGetAssociationsMixin<Stream>;
     declare countStreams: HasManyCountAssociationsMixin;
     declare Streams?: NonAttribute<Stream[]>;
+    declare countMovies: BelongsToManyCountAssociationsMixin;
+    declare countEpisodes: BelongsToManyCountAssociationsMixin;
+    declare Movies?: NonAttribute<Movie[]>;
+    declare Episodes?: NonAttribute<Episode[]>;
 }
 
 export const fileColumns = {
@@ -53,6 +68,8 @@ export const fileColumns = {
     size: { type: DataTypes.BIGINT, allowNull: true },
 
     problematic: { type: DataTypes.BOOLEAN, defaultValue: false },
+    problemStage: { type: DataTypes.STRING, allowNull: true },
+    problemIgnored: { type: DataTypes.BOOLEAN, defaultValue: false },
     error: { type: DataTypes.TEXT, allowNull: true },
 
     createdAt: DataTypes.DATE,

@@ -6,6 +6,7 @@ import ffprobe from '../../../submodules/ffprobe.js';
 import VideoAnalysisError from '../../errors/VideoAnalysisError.js';
 
 import { File } from '../../../models/file.js';
+import { clearProblem, markProblematic } from '../../indexers/files/problems.js';
 
 import type Oblecto from '../../oblecto/index.js';
 
@@ -170,6 +171,8 @@ export default class FileUpdater {
             const lines = (error.message ?? '').split('\n');
             const lastLine = lines[lines.length - 1];
 
+            await markProblematic(this.oblecto, file, 'probe', lastLine || 'Unknown error');
+
             throw new VideoAnalysisError(`Failed to ffprobe ${file.path}: ${lastLine}`);
         }
 
@@ -188,5 +191,7 @@ export default class FileUpdater {
             videoCodec: primaryVideoStream?.codec_name,
             audioCodec: primaryAudioStream?.codec_name
         });
+
+        await clearProblem(this.oblecto, file, 'probe');
     }
 }
