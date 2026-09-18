@@ -16,7 +16,8 @@ import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
 import { getRequestValue } from '../../requestUtils.js';
 import { libraryViews } from '../../../views.js';
-import { isLocalRequest } from '../../../../network/localNetwork.js';
+import { clientAddress, isLocalRequest } from '../../../../network/localNetwork.js';
+import { loginThrottle } from '../../../../auth/loginThrottle.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
@@ -158,7 +159,16 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             return;
         }
 
-        const local = isLocalRequest(req, embyEmulation.oblecto.config.authentication);
+        const authentication = embyEmulation.oblecto.config.authentication;
+        const address = clientAddress(req, authentication);
+        const wait = loginThrottle.retryAfter(address, Username);
+
+        if (wait > 0) {
+            res.set('Retry-After', String(wait)).status(429).send('Too many failed sign-ins');
+            return;
+        }
+
+        const local = isLocalRequest(req, authentication);
         const client = req.headers.emby ?? {};
         let accessToken: string;
 
@@ -172,9 +182,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             });
         } catch {
             // Jellyfin answers a failed sign-in with 401, which clients show as "wrong username or password"
+            loginThrottle.failed(address, Username);
             res.status(401).send('Invalid username or password');
             return;
         }
+
+        loginThrottle.succeeded(address, Username);
 
         const session = embyEmulation.sessions[accessToken];
         const user = await User.findByPk(session.Id);
