@@ -14,6 +14,7 @@ import { fileExists } from '../../../../../submodules/utils';
 import logger from '../../../../../submodules/logger/index.js';
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { isLibraryView, libraryView, libraryViews } from '../../../views.js';
+import { embyUserCan } from '../../permission.js';
 import { getLastMediaSource, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -692,7 +693,18 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.post('/items/remotesearch/series', (req, res) => { res.send([]); });
     server.post('/items/remotesearch/trailer', (req, res) => { res.send([]); });
 
-    server.post('/items/:itemid/refresh', (req, res) => { res.status(204).send(); });
+    // "Refresh metadata" on an item: queue the same update the indexer runs.
+    server.post('/items/:itemid/refresh', async (req: EmbyRequest, res: Response) => {
+        if (!await embyUserCan(req, 'libraries.manage')) return res.status(403).send('Forbidden');
+
+        const { id, type } = parseId(req.params.itemid);
+        const item = type === 'movie' ? await Movie.findByPk(id) : type === 'series' ? await Series.findByPk(id) : type === 'episode' ? await Episode.findByPk(id) : null;
+
+        if (!item) return res.status(404).send('Item not found');
+
+        embyEmulation.oblecto.queue.pushJob(type === 'movie' ? 'updateMovie' : type === 'series' ? 'updateSeries' : 'updateEpisode', item);
+        res.status(204).send();
+    });
     server.get('/items/:itemid/contenttype', (req, res) => { res.send({}); }); // Guessing response
     server.get('/items/:itemid/metadataeditor', (req, res) => { res.send({}); });
     server.get('/items/:itemid/ancestors', (req, res) => { res.send([]); });

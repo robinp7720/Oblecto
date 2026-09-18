@@ -28,11 +28,10 @@ export default (server: Application, emby: EmbyEmulation): void => {
         // The scoped URL is on this Emby server; no REST-server origin or filesystem path leaks.
         res.redirect(307, description.mediaUrl);
     };
-    for (const kind of ['videos', 'audio']) {
-        server.get(`/${kind}/:itemid/stream`, handle);
-        server.get(`/${kind}/:itemid/stream.:container`, handle);
-        for (const playlist of ['master', 'main', 'live']) server.get(`/${kind}/:itemid/${playlist}.m3u8`, handle);
-    }
+    // Video only: Oblecto has no music library, and the media routes answer 404 for audio.
+    server.get('/videos/:itemid/stream', handle);
+    server.get('/videos/:itemid/stream.:container', handle);
+    for (const playlist of ['master', 'main', 'live']) server.get(`/videos/:itemid/${playlist}.m3u8`, handle);
     server.get('/videos/:mediaid/stream/:ext', handle);
     server.get('/playback/media/:id/:revision/:asset', async (req, res) => {
         const session = emby.oblecto.playback.get(String(req.params.id));

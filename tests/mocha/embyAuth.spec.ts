@@ -15,6 +15,10 @@ import { Series, seriesColumns } from '../../src/models/series.js';
 import { File, fileColumns } from '../../src/models/file.js';
 import { Stream, streamColumns } from '../../src/models/stream.js';
 import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
+import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
+import { Episode, episodeColumns } from '../../src/models/episode.js';
+import { saveProgress } from '../../src/lib/playback/progress.js';
+import { formatId } from '../../src/lib/embyEmulation/helpers.js';
 
 const AUTH = (token?: string) => ({
     'X-Emby-Authorization': `MediaBrowser Client="Spec", Device="Mocha", DeviceId="spec-device", Version="1.0"${token ? `, Token="${token}"` : ''}`
@@ -62,6 +66,11 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         File.init(fileColumns, { sequelize, modelName: 'File' });
         Stream.init(streamColumns, { sequelize, modelName: 'Stream' });
         TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
+        TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
+        Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+        if (!Episode.associations.Series) Episode.belongsTo(Series);
+        if (!Episode.associations.TrackEpisodes) Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
+        if (!Episode.associations.Files) Episode.belongsToMany(File, { through: 'EpisodeFiles' });
         // Other specs associate these model classes too; reuse theirs rather than declare a second alias.
         if (!TrackMovie.associations.Movie) TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
         if (!Movie.associations.TrackMovies) Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
@@ -193,6 +202,66 @@ describe('Jellyfin emulation sign-in and sessions', function () {
 
         assert.deepEqual(await ids(`/Users/${formatUuid(alice.id)}/Views`), await ids('/UserViews'));
         assert.deepEqual(await ids('/UserViews'), ['movies', 'shows', 'collections']);
+    });
+
+    describe('user data', function () {
+        let base: string;
+        let token: string;
+        let movie: Movie;
+
+        before(async () => {
+            ({ base } = await start());
+            token = await tokenFor(base);
+            movie = await Movie.create({ movieName: 'Half watched' } as any);
+        });
+
+        it('marks a movie played and unplayed, and reports it', async () => {
+            const id = formatId(movie.id, 'movie');
+            const marked = await fetch(`${base}/UserPlayedItems/${id}`, { method: 'POST', headers: AUTH(token) });
+
+            assert.equal(marked.status, 200);
+            assert.equal(((await marked.json()) as { Played: boolean }).Played, true);
+            assert.equal(((await (await fetch(`${base}/UserItems/${id}/UserData`, { headers: AUTH(token) })).json()) as { Played: boolean }).Played, true);
+
+            await fetch(`${base}/Users/${formatUuid(alice.id)}/PlayedItems/${id}`, { method: 'DELETE', headers: AUTH(token) });
+            assert.equal(((await (await fetch(`${base}/UserItems/${id}/UserData`, { headers: AUTH(token) })).json()) as { Played: boolean }).Played, false);
+        });
+
+        it('lists started, unfinished items to resume, for the signed-in user only', async () => {
+            await saveProgress(alice.id, 'movie', movie.id, 600, 1200);
+            await saveProgress(bob.id, 'movie', movie.id, 60, 1200);
+
+            const resume = await (await fetch(`${base}/Users/${formatUuid(alice.id)}/Items/Resume`, { headers: AUTH(token) })).json() as { Items: { Name: string; UserData: { PlaybackPositionTicks: number } }[] };
+
+            assert.deepEqual(resume.Items.map(item => item.Name), ['Half watched']);
+            assert.equal(resume.Items[0].UserData.PlaybackPositionTicks, 600 * 10000000);
+        });
+
+        it('says favourites and ratings are unsupported instead of pretending to keep them', async () => {
+            const id = formatId(movie.id, 'movie');
+
+            assert.equal((await fetch(`${base}/UserFavoriteItems/${id}`, { method: 'POST', headers: AUTH(token) })).status, 501);
+            assert.equal((await fetch(`${base}/UserItems/${id}/Rating`, { method: 'POST', headers: AUTH(token) })).status, 501);
+        });
+
+        it('changes the password, checking the current one', async () => {
+            const change = (CurrentPw: string, NewPw: string) => fetch(`${base}/Users/${formatUuid(alice.id)}/Password`, {
+                method: 'POST',
+                headers: { ...AUTH(token), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ CurrentPw, NewPw })
+            });
+
+            assert.equal((await change('wrong', 'alice-new-pw')).status, 403);
+            assert.equal((await change('alice-pw', 'alice-new-pw')).status, 204);
+            assert.equal((await signIn(base, 'alice', 'alice-new-pw')).status, 200);
+
+            // Back again for the other tests
+            const fresh = await start();
+
+            assert.equal((await fetch(`${fresh.base}/System/Info`, { headers: AUTH(token) })).status, 401, 'old token rejected after a password change');
+            await alice.reload();
+            await alice.update({ password: await bcrypt.hash('alice-pw', 4) });
+        });
     });
 
     describe('pinToUser', function () {

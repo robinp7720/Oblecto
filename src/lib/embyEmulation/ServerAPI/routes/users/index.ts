@@ -22,6 +22,8 @@ import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
+import { setPlayed } from '../../../../playback/progress.js';
+import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 
 // Jellyfin clients show their admin dashboard to administrators.
 const isAdministrator = async (user: User | null): Promise<boolean> => user !== null && (await permissionsOf(user)).includes('settings.manage');
@@ -472,6 +474,111 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
+    const trackFor = (userId: number, type: string, id: number) => (type === 'movie'
+        ? TrackMovie.findOne({ where: { userId, movieId: id } })
+        : TrackEpisode.findOne({ where: { userId, episodeId: id } }));
+
+    /** The UserItemDataDto for one movie or episode, from the user's own progress. */
+    const userDataFor = async (userId: number | undefined, itemId: string): Promise<Record<string, unknown> | null> => {
+        const { id, type } = parseId(itemId);
+
+        if (!userId || !Number.isFinite(id) || !['movie', 'episode'].includes(type)) return null;
+
+        const track = await trackFor(userId, type, id);
+        const played = (track?.progress ?? 0) >= 1;
+
+        return {
+            PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
+            PlayCount: played ? 1 : 0,
+            IsFavorite: false,
+            Played: played,
+            LastPlayedDate: track?.updatedAt?.toISOString(),
+            Key: itemId,
+            ItemId: itemId
+        };
+    };
+
+    /** Mark a movie, an episode, or every episode of a series, as watched or unwatched. */
+    const markPlayed = (played: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
+        const itemId = String(req.params.itemid);
+        const { id, type } = parseId(itemId);
+        const userId = req.embyUserId;
+
+        if (!userId || !Number.isFinite(id)) {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        if (type === 'series') {
+            const episodes = await Episode.findAll({ where: { SeriesId: id }, attributes: ['id'] });
+
+            for (const episode of episodes) await setPlayed(userId, 'episode', episode.id, played);
+            res.send({
+                Played: played,
+                PlayCount: played ? 1 : 0,
+                PlaybackPositionTicks: 0,
+                IsFavorite: false,
+                Key: itemId,
+                ItemId: itemId
+            });
+            return;
+        }
+
+        if (type !== 'movie' && type !== 'episode') {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        await setPlayed(userId, type, id, played);
+        res.send(await userDataFor(userId, itemId));
+    };
+
+    /** Started but unfinished movies and episodes, most recently watched first. */
+    const resumeItems = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const userId = req.embyUserId;
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 12, 1), 100);
+        const inProgress = {
+            userId,
+            progress: { [Op.gt]: 0, [Op.lt]: 0.9 }
+        };
+        const recent = {
+            where: inProgress,
+            order: [['updatedAt', 'DESC']] as [string, string][],
+            limit
+        };
+        const [movieTracks, episodeTracks] = await Promise.all([TrackMovie.findAll(recent), TrackEpisode.findAll(recent)]);
+        const files: Includeable = { model: File, include: [{ model: Stream }] };
+        const ownProgress = (model: typeof TrackMovie | typeof TrackEpisode): Includeable => ({
+            model,
+            required: false,
+            where: { userId }
+        });
+        const [movies, episodes] = await Promise.all([
+            Movie.findAll({
+                where: { id: movieTracks.map(track => track.movieId) },
+                include: [files, ownProgress(TrackMovie)]
+            }),
+            Episode.findAll({
+                where: { id: episodeTracks.map(track => track.episodeId) },
+                include: [Series, files, ownProgress(TrackEpisode)]
+            })
+        ]);
+        const watched = new Map<string, number>([
+            ...movieTracks.map(track => [`movie:${track.movieId}`, track.updatedAt.getTime()] as [string, number]),
+            ...episodeTracks.map(track => [`episode:${track.episodeId}`, track.updatedAt.getTime()] as [string, number])
+        ]);
+        const items = [
+            ...movies.map(movie => ({ at: watched.get(`movie:${movie.id}`) ?? 0, item: formatMediaItem(movie as unknown as MediaItem, 'movie', embyEmulation) })),
+            ...episodes.map(episode => ({ at: watched.get(`episode:${episode.id}`) ?? 0, item: formatMediaItem(episode as unknown as MediaItem, 'episode', embyEmulation) }))
+        ].sort((a, b) => b.at - a.at).slice(0, limit).map(entry => entry.item);
+
+        res.send({
+            Items: items,
+            TotalRecordCount: items.length,
+            StartIndex: 0
+        });
+    };
+
     // Recently added items for a library view. Always answers: a parent Oblecto has no latest items
     // for (collections, a series, an unknown id) gets an empty list rather than a hung request.
     const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
@@ -512,13 +619,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/:userid/items/latest', getLatestItems);
     server.get('/items/latest', getLatestItems);
 
-    server.get('/users/:userid/items/resume', (req, res) => {
-        res.send({
-            'Items': [],
-            'TotalRecordCount': 0,
-            'StartIndex': 0
-        });
-    });
+    server.get('/users/:userid/items/resume', (req: EmbyRequest, res: Response) => resumeItems(req, res));
 
     // Registered after /items/latest and /items/resume above, which it would otherwise swallow as an item id.
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
@@ -625,13 +726,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/useritems/resume', (req, res) => {
-        res.send({
-            'Items': [],
-            'TotalRecordCount': 0,
-            'StartIndex': 0
-        });
-    });
+    server.get('/useritems/resume', (req: EmbyRequest, res: Response) => resumeItems(req, res));
 
     // TODO: Implement Auth routes
     server.get('/auth/keys', (req, res) => {
@@ -660,28 +755,73 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // Additional User Routes
-    server.get('/users/:userid/policy', (req, res) => { res.send({}); });
+    server.get('/users/:userid/policy', async (req: EmbyRequest, res: Response) => {
+        const user = await User.findByPk(req.embyUserId);
+
+        if (!user) return res.status(404).send('User not found');
+
+        res.send(buildUserDto(user, embyEmulation, Boolean(user.password), await isAdministrator(user)).Policy);
+    });
     server.post('/users/authenticatewithquickconnect', (req, res) => { res.status(501).send('Not Implemented'); });
     server.get('/users/configuration', (req, res) => { res.send([]); });
     server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.post('/users/password', (req, res) => { res.status(501).send('Not Implemented'); });
+    // Changing the password signs this and every other session out, so the app asks to sign in again.
+    const changePassword = async (req: EmbyRequest, res: Response) => {
+        if (getRequestValue(req, 'ResetPassword') === 'true' || (req.body as { ResetPassword?: unknown })?.ResetPassword === true) {
+            res.status(501).send('Removing a password is done with "oblecto removepassword"');
+            return;
+        }
+
+        const user = await User.findByPk(req.embyUserId);
+
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+
+        try {
+            await changeOwnPassword(user, getRequestValue(req, 'CurrentPw'), getRequestValue(req, 'NewPw'), embyEmulation.oblecto.config.authentication.saltRounds);
+            res.status(204).send();
+        } catch (error) {
+            if (!(error instanceof PasswordChangeError)) throw error;
+            res.status(error.statusCode).send(error.message);
+        }
+    };
+
+    server.post('/users/password', changePassword);
+    server.post('/users/:userid/password', changePassword);
 
     // UserImage
     server.get('/userimage', (req, res) => { res.status(404).send('Not Found'); }); // This seems to be POST in some docs or GET specific image? Spec says GET /UserImage (truncated?)
 
     // UserItems
-    server.get('/useritems/:itemid/userdata', (req, res) => { res.send({}); });
-    server.post('/useritems/:itemid/rating', (req, res) => { res.send({}); });
+    server.get('/useritems/:itemid/userdata', async (req: EmbyRequest, res: Response) => {
+        const data = await userDataFor(req.embyUserId, String(req.params.itemid));
 
-    // UserPlayedItems
-    server.post('/userplayeditems/:itemid', (req, res) => { res.send({}); });
-    server.delete('/userplayeditems/:itemid', (req, res) => { res.send({}); });
+        if (!data) return res.status(404).send('Item not found');
+        res.send(data);
+    });
 
-    // UserFavoriteItems
-    server.post('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
-    server.delete('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
+    // Oblecto has no favourites or ratings yet; say so rather than pretend the change was kept.
+    const unsupported = (feature: string) => (_req: Request, res: Response) => { res.status(501).send(`${feature} are not supported by Oblecto yet`); };
+
+    server.post('/useritems/:itemid/rating', unsupported('Ratings'));
+    server.delete('/useritems/:itemid/rating', unsupported('Ratings'));
+    server.post('/users/:userid/items/:itemid/rating', unsupported('Ratings'));
+    server.delete('/users/:userid/items/:itemid/rating', unsupported('Ratings'));
+
+    // Played state, at the current path and the one older apps use
+    for (const path of ['/userplayeditems/:itemid', '/users/:userid/playeditems/:itemid']) {
+        server.post(path, markPlayed(true));
+        server.delete(path, markPlayed(false));
+    }
+
+    for (const path of ['/userfavoriteitems/:itemid', '/users/:userid/favoriteitems/:itemid']) {
+        server.post(path, unsupported('Favourites'));
+        server.delete(path, unsupported('Favourites'));
+    }
 
     // UserViews
     server.get('/userviews/groupingoptions', (req, res) => { res.send([]); });
