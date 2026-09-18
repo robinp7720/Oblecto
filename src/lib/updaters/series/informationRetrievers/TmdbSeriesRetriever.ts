@@ -38,10 +38,10 @@ export default class TmdbSeriesRetriever {
             popularity: seriesInfo.popularity,
             siteRating: seriesInfo.vote_average,
             siteRatingCount: seriesInfo.vote_count,
-            genre: JSON.stringify(seriesInfo.genres.map((i: { name: string }) => i.name))
+            genre: JSON.stringify((seriesInfo.genres ?? []).map(genre => genre.name))
         };
 
-        let externalIds: { tvdb_id?: number; imdb_id?: string } = {};
+        let externalIds: { tvdb_id?: number | null; imdb_id?: string | null } = {};
 
         if (!(series.tvdbid && series.imdbid)) {
             externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({ id: series.tmdbid }, { timeout: 5000 }));

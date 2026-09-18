@@ -45,7 +45,7 @@ export default class Downloader {
             responseType: 'arraybuffer',
         } as AxiosRequestConfig);
 
-        await fs.writeFile(dest, data as Buffer, { flag: flags });
+        await fs.writeFile(dest, new Uint8Array(data as ArrayBuffer), { flag: flags });
     }
 
     /**

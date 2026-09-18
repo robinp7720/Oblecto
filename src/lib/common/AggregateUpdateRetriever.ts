@@ -2,7 +2,7 @@ import logger from '../../submodules/logger';
 import IdentificationError from '../errors/IdentificationError';
 
 type InformationRetriever = {
-    retrieveInformation: (...args: unknown[]) => Promise<Record<string, unknown>>;
+    retrieveInformation(...args: unknown[]): Promise<Record<string, unknown>>;
 };
 
 export default class AggregateUpdateRetriever {

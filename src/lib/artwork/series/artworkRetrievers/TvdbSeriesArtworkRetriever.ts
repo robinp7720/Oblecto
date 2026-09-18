@@ -1,4 +1,5 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
+import type { TvdbEpisode } from '../../../common/tvdbTypes.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
 import { Episode } from '../../../../models/episode.js';
@@ -26,7 +27,9 @@ export default class TvdbSeriesArtworkRetriever {
         if (episode.tvdbid === null || episode.tvdbid === undefined) throw new DebugExtendableError(`TVDB Episode banner retriever failed for ${episode.episodeName}`);
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const data = await promiseTimeout((this.oblecto.tvdb).getEpisodeById(episode.tvdbid));
+        const data = await promiseTimeout<TvdbEpisode>((this.oblecto.tvdb).getEpisodeById(episode.tvdbid));
+
+        if (!data.filename) throw new DebugExtendableError(`TVDB has no banner for ${episode.episodeName}`);
          
         return [`https://thetvdb.com/banners/_cache/${data.filename}`];
     }

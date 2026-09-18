@@ -16,7 +16,8 @@ type MovieUpdateData = Record<string, unknown> & {
 };
 
 type UpdaterConstructor = new (oblecto: Oblecto) => {
-    retrieveInformation: (entity: unknown) => Promise<Record<string, unknown>>;
+    // Method syntax on purpose: each retriever narrows the entity it accepts.
+    retrieveInformation(entity: unknown): Promise<Record<string, unknown>>;
 };
 
 export default class MovieUpdater {
@@ -49,7 +50,7 @@ export default class MovieUpdater {
      * @param movie - Movie entity to be updated
      */
     async updateMovie(movie: Movie): Promise<void> {
-        const data = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie) as MovieUpdateData;
+        const { id: _ignoredId, ...data } = await this.aggregateMovieUpdateRetriever.retrieveInformation(movie) as MovieUpdateData;
 
         if (data._set) {
             const setInfo = data._set;
@@ -74,6 +75,6 @@ export default class MovieUpdater {
             }
         }
 
-        await movie.update(data);
+        await movie.update(data as Parameters<Movie['update']>[0]);
     }
 }

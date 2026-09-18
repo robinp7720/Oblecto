@@ -13,7 +13,8 @@ import logger from '../../../submodules/logger/index.js';
 import type Oblecto from '../../oblecto/index.js';
 
 type UpdaterConstructor = new (oblecto: Oblecto) => {
-    retrieveInformation: (entity: unknown) => Promise<Record<string, unknown>>;
+    // Method syntax on purpose: each retriever narrows the entity it accepts.
+    retrieveInformation(entity: unknown): Promise<Record<string, unknown>>;
 };
 
 export default class SeriesUpdater {
@@ -70,7 +71,7 @@ export default class SeriesUpdater {
      * @param series - Series to fetch updated metadata for
      */
     async updateSeries(series: Series): Promise<void> {
-        const data = await this.aggregateSeriesUpdateRetriever.retrieveInformation(series);
+        const { id: _ignoredId, ...data } = await this.aggregateSeriesUpdateRetriever.retrieveInformation(series);
 
         await series.update(data);
     }
@@ -80,7 +81,7 @@ export default class SeriesUpdater {
      * @param episode - Episode to fetch updated metadata for
      */
     async updateEpisode(episode: Episode): Promise<void> {
-        const data = await this.aggregateEpisodeUpdaterRetriever.retrieveInformation(episode);
+        const { id: _ignoredId, ...data } = await this.aggregateEpisodeUpdaterRetriever.retrieveInformation(episode);
 
         await episode.update(data);
     }
