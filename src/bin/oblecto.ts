@@ -92,9 +92,9 @@ async function run(): Promise<void> {
                 console.log('  oblecto start-tui      (TUI mode)');
                 console.log();
                 console.log('User maintenance:');
-                console.log('  oblecto adduser USERNAME PASSWORD REALNAME EMAIL [GROUP]');
+                console.log('  oblecto adduser USERNAME - REALNAME EMAIL [GROUP]   (- asks for the password)');
                 console.log('  oblecto deluser USERNAME');
-                console.log('  oblecto changepassword USERNAME PASSWORD');
+                console.log('  oblecto changepassword USERNAME                  (asks for the password)');
                 console.log('  oblecto removepassword USERNAME');
                 console.log('  oblecto usergroup USERNAME GROUP     (e.g. Administrators)');
                 console.log();

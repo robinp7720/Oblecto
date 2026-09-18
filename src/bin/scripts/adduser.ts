@@ -1,56 +1,49 @@
-import { promises as fs } from 'fs';
 import bcrypt from 'bcrypt';
+import config from '../../config.js';
 import { User } from '../../models/user.js';
 import { initDatabase } from '../../submodules/database.js';
 import argumentError from './helpers/argumentError.js';
+import { passwordArgument } from './helpers/readPassword.js';
 import { Group } from '../../models/group.js';
 import { DEFAULT_GROUP, seedGroups } from '../../lib/auth/permissions.js';
 
-type AuthConfig = {
-    authentication: {
-        saltRounds: number;
-    };
-};
-
+// oblecto adduser USERNAME PASSWORD|- REALNAME EMAIL [GROUP]
 export default async (args: string[]): Promise<void> => {
+    if (args.length < 5) {
+        argumentError('adduser', ['username', 'password (or - to be asked)', 'realname', 'email']);
+        return;
+    }
+
     const sequelize = initDatabase();
 
-    const config = JSON.parse(await fs.readFile('/etc/oblecto/config.json', 'utf8')) as AuthConfig;
+    try {
+        await seedGroups();
 
-    if (args.length < 5) {
-        argumentError('adduser', ['username', 'password', 'realname', 'email']);
-        return;
-    }
+        const groupName = args[5] ?? DEFAULT_GROUP;
+        const group = await Group.findOne({ where: { name: groupName } });
 
-    await seedGroups();
+        if (group == null) {
+            console.log(`Group ${groupName} was not found`);
+            return;
+        }
 
-    const groupName = args[5] ?? DEFAULT_GROUP;
-    const group = await Group.findOne({ where: { name: groupName } });
+        if (await User.findOne({ where: { username: args[1] } })) {
+            console.log(`A user called ${args[1]} already exists`);
+            return;
+        }
 
-    if (group == null) {
-        console.log(`Group ${groupName} was not found`);
-        await sequelize.close();
-        return;
-    }
-
-    const hash = await bcrypt.hash(args[2], config.authentication.saltRounds);
-
-    const [user, inserted] = await User.findOrCreate({
-        where: { username: args[1] },
-        defaults: {
+        const password = await passwordArgument(args[2]);
+        const user = await User.create({
             username: args[1],
             name: args[3],
             email: args[4],
-            password: hash,
+            password: password ? await bcrypt.hash(password, config.authentication.saltRounds) : null,
+            avatar: null,
             groupId: group.id
-        }
-    });
+        });
 
-    if (inserted) {
-        console.log(`User with username ${user.username} has been created`);
-    } else {
-        console.log('A user that with username already exists!');
+        console.log(`User ${user.username} has been created in ${group.name}`);
+    } finally {
+        await sequelize.close();
     }
-
-    await sequelize.close();
 };

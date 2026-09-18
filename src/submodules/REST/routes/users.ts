@@ -80,7 +80,8 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        const params = req.combined_params!;
+        // The body only: a password in the query string would end up in access logs.
+        const params = (req.body ?? {}) as Record<string, unknown>;
 
         if (params.username) {
             user.username = params.username as string;
