@@ -9,59 +9,49 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
     constructor(config: SeedboxStorageDriverConfig) {
         super(config);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        this.client = new (Client as any)();
+        this.client = new Client();
+    }
+
+    private connectOptions(): Client.ConnectOptions {
+        return {
+            host: this.config.host,
+            port: this.config.port ?? 22,
+            username: this.config.username,
+            password: this.config.password
+        };
     }
 
     async setup(): Promise<void> {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-            await this.client.connect({
-                host: this.config.host,
-                port: this.config.port || 22,
-                user: this.config.username,
-                password: this.config.password,
-            });
-
+            await this.client.connect(this.connectOptions());
         } catch (e) {
             logger.info(e);
         }
     }
 
     async list(path: string): Promise<SeedboxListEntry[]> {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
         const listing = await this.client.list(path);
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        return listing.map((item: any) => {
-             
-            return {
-                name: item.name,
-                type: item.type === 'd'? 1:0
-            };
-        });
+        return listing.map(item => ({
+            name: item.name,
+            type: item.type === 'd' ? 1 : 0
+        }));
     }
 
     async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        const client =  new (Client as any)();
+        // A separate connection per transfer, so imports can run beside directory listings.
+        const client = new Client();
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        await client.connect({
-            host: this.config.host,
-            port: this.config.port || 22,
-            user: this.config.username,
-            password: this.config.password,
-        });
+        await client.connect(this.connectOptions());
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        await client.fastGet(origin, destination, {
-            step: (transferred: any, chunk: any, total: any) => {
-                if (callback) callback(transferred, total);
-            }
-        });
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        await client.end();
+        try {
+            await client.fastGet(origin, destination, {
+                step: (transferred: number, _chunk: number, total: number) => {
+                    if (callback) callback(transferred, total);
+                }
+            });
+        } finally {
+            await client.end();
+        }
     }
 }
