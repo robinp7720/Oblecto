@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/restrict-plus-operands, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import { Op } from 'sequelize';
@@ -306,7 +306,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/poster', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/movie/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
@@ -356,7 +356,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/fanart', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/movie/:id/fanart', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
@@ -439,7 +439,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(sets ? sets.MovieSets : []);
     });
 
-    server.put('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/movie/:id/sets', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         try {
             const movie = await Movie.findByPk(req.params.id as string);
             const setId = req.combined_params?.setId;

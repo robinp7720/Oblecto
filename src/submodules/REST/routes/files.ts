@@ -1,5 +1,5 @@
 import { col, fn, WhereOptions } from 'sequelize';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/unbound-method, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
@@ -28,7 +28,7 @@ function problematicWhere(query: { stage?: unknown; includeIgnored?: unknown }):
 }
 
 export default (server: Express, oblecto: Oblecto) => {
-    server.get('/files/duplicates', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/files/duplicates', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response) {
         const fileHashCounts = await File.findAll({
             attributes: [
                 'hash',
@@ -56,7 +56,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(duplicates);
     });
 
-    server.get('/files/problematic', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+    server.get('/files/problematic', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
         try {
             const files = await File.findAll({
                 where: problematicWhere(req.query),
@@ -84,7 +84,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Registered before `/files/:id/retry` so `problematic` is not taken for an id
-    server.post('/files/problematic/retry', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+    server.post('/files/problematic/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
         try {
             const files = await File.findAll({ where: problematicWhere({ stage: req.body?.stage }) });
 
@@ -110,7 +110,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.post('/files/:id/retry', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+    server.post('/files/:id/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
         try {
             const file = await File.findByPk(req.params.id as string);
 
@@ -144,7 +144,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.patch('/files/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+    server.patch('/files/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
         try {
             const problemIgnored = req.body?.problemIgnored;
 

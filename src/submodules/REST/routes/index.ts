@@ -13,6 +13,7 @@ import v1Settings from './v1/settings.js';
 import v1Libraries from './v1/libraries.js';
 import v1System from './v1/system.js';
 import v1Status from './v1/status.js';
+import v1Groups from './v1/groups.js';
 
 import { Express } from 'express';
 import Oblecto from '../../../lib/oblecto/index.js';
@@ -36,4 +37,5 @@ export default (server: Express, oblecto: Oblecto): void => {
     v1Libraries(server, oblecto);
     v1System(server, oblecto);
     v1Status(server, oblecto);
+    v1Groups(server, oblecto);
 };

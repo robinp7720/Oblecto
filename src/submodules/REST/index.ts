@@ -6,12 +6,15 @@ import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import { Server } from 'http';
 import Oblecto from '../../lib/oblecto/index.js';
+import type { Permission } from '../../lib/auth/permissions.js';
 
 export interface OblectoRequest extends Request {
     authorization?: {
         scheme: string;
         credentials: string;
         user?: any;
+        // Loaded from the database once per request by requiresPermission
+        principal?: { id: number; permissions: Permission[] } | null;
     };
     files?: any;
     combined_params?: Record<string, any>;

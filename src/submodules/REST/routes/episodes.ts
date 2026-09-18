@@ -1,6 +1,6 @@
 import { Op, and, col, fn, where } from 'sequelize';
 import { promises as fs } from 'fs';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import sharp from 'sharp';
@@ -61,7 +61,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(imagePath);
     });
 
-    server.put('/episode/:id/banner', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 
         if (!episode) {
