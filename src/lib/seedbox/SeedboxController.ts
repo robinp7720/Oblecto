@@ -14,6 +14,7 @@ export default class SeedboxController {
     public oblecto: Oblecto;
     public seedBoxes: Seedbox[];
     public importQueue: Queue;
+    private poller?: NodeJS.Timeout;
 
     /**
      *
@@ -41,7 +42,7 @@ export default class SeedboxController {
         await this.importAllEpisodes();
         await this.importAllMovies();
 
-        setInterval(() => {
+        this.poller = setInterval(() => {
             void (async () => {
                 await this.importAllEpisodes();
                 await this.importAllMovies();
@@ -49,6 +50,10 @@ export default class SeedboxController {
         },
         30 * 60 * 1000
         );
+    }
+
+    close(): void {
+        if (this.poller) clearInterval(this.poller);
     }
 
     async addSeedbox(seedboxConfig: ConstructorParameters<typeof Seedbox>[0]): Promise<void> {

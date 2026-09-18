@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { startupConfig } from './startupConfig.js';
 
+// The built server to start; point elsewhere to test a bundle without touching dist/.
+const bundle = process.env.OBLECTO_SERVER_BUNDLE ?? 'dist/index.js';
+
 const config = await startupConfig();
 try {
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {
         await new Promise<void>((resolve, reject) => {
-            const child = spawn(process.execPath, ['dist/index.js'], {
+            const child = spawn(process.execPath, [bundle], {
                 env: { ...process.env, OBLECTO_CONFIG_PATH: config.file },
                 stdio: ['ignore', 'pipe', 'pipe']
             });

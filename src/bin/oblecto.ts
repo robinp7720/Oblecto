@@ -24,13 +24,17 @@ async function run(): Promise<void> {
         switch (command) {
             case 'start': {
                 const { default: core } = await import('../core/index.js');
+                const { installLifecycle } = await import('../core/lifecycle.js');
 
+                installLifecycle(() => core.close());
                 core.start();
                 break;
             }
             case 'start-tui': {
                 const { default: graphical } = await import('../core/graphical.js');
+                const { installLifecycle } = await import('../core/lifecycle.js');
 
+                installLifecycle(() => graphical.close());
                 graphical.start();
                 break;
             }

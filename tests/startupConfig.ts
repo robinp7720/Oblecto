@@ -9,6 +9,7 @@ export async function startupConfig(): Promise<{ file: string; cleanup: () => Pr
     config.authentication.secret = 'startup-test-secret';
     config.database.storage = ':memory:';
     config.server.port = 0;
+    config.jellyfin = { enabled: true, port: 0, host: '127.0.0.1' };
     config.federation.enable = false;
     config.indexer.runAtBoot = false;
     config.cleaner.runAtBoot = false;

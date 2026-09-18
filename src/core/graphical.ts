@@ -28,7 +28,7 @@ const graphical = {
     initScreen(): void {
         // Create a screen object.
 
-        this.screen.title = 'my window title';
+        this.screen.title = 'Oblecto';
 
         // Create a box perfectly centered horizontally and vertically.
         this.streamerSessionsBox = blessed.list({

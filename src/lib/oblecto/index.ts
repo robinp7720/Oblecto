@@ -1,6 +1,7 @@
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
 import { unconfiguredClient } from '../common/unconfiguredClient.js';
+import { describeMissingTools, probeTools, type ToolReport } from './tools.js';
 import { MovieDb } from 'moviedb-promise';
 
 import Queue from '../queue/index.js';
@@ -91,9 +92,13 @@ export default class Oblecto {
     public oblectoAPI: OblectoAPI;
     public realTimeController: RealtimeController;
     public embyServer?: EmbyEmulation;
+    public tools: ToolReport;
 
     constructor(config: IConfig) {
         this.config = config;
+
+        this.tools = probeTools(config);
+        for (const problem of describeMissingTools(this.tools)) logger.warn(problem);
 
         this.database = initDatabase();
         void this.prepareGroups();
@@ -180,6 +185,7 @@ export default class Oblecto {
             () => this.oblectoAPI.close(),
             () => this.realTimeController.close(),
             () => this.embyServer?.close(),
+            () => this.seedboxController.close(),
             () => this.federationController?.close(),
             () => this.federationClientController?.close()
         ];

@@ -86,6 +86,8 @@ export default (server: Express, oblecto: any) => {
     // GET /api/v1/system/capabilities
     server.get('/api/v1/system/capabilities', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         res.send({
+            // External programs found at startup; without them identification or playback is limited
+            tools: oblecto.tools,
             movies: {
                 identifiers: oblecto.movieIndexer.availableIdentifiers,
                 updaters: oblecto.movieUpdater.availableUpdaters
