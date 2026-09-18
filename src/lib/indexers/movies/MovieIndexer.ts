@@ -104,7 +104,7 @@ export default class MovieIndexer {
             // already in the database, so an unflagged file would be stuck.
             await markProblematic(this.oblecto, file, 'identify', error.message || 'Unknown error');
 
-            if (error instanceof IdentificationError) return;
+            if (error instanceof IdentificationError && !this.oblecto.queue.maintenance?.current()) return;
             throw e;
         }
 

@@ -2,60 +2,26 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
+import type Oblecto from '../../../../lib/oblecto/index.js';
+import { maintenanceWork } from '../../../../lib/maintenance/dispatch.js';
 
 export default (server: Express, oblecto: any) => {
 
-    // POST /api/v1/system/maintenance
-    server.post('/api/v1/system/maintenance', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
-        const { action, target } = req.body;
-
-        if (!action || !target) {
-            return next(new errors.BadRequestError('Action and target are required'));
-        }
-
-        try {
-            switch (action) {
-                case 'scan':
-                    if (target === 'tvshows' || target === 'all') oblecto.seriesCollector.collectAll();
-                    if (target === 'movies' || target === 'all') oblecto.movieCollector.collectAll();
-                    break;
-
-                case 'update_artwork':
-                    if (target === 'tvshows' || target === 'all') oblecto.seriesArtworkCollector.collectAll();
-                    if (target === 'movies' || target === 'all') oblecto.movieArtworkCollector.collectAll();
-                    break;
-
-                case 'update_metadata':
-                    if (target === 'tvshows' || target === 'all') {
-                        oblecto.seriesUpdateCollector.collectAllSeries();
-                        oblecto.seriesUpdateCollector.collectAllEpisodes();
-                    }
-                    if (target === 'movies' || target === 'all') oblecto.movieUpdateCollector.collectAllMovies();
-                    if (target === 'files' || target === 'all') oblecto.fileUpdateCollector.collectAllFiles();
-                    break;
-
-                case 'clean':
-                    if (target === 'files' || target === 'all') {
-                        oblecto.fileCleaner.removeAssoclessFiles();
-                        oblecto.fileCleaner.removedDeletedFiled();
-                    }
-                    if (target === 'movies' || target === 'all') oblecto.movieCleaner.removeFileLessMovies();
-                    if (target === 'tvshows' || target === 'all') {
-                        oblecto.seriesCleaner.removeEpisodeslessShows();
-                        oblecto.seriesCleaner.removePathLessShows();
-                        oblecto.seriesCleaner.removeFileLessEpisodes();
-                    }
-                    break;
-
-                default:
-                    return next(new errors.BadRequestError('Invalid action'));
-            }
-            
-            res.send({ success: true, message: `Maintenance task '${action}' triggered for '${target}'` });
-
-        } catch (err) {
-            next(err);
-        }
+    server.get('/api/v1/system/maintenance/jobs', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+        res.send(oblecto.queue.maintenance.list());
+    });
+    server.post('/api/v1/system/maintenance', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+        const { action, target } = (req.body ?? {}) as { action?: unknown; target?: unknown };
+        if (typeof action !== 'string' || typeof target !== 'string') return res.status(400).send({ error: 'Action and target are required' });
+        const work = maintenanceWork(oblecto as Oblecto, action, target);
+        if (!work) return res.status(400).send({ error: 'Invalid maintenance action or target' });
+        const canonicalTarget = target === 'tvshows' && ['scan', 'update_artwork'].includes(action) ? 'series' : target;
+        const job = oblecto.queue.maintenance.start(action, canonicalTarget, work);
+        res.send({
+            success: true,
+            message: 'Maintenance job accepted',
+            job
+        });
     });
 
     // POST /api/v1/system/imports

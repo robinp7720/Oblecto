@@ -1,15 +1,18 @@
 import async from 'async';
+import { JobTracker } from '../maintenance/JobTracker.js';
 import logger from '../../submodules/logger/index.js';
 
-interface QueueItem {
+export interface QueueItem {
     id: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attr: any;
+    attr: unknown;
+    maintenance?: ReturnType<JobTracker['current']>;
 }
 
+type Job = (attr: unknown) => Promise<void>;
+
 export default class Queue {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private jobs: Record<string, (attr: any) => Promise<void>> = {};
+    public maintenance = new JobTracker();
+    private jobs: Partial<Record<string, Job>> = {};
     private queue: async.AsyncPriorityQueue<QueueItem>;
 
     /**
@@ -17,31 +20,35 @@ export default class Queue {
      */
     constructor(concurrency: number) {
         this.queue = async.priorityQueue((job: QueueItem, callback: () => void) => {
-            if (!this.jobs[job.id]) return callback();
+            const run = this.jobs[job.id];
+
+            if (!run) {
+                this.maintenance.complete(job.maintenance, true);
+                return callback();
+            }
 
             const jobTimeout = setTimeout(() => {
                 // logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
             }, 20000);
 
-            this.jobs[job.id](job.attr)
+            Promise.resolve().then(() => this.maintenance.run(job.maintenance, () => run(job.attr)))
                 .then(() => {
                     clearTimeout(jobTimeout);
+                    this.maintenance.complete(job.maintenance, false);
                     callback();
                 })
                 .catch((err: unknown) => {
                     clearTimeout(jobTimeout);
 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const error = err as any;
+                    const level = (err as { level?: unknown } | null)?.level;
 
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions
-                    if (error.level) {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
-                        logger.log(error.level, error);
+                    if (typeof level === 'string' && level) {
+                        logger.log(level, err);
                     } else {
-                        logger.error(error);
+                        logger.error(err);
                     }
 
+                    this.maintenance.complete(job.maintenance, true);
                     callback();
                 });
         }, concurrency);
@@ -52,8 +59,7 @@ export default class Queue {
      * @param id - ID/Name for job
      * @param job - Function used for Queue item
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    registerJob(id: string, job: (attr: any) => Promise<void>): void {
+    registerJob<T>(id: string, job: (attr: T) => Promise<void>): void {
         if (this.jobs[id]) {
             logger.error(`A job has been registered which was already registered: ${id}`);
             logger.error('This should not happen');
@@ -61,7 +67,8 @@ export default class Queue {
         }
 
         logger.debug('New queue item has been registered:', id);
-        this.jobs[id] = job;
+        // Callers are trusted to queue attributes matching the job they registered
+        this.jobs[id] = job as Job;
     }
 
     /**
@@ -70,9 +77,10 @@ export default class Queue {
      * @param attr - Attributes to be passed to the job
      * @param priority - Priority for the job
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queueJob(id: string, attr: any, priority: number = 5): void {
-        void this.queue.push({ id, attr }, priority);
+    queueJob(id: string, attr: unknown, priority: number = 5): void {
+        const maintenance = this.maintenance.current();
+        this.maintenance.enqueue(maintenance);
+        void this.queue.push({ id, attr, maintenance }, priority);
     }
 
     /**
@@ -80,8 +88,7 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed to the job
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    lowPriorityJob(id: string, attr: any): void {
+    lowPriorityJob(id: string, attr: unknown): void {
         this.queueJob(id, attr, 20);
     }
 
@@ -90,9 +97,23 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed the job
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pushJob(id: string, attr: any): void {
+    pushJob(id: string, attr: unknown): void {
         this.queueJob(id, attr, 0);
+    }
+
+    /**
+     * Snapshot of jobs waiting to run, in internal heap order rather than strict priority order
+     * @param limit - Maximum number of jobs to return
+     */
+    pending(limit: number = Infinity): QueueItem[] {
+        const items: QueueItem[] = [];
+
+        for (const item of this.queue as unknown as Iterable<QueueItem>) {
+            if (items.length >= limit) break;
+            items.push(item);
+        }
+
+        return items;
     }
 
     /**

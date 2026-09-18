@@ -281,7 +281,11 @@ Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/play
 ## Settings & System (V1)
 
 ### Configuration
-Manage the core application configuration.
+Manage the core application configuration. All settings and system endpoints require the existing authenticated session.
+
+Configuration and library mutations are serialized and persisted by atomic file replacement before success is returned. A failed write leaves the active configuration unchanged and returns an error. Object sections use shallow field merging; send the complete nested width object when changing artwork sizes. Unchanged fields should be omitted. Masked `***` credential values in object sections are treated as unchanged.
+
+Invalid settings return HTTP 400 with `{ "error": "Check the highlighted settings.", "fields": { "artwork.poster.small": "Enter a positive whole number of pixels." } }`. No part of an invalid request is applied. Artwork widths must be positive integers; paths must be non-empty and contain no null characters (relative paths remain supported); federation ports must be integers from 1 through 65535. Provider keys must be strings.
 
 - **Get Full Config:** `GET /api/v1/settings`
 - **Update Config:** `PATCH /api/v1/settings`
@@ -290,8 +294,18 @@ Manage the core application configuration.
 - **Update Section:** `PATCH /api/v1/settings/:section`
   - **Body:** JSON object for the section.
 
+### Metadata provider connection tests
+
+- **Test saved credentials:** `POST /api/v1/settings/providers/:provider/test`
+- **Provider:** `themoviedb`, `tvdb`, or `fanart.tv`; unknown providers return HTTP 400.
+- **Body:** None. Uses the saved key, never changes configuration, and does not require a server restart to test.
+- **Response:** `{ "ok": true, "code": "connected", "message": "Connection successful using the saved key." }`.
+- **Failure codes:** `missing_key`, `invalid_key`, `rate_limited`, `timeout`, `provider_error`, or `service_error`, with `ok: false` and an actionable message. Provider failures use HTTP 200; transport/authentication failures of the Oblecto request use the normal HTTP error handling.
+- Requests time out after eight seconds. Responses contain no keys, access tokens, or raw upstream errors. Tests use the API generations used by the installed metadata clients. Metadata clients cache credentials, so saved key changes require a server restart for indexing.
+- Reference: [TMDB authentication](https://developer.themoviedb.org/reference/authentication-validate-key), [Fanart.tv v3 API](https://fanart.tv/api-docs/api-v3/), and the installed `node-tvdb` client’s legacy login endpoint.
+
 ### Library Management
-Manage media libraries and sources.
+Manage media libraries and sources. Mutations follow the same persistence guarantees as configuration updates. Source paths must be non-empty strings without null characters.
 
 - **List Libraries:** `GET /api/v1/libraries`
 - **Get Library Paths:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
@@ -303,16 +317,24 @@ Manage media libraries and sources.
   - **Body:** `{ "path": "/path/to/media" }`
 
 ### System Maintenance
-Trigger background maintenance tasks.
 
-- **Trigger Task:** `POST /api/v1/system/maintenance`
-  - **Body:**
-    ```json
-    {
-      "action": "scan" | "update_metadata" | "update_artwork" | "clean",
-      "target": "all" | "movies" | "tvshows" | "files"
-    }
-    ```
+- **Trigger task:** `POST /api/v1/system/maintenance`
+- **Body:** `{ "action": "scan", "target": "movies" }`.
+- **Response:** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans/artwork.
+- **List jobs:** `GET /api/v1/system/maintenance/jobs` returns an array of job records, newest first.
+
+| Action | Supported targets |
+| --- | --- |
+| `scan` | `all`, `movies`, `series`, `tvshows` |
+| `update_artwork` | `all`, `movies`, `series`, `tvshows` |
+| `update_metadata` | `all`, `movies`, `series`, `episodes`, `files`, `tvshows` (series and episodes) |
+| `clean` | `all`, `movies`, `series`, `episodes`, `files`, `tvshows` (episodes, empty series, and pathless series) |
+
+Unsupported combinations return HTTP 400. Individual `clean/series` removes empty series; `clean/episodes` removes episodes without linked files. Scans use the configured re-index behavior rather than forcing re-identification.
+
+A job record contains `id`, `action`, `target`, `state` (`queued`, `running`, `completed`, `failed`), ISO `createdAt`, optional ISO `finishedAt`, `discovering`, `total`, `completed`, `failed`, and optional safe `error`. Counts track queued tasks, including descendants; a failed collection contributes a failed task. Totals can grow during discovery and descendant processing. Completion means collection and all associated tasks have settled, regardless of unrelated queue activity.
+
+History holds active jobs and the latest 100 finished jobs in memory. It survives page reloads and resets on server restart. There is no job cancellation or database migration. Clients may poll every two seconds while visible and should mark retained data as stale when requests fail.
 
 ### Remote Imports
 Trigger imports from configured remote seedboxes.
