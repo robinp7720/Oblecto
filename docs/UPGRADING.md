@@ -27,6 +27,12 @@ oblecto usergroup USERNAME Administrators
 
 Put everyone else in **Users**, or in a group of your own, from the Users page under settings.
 
+## Account preferences
+
+```sql
+ALTER TABLE `Users` ADD COLUMN preferences TEXT NULL;
+```
+
 ## Profile picker and avatars
 
 ```sql

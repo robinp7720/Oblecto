@@ -1,23 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import fs from 'fs/promises';
-import sharp from 'sharp';
-import type { UploadedFile } from 'express-fileupload';
 import config from '../../../config.js';
 import authMiddleWare from '../middleware/auth.js';
 import { User } from '../../../models/user.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 import errors from '../errors.js';
-import { AVATAR_SIZE, avatarDirectory, avatarPath, removeAvatarFile } from '../../../lib/users/avatars.js';
+import { avatarPath, clearAvatar, firstUpload, removeAvatarFile, saveAvatar } from '../../../lib/users/avatars.js';
 import { Group } from '../../../models/group.js';
 import { defaultGroupId, withAdminGuard } from '../../../lib/auth/permissions.js';
 
 const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar', 'groupId'];
 
 // Everything but the password hash.
-const publicUser = (user: User) => ({
+export const publicUser = (user: User) => ({
     id: user.id,
     username: user.username,
     email: user.email,
@@ -143,37 +140,7 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        const files = (req.files ?? {}) as Record<string, UploadedFile | UploadedFile[]>;
-        const first = Object.values(files)[0];
-        const upload = Array.isArray(first) ? first[0] : first;
-
-        if (!upload) {
-            res.status(400).send({ message: 'Image file is missing' });
-            return;
-        }
-
-        const avatar = `${user.id}-${Date.now()}.webp`;
-
-        await fs.mkdir(avatarDirectory(oblecto.config), { recursive: true });
-
-        try {
-            await sharp(upload.tempFilePath || upload.data)
-                .rotate()
-                .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
-                .webp()
-                .toFile(avatarPath(oblecto.config, avatar));
-        } catch {
-            res.status(422).send({ message: 'File is not an image' });
-            return;
-        } finally {
-            if (upload.tempFilePath) await fs.rm(upload.tempFilePath, { force: true });
-        }
-
-        const previous = user.avatar;
-
-        user.avatar = avatar;
-        await user.save();
-        await removeAvatarFile(oblecto.config, previous);
+        await saveAvatar(oblecto.config, user, firstUpload(req.files));
 
         res.send(publicUser(user));
     });
@@ -186,11 +153,7 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        const previous = user.avatar;
-
-        user.avatar = null;
-        await user.save();
-        await removeAvatarFile(oblecto.config, previous);
+        await clearAvatar(oblecto.config, user);
 
         res.send(publicUser(user));
     });
