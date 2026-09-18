@@ -1,7 +1,8 @@
 module.exports = {
     diff: true,
-    extension: ['js'],
+    extension: ['ts'],
+    spec: ['tests/mocha'],
     package: './package.json',
     import: ['tsx'],
-    'watch-files': ['src/**/*.js', 'tests/mocha/**/*.js'],
+    'watch-files': ['src/**/*.ts', 'tests/mocha/**/*.ts'],
 };

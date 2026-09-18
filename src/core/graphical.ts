@@ -1,26 +1,23 @@
-/* eslint-disable */
 import blessed from 'neo-blessed';
 
 import Oblecto from '../lib/oblecto/index.js';
 import config from '../config.js';
 import logger from '../submodules/logger/index.js';
 
-type Task = {
-    id: string;
-    attr: Record<string, unknown> & {
-        path?: string;
-        airedSeason?: string | number;
-        airedEpisodeNumber?: string | number;
-        episodeName?: string;
-        movieName?: string;
-        seriesName?: string;
-    };
+type TaskAttr = {
+    path?: string;
+    airedSeason?: string | number;
+    airedEpisodeNumber?: string | number;
+    episodeName?: string;
+    movieName?: string;
+    seriesName?: string;
 };
+
+const QUEUE_DISPLAY_LIMIT = 100;
 
 const graphical = {
     oblecto: null as Oblecto | null,
-     
-    screen: blessed.screen({ smartCSR: true }) as any,
+    screen: blessed.screen({ smartCSR: true }),
     streamerSessionsBox: null as ReturnType<typeof blessed.list> | null,
     queueBox: null as ReturnType<typeof blessed.list> | null,
     logBox: null as ReturnType<typeof blessed.list> | null,
@@ -136,7 +133,7 @@ const graphical = {
         const sessions = this.oblecto.playback.diagnostics();
         this.streamerSessionsBox.setLabel('Active Streaming Sessions: ' + sessions.length);
         for (const session of sessions) {
-            this.streamerSessionsBox.addItem(`${session.sessionId}: ${session.method} (${session.state})`);
+            this.streamerSessionsBox.addItem(`${String(session.sessionId)}: ${String(session.method)} (${String(session.state)})`);
         }
     },
 
@@ -145,31 +142,29 @@ const graphical = {
 
         this.queueBox.clearItems();
 
-        const tasks = (this.oblecto.queue.queue as { _tasks?: Task[] })._tasks ?? [];
+        this.queueBox.setLabel('Queue: ' + this.oblecto.queue.getStats().length);
 
-        this.queueBox.setLabel('Queue: ' + tasks.length);
-
-        for (const task of tasks) {
-            if ((task as unknown as number) > 100) break;
+        for (const task of this.oblecto.queue.pending(QUEUE_DISPLAY_LIMIT)) {
+            const attr = (task.attr ?? {}) as TaskAttr;
 
             switch (task.id) {
                 case 'indexEpisode':
-                    this.queueBox.addItem('Index Episode: ' + task.attr.path);
+                    this.queueBox.addItem('Index Episode: ' + attr.path);
                     break;
                 case 'indexMovie':
-                    this.queueBox.addItem('Index Episode: ' + task.attr.path);
+                    this.queueBox.addItem('Index Movie: ' + attr.path);
                     break;
                 case 'updateEpisode':
-                    this.queueBox.addItem('Update Episode: S' + task.attr.airedSeason + 'E' + task.attr.airedEpisodeNumber + ' ' + task.attr.episodeName);
+                    this.queueBox.addItem('Update Episode: S' + attr.airedSeason + 'E' + attr.airedEpisodeNumber + ' ' + attr.episodeName);
                     break;
                 case 'downloadEpisodeBanner':
-                    this.queueBox.addItem('Episode Banner: S' + task.attr.airedSeason + 'E' + task.attr.airedEpisodeNumber + ' ' + task.attr.episodeName);
+                    this.queueBox.addItem('Episode Banner: S' + attr.airedSeason + 'E' + attr.airedEpisodeNumber + ' ' + attr.episodeName);
                     break;
                 case 'updateMovie':
-                    this.queueBox.addItem('Update Movie: ' + task.attr.movieName);
+                    this.queueBox.addItem('Update Movie: ' + attr.movieName);
                     break;
                 case 'updateSeries':
-                    this.queueBox.addItem('Update Movie: ' + task.attr.seriesName);
+                    this.queueBox.addItem('Update Series: ' + attr.seriesName);
                     break;
                 default:
                     this.queueBox.addItem(task.id + ' - ' + JSON.stringify(task.attr));
