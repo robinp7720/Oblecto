@@ -1,8 +1,11 @@
 import fs from 'fs';
+import { ConfigWriter } from './lib/settings/ConfigWriter.js';
 import { IConfig } from './interfaces/config.js';
 import logger from './submodules/logger';
 
 let loadedConfigPath: string | null = null;
+
+const writer = new ConfigWriter(() => loadedConfigPath ?? '/etc/oblecto/config.json');
 
 const ConfigManager = {
     loadFile: function loadFile (file: string): Partial<IConfig> {
@@ -31,22 +34,15 @@ const ConfigManager = {
         }
         return { ...this.loadFile('/etc/oblecto/config.json') } as IConfig;
     },
-    saveConfig: function saveConfig () {
-        const savePath = loadedConfigPath ?? '/etc/oblecto/config.json';
-
-        fs.writeFile(savePath, JSON.stringify(config, null, 4), (err) => {
-            if (err) {
-                logger.error(`Failed to save config to ${savePath}:`, err);
-            } else {
-                logger.info(`Config saved successfully to ${savePath}`);
-            }
-        });
+    saveConfig: function saveConfig (): Promise<void> {
+        return writer.update(config, () => {});
+    },
+    updateConfig: function updateConfig(change: (draft: IConfig) => void, current: IConfig = config): Promise<void> {
+        return writer.update(current, change);
     }
 };
 
 const config: IConfig = ConfigManager.loadConfigFiles();
 
 export default config;
-
 export { ConfigManager };
-

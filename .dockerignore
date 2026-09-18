@@ -1,3 +1,11 @@
-node_modules
-npm-debug.log 
+**/node_modules
+npm-debug.log
 .git
+.claude
+dist
+Oblecto-Web/dist
+jellyfin-web/dist
+logs
+coverage
+test-results
+playwright-report

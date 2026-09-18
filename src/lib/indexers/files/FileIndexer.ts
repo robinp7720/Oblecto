@@ -10,6 +10,7 @@ import FileExistsError from '../../errors/FileExistsError.js';
 import VideoAnalysisError from '../../errors/VideoAnalysisError.js';
 import ffprobe from '../../../submodules/ffprobe.js';
 import logger from '../../../submodules/logger/index.js';
+import { clearProblem, markProblematic } from './problems.js';
 
 import type { FfprobeData } from 'fluent-ffmpeg';
 import type Oblecto from '../../oblecto/index.js';
@@ -44,7 +45,7 @@ export default class FileIndexer {
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
 
-        this.oblecto.queue.registerJob('indexFileStreams', this.indexVideoFileStreams);
+        this.oblecto.queue.registerJob('indexFileStreams', (file: File) => this.indexVideoFileStreams(file));
     }
 
     /**
@@ -94,7 +95,7 @@ export default class FileIndexer {
 
             const errorMsg = lastLine || 'Unknown error';
 
-            await file.update({ problematic: true, error: errorMsg });
+            await markProblematic(this.oblecto, file, 'probe', errorMsg);
 
             throw new VideoAnalysisError(`Failed to probe ${file.path}: ${errorMsg}`);
         }
@@ -150,5 +151,7 @@ export default class FileIndexer {
                 defaults: stream as InferCreationAttributes<Stream>
             });
         }
+
+        await clearProblem(this.oblecto, file, 'probe');
     }
 }

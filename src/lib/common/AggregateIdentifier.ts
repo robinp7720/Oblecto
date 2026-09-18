@@ -29,6 +29,7 @@ export default class AggregateIdentifier {
 
     async identify(...args: unknown[]): Promise<Record<string, unknown>> {
         let identification: Record<string, unknown> = {};
+        const failures: string[] = [];
 
         for (const identifier of this.identifiers) {
             let currentIdentification: Record<string, unknown>;
@@ -37,6 +38,7 @@ export default class AggregateIdentifier {
                 currentIdentification = await identifier.identify(...args);
             } catch (e) {
                 logger.debug("Failed to identify", args, e);
+                failures.push(AggregateIdentifier.describeFailure(identifier, e));
                 continue;
             }
 
@@ -53,10 +55,21 @@ export default class AggregateIdentifier {
         }
 
         if (Object.keys(identification).length === 0) {
-            logger.info(`Could not identify: ${String(args[0])}`);
-            throw new IdentificationError(`Could not identify: ${String(args[0])}`);
+            // Keep each identifier's reason: "TMDB timed out" calls for a
+            // retry, "no results" calls for renaming the file.
+            const reasons = failures.length > 0 ? ` (${failures.join('; ')})` : '';
+
+            logger.info(`Could not identify: ${String(args[0])}${reasons}`);
+            throw new IdentificationError(`Could not identify: ${String(args[0])}${reasons}`);
         }
 
         return identification;
+    }
+
+    private static describeFailure(identifier: Identifier, error: unknown): string {
+        const name = identifier.constructor.name.replace(/Identifier$/, '');
+        const message = error instanceof Error ? error.message : String(error);
+
+        return message ? `${name}: ${message}` : name;
     }
 }

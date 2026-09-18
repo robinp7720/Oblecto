@@ -1,6 +1,8 @@
 import AggregateIdentifier from '../../common/AggregateIdentifier.js';
 import TmdbMovieIdentifier from './identifiers/TmdbMovieidentifier.js';
 import { Movie } from '../../../models/movie.js';
+import { File } from '../../../models/file.js';
+import { clearProblem, markProblematic } from '../files/problems.js';
 import logger from '../../../submodules/logger/index.js';
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, jsdoc/require-returns-description */
 import guessit, { GuessitIdentification } from '../../../submodules/guessit.js';
@@ -45,6 +47,14 @@ export default class MovieIndexer {
         this.oblecto.queue.registerJob('indexMovie', async (job: { path: string; doReIndex?: boolean }) => {
             await this.indexFile(job.path, job.doReIndex);
         });
+
+        // Re-identify a file that is already in the database, e.g. to retry a
+        // file that could not be identified before
+        this.oblecto.queue.registerJob('identifyMovieFile', async (job: { fileId: number }) => {
+            const file = await File.findByPk(job.fileId);
+
+            if (file) await this.identifyFile(file, true);
+        });
     }
 
     async matchFile(moviePath: string): Promise<MovieIdentification> {
@@ -53,17 +63,15 @@ export default class MovieIndexer {
         try {
             return await this.movieIdentifier.identify(moviePath, guessitIdentification);
         } catch (e) {
-            if (guessitIdentification.year) {
-                logger.info( `Could not identify ${moviePath}. Maybe the specified year is wrong?`);
-                logger.info( 'Attempting to identify without year');
+            if (!guessitIdentification.year) throw e;
 
-                delete guessitIdentification.year;
+            logger.info( `Could not identify ${moviePath}. Maybe the specified year is wrong?`);
+            logger.info( 'Attempting to identify without year');
 
-                return await this.movieIdentifier.identify(moviePath, guessitIdentification);
-            }
+            delete guessitIdentification.year;
+
+            return await this.movieIdentifier.identify(moviePath, guessitIdentification);
         }
-
-        throw new IdentificationError(`Could not identify ${moviePath}`);
     }
 
     /**
@@ -75,17 +83,28 @@ export default class MovieIndexer {
     async indexFile(moviePath: string, doReindex?: boolean): Promise<void> {
         const file = await this.oblecto.fileIndexer.indexVideoFile(moviePath);
 
+        await this.identifyFile(file, doReindex);
+    }
+
+    /**
+     * Identify a file which is already in the database and link it to its movie
+     * @param file - File to identify
+     * @param doReindex - Whether to refresh the movie even if it already existed
+     * @returns
+     */
+    async identifyFile(file: File, doReindex?: boolean): Promise<void> {
         let movieIdentification: MovieIdentification;
 
         try {
-            movieIdentification = await this.matchFile(moviePath);
+            movieIdentification = await this.matchFile(file.path as string);
         } catch (e) {
-            const error = e as Error & { name?: string; message?: string };
+            const error = e as Error;
 
-            if (error.name === 'IdentificationError') {
-                await file.update({ problematic: true, error: error.message });
-                return;
-            }
+            // Flag the file whatever the cause: rescans skip files that are
+            // already in the database, so an unflagged file would be stuck.
+            await markProblematic(this.oblecto, file, 'identify', error.message || 'Unknown error');
+
+            if (error instanceof IdentificationError && !this.oblecto.queue.maintenance?.current()) return;
             throw e;
         }
 
@@ -95,7 +114,8 @@ export default class MovieIndexer {
                 defaults: movieIdentification
             });
 
-        movie.addFile(file);
+        await movie.addFile(file);
+        await clearProblem(this.oblecto, file, 'identify');
 
         if (!movieCreated && !doReindex) return;
 

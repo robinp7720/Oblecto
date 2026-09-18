@@ -44,9 +44,9 @@ export default class MovieCollector {
      *
      * @returns
      */
-    collectAll(): void {
-        this.oblecto.config.movies.directories.forEach(directory => {
-            void this.collectDirectory(directory.path);
-        });
+    async collectAll(): Promise<void> {
+        const results = await Promise.allSettled(this.oblecto.config.movies.directories.map(directory => this.collectDirectory(directory.path)));
+        const failures = results.filter(result => result.status === 'rejected');
+        if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Could not scan some library directories');
     }
 }

@@ -40,11 +40,11 @@ Oblecto can be installed using NPM or directly from Git. We recommend NPM unless
 6. Open the web UI at `http://localhost:8080/web` (or the port set in `server.port`)
 
 ### From source (development)
-1. Install dependencies: `npm install`
-2. Build the web UI: `npm run build:web`
-3. Build or run the backend:
-   - `npm run build` then `npm run start`, or
-   - `npm run dev` for live development
+1. Fetch the web frontends: `git submodule update --init`
+2. Install dependencies: `npm install`
+3. Build or run:
+   - `npm run build` (both web UIs and the backend) then `npm run start`, or
+   - `npm run build:web` then `npm run dev` for live backend development
 4. Use the CLI if needed: `npm run oblecto` (or `npm run oblecto:dev`)
 
 ### Configuration notes

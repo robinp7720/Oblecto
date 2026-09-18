@@ -1,15 +1,32 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/unbound-method, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import fs from 'fs/promises';
+import sharp from 'sharp';
+import type { UploadedFile } from 'express-fileupload';
 import config from '../../../config.js';
 import authMiddleWare from '../middleware/auth.js';
 import { User } from '../../../models/user.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+import { AVATAR_SIZE, avatarDirectory, avatarPath, removeAvatarFile } from '../../../lib/users/avatars.js';
+
+const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar'];
+
+// Everything but the password hash.
+const publicUser = (user: User) => ({
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    publicProfile: user.publicProfile,
+    passwordlessLocal: user.passwordlessLocal,
+    avatar: user.avatar
+});
 
 export default (server: Express, oblecto: Oblecto) => {
-    server.get('/users', async function (req: Request, res: Response) {
-        const users = await User.findAll({ attributes: ['username', 'name', 'email', 'id'] });
+    server.get('/users', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+        const users = await User.findAll({ attributes: USER_ATTRIBUTES });
 
         res.send(users);
     });
@@ -17,7 +34,7 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const user = await User.findOne({
             where: { id: req.params.id },
-            attributes: ['username', 'name', 'email', 'id']
+            attributes: USER_ATTRIBUTES
         });
 
         res.send(user);
@@ -26,7 +43,7 @@ export default (server: Express, oblecto: Oblecto) => {
     server.delete('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const user = await User.findOne({
             where: { id: req.params.id },
-            attributes: ['username', 'name', 'email', 'id']
+            attributes: USER_ATTRIBUTES
         });
 
         if (!user) {
@@ -39,6 +56,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         // Now delete the user
         await user.destroy();
+        await removeAvatarFile(oblecto.config, user.avatar);
     });
 
     // Endpoint to update the entries of a certain user
@@ -68,13 +86,93 @@ export default (server: Express, oblecto: Oblecto) => {
             user.name = params.name as string;
         }
 
+        if (typeof params.publicProfile === 'boolean') {
+            user.publicProfile = params.publicProfile;
+        }
+
+        if (typeof params.passwordlessLocal === 'boolean') {
+            user.passwordlessLocal = params.passwordlessLocal;
+        }
+
         await user.save();
 
-        res.send({
-            username: user.username,
-            email: user.email,
-            name: user.name
+        res.send(publicUser(user));
+    });
+
+    // Public: the login screen shows avatars before anyone has signed in.
+    server.get('/user/:id/avatar', async function (req: Request, res: Response) {
+        const user = await User.findByPk(req.params.id as string, { attributes: ['id', 'avatar'] });
+
+        if (!user?.avatar) {
+            res.status(404).send({ message: 'User has no avatar' });
+            return;
+        }
+
+        // Every upload gets a new name, so a URL carrying the current one never goes stale.
+        res.set('Cache-Control', req.query.v === user.avatar ? 'public, max-age=31536000, immutable' : 'no-cache');
+        res.sendFile(avatarPath(oblecto.config, user.avatar), (error) => {
+            if (error && !res.headersSent) res.status(404).send({ message: 'User has no avatar' });
         });
+    });
+
+    server.put('/user/:id/avatar', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const user = await User.findByPk(req.params.id as string);
+
+        if (!user) {
+            res.status(404).send({ message: 'User not found' });
+            return;
+        }
+
+        const files = (req.files ?? {}) as Record<string, UploadedFile | UploadedFile[]>;
+        const first = Object.values(files)[0];
+        const upload = Array.isArray(first) ? first[0] : first;
+
+        if (!upload) {
+            res.status(400).send({ message: 'Image file is missing' });
+            return;
+        }
+
+        const avatar = `${user.id}-${Date.now()}.webp`;
+
+        await fs.mkdir(avatarDirectory(oblecto.config), { recursive: true });
+
+        try {
+            await sharp(upload.tempFilePath || upload.data)
+                .rotate()
+                .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
+                .webp()
+                .toFile(avatarPath(oblecto.config, avatar));
+        } catch {
+            res.status(422).send({ message: 'File is not an image' });
+            return;
+        } finally {
+            if (upload.tempFilePath) await fs.rm(upload.tempFilePath, { force: true });
+        }
+
+        const previous = user.avatar;
+
+        user.avatar = avatar;
+        await user.save();
+        await removeAvatarFile(oblecto.config, previous);
+
+        res.send(publicUser(user));
+    });
+
+    server.delete('/user/:id/avatar', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+        const user = await User.findByPk(req.params.id as string);
+
+        if (!user) {
+            res.status(404).send({ message: 'User not found' });
+            return;
+        }
+
+        const previous = user.avatar;
+
+        user.avatar = null;
+        await user.save();
+        await removeAvatarFile(oblecto.config, previous);
+
+        res.send(publicUser(user));
     });
 
     server.post('/user', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
@@ -99,11 +197,14 @@ export default (server: Express, oblecto: Oblecto) => {
                 username: params.username as string,
                 name: params.name as string,
                 email: params.email as string,
-                password: passwordHash || null
+                password: passwordHash || null,
+                publicProfile: params.publicProfile === true,
+                passwordlessLocal: params.passwordlessLocal === true,
+                avatar: null
             }
         });
 
-        res.send(user);
+        res.send(publicUser(user));
     });
 
 };

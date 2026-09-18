@@ -4,12 +4,8 @@ import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
 import { ConfigManager } from '../../../../config.js';
 
-const ALLOWED_SECTIONS = [
-    'indexer', 'cleaner', 'mdns', 'queue', 'tvdb', 'themoviedb', 
-    'fanart.tv', 'assets', 'server', 'files', 'artwork', 
-    'fileExtensions', 'tracker', 'transcoding', 'web', 'streaming', 
-    'authentication', 'federation', 'seedboxes', 'movies', 'tvshows'
-];
+import { allowedSections as ALLOWED_SECTIONS, mergeSettings, validateSettings } from '../../../../lib/settings/validation.js';
+import { providers, testProvider } from '../../../../lib/settings/providerTest.js';
 
 // Simple secret scrubber
 const scrubConfig = (conf: any) => {
@@ -34,32 +30,16 @@ export default (server: Express, oblecto: any) => {
         res.send(scrubConfig(oblecto.config));
     });
 
-    // PATCH /api/v1/settings - Update multiple sections
-    server.patch('/api/v1/settings', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
-        const updates = req.body;
+    server.post('/api/v1/settings/providers/:provider/test', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
+        const provider = req.params.provider as typeof providers[number];
+        if (!providers.includes(provider)) return res.status(400).send({ error: 'Unknown provider' });
+        res.send(await testProvider(provider, oblecto.config[provider]?.key || ''));
+    });
 
-        if (!updates || Object.keys(updates).length === 0) {
-            return next(new errors.BadRequestError('Empty configuration provided'));
-        }
-
-        // Validate sections
-        for (const section of Object.keys(updates)) {
-            if (!ALLOWED_SECTIONS.includes(section)) {
-                return next(new errors.BadRequestError(`Invalid setting section: ${section}`));
-            }
-        }
-
-        // Apply updates
-        for (const [key, value] of Object.entries(updates)) {
-            // Shallow merge for top-level sections
-            if (typeof oblecto.config[key as keyof any] === 'object' && !Array.isArray(oblecto.config[key as keyof any]) && oblecto.config[key as keyof any] !== null) {
-                Object.assign(oblecto.config[key as keyof any], value);
-            } else {
-                oblecto.config[key as keyof any] = value as any;
-            }
-        }
-
-        ConfigManager.saveConfig();
+    server.patch('/api/v1/settings', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
+        const fields = validateSettings(req.body);
+        if (Object.keys(fields).length) return res.status(400).send({ error: 'Check the highlighted settings.', fields });
+        await ConfigManager.updateConfig(draft => mergeSettings(draft, req.body), oblecto.config);
         res.send(scrubConfig(oblecto.config));
     });
 
@@ -85,31 +65,12 @@ export default (server: Express, oblecto: any) => {
         res.send(dataToSend);
     });
 
-    // PATCH /api/v1/settings/:section
-    server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
+    server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
         const section = req.params.section as string;
-
-        if (!ALLOWED_SECTIONS.includes(section)) {
-            return next(new errors.BadRequestError('Invalid setting section'));
-        }
-
-        const updates = req.body;
-
-        if (!updates || Object.keys(updates).length === 0) {
-            return next(new errors.BadRequestError('Empty configuration provided'));
-        }
-
-        if (!oblecto.config[section as keyof any]) oblecto.config[section as keyof any] = {} as any;
-
-        const currentSection = oblecto.config[section as keyof any];
-
-        if (typeof currentSection === 'object' && !Array.isArray(currentSection)) {
-            Object.assign(currentSection, updates);
-        } else {
-            oblecto.config[section as keyof any] = updates;
-        }
-
-        ConfigManager.saveConfig();
-        res.send(oblecto.config[section as keyof any]);
+        const updates = { [section]: req.body };
+        const fields = validateSettings(updates);
+        if (Object.keys(fields).length) return res.status(400).send({ error: 'Check the highlighted settings.', fields });
+        await ConfigManager.updateConfig(draft => mergeSettings(draft, updates), oblecto.config);
+        res.send(scrubConfig(oblecto.config)[section]);
     });
 };

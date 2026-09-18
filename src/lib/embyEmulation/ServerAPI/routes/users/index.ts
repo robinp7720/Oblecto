@@ -15,15 +15,16 @@ import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
 import { getRequestValue } from '../../requestUtils.js';
+import { isLocalRequest } from '../../../../network/localNetwork.js';
+import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
+import { avatarPath } from '../../../../users/avatars.js';
 
-const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, unknown> => {
-    const HasPassword = user.password !== '';
-
+const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password)): Record<string, unknown> => {
     return {
         Name: user.name,
         ServerId: embyEmulation.serverId,
         Id: formatUuid(user.id),
-        PrimaryImageTag: 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
+        PrimaryImageTag: user.avatar ?? undefined,
         HasPassword,
         HasConfiguredPassword: HasPassword,
         HasConfiguredEasyPassword: false,
@@ -95,8 +96,32 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation): Record<string, 
  * @param embyEmulation - The EmbyEmulation instance
  */
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
-    server.get('/users/public', (req: Request, res: Response) => {
-        res.send([]);
+    // The login screen's user tiles: only shown to clients on the local network.
+    server.get('/users/public', async (req: Request, res: Response) => {
+        const authentication = embyEmulation.oblecto.config.authentication;
+
+        if (authentication.profilePicker === false || !isLocalRequest(req, authentication)) {
+            res.send([]);
+            return;
+        }
+
+        const users = await User.findAll({ where: { publicProfile: true }, order: [['name', 'ASC'], ['username', 'ASC']] });
+
+        // HasPassword false makes jellyfin-web sign in straight from the tile.
+        res.send(users.map((user) => buildUserDto(user, embyEmulation, !canSignInWithoutPassword(user, true, authentication))));
+    });
+
+    server.get('/users/:userid/images/primary', async (req: Request, res: Response) => {
+        const user = await User.findByPk(parseUuid(req.params.userid as string), { attributes: ['id', 'avatar'] });
+
+        if (!user?.avatar) {
+            res.status(404).send('Not Found');
+            return;
+        }
+
+        res.sendFile(avatarPath(embyEmulation.oblecto.config, user.avatar), (error) => {
+            if (error && !res.headersSent) res.status(404).send('Not Found');
+        });
     });
 
     server.get('/users', async (req: Request, res: Response) => {
@@ -109,12 +134,13 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const Username = getRequestValue(req, 'Username');
         const Pw = getRequestValue(req, 'Pw');
 
-        if (!Username || !Pw) {
-            res.status(400).send('Missing Username or Pw');
+        if (!Username) {
+            res.status(400).send('Missing Username');
             return;
         }
 
-        const sessionId = await embyEmulation.handleLogin(Username, Pw);
+        const local = isLocalRequest(req, embyEmulation.oblecto.config.authentication);
+        const sessionId = await embyEmulation.handleLogin(Username, Pw, local);
 
         logger.debug('Jellyfin Session ID: ' + sessionId);
         logger.debug(JSON.stringify(embyEmulation.sessions[sessionId]));

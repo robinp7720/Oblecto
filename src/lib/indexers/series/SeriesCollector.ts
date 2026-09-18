@@ -52,9 +52,9 @@ export default class SeriesCollector {
      * Index all TV Show libraries
      * @returns
      */
-    collectAll(): void {
-        this.oblecto.config.tvshows.directories.forEach(directory => {
-            void this.collectDirectory(directory.path);
-        });
+    async collectAll(): Promise<void> {
+        const results = await Promise.allSettled(this.oblecto.config.tvshows.directories.map(directory => this.collectDirectory(directory.path)));
+        const failures = results.filter(result => result.status === 'rejected');
+        if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Could not scan some library directories');
     }
 }

@@ -29,7 +29,8 @@ export interface IConfig {
         'episodeBannerLocation': string,
         'showPosterLocation': string,
         'moviePosterLocation': string,
-        'movieFanartLocation': string
+        'movieFanartLocation': string,
+        'userAvatarLocation'?: string
     },
     'database': {
         'dialect': string,
@@ -99,7 +100,15 @@ string
     'authentication': {
         'secret': string,
         'saltRounds': number,
-        'allowPasswordlessLogin': boolean
+        'allowPasswordlessLogin': boolean,
+        // Show the profile picker instead of the login form on the local network
+        'profilePicker'?: boolean,
+        // Let users who opted in sign in without a password on the local network
+        'localPasswordlessLogin'?: boolean,
+        // CIDRs counted as local on top of loopback, private and link-local ranges
+        'localSubnets'?: string[],
+        // Take the client address from X-Forwarded-For (only behind a reverse proxy)
+        'trustProxy'?: boolean
     },
     'tracker': {
         'interval': number

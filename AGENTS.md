@@ -7,10 +7,12 @@ Scope
 
 Quick commands (from repo root)
 - `npm run dev` (backend dev server via tsx)
-- `npm run build` (backend build to `dist/`)
+- `npm run build` (full build: both frontends plus the backend bundle in `dist/`)
+- `npm run build:server` (backend bundle only)
 - `npm run start` (run built backend)
 - `npm run oblecto` / `npm run oblecto:dev` (CLI)
-- `npm run build:web` (frontend build; runs npm install inside `Oblecto-Web/`)
+- `npm run build:web` (Oblecto-Web build; runs npm ci inside `Oblecto-Web/`)
+- `npm run build:jellyfin-web` (Jellyfin web build; runs npm ci inside `jellyfin-web/`)
 - `npm test` / `npm run test:mocha` / `npm run test:startup`
 
 Config and data

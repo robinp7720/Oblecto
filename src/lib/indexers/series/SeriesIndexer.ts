@@ -13,6 +13,7 @@ import { File } from '../../../models/file.js';
 
 import IdentificationError from '../../errors/IdentificationError.js';
 import logger from '../../../submodules/logger/index.js';
+import { clearProblem, markProblematic } from '../files/problems.js';
 import guessit, { GuessitIdentification } from '../../../submodules/guessit.js';
 
 import type Oblecto from '../../oblecto/index.js';
@@ -95,6 +96,14 @@ export default class SeriesIndexer {
         this.oblecto.queue.registerJob('indexEpisode', async (job: { path: string }) => {
             await this.indexFile(job.path);
         });
+
+        // Re-identify a file that is already in the database, e.g. to retry a
+        // file that could not be identified before
+        this.oblecto.queue.registerJob('identifyEpisodeFile', async (job: { fileId: number }) => {
+            const file = await File.findByPk(job.fileId);
+
+            if (file) await this.identifyFile(file);
+        });
     }
 
     /**
@@ -138,6 +147,7 @@ export default class SeriesIndexer {
         let seriesIdentification: SeriesIdentification | undefined;
 
         let seriesIdentified = false;
+        let lastError: unknown;
 
         for (const name of identificationNames) {
             try {
@@ -153,12 +163,16 @@ export default class SeriesIndexer {
 
                 break;
             } catch (e) {
+                lastError = e;
                 logger.debug( 'Using for path for identifying', episodePath);
             }
         }
 
         if (seriesIdentified === false || !guessitIdentification || !seriesIdentification) {
-            throw new IdentificationError('Could not identify series');
+            // The last attempt used the full path, so its reason is the most informed one
+            if (lastError instanceof Error && !(lastError instanceof IdentificationError)) throw lastError;
+
+            throw new IdentificationError(lastError instanceof Error ? lastError.message : 'Could not identify series');
         }
 
         const episodeIdentification = await this.episodeIdentifer.identify(
@@ -178,18 +192,28 @@ export default class SeriesIndexer {
     async indexFile(episodePath: string): Promise<void> {
         const file = await this.oblecto.fileIndexer.indexVideoFile(episodePath);
 
+        await this.identifyFile(file);
+    }
+
+    /**
+     * Identify a file which is already in the database and link it to its episode
+     * @param file - File to identify
+     * @returns
+     */
+    async identifyFile(file: File): Promise<void> {
         let seriesIdentification: SeriesIdentification;
         let episodeIdentification: EpisodeIdentification;
 
         try {
-            ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(episodePath));
+            ({ series: seriesIdentification, episode: episodeIdentification } = await this.identify(file.path as string));
         } catch (e) {
-            const error = e as Error & { name?: string; message?: string };
+            const error = e as Error;
 
-            if (error.name === 'IdentificationError') {
-                await file.update({ problematic: true, error: error.message });
-                return;
-            }
+            // Flag the file whatever the cause: rescans skip files that are
+            // already in the database, so an unflagged file would be stuck.
+            await markProblematic(this.oblecto, file, 'identify', error.message || 'Unknown error');
+
+            if (error instanceof IdentificationError && !this.oblecto.queue.maintenance?.current()) return;
             throw e;
         }
 
@@ -209,6 +233,7 @@ export default class SeriesIndexer {
             });
 
         await episode.addFile(file);
+        await clearProblem(this.oblecto, file, 'identify');
 
         if (episodeCreated) {
             this.oblecto.realTimeController.broadcast('indexer', {

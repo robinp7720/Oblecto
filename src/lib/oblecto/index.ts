@@ -1,4 +1,3 @@
-// @ts-ignore
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
@@ -155,18 +154,18 @@ export default class Oblecto {
 
     async close(): Promise<void> {
         await this.playback.close();
-        const closing: Promise<unknown>[] = [];
-        for (const item of Object.keys(this)) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-            const member = (this as any)[item];
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions
-            if (member?.close && member !== this.playback && member !== this.database) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-                closing.push(Promise.resolve(member.close()));
-            }
-        }
-        await Promise.allSettled(closing);
+        // Wrapped so a synchronous throw from one service can't keep the others or the database open
+        const closers: (() => unknown)[] = [
+            () => this.oblectoAPI.close(),
+            () => this.realTimeController.close(),
+            () => this.embyServer.close(),
+            () => this.federationController?.close(),
+            () => this.federationClientController?.close()
+        ];
+
+        await Promise.allSettled(closers.map(close => Promise.resolve().then(close)));
+
         await this.database.close();
     }
 }

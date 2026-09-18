@@ -26,6 +26,29 @@ Authenticate a user and retrieve an access token.
   }
   ```
 - **Notes:** Pass the `accessToken` in the `Authorization` header as `Bearer <token>` for subsequent requests.
+  - `userId` may be sent instead of `username` (used by the profile picker).
+  - `password` may be omitted only on the local network, when either `authentication.localPasswordlessLogin` is on and the user has `passwordlessLocal`, or `authentication.allowPasswordlessLogin` is on and the account has no password. Remote clients always need a password.
+  - Errors: `400` when the user or a required password is missing, `401` for an unknown user or wrong password.
+
+### Login Options
+What the login screen should offer this client. No authentication required.
+
+- **URL:** `/auth/login-options`
+- **Method:** `GET`
+- **Response:**
+  ```json
+  {
+    "local": true,
+    "profilePicker": true,
+    "users": [
+      { "id": 1, "username": "robin", "name": "Robin", "avatar": "1-1758190000000.webp", "passwordless": true }
+    ]
+  }
+  ```
+- **Notes:** `users` holds users with `publicProfile` and is only populated for clients on the local network when `authentication.profilePicker` is not `false`; it never includes emails. `passwordless` means `POST /auth/login` with just `userId` will succeed.
+
+### Local network
+A client is local when its address is loopback, private (10/8, 172.16/12, 192.168/16, fc00::/7) or link-local, or falls in one of `authentication.localSubnets` (CIDRs). The TCP peer address is used; `X-Forwarded-For` is only honoured when `authentication.trustProxy` is on, so enable that only behind a reverse proxy that sets it.
 
 ## Movies
 
@@ -250,9 +273,12 @@ Federation media peers must both support protocol version 1; older peers are rej
 
 ## Users
 
+User objects look like `{ "id", "username", "name", "email", "publicProfile", "passwordlessLocal", "avatar" }`; the password hash is never returned. `publicProfile` shows the user on the local-network profile picker; `passwordlessLocal` lets them sign in there without a password (when the server allows it). `avatar` is the current avatar file name or `null`, and changes with every upload.
+
 ### List Users
 - **URL:** `/users`
 - **Method:** `GET`
+- **Auth:** Required.
 
 ### Get User Info
 - **URL:** `/user/:id`
@@ -261,16 +287,22 @@ Federation media peers must both support protocol version 1; older peers are rej
 ### Create User
 - **URL:** `/user`
 - **Method:** `POST`
-- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "..." }`
+- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": false, "passwordlessLocal": false }`
 
 ### Update User
 - **URL:** `/user/:id`
 - **Method:** `PUT`
-- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "..." }`
+- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": true, "passwordlessLocal": false }` (all optional; the flags must be booleans)
 
 ### Delete User
 - **URL:** `/user/:id`
 - **Method:** `DELETE`
+
+### User Avatar
+- **Get:** `GET /user/:id/avatar?v=<avatar>` — no authentication (the login screen shows it). 256×256 WebP; `404` when the user has none. Cached indefinitely when `v` matches the current `avatar`.
+- **Upload:** `PUT /user/:id/avatar` — multipart with one image file; cropped to a square. Returns the updated user. `400` without a file, `422` if it is not an image.
+- **Remove:** `DELETE /user/:id/avatar` — returns the updated user.
+- Files are stored in `assets.userAvatarLocation` (default `/etc/oblecto/assets/userAvatars/`).
 
 ## Clients (Remote Control)
 
@@ -281,7 +313,13 @@ Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/play
 ## Settings & System (V1)
 
 ### Configuration
-Manage the core application configuration.
+Manage the core application configuration. All settings and system endpoints require the existing authenticated session.
+
+Configuration and library mutations are serialized and persisted by atomic file replacement before success is returned. A failed write leaves the active configuration unchanged and returns an error. Object sections use shallow field merging; send the complete nested width object when changing artwork sizes. Unchanged fields should be omitted. Masked `***` credential values in object sections are treated as unchanged.
+
+The `authentication` section also carries the login-screen switches: `profilePicker` (show the profile picker on the local network, default on), `localPasswordlessLogin` (allow opted-in users to sign in without a password on the local network), `localSubnets` (extra CIDRs counted as local) and `trustProxy` (believe `X-Forwarded-For`). `allowPasswordlessLogin` now only applies on the local network.
+
+Invalid settings return HTTP 400 with `{ "error": "Check the highlighted settings.", "fields": { "artwork.poster.small": "Enter a positive whole number of pixels." } }`. No part of an invalid request is applied. Artwork widths must be positive integers; paths must be non-empty and contain no null characters (relative paths remain supported); federation ports must be integers from 1 through 65535. Provider keys must be strings.
 
 - **Get Full Config:** `GET /api/v1/settings`
 - **Update Config:** `PATCH /api/v1/settings`
@@ -290,8 +328,18 @@ Manage the core application configuration.
 - **Update Section:** `PATCH /api/v1/settings/:section`
   - **Body:** JSON object for the section.
 
+### Metadata provider connection tests
+
+- **Test saved credentials:** `POST /api/v1/settings/providers/:provider/test`
+- **Provider:** `themoviedb`, `tvdb`, or `fanart.tv`; unknown providers return HTTP 400.
+- **Body:** None. Uses the saved key, never changes configuration, and does not require a server restart to test.
+- **Response:** `{ "ok": true, "code": "connected", "message": "Connection successful using the saved key." }`.
+- **Failure codes:** `missing_key`, `invalid_key`, `rate_limited`, `timeout`, `provider_error`, or `service_error`, with `ok: false` and an actionable message. Provider failures use HTTP 200; transport/authentication failures of the Oblecto request use the normal HTTP error handling.
+- Requests time out after eight seconds. Responses contain no keys, access tokens, or raw upstream errors. Tests use the API generations used by the installed metadata clients. Metadata clients cache credentials, so saved key changes require a server restart for indexing.
+- Reference: [TMDB authentication](https://developer.themoviedb.org/reference/authentication-validate-key), [Fanart.tv v3 API](https://fanart.tv/api-docs/api-v3/), and the installed `node-tvdb` client’s legacy login endpoint.
+
 ### Library Management
-Manage media libraries and sources.
+Manage media libraries and sources. Mutations follow the same persistence guarantees as configuration updates. Source paths must be non-empty strings without null characters.
 
 - **List Libraries:** `GET /api/v1/libraries`
 - **Get Library Paths:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
@@ -303,16 +351,24 @@ Manage media libraries and sources.
   - **Body:** `{ "path": "/path/to/media" }`
 
 ### System Maintenance
-Trigger background maintenance tasks.
 
-- **Trigger Task:** `POST /api/v1/system/maintenance`
-  - **Body:**
-    ```json
-    {
-      "action": "scan" | "update_metadata" | "update_artwork" | "clean",
-      "target": "all" | "movies" | "tvshows" | "files"
-    }
-    ```
+- **Trigger task:** `POST /api/v1/system/maintenance`
+- **Body:** `{ "action": "scan", "target": "movies" }`.
+- **Response:** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans/artwork.
+- **List jobs:** `GET /api/v1/system/maintenance/jobs` returns an array of job records, newest first.
+
+| Action | Supported targets |
+| --- | --- |
+| `scan` | `all`, `movies`, `series`, `tvshows` |
+| `update_artwork` | `all`, `movies`, `series`, `tvshows` |
+| `update_metadata` | `all`, `movies`, `series`, `episodes`, `files`, `tvshows` (series and episodes) |
+| `clean` | `all`, `movies`, `series`, `episodes`, `files`, `tvshows` (episodes, empty series, and pathless series) |
+
+Unsupported combinations return HTTP 400. Individual `clean/series` removes empty series; `clean/episodes` removes episodes without linked files. Scans use the configured re-index behavior rather than forcing re-identification.
+
+A job record contains `id`, `action`, `target`, `state` (`queued`, `running`, `completed`, `failed`), ISO `createdAt`, optional ISO `finishedAt`, `discovering`, `total`, `completed`, `failed`, and optional safe `error`. Counts track queued tasks, including descendants; a failed collection contributes a failed task. Totals can grow during discovery and descendant processing. Completion means collection and all associated tasks have settled, regardless of unrelated queue activity.
+
+History holds active jobs and the latest 100 finished jobs in memory. It survives page reloads and resets on server restart. There is no job cancellation or database migration. Clients may poll every two seconds while visible and should mark retained data as stale when requests fail.
 
 ### Remote Imports
 Trigger imports from configured remote seedboxes.
@@ -420,3 +476,37 @@ Get the status of the seedbox importer, including configured seedboxes and impor
 - **URL:** `/files/duplicates`
 - **Method:** `GET`
 - **Response:** List of files with duplicate hashes.
+
+### Problematic Files
+Files that failed indexing. `problemStage` says where they failed: `identify` (no movie or episode matched, so nothing is linked to the file) or `probe` (ffprobe could not read it). Rows flagged before stages were recorded have `problemStage: null`. The flag clears itself when the failed stage later succeeds.
+
+- **URL:** `/files/problematic`
+- **Method:** `GET`
+- **Query Parameters:**
+  - `stage` (optional): `identify` or `probe`.
+  - `includeIgnored` (optional): `true` to include files marked as ignored.
+- **Response:** List of files, newest first, with `id`, `path`, `name`, `directory`, `error`, `problemStage`, `problemIgnored`, `updatedAt`, and the linked `Movies` / `Episodes` (with `Series`).
+
+### Retry Problematic File
+Queues the job for the stage that failed: stream analysis for `probe`, identification for `identify`. The file stays problematic until that job succeeds; a failed retry updates `error`. Progress arrives as `indexer` `problem` events (see [REALTIME_API.md](REALTIME_API.md)).
+
+- **URL:** `/files/:id/retry`
+- **Method:** `POST`
+- **Response (202):** `{ "queued": true, "jobs": ["identifyMovieFile"] }`
+- **Errors:** `404` unknown file, `409` file is not problematic, `400` file is outside every library directory, `410` file no longer exists on disk (e.g. it was renamed) and has been removed. A rescan picks up the new name.
+
+### Retry All Problematic Files
+Retries every problematic file that is not ignored.
+
+- **URL:** `/files/problematic/retry`
+- **Method:** `POST`
+- **Body:** `{ "stage": "identify" }` (optional; limits the retry to one stage)
+- **Response (202):** `{ "queued": 12, "removedIds": [7], "skippedIds": [42] }`. Removed files no longer existed on disk; skipped files are outside every library directory.
+
+### Ignore Problematic File
+Hides a problematic file from the default listing and from Retry All, e.g. samples or extras that will never be identified.
+
+- **URL:** `/files/:id`
+- **Method:** `PATCH`
+- **Body:** `{ "problemIgnored": true }`
+- **Response:** `{ "id": 42, "problemIgnored": true }`
