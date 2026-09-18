@@ -48,9 +48,11 @@ Oblecto can be installed using NPM or directly from Git. We recommend NPM unless
 4. Use the CLI if needed: `npm run oblecto` (or `npm run oblecto:dev`)
 
 ### Configuration notes
-- Config path order: `OBLECTO_CONFIG_PATH` -> `./res/config.json` -> `/etc/oblecto/config.json`
+- Config file: `OBLECTO_CONFIG_PATH` when set, otherwise `/etc/oblecto/config.json`. Anything the file leaves out is taken from `res/config.json`.
+- Oblecto refuses to start without `authentication.secret`; `oblecto init` generates one.
+- For development against a scratch config: `OBLECTO_CONFIG_PATH=/path/to/dev-config.json npm run dev`
 - Default SQLite file: `/etc/oblecto/database.sqlite`
-- Sample config template: `res/config.json`
+- Defaults and template: `res/config.json`
 
 Need help? Ask in the gitter chat or check the setup guide:
 https://github.com/robinp7720/Oblecto/wiki/Getting-Started

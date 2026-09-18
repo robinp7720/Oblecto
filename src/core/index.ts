@@ -1,5 +1,14 @@
 import Oblecto from '../lib/oblecto/index.js';
-import config from '../config.js';
+import config, { ConfigManager } from '../config.js';
+import { startupProblems } from '../lib/settings/startupChecks.js';
+
+const problems = startupProblems(config, ConfigManager.loadProblem());
+
+if (problems.length) {
+    console.error('Oblecto cannot start:');
+    for (const problem of problems) console.error(`  - ${problem}`);
+    process.exit(1);
+}
 
 const core = {
     oblecto: new Oblecto(config),

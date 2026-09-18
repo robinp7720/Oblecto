@@ -1,6 +1,7 @@
 {
   "ffmpeg": {
-
+    "pathFFmpeg": null,
+    "pathFFprobe": null
   },
   "indexer": {
     "runAtBoot": false
@@ -15,13 +16,13 @@
     "concurrency": 1
   },
   "tvdb": {
-    "key": "4908EBCEE2556E3D"
+    "key": ""
   },
   "themoviedb": {
-    "key": "b06b4917705eeed4e4b273d4c90fe158"
+    "key": ""
   },
   "fanart.tv": {
-    "key": "b6821e30b1a791e04d43543936de1fd0"
+    "key": ""
   },
   "assets": {
     "storeWithFile": false,
@@ -33,32 +34,45 @@
   },
   "database": {
     "dialect": "sqlite",
+    "storage": "/etc/oblecto/database.sqlite",
     "host": "localhost",
-    "username": "root",
-    "password": "root",
+    "username": "",
+    "password": "",
     "database": "Oblecto"
   },
   "server": {
     "port": 8080
   },
   "tvshows": {
-    "seriesIdentifiers": ["tmdb"],
-    "episodeIdentifiers": ["tmdb"],
-    "seriesUpdaters": ["tmdb", "tvdb"],
-    "episodeUpdaters": ["tmdb", "tvdb"],
+    "seriesIdentifiers": [
+      "tmdb"
+    ],
+    "episodeIdentifiers": [
+      "tmdb"
+    ],
+    "seriesUpdaters": [
+      "tmdb",
+      "tvdb"
+    ],
+    "episodeUpdaters": [
+      "tmdb",
+      "tvdb"
+    ],
     "doReIndex": false,
     "ignoreSeriesMismatch": true,
     "indexBroken": false,
-    "directories": [
-    ]
+    "directories": []
   },
   "movies": {
-    "movieIdentifiers": ["tmdb"],
-    "movieUpdaters": ["tmdb"],
+    "movieIdentifiers": [
+      "tmdb"
+    ],
+    "movieUpdaters": [
+      "tmdb"
+    ],
     "doReIndex": false,
     "indexBroken": false,
-    "directories": [
-    ]
+    "directories": []
   },
   "files": {
     "doHash": true
@@ -91,10 +105,10 @@
     ]
   },
   "authentication": {
-    "secret": "secret",
+    "secret": "",
     "saltRounds": 10,
-    "allowPasswordlessLogin": true,
-    "profilePicker": true,
+    "allowPasswordlessLogin": false,
+    "profilePicker": false,
     "localPasswordlessLogin": false,
     "localSubnets": [],
     "trustProxy": false
@@ -122,40 +136,11 @@
     "dataPort": 9131,
     "mediaPort": 9132,
     "enable": false,
-    "servers": {
-      "oblecto": {
-        "address": "88.153.83.155",
-        "ca": "/etc/oblecto/keys/oblecto.pem",
-        "dataPort": 9131,
-        "mediaPort": 9132
-      }
-    },
-    "clients": {
-      "tria": {
-        "key": "/etc/oblecto/keys/tria.pub"
-      }
-    }
+    "servers": {},
+    "clients": {}
   },
   "seedboxImport": {
     "concurrency": 1
   },
-  "seedboxes": [
-    {
-      "name": "Main seedbox",
-      "storageDriver": "ftp",
-      "storageDriverOptions": {
-        "host": "",
-        "port": 21,
-        "username": "username",
-        "password": "password"
-      },
-      "mediaImport": {
-        "movieDirectory": "/downloads/finished/movie/",
-        "seriesDirectory": "/downloads/finished/series/"
-      },
-      "automaticImport": true,
-      "deleteOnImport": false,
-      "enabled": false
-    }
-  ]
+  "seedboxes": []
 }

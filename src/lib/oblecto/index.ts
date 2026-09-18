@@ -1,5 +1,6 @@
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
+import { unconfiguredClient } from '../common/unconfiguredClient.js';
 import { MovieDb } from 'moviedb-promise';
 
 import Queue from '../queue/index.js';
@@ -98,8 +99,11 @@ export default class Oblecto {
         void this.prepareGroups();
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        this.tvdb = new (TVDB)(this.config.tvdb.key);
-        this.tmdb = new MovieDb(this.config.themoviedb.key);
+        this.tvdb = this.config.tvdb.key ? new (TVDB)(this.config.tvdb.key) : unconfiguredClient('TVDB', 'tvdb.key');
+        this.tmdb = this.config.themoviedb.key ? new MovieDb(this.config.themoviedb.key) : unconfiguredClient<MovieDb>('TMDb', 'themoviedb.key');
+
+        for (const [provider, key] of [['TVDB', this.config.tvdb.key], ['TMDb', this.config.themoviedb.key], ['fanart.tv', this.config['fanart.tv'].key]])
+            if (!key) logger.warn(`No ${provider} API key is set, so ${provider} lookups will fail until a key is added and Oblecto is restarted`);
 
         this.queue = new Queue(this.config.queue.concurrency);
 

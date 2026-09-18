@@ -6,6 +6,7 @@ import type { IConfig } from '../src/interfaces/config.js';
 export async function startupConfig(): Promise<{ file: string; cleanup: () => Promise<void> }> {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'oblecto-startup-'));
     const config = JSON.parse(await fs.readFile(new URL('../res/config.json', import.meta.url), 'utf8')) as IConfig;
+    config.authentication.secret = 'startup-test-secret';
     config.database.storage = ':memory:';
     config.server.port = 0;
     config.federation.enable = false;
