@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { account } from './accounts.mjs'
 const API = 'http://oblecto.test'
 const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': '*', 'access-control-allow-headers': '*' }
 const reply = (route, body, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) })
@@ -15,6 +16,7 @@ async function boot (page, path, handle = () => false) {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const url = new URL(route.request().url())
     if (await handle(route, url)) return
+    if (url.pathname === '/api/v1/me') return reply(route, account())
     if (url.pathname === '/api/v1/status/seedbox') return reply(route, { queue: { idle: true, length: 0, running: 0 } })
     if (url.pathname === '/api/v1/settings') return reply(route, config())
     if (url.pathname === '/api/v1/system/capabilities') return reply(route, { movies: { identifiers: ['tmdb'], updaters: ['tmdb'] }, tvshows: { seriesIdentifiers: ['tvdb'], episodeIdentifiers: ['tvdb'], seriesUpdaters: ['tvdb'], episodeUpdaters: ['tvdb'] } })

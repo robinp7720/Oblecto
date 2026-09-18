@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { account } from './accounts.mjs'
 
 // Generated rather than committed, the way tests/browser/server.ts does it.
 const MEDIA = path.join(os.tmpdir(), 'oblecto-player-ui', 'source.mp4')
@@ -60,7 +61,9 @@ function json (route, body, status = 200) {
   return route.fulfill({ status, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) })
 }
 
-async function stub (page) {
+// `me` answers /api/v1/me; the body of every new playback session is pushed
+// onto `sessions`.
+async function stub (page, { me = account(), sessions = [] } = {}) {
   // Everything is namespaced under a dedicated API origin so the stubs cannot
   // collide with the dev server's own module paths.
   await page.route('**oblecto.test/**', route => {
@@ -79,8 +82,11 @@ async function stub (page) {
       })
     }
 
+    if (path === '/api/v1/me') return json(route, me)
+
     if (path.startsWith('/playback/sessions')) {
       const method = request.method()
+      if (method === 'POST' && path === '/playback/sessions') sessions.push(request.postDataJSON())
       if (method === 'POST' || method === 'PATCH') return json(route, SESSION)
       return route.fulfill({ status: 204, headers: CORS, body: '' })
     }
@@ -96,10 +102,10 @@ async function stub (page) {
   })
 }
 
-async function boot (page) {
+async function boot (page, options) {
   const errors = []
   page.on('pageerror', error => errors.push(String(error)))
-  await stub(page)
+  await stub(page, options)
   await page.addInitScript(api => {
     localStorage.setItem('oblecto.accessToken', 'test-token')
     localStorage.setItem('oblecto.host', api)
@@ -179,6 +185,28 @@ test.describe('@desktop player', () => {
 
     const rail = page.locator('[role="slider"][aria-label="Seek"]')
     expect(await rail.getAttribute('aria-valuetext')).toBeTruthy()
+  })
+
+  test('starts on the tracks and quality the user prefers', async ({ page }) => {
+    const sessions = []
+    await boot(page, {
+      sessions,
+      me: account({ preferences: { audioLanguage: 'ger', subtitleMode: 'off', quality: 720 } })
+    })
+    await play(page)
+
+    // "ger" and the file's "deu" are the same language.
+    expect(sessions[0]).toMatchObject({ fileId: 11, quality: 720, audioStreamIndex: 2, subtitleStreamIndex: null, subtitleMode: 'off' })
+  })
+
+  test('leaves tracks to the server without a preference', async ({ page }) => {
+    const sessions = []
+    await boot(page, { sessions })
+    await play(page)
+
+    expect(sessions[0]).toMatchObject({ quality: 'original', subtitleMode: 'auto' })
+    expect(sessions[0].audioStreamIndex).toBeUndefined()
+    expect(sessions[0].subtitleStreamIndex).toBeUndefined()
   })
 
   test('settings opens as a popover on desktop', async ({ page }) => {
