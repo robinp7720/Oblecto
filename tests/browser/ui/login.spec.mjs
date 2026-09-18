@@ -117,3 +117,23 @@ test.describe('@phone login', () => {
     await page.screenshot({ path: 'test-results/login-picker-phone.png', fullPage: true })
   })
 })
+
+test.describe('@desktop session expiry', () => {
+  test('returns to sign-in with a notice when the server rejects the saved token', async ({ page }) => {
+    await page.route('**oblecto.test/**', async route => {
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+      const url = new URL(route.request().url())
+      if (url.pathname === '/auth/login-options') return reply(route, { local: false, users: [] })
+      return reply(route, { message: 'Your session has expired. Please sign in again.' }, 401)
+    })
+    await page.addInitScript(api => {
+      localStorage.setItem('oblecto.host', api)
+      localStorage.setItem('oblecto.accessToken', 'stale-token')
+    }, API)
+    await page.goto('/movies')
+
+    await expect(page).toHaveURL(/\/login\?redirect=\/library\/movies&expired=1/)
+    await expect(page.locator('.login-error').first()).toContainText('Your session has ended')
+    expect(await page.evaluate(() => localStorage.getItem('oblecto.accessToken'))).toBeNull()
+  })
+})
