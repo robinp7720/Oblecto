@@ -42,6 +42,7 @@
     "test:player:ui": "playwright test --project=player-desktop --project=player-phone",
     "typecheck": "tsc --noEmit -p tsconfig.src.json",
     "lint:src": "eslint src",
+    "test:network": "mocha --config tests/network/.mocharc.cjs",
     "verify": "npm run lint:src && npm run typecheck && npm test"
   },
   "dependencies": {

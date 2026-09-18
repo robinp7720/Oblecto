@@ -11,10 +11,14 @@ const IMDBD_TEST_ID = 'tt4154796';
 
 const oblecto = {
     queue: new Queue(1),
-    config: { 'fanart.tv': { key: 'b6821e30b1a791e04d43543936de1fd0' } }
+    config: { 'fanart.tv': { key: process.env.OBLECTO_FANART_KEY ?? '' } }
 };
 
 describe('FanartTV Movie Artwork Retriever', function () {
+    before(function () {
+        if (!process.env.OBLECTO_FANART_KEY) this.skip();
+    });
+
     const ArtworkRetriever = new FanarttvMovieArtworkRetriever(oblecto);
 
     it('Fanart artwork retrieval using TMDBID', async function () {

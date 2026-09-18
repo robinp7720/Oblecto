@@ -7,10 +7,15 @@ import guessit from '../../src/submodules/guessit.js';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
 
+// Provide real keys to run this suite:
+//   OBLECTO_TVDB_KEY=... OBLECTO_TMDB_KEY=... OBLECTO_FANART_KEY=... npm run test:network
+const tvdbKey = process.env.OBLECTO_TVDB_KEY ?? '';
+const tmdbKey = process.env.OBLECTO_TMDB_KEY ?? '';
+
 function createOblectoFixture() {
     return {
-        tvdb: new TVDB( '4908EBCEE2556E3D'),
-        tmdb: new MovieDb('b06b4917705eeed4e4b273d4c90fe158'),
+        tvdb: new TVDB(tvdbKey),
+        tmdb: new MovieDb(tmdbKey),
 
         queue: new Queue(1),
         config: {
@@ -23,6 +28,10 @@ function createOblectoFixture() {
 }
 
 describe('SeriesIndexer', function () {
+    before(function () {
+        if (!tvdbKey || !tmdbKey) this.skip();
+    });
+
     describe('Aggregate Series Identifier', function () {
         this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {

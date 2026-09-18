@@ -11,11 +11,15 @@ const TMDBID_TEST_ID = '299534';
 
 const oblecto = {
     queue: new Queue(1),
-    config: { 'fanart.tv': { key: 'b6821e30b1a791e04d43543936de1fd0' } },
-    tmdb: new MovieDb('b06b4917705eeed4e4b273d4c90fe158')
+    config: { 'fanart.tv': { key: process.env.OBLECTO_FANART_KEY ?? '' } },
+    tmdb: new MovieDb(process.env.OBLECTO_TMDB_KEY ?? '')
 };
 
 describe('Tmdb Movie Artwork Retriever', function () {
+    before(function () {
+        if (!process.env.OBLECTO_FANART_KEY || !process.env.OBLECTO_TMDB_KEY) this.skip();
+    });
+
     const ArtworkRetriever = new TmdbMovieArtworkRetriever(oblecto);
 
     it('Fanart artwork retrieval using TMDBID', async function () {
