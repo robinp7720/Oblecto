@@ -74,7 +74,7 @@ export default class EmbyEmulation {
             this.websocketSessions[req.query.api_key] = spark;
 
             spark.on('end', () => {
-                if (this.websocketSessions[req.query!.api_key!] === spark) delete this.websocketSessions[req.query!.api_key!];
+                if (this.websocketSessions[req.query!.api_key] === spark) delete this.websocketSessions[req.query!.api_key];
             });
 
             spark.on('data', function message(data: unknown) {
@@ -84,7 +84,9 @@ export default class EmbyEmulation {
     }
 
     close(): Promise<void> {
-        return new Promise(resolve => this.primus.destroy({ close: true, reconnect: false, timeout: 1000 }, resolve));
+        return new Promise(resolve => this.primus.destroy({
+ close: true, reconnect: false, timeout: 1000 
+}, resolve));
     }
 
     /**

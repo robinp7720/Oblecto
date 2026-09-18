@@ -80,7 +80,9 @@ export default class Queue {
     queueJob(id: string, attr: unknown, priority: number = 5): void {
         const maintenance = this.maintenance.current();
         this.maintenance.enqueue(maintenance);
-        void this.queue.push({ id, attr, maintenance }, priority);
+        void this.queue.push({
+ id, attr, maintenance 
+}, priority);
     }
 
     /**

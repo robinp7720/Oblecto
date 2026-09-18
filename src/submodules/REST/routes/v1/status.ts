@@ -18,7 +18,8 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/api/v1/status/sessions', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         // Scoped to the caller's own sessions, so no permission is needed.
 
-        const sessions = oblecto.playback.diagnostics(`user:${(req as OblectoRequest).authorization?.user?.id}`);
+        const user = (req as OblectoRequest).authorization?.user as { id?: number } | undefined;
+        const sessions = oblecto.playback.diagnostics(`user:${user?.id}`);
 
         res.send(sessions);
     });

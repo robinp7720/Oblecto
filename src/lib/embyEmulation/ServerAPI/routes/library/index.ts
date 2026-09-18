@@ -1,5 +1,5 @@
 import type { Application, Request, Response } from 'express';
-import type EmbyEmulation from '../../index.js';
+import type EmbyEmulation from '../../../index.js';
 
 export default (server: Application, _embyEmulation: EmbyEmulation): void => {
     // Collections

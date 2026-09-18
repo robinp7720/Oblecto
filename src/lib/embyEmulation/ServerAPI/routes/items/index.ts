@@ -635,11 +635,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             Path: undefined,
             Protocol: 'Http',
             RunTimeTicks: session.media.duration * 10000000,
-            MediaStreams: createStreamsList(session.media.streams.map(track => ({ ...track, tags_language: track.tags?.language, tags_title: track.tags?.title, disposition_default: track.disposition?.default, disposition_forced: track.disposition?.forced }))).map(stream => {
+            MediaStreams: createStreamsList(session.media.streams.map(track => ({
+ ...track, tags_language: track.tags?.language, tags_title: track.tags?.title, disposition_default: track.disposition?.default, disposition_forced: track.disposition?.forced 
+}))).map(stream => {
                 if (stream.Type !== 'Subtitle') return stream;
                 const text = ['subrip', 'webvtt', 'mov_text', 'text'].includes(String(stream.Codec));
                 const url = playback.mediaUrl.replace(/\/[^/?]+\?token=/, `/subtitle-${String(stream.Index)}.vtt?token=`);
-                return { ...stream, DeliveryMethod: text ? 'External' : 'Encode', DeliveryUrl: text ? url : undefined, IsExternal: text, IsTextSubtitleStream: text, SupportsExternalStream: text };
+                return {
+ ...stream, DeliveryMethod: text ? 'External' : 'Encode', DeliveryUrl: text ? url : undefined, IsExternal: text, IsTextSubtitleStream: text, SupportsExternalStream: text 
+};
             }),
             SupportsDirectPlay: session.plan.method === 'direct',
             SupportsDirectStream: session.plan.method === 'direct',
@@ -651,7 +655,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             DefaultAudioStreamIndex: session.plan.audio?.index ?? -1,
             DefaultSubtitleStreamIndex: session.plan.subtitle?.index ?? -1
         }));
-        res.send({ MediaSources: sources, PlaySessionId: playSessionId, MediaSourceId: formatFileId(file.id) });
+        res.send({
+ MediaSources: sources, PlaySessionId: playSessionId, MediaSourceId: formatFileId(file.id) 
+});
     };
     server.post('/items/:mediaid/playbackinfo', playbackInfo);
     server.get('/items/:mediaid/playbackinfo', playbackInfo);

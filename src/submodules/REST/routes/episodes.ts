@@ -23,10 +23,12 @@ export default (server: Express, oblecto: Oblecto) => {
         const combined_params = req.combined_params!;
         const AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf((combined_params.order as string).toLowerCase()) === -1)
+        const order = String(combined_params.order ?? '').toLowerCase();
+
+        if (AllowedOrders.indexOf(order) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
-        if (!(req.params.sorting in Episode.rawAttributes))
+        if (!(String(req.params.sorting) in Episode.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
         if (combined_params.count && Number.isInteger(parseInt(combined_params.count as string)))
@@ -44,7 +46,7 @@ export default (server: Express, oblecto: Oblecto) => {
                     where: { userId: req.authorization!.user.id }
                 }
             ],
-            order: [[req.params.sorting, combined_params.order as string]],
+            order: [[String(req.params.sorting), order]],
             limit,
             offset: limit * page
         });
@@ -55,6 +57,8 @@ export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a banner image for an episode based on the local episode ID
     server.get('/episode/:id/banner', async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
+
+        if (!episode) return res.status(404).send({ message: 'Episode does not exist' });
 
         const imagePath = oblecto.artworkUtils.episodeBannerPath(episode, (req.combined_params?.size as string) || 'medium');
 

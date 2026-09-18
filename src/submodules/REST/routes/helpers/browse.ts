@@ -190,31 +190,19 @@ export function buildCursorWhere(sortField: string, order: 'asc' | 'desc', sortV
             [Op.or]: [
                 {
                     [sortField]: null,
-                    id: {
-                        [idOp]: id
-                    }
+                    id: {[idOp]: id}
                 },
-                {
-                    [sortField]: {
-                        [Op.not]: null
-                    }
-                }
+                {[sortField]: {[Op.not]: null}}
             ]
         };
     }
 
     return {
         [Op.or]: [
-            {
-                [sortField]: {
-                    [sortOp]: sortValue
-                }
-            },
+            {[sortField]: {[sortOp]: sortValue}},
             {
                 [sortField]: sortValue,
-                id: {
-                    [idOp]: id
-                }
+                id: {[idOp]: id}
             }
         ]
     };

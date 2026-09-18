@@ -12,7 +12,7 @@ const shutdown = async (_signal: string): Promise<void> => {
     finally { clearTimeout(deadline); process.exit(process.exitCode ?? 0); }
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => { void shutdown('SIGINT'); });
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
 
 core.start();

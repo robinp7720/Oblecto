@@ -38,4 +38,12 @@ declare module 'neo-blessed' {
 
     export default blessed;
 }
-declare module 'node-rsa';
+declare module 'node-rsa' {
+    // Only the surface federation uses
+    export default class NodeRSA {
+        constructor(key?: string | Buffer | { b: number });
+        encrypt(data: string | Buffer, encoding: 'base64'): string;
+        decrypt(data: string | Buffer, encoding: 'ascii' | 'utf8'): string;
+        exportKey(format: 'pkcs1-private-pem' | 'pkcs1-public-pem'): string;
+    }
+}

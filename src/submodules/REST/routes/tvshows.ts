@@ -51,7 +51,10 @@ const buildSeriesProgressLiteral = (
     conditionType: 'watched' | 'inprogress' | 'hasProgress',
     negate = false
 ): any => {
-    const queryGenerator = Series.sequelize?.getQueryInterface().queryGenerator;
+    const queryGenerator = Series.sequelize?.getQueryInterface().queryGenerator as {
+        quoteTable(table: unknown): string;
+        quoteIdentifier(identifier: string): string;
+    } | undefined;
 
     if (!queryGenerator) {
         return null;
@@ -108,11 +111,11 @@ export default (server: Express, oblecto: Oblecto) => {
             if (LEGACY_ALLOWED_ORDERS.indexOf(legacyOrder) === -1)
                 return res.status(400).send({ message: 'Sorting order is invalid' });
 
-            if (!(req.params.sorting in Series.rawAttributes))
+            if (!(String(req.params.sorting) in Series.rawAttributes))
                 return res.status(400).send({ message: 'Sorting method is invalid' });
 
             const results = await Series.findAll({
-                order: [[req.params.sorting, legacyOrder]],
+                order: [[String(req.params.sorting), legacyOrder]],
                 limit,
                 offset: limit * page
             });
@@ -120,7 +123,7 @@ export default (server: Express, oblecto: Oblecto) => {
             return res.send(results);
         }
 
-        const sorting = req.params.sorting;
+        const sorting = String(req.params.sorting);
         if (!BROWSE_SORT_FIELDS.has(sorting)) {
             return res.status(400).send({ message: 'Sorting method is invalid' });
         }
@@ -182,11 +185,7 @@ export default (server: Express, oblecto: Oblecto) => {
                         attributes: [],
                         through: { attributes: [] },
                         required: true,
-                        where: {
-                            path: {
-                                [Op.like]: `${escapeLike(browseParams.libraryPath)}%`
-                            }
-                        }
+                        where: {path: {[Op.like]: `${escapeLike(browseParams.libraryPath)}%`}}
                     }
                 ]
             });

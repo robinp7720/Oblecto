@@ -2,6 +2,7 @@ import express, { type Request, type Response, type NextFunction, type Applicati
 import routes from './routes/index.js';
 import { resolveJellyfinWebPath } from './webPath.js';
 import cors from 'cors';
+import type { Server } from 'http';
 import logger from '../../../submodules/logger/index.js';
 
 import type EmbyEmulation from '../index.js';
@@ -48,7 +49,8 @@ function parseMediaBrowserHeader(headerStr: string): Record<string, string> {
 
 export default class EmbyServerAPI {
     public embyEmulation: EmbyEmulation;
-    public server: Application | ReturnType<Application['listen']>;
+    public app: Application;
+    public server: Server;
 
     /**
      * @param embyEmulation - The EmbyEmulation instance
@@ -57,16 +59,16 @@ export default class EmbyServerAPI {
         this.embyEmulation = embyEmulation;
 
         // Initialize REST based server
-        this.server = express();
+        this.app = express();
 
         // Log requests
-        this.server.use((req: Request, res: Response, next: NextFunction) => {
+        this.app.use((req: Request, res: Response, next: NextFunction) => {
             logger.debug(req.path, req.method);
             next();
         });
 
         // Allow remote clients to connect to the backend
-        this.server.use(cors({
+        this.app.use(cors({
             origin: '*',
             maxAge: 5,
             allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range', 'X-Emby-Authorization', 'X-Emby-Token'],
@@ -74,7 +76,7 @@ export default class EmbyServerAPI {
         }));
 
         // Parse Authorization header
-        this.server.use((req: EmbyRequest, res: Response, next: NextFunction) => {
+        this.app.use((req: EmbyRequest, res: Response, next: NextFunction) => {
             if (req.headers.authorization !== undefined) {
                 const parts = req.headers.authorization.split(' ');
 
@@ -89,26 +91,26 @@ export default class EmbyServerAPI {
         });
 
         // Parse query parameters and body
-        this.server.use(express.urlencoded({ extended: true }));
-        this.server.use(express.json());
+        this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(express.json());
 
         // Serve web interface
         const staticPath = resolveJellyfinWebPath();
-        this.server.use('/web', express.static(staticPath));
+        this.app.use('/web', express.static(staticPath));
 
-        this.server.get('/', (req, res) => {
+        this.app.get('/', (req, res) => {
             res.redirect('/web/index.html');
         });
 
         // Convert URL to lowercase
-        this.server.use((req: Request, res: Response, next: NextFunction) => {
+        this.app.use((req: Request, res: Response, next: NextFunction) => {
             const split = req.url.indexOf('?');
             req.url = split === -1 ? req.url.toLowerCase() : req.url.slice(0, split).toLowerCase() + req.url.slice(split);
             next();
         });
 
         // Parse Emby headers
-        this.server.use((req: EmbyRequest, res: Response, next: NextFunction) => {
+        this.app.use((req: EmbyRequest, res: Response, next: NextFunction) => {
             if (req.headers.authorization === undefined) return next();
 
             req.headers.emby = parseMediaBrowserHeader(req.headers.authorization);
@@ -117,17 +119,17 @@ export default class EmbyServerAPI {
         });
 
         // Add routes
-        routes(this.server, this.embyEmulation);
+        routes(this.app, this.embyEmulation);
 
         // Log unmatched routes
-        this.server.use((req: Request, res: Response, next: NextFunction) => {
+        this.app.use((req: Request, res: Response, next: NextFunction) => {
             logger.debug('Route remained unmatched:', req.url, (res.locals as { _data?: unknown })._data);
             next();
         });
 
         // Error handling middleware
 
-        this.server.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
+        this.app.use((err: Error & { statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
             if (err === null || err === undefined) return next();
 
             if (res.headersSent) return next(err);
@@ -143,7 +145,7 @@ export default class EmbyServerAPI {
         });
 
         // Start express server
-        this.server = (this.server).listen(8096, () => {
+        this.server = this.app.listen(8096, () => {
             logger.info('Jellyfin emulation server listening at http://localhost:8096');
         });
     }

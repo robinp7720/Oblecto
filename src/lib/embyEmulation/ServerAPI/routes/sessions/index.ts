@@ -73,7 +73,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const entry = getPlaybackEntry(embyEmulation, token, playId);
         const playback = entry?.streamSessionId ? embyEmulation.oblecto.playback?.sessions.get(String(entry.streamSessionId)) : undefined;
         if (playback && playback.owner === `emby:${token}`) {
-            await embyEmulation.oblecto.playback.report(playback, { revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' });
+            await embyEmulation.oblecto.playback.report(playback, {
+ revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' 
+});
             if (stop) await embyEmulation.oblecto.playback.stop(playback);
         } else {
             const { id, type } = parseId(String(itemId));

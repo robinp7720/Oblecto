@@ -65,7 +65,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 return res.status(400).send({ message: 'Sorting order is invalid' });
             }
 
-            if (!(req.params.sorting in Movie.rawAttributes))
+            if (!(String(req.params.sorting) in Movie.rawAttributes))
                 return res.status(400).send({ message: 'Sorting method is invalid' });
 
             if (params.count && Number.isInteger(parseInt(params.count as string)))
@@ -82,7 +82,7 @@ export default (server: Express, oblecto: Oblecto) => {
                         where: { userId: req.authorization!.user.id }
                     }
                 ],
-                order: [[req.params.sorting, params.order]],
+                order: [[String(req.params.sorting), legacyOrder]],
                 limit,
                 offset: limit * page
             });
@@ -90,7 +90,7 @@ export default (server: Express, oblecto: Oblecto) => {
             return res.send(results);
         }
 
-        const sorting = req.params.sorting;
+        const sorting = String(req.params.sorting);
 
         if (!BROWSE_SORT_FIELDS.has(sorting)) {
             return res.status(400).send({ message: 'Sorting method is invalid' });

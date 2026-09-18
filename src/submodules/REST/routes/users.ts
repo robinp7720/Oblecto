@@ -72,7 +72,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
-        const user = await User.findByPk(req.params.id);
+        const user = await User.findByPk(String(req.params.id));
 
         if (!user) {
             res.status(400).send({ message: 'User with id does not exist' });

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Application, Request, Response } from 'express';
-import type EmbyEmulation from '../../index.js';
+import type EmbyEmulation from '../../../index.js';
 
 /**
  * @param server - The Express application

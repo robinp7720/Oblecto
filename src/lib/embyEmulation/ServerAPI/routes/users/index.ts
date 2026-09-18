@@ -436,7 +436,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'StartIndex': startIndex
             });
         } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
-            const userId = req.params.userid; // Route parameter
+            const userId = String(req.params.userid ?? ''); // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
             const where: any = {};
 
@@ -546,7 +546,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
-        const userId = parseUuid(req.params.userid);
+        const userId = parseUuid(String(req.params.userid));
         let resolvedType = parsed.type;
         let item = null;
 

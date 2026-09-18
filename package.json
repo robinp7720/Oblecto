@@ -39,7 +39,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test:playback:browser": "playwright test --project=chromium --project=firefox --project=webkit",
-    "test:player:ui": "playwright test --project=player-desktop --project=player-phone"
+    "test:player:ui": "playwright test --project=player-desktop --project=player-phone",
+    "typecheck": "tsc --noEmit -p tsconfig.src.json",
+    "lint:src": "eslint src",
+    "verify": "npm run lint:src && npm run typecheck && npm test"
   },
   "dependencies": {
     "async": "^3.2.6",
