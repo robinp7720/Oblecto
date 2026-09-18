@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
+import { containsText } from '../../../../common/textSearch.js';
 
 /**
  *
@@ -354,7 +355,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = null;
 
             if (searchTerm) {
-                where = { movieName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('movieName', searchTerm);
             }
 
             const count = await Movie.count({ where } as any);
@@ -376,7 +377,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = null;
 
             if (searchTerm) {
-                where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('seriesName', searchTerm);
             }
 
             const count = await Series.count({ where } as any);
@@ -435,7 +436,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
 
             if (searchTerm) {
-                where.episodeName = { [Op.like]: `%${searchTerm}%` };
+                where[Op.and] = [containsText('episodeName', searchTerm)];
             }
 
             const count = await Episode.count({ where } as any);
@@ -804,7 +805,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         let totalCount = 0;
 
         if (wantsMovie) {
-            const where = { movieName: { [Op.like]: `%${searchTerm}%` } };
+            const where = containsText('movieName', searchTerm);
             const count = await Movie.count({ where });
 
             totalCount += count;
@@ -819,7 +820,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (wantsSeries) {
-            const where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+            const where = containsText('seriesName', searchTerm);
             const count = await Series.count({ where });
 
             totalCount += count;
@@ -834,7 +835,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (wantsEpisode) {
-            const where = { episodeName: { [Op.like]: `%${searchTerm}%` } };
+            const where = containsText('episodeName', searchTerm);
             const count = await Episode.count({ where });
 
             totalCount += count;

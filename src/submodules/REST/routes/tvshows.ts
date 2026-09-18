@@ -12,10 +12,11 @@ import { SeriesSet } from '../../../models/seriesSet.js';
 import { File } from '../../../models/file.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
-import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor } from './helpers/browse.js';
 import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
+import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -132,11 +133,10 @@ export default (server: Express, oblecto: Oblecto) => {
         const includeClauses: any[] = [];
 
         if (browseParams.q) {
-            const query = `%${escapeLike(browseParams.q)}%`;
             whereClauses.push({
                 [Op.or]: [
-                    { seriesName: { [Op.like]: query } },
-                    { alias: { [Op.like]: query } }
+                    containsText('seriesName', browseParams.q),
+                    containsText('alias', browseParams.q)
                 ]
             });
         }
@@ -144,7 +144,7 @@ export default (server: Express, oblecto: Oblecto) => {
         if (browseParams.genres.length > 0) {
             whereClauses.push({
                 [Op.or]: browseParams.genres.map((genre: string) => {
-                    return { genre: { [Op.like]: `%${escapeLike(genre)}%` } };
+                    return containsText('genre', genre);
                 })
             });
         }
@@ -185,7 +185,7 @@ export default (server: Express, oblecto: Oblecto) => {
                         attributes: [],
                         through: { attributes: [] },
                         required: true,
-                        where: {path: {[Op.like]: `${escapeLike(browseParams.libraryPath)}%`}}
+                        where: startsWithText('path', browseParams.libraryPath)
                     }
                 ]
             });
@@ -384,7 +384,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const series = await Series.findAll({ where: { seriesName: { [Op.like]: '%' + req.params.name + '%' } } });
+        const series = await Series.findAll({ where: containsText('seriesName', String(req.params.name)) });
 
         res.send(series);
     });

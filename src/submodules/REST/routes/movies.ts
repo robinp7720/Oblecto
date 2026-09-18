@@ -12,10 +12,11 @@ import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
-import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor } from './helpers/browse.js';
 import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
+import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -101,11 +102,10 @@ export default (server: Express, oblecto: Oblecto) => {
         const includeClauses: any[] = [];
 
         if (browseParams.q) {
-            const query = `%${escapeLike(browseParams.q)}%`;
             whereClauses.push({
                 [Op.or]: [
-                    { movieName: { [Op.like]: query } },
-                    { originalName: { [Op.like]: query } }
+                    containsText('movieName', browseParams.q),
+                    containsText('originalName', browseParams.q)
                 ]
             });
         }
@@ -113,7 +113,7 @@ export default (server: Express, oblecto: Oblecto) => {
         if (browseParams.genres.length > 0) {
             whereClauses.push({
                 [Op.or]: browseParams.genres.map((genre: string) => {
-                    return { genres: { [Op.like]: `%${escapeLike(genre)}%` } };
+                    return containsText('genres', genre);
                 })
             });
         }
@@ -161,7 +161,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 attributes: [],
                 through: { attributes: [] },
                 required: true,
-                where: {path: {[Op.like]: `${escapeLike(browseParams.libraryPath)}%`}}
+                where: startsWithText('path', browseParams.libraryPath)
             });
         }
 
@@ -403,7 +403,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
     server.get('/movies/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const movie = await Movie.findAll({
-            where: { movieName: { [Op.like]: '%' + req.params.name + '%' } },
+            where: containsText('movieName', String(req.params.name)),
             include: [File]
         });
 

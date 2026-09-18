@@ -24,6 +24,7 @@ import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
 import { setPlayed } from '../../../../playback/progress.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
+import { containsText } from '../../../../common/textSearch.js';
 
 // Jellyfin clients show their admin dashboard to administrators.
 const isAdministrator = async (user: User | null): Promise<boolean> => user !== null && (await permissionsOf(user)).includes('settings.manage');
@@ -298,7 +299,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = {};
 
             if (searchTerm) {
-                where = { movieName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('movieName', searchTerm);
             }
 
             const results = await Movie.findAll({
@@ -321,7 +322,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = {};
 
             if (searchTerm) {
-                where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('seriesName', searchTerm);
             }
 
             const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby')
@@ -381,7 +382,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
 
             if (searchTerm) {
-                where.episodeName = { [Op.like]: `%${searchTerm}%` };
+                where[Op.and] = [containsText('episodeName', searchTerm)];
             }
 
             const count = await Episode.count({ where });

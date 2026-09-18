@@ -14,6 +14,7 @@ import { OblectoRequest } from '../index.js';
 import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
+import { containsText } from '../../../lib/common/textSearch.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -142,7 +143,7 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
         const episode = await Episode.findAll({
-            where: { episodeName: { [Op.like]: '%' + req.params.name + '%' } },
+            where: containsText('episodeName', String(req.params.name)),
             include: [
                 File,
                 Series,
