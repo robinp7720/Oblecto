@@ -1,6 +1,8 @@
 import tls from 'tls';
 import fs from 'fs';
 
+import logger from '../../../submodules/logger/index.js';
+
 import type Oblecto from '../../oblecto/index.js';
 
 export default class FederationServer {
@@ -12,7 +14,7 @@ export default class FederationServer {
 
         const options = {
             key: fs.readFileSync(this.oblecto.config.federation.key),
-            cert: fs.readFileSync('/etc/oblecto/keys/public-cert.pem'),
+            cert: fs.readFileSync(this.oblecto.config.federation.cert ?? '/etc/oblecto/keys/public-cert.pem'),
         };
 
         this.server = tls.createServer(options, () => {});
@@ -25,7 +27,7 @@ export default class FederationServer {
     }
 
     errorHandler(error: Error): void {
-        void error;
+        logger.error('Federation server error', error);
     }
 
     connectionHandler(socket: tls.TLSSocket): void {

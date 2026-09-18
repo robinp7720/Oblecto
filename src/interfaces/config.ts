@@ -141,6 +141,8 @@ string
     },
     'federation': {
         'key': string,
+        // TLS certificate presented to federation peers
+        'cert'?: string,
         'dataPort': number,
         'mediaPort': number,
         'enable': boolean,

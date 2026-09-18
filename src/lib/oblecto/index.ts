@@ -148,13 +148,21 @@ export default class Oblecto {
         void this.seedboxController.loadAllSeedboxes();
 
         if (this.config.federation.enable) {
-            this.federationController = new FederationController(this);
-            this.federationClientController = new FederationClientController(this);
+            // Federation needs key and certificate files; without them the rest of Oblecto still runs.
+            try {
+                this.federationController = new FederationController(this);
+                this.federationClientController = new FederationClientController(this);
 
-            this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
-            this.federationMovieIndexer = new FederationMovieIndexer(this);
+                this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
+                this.federationMovieIndexer = new FederationMovieIndexer(this);
 
-            void this.federationClientController.addAllSyncMasters();
+                void this.federationClientController.addAllSyncMasters();
+            } catch (error) {
+                logger.error('Federation is enabled but could not start, so it is off until this is fixed', error);
+                this.federationController?.close();
+                this.federationController = undefined;
+                this.federationClientController = undefined;
+            }
         }
 
         this.oblectoAPI = new OblectoAPI(this);

@@ -139,6 +139,7 @@
   },
   "federation": {
     "key": "/etc/oblecto/id_rsa",
+    "cert": "/etc/oblecto/keys/public-cert.pem",
     "dataPort": 9131,
     "mediaPort": 9132,
     "enable": false,
