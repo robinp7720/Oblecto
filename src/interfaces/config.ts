@@ -100,6 +100,8 @@ string
     'authentication': {
         'secret': string,
         'saltRounds': number,
+        // Days a web sign-in lasts before the user must sign in again
+        'tokenLifetimeDays'?: number,
         'allowPasswordlessLogin': boolean,
         // Show the profile picker instead of the login form on the local network
         'profilePicker'?: boolean,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import express from 'express';
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../src/lib/auth/tokens.js';
+import { User } from '../../src/models/user.js';
 import type { Server } from 'node:http';
 import { File } from '../../src/models/file.js';
 import config from '../../src/config.js';
@@ -12,11 +13,13 @@ import type { OblectoRequest } from '../../src/submodules/REST/index.js';
 describe('Playback session REST API', () => {
     let server: Server; let service: PlaybackService; let base: string;
     const findFile = File.findByPk;
-    const token = (id = 1) => jwt.sign({ id }, config.authentication.secret);
+    const findUser = User.findByPk;
+    const token = (id = 1) => issueAccessToken({ id, password: null }, config.authentication);
     const headers = (id = 1) => ({ Authorization: `Bearer ${token(id)}`, 'Content-Type': 'application/json' });
     before(async () => {
         service = new PlaybackService({ config: { ffmpeg: {}, streaming: {}, transcoding: {} } } as unknown as Oblecto);
         service.probe = async () => ({ path: '/not-used.mp4', duration: 90, size: 100000, container: 'mp4', streams: [{ index: 0, codec_type: 'video', codec_name: 'h264' }, { index: 1, codec_type: 'audio', codec_name: 'aac' }] });
+        User.findByPk = (async (id: number) => ({ id, password: null }) as User) as typeof User.findByPk;
         File.findByPk = (async (id: number) => id === 1 ? { id: 1, path: '/not-used.mp4', host: 'local', extension: 'mp4' } as File : null) as typeof File.findByPk;
         const app = express(); app.use(express.json());
         app.use((req: OblectoRequest, _res, next) => { if (req.headers.authorization) req.authorization = { scheme: 'Bearer', credentials: req.headers.authorization.split(' ')[1] }; next(); });
@@ -25,7 +28,7 @@ describe('Playback session REST API', () => {
         server = app.listen(0); await new Promise<void>(resolve => server.once('listening', resolve));
         base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
     });
-    after(async () => { File.findByPk = findFile; await service.close(); await new Promise<void>(resolve => server.close(() => resolve())); });
+    after(async () => { File.findByPk = findFile; User.findByPk = findUser; await service.close(); await new Promise<void>(resolve => server.close(() => resolve())); });
     it('requires authentication and removes legacy session routes', async () => {
         assert.equal((await fetch(`${base}/playback/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"fileId":1}' })).status, 401);
         assert.equal((await fetch(`${base}/session/create/1`, { headers: headers() })).status, 404);

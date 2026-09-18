@@ -107,6 +107,7 @@
   "authentication": {
     "secret": "",
     "saltRounds": 10,
+    "tokenLifetimeDays": 30,
     "allowPasswordlessLogin": false,
     "profilePicker": false,
     "localPasswordlessLogin": false,

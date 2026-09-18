@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
 import { Server } from 'node:http';
 import express, { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../src/lib/auth/tokens.js';
 import { Sequelize } from 'sequelize';
 import config from '../../src/config.js';
 import userRoutes from '../../src/submodules/REST/routes/users.js';
@@ -25,7 +25,7 @@ describe('groups and permissions', () => {
         queue: { maintenance: { list: () => [] } }
     };
 
-    const tokenFor = (user: User) => jwt.sign({ id: user.id, username: user.username }, config.authentication.secret);
+    const tokenFor = (user: User) => issueAccessToken(user, config.authentication);
 
     const call = async (method: string, path: string, user?: User, body?: object) => {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };

@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import jwt from 'jsonwebtoken';
+import { verifyAccessToken } from '../auth/tokens.js';
 
 import logger from '../../submodules/logger/index.js';
 import RealtimeClient from './RealtimeClient.js';
@@ -86,18 +86,20 @@ export default class RealtimeController {
             return;
         }
 
-        let user: AuthUser;
+        verifyAccessToken(auth.token, this.oblecto.config.authentication).then(claims => {
+            if (!claims) {
+                logger.warn('An unauthorized user attempted connection to realtime server');
+                next(new Error('Authentication failed'));
 
-        try {
-            user = jwt.verify(auth.token, this.oblecto.config.authentication.secret) as AuthUser;
-        } catch {
-            logger.warn('An unauthorized user attempted connection to realtime server');
-            next(new Error('Authentication failed'));
+                return;
+            }
 
-            return;
-        }
+            this.admit(socket, claims as AuthUser, auth.device, next);
+        }).catch((error: unknown) => next(error instanceof Error ? error : new Error(String(error))));
+    }
 
-        const identity = parseDeviceIdentity(auth.device);
+    private admit(socket: Socket, user: AuthUser, device: unknown, next: (err?: Error) => void): void {
+        const identity = parseDeviceIdentity(device);
 
         if (!identity) {
             next(new Error('A device identity is required to connect'));

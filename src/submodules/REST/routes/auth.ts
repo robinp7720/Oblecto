@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions */
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../../lib/auth/tokens.js';
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import { User } from '../../../models/user.js';
@@ -63,14 +63,7 @@ export default (server: Express, oblecto: any) => {
             if (!await checkLogin(user, req.body.password, local, authentication))
                 throw new errors.UnauthorizedError('Password is incorrect');
 
-            const tokenPayload = {
-                id: user.id,
-                username: user.username,
-                name: user.name,
-                email: user.email
-            };
-
-            const accessToken = jwt.sign(tokenPayload, authentication.secret);
+            const accessToken = issueAccessToken(user, authentication);
 
             res.send({ accessToken });
         } catch (error) {

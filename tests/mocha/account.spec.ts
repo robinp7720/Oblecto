@@ -8,7 +8,7 @@ import path from 'node:path';
 import express, { NextFunction, Request, Response } from 'express';
 import fileUpload from 'express-fileupload';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../src/lib/auth/tokens.js';
 import sharp from 'sharp';
 import { Sequelize } from 'sequelize';
 import config from '../../src/config.js';
@@ -27,7 +27,9 @@ describe('account self-service', () => {
     const oblecto: any = { config: { authentication: { secret: config.authentication.secret, saltRounds: 4 }, assets: {} } };
 
     const request = async (method: string, route: string, init: { json?: object; form?: FormData; as?: User } = {}) => {
-        const headers: Record<string, string> = { Authorization: `Bearer ${jwt.sign({ id: (init.as ?? user).id }, config.authentication.secret)}` };
+        // Re-read the user so tokens match a password changed earlier in the test.
+        const signedIn = await User.findByPk((init.as ?? user).id);
+        const headers: Record<string, string> = { Authorization: `Bearer ${issueAccessToken(signedIn ?? (init.as ?? user), config.authentication)}` };
         let body: BodyInit | undefined;
 
         if (init.json) {
