@@ -10,6 +10,7 @@ import errors from '../errors.js';
 import { avatarPath, clearAvatar, firstUpload, removeAvatarFile, saveAvatar } from '../../../lib/users/avatars.js';
 import { Group } from '../../../models/group.js';
 import { defaultGroupId, withAdminGuard } from '../../../lib/auth/permissions.js';
+import upload from '../middleware/upload.js';
 
 const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar', 'groupId'];
 
@@ -132,7 +133,7 @@ export default (server: Express, oblecto: Oblecto) => {
         });
     });
 
-    server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const user = await User.findByPk(req.params.id as string);
 
         if (!user) {

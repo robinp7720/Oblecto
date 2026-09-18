@@ -1,9 +1,7 @@
-import { promises as fs } from 'fs';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import { Op } from 'sequelize';
-import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth.js';
 
@@ -15,6 +13,9 @@ import { MovieSet } from '../../../models/movieSet.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
+import { firstUpload } from '../../../lib/users/avatars.js';
+import upload from '../middleware/upload.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -306,42 +307,14 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/movie/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
             return res.status(404).send({ message: 'Movie does not exist' });
         }
 
-        const posterPath = oblecto.artworkUtils.moviePosterPath(movie);
-
-        if (!req.files || Object.keys(req.files).length === 0) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if (ratio < 1 || ratio > 2) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        await fs.copyFile(uploadPath, posterPath);
-
-        for (const size of Object.keys(oblecto.config.artwork.poster)) {
-            oblecto.queue.pushJob('rescaleImage', {
-                from: oblecto.artworkUtils.moviePosterPath(movie),
-                to: oblecto.artworkUtils.moviePosterPath(movie, size),
-                width: (oblecto.config.artwork.poster as any)[size]
-            });
-        }
+        await saveArtwork(oblecto, firstUpload(req.files), 'poster', size => oblecto.artworkUtils.moviePosterPath(movie, size));
 
         res.send(['success']);
     });
@@ -356,42 +329,14 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(path);
     });
 
-    server.put('/movie/:id/fanart', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/movie/:id/fanart', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string, { include: [File] });
 
         if (!movie) {
             return res.status(404).send({ message: 'Movie does not exist' });
         }
 
-        const fanartPath = oblecto.artworkUtils.movieFanartPath(movie);
-
-        if (!req.files || Object.keys(req.files).length === 0) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if (ratio < 1 || ratio > 2) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        await fs.copyFile(uploadPath, fanartPath);
-
-        for (const size of Object.keys(oblecto.config.artwork.poster)) {
-            oblecto.queue.pushJob('rescaleImage', {
-                from: oblecto.artworkUtils.movieFanartPath(movie),
-                to: oblecto.artworkUtils.movieFanartPath(movie, size),
-                width: (oblecto.config.artwork.poster as any)[size]
-            });
-        }
+        await saveArtwork(oblecto, firstUpload(req.files), 'fanart', size => oblecto.artworkUtils.movieFanartPath(movie, size));
 
         res.send(['success']);
     });

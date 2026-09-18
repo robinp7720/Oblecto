@@ -9,6 +9,7 @@ import { publicUser } from '../users.js';
 import { clearAvatar, firstUpload, saveAvatar } from '../../../../lib/users/avatars.js';
 import { resolvePreferences, validatePreferences } from '../../../../lib/users/preferences.js';
 import type Oblecto from '../../../../lib/oblecto/index.js';
+import upload from '../../middleware/upload.js';
 
 const MIN_PASSWORD_LENGTH = 4;
 
@@ -101,7 +102,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.put('/api/v1/me/avatar', authMiddleWare.requiresAuth, async (req: OblectoRequest, res: Response, next: NextFunction) => {
+    server.put('/api/v1/me/avatar', authMiddleWare.requiresAuth, upload, async (req: OblectoRequest, res: Response, next: NextFunction) => {
         try {
             const user = await currentUser(req);
 

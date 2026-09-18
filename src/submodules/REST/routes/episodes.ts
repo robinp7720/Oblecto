@@ -1,9 +1,7 @@
 import { Op, and, col, fn, where } from 'sequelize';
-import { promises as fs } from 'fs';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
-import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth.js';
 import { Episode } from '../../../models/episode.js';
@@ -13,6 +11,9 @@ import { File } from '../../../models/file.js';
 import { Stream } from '../../../models/stream.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
+import { firstUpload } from '../../../lib/users/avatars.js';
+import upload from '../middleware/upload.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -65,50 +66,16 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(imagePath);
     });
 
-    server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 
         if (!episode) {
             return res.status(404).send({ message: 'Episode does not exist' });
         }
 
-        const thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode);
+        await saveArtwork(oblecto, firstUpload(req.files), 'banner', size => oblecto.artworkUtils.episodeBannerPath(episode, size));
 
-        if (!req.files || Object.keys(req.files).length < 1) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if ( !(1 <= ratio && ratio <= 2)) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        try {
-            await fs.copyFile(uploadPath, thumbnailPath);
-
-            for (const size of Object.keys(oblecto.config.artwork.poster)) {
-                oblecto.queue.pushJob('rescaleImage', {
-                    from: oblecto.artworkUtils.episodeBannerPath(episode),
-                    to: oblecto.artworkUtils.episodeBannerPath(episode, size),
-                    width: (oblecto.config.artwork.poster as any)[size]
-                });
-            }
-
-            res.send(['success']);
-        } catch (e) {
-            console.log(e);
-            return res.status(500).send({ message: 'An error has occured during upload of banner' });
-        }
+        res.send(['success']);
     });
 
     // Endpoint to list all stored files for the specific episode

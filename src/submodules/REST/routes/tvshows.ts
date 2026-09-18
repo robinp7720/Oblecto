@@ -1,9 +1,6 @@
-import path from 'path';
-import { promises as fs } from 'fs';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import { Op, literal, where } from 'sequelize';
-import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth.js';
 import errors from '../errors.js';
@@ -16,6 +13,9 @@ import { File } from '../../../models/file.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
+import { firstUpload } from '../../../lib/users/avatars.js';
+import upload from '../middleware/upload.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -371,48 +371,16 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(imagePath);
     });
 
-    server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) {
             return res.status(404).send({ message: 'Series does not exist' });
         }
 
-        let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
+        await saveArtwork(oblecto, firstUpload(req.files), 'poster', size => oblecto.artworkUtils.seriesPosterPath(show, size));
 
-        if (oblecto.config.assets.storeWithFile) {
-            const showPath = show.directory;
-
-            if (showPath) {
-                posterPath = path.join(showPath, (show.seriesName || show.id.toString()) + '-poster.jpg');
-            }
-        }
-
-        if (!req.files || Object.keys(req.files).length === 0) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if (ratio < 1 || ratio > 2) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        try {
-            await fs.copyFile(uploadPath, posterPath);
-            res.send(['success']);
-        } catch (e) {
-            return res.status(500).send({ message: 'An error has occurred during upload of poster' });
-        }
+        res.send(['success']);
     });
 
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {

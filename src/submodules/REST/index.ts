@@ -3,7 +3,6 @@ import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
 import logger from '../logger/index.js';
 import cors from 'cors';
-import fileUpload from 'express-fileupload';
 import { Server } from 'http';
 import Oblecto from '../../lib/oblecto/index.js';
 import type { Permission } from '../../lib/auth/permissions.js';
@@ -36,11 +35,6 @@ export default class OblectoAPI {
             maxAge: 5,
             allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range'],
             exposedHeaders: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
-        }));
-
-        app.use(fileUpload({
-            useTempFiles: true,
-            tempFileDir: '/tmp/'
         }));
 
         // Parse Authorization header

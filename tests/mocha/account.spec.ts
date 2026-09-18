@@ -6,7 +6,6 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import express, { NextFunction, Request, Response } from 'express';
-import fileUpload from 'express-fileupload';
 import bcrypt from 'bcrypt';
 import { issueAccessToken } from '../../src/lib/auth/tokens.js';
 import sharp from 'sharp';
@@ -67,7 +66,6 @@ describe('account self-service', () => {
 
         const app = express();
 
-        app.use(fileUpload({ useTempFiles: true, tempFileDir: os.tmpdir() }));
         app.use((req: any, res: Response, next: NextFunction) => {
             const [scheme, credentials] = (req.headers.authorization ?? '').split(' ');
 
