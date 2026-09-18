@@ -2,7 +2,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
 import logger from '../logger/index.js';
-import cors from 'cors';
+import { corsFor } from '../../lib/network/cors.js';
 import { Server } from 'http';
 import Oblecto from '../../lib/oblecto/index.js';
 import type { Permission } from '../../lib/auth/permissions.js';
@@ -30,11 +30,9 @@ export default class OblectoAPI {
         const app = express();
 
         // Configure CORS
-        app.use(cors({
-            origin: '*',
-            maxAge: 5,
-            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range'],
-            exposedHeaders: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
+        app.use(corsFor(() => oblecto.config.server, {
+            allowed: ['API-Token', 'Authorization', 'Content-Type', 'Range'],
+            exposed: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
         }));
 
         // Parse Authorization header

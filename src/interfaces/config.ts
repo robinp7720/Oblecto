@@ -40,7 +40,9 @@ export interface IConfig {
         'migrateOnStart'?: boolean
     },
     'server': {
-        'port': number
+        'port': number,
+        // Other web origins allowed to call the APIs from a browser, e.g. "http://localhost:5173"; "*" for any
+        'corsOrigins'?: string[]
     },
     // The Jellyfin-compatible API for Jellyfin apps
     'jellyfin': {

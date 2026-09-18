@@ -60,6 +60,7 @@ export function validateSettings(updates: unknown, current?: Record<string, unkn
             if (section === 'authentication' && field === 'tokenLifetimeDays' && (!Number.isInteger(entry) || Number(entry) < 1 || Number(entry) > 3650)) errors[key] = 'Enter a number of days from 1 to 3650.';
             if (section === 'authentication' && field === 'localSubnets' && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !parseSubnet(item)))) errors[key] = 'Enter subnets like 192.168.1.0/24.';
             if (((section === 'server' || section === 'jellyfin') && field === 'port') && (!Number.isInteger(entry) || Number(entry) < 0 || Number(entry) > 65535)) errors[key] = 'Enter a port from 0 to 65535.';
+            if (section === 'server' && field === 'corsOrigins' && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !(item === '*' || /^https?:\/\/[^/]+$/.test(item))))) errors[key] = 'Enter origins like http://localhost:5173, or *.';
             if (section === 'jellyfin' && field === 'host' && (typeof entry !== 'string' || !entry.trim())) errors[key] = 'Enter an address to listen on, such as 0.0.0.0.';
             if (section === 'logging' && field === 'level' && !['error', 'warn', 'info', 'debug'].includes(entry as string)) errors[key] = 'Choose error, warn, info or debug.';
             if (section === 'logging' && ['maxSizeMB', 'maxFiles'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1)) errors[key] = 'Enter a whole number of at least 1.';

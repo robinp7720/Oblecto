@@ -2,7 +2,7 @@ import express, { type Request, type Response, type NextFunction, type Applicati
 import routes from './routes/index.js';
 import { resolveJellyfinWebPath } from './webPath.js';
 import { sessionGuard } from './sessionGuard.js';
-import cors from 'cors';
+import { corsFor } from '../../network/cors.js';
 import type { Server } from 'http';
 import type { AddressInfo } from 'net';
 import logger from '../../../submodules/logger/index.js';
@@ -73,11 +73,9 @@ export default class EmbyServerAPI {
         });
 
         // Allow remote clients to connect to the backend
-        this.app.use(cors({
-            origin: '*',
-            maxAge: 5,
-            allowedHeaders: ['API-Token', 'Authorization', 'Content-Type', 'Range', 'X-Emby-Authorization', 'X-Emby-Token'],
-            exposedHeaders: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
+        this.app.use(corsFor(() => embyEmulation.oblecto.config.server, {
+            allowed: ['API-Token', 'Authorization', 'Content-Type', 'Range', 'X-Emby-Authorization', 'X-Emby-Token'],
+            exposed: ['API-Token-Expiry', 'Content-Range', 'Accept-Ranges', 'Content-Length']
         }));
 
         // Parse Authorization header
