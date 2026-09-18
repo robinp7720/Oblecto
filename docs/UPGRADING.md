@@ -1,25 +1,33 @@
 # Upgrading
 
-Oblecto has no migrations. When a release changes the schema, apply the statements below to an existing database before starting the new version. They are written for MariaDB/MySQL; SQLite users can run the same `ALTER TABLE ... ADD COLUMN` statements one column at a time.
+Back up your database before upgrading. For SQLite that is a copy of the database file; for MariaDB or MySQL use `mysqldump`.
 
-## User groups and permissions
+## Database changes happen on their own
 
-```sql
-CREATE TABLE `Groups` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    permissions TEXT NOT NULL,
-    builtIn TINYINT(1) NOT NULL DEFAULT 0,
-    createdAt DATETIME NOT NULL,
-    updatedAt DATETIME NOT NULL
-);
+Oblecto updates the database schema when it starts. Each change is a named migration, recorded in the `SchemaMigrations` table, so it runs once. Migrations only add tables and columns; they never drop data.
 
-ALTER TABLE `Users`
-    ADD COLUMN groupId INT NULL,
-    ADD CONSTRAINT fk_users_group FOREIGN KEY (groupId) REFERENCES `Groups`(id) ON DELETE SET NULL;
+To see or apply pending migrations yourself:
+
+```sh
+oblecto migrate --status
+oblecto migrate
 ```
 
-The server creates the **Administrators** and **Users** groups when it starts. Existing users start in no group, which grants no permissions, so nobody can open the server settings until you promote someone:
+To stop Oblecto from changing the schema by itself, set `database.migrateOnStart` to `false`. It then refuses to start until `oblecto migrate` has run.
+
+Databases that were upgraded by hand with the SQL this page used to list are fine: each migration checks for the columns it adds and records itself without changing anything.
+
+## After upgrading to 1.0
+
+### Everyone signs in again
+
+Sign-in tokens now expire, after `authentication.tokenLifetimeDays` (30 by default), and stop working when the password changes. Tokens from earlier versions are not accepted, so every browser and app signs in once more.
+
+Jellyfin apps sign in again as well. Their tokens now survive restarts, which earlier versions did not.
+
+### Promote an administrator
+
+The first start creates the **Administrators** and **Users** groups. Users who existed before start in no group, which grants no permissions, so nobody can open the server settings until you promote someone:
 
 ```sh
 oblecto usergroup USERNAME Administrators
@@ -27,17 +35,10 @@ oblecto usergroup USERNAME Administrators
 
 Put everyone else in **Users**, or in a group of your own, from the Users page under settings.
 
-## Account preferences
+### Check your configuration
 
-```sql
-ALTER TABLE `Users` ADD COLUMN preferences TEXT NULL;
-```
-
-## Profile picker and avatars
-
-```sql
-ALTER TABLE `Users`
-    ADD COLUMN publicProfile TINYINT(1) NOT NULL DEFAULT 0,
-    ADD COLUMN passwordlessLocal TINYINT(1) NOT NULL DEFAULT 0,
-    ADD COLUMN avatar VARCHAR(255) NULL;
-```
+- Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. It no longer reads `res/config.json` from the working directory.
+- It refuses to start without `authentication.secret`, or with the old placeholder `secret`. `oblecto init` writes a random one.
+- Settings missing from your file take their defaults from `res/config.json`. Two defaults changed: `authentication.allowPasswordlessLogin` and `authentication.profilePicker` are now off. Set them to `true` to keep the old behaviour.
+- The Jellyfin API has its own section, `jellyfin`, with `enabled`, `port` (8096) and `host` (0.0.0.0).
+- The provider keys that shipped in the sample config are gone. Add your own TMDb, TVDB and fanart.tv keys.
