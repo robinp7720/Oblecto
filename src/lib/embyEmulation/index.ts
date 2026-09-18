@@ -3,7 +3,7 @@ import EmbyServerAPI from './ServerAPI/index.js';
 
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../models/user.js';
-import bcrypt from 'bcrypt';
+import { checkLogin } from '../auth/loginPolicy.js';
 import Primus, { Spark } from 'primus';
 import logger from '../../submodules/logger/index.js';
 
@@ -91,22 +91,22 @@ export default class EmbyEmulation {
      * Handles user login by authenticating credentials and creating a session.
      * @param username - The username for login.
      * @param password - The password for login.
+     * @param local - Whether the client is on the local network (enables password-less sign-in).
      * @returns A promise that resolves with the session ID if login is successful.
      * @throws If the username is incorrect or the password does not match.
      */
-    async handleLogin(username: string, password: string): Promise<string> {
+    async handleLogin(username: string, password: string | undefined, local = false): Promise<string> {
         const user = await User.findOne({
             where: { username },
-            attributes: ['username', 'name', 'email', 'password', 'id']
+            attributes: ['username', 'name', 'email', 'password', 'passwordlessLocal', 'id']
         });
 
-        if (!user?.password) throw Error('Incorrect username');
+        if (!user) throw Error('Incorrect username');
 
-        const match = await bcrypt.compare(password, user.password);
-        if (!match)
+        if (!await checkLogin(user, password, local, this.oblecto.config.authentication))
             throw Error('Password incorrect');
 
-        const HasPassword = user.password !== '';
+        const HasPassword = Boolean(user.password);
 
         const sessionId = uuidv4();
 

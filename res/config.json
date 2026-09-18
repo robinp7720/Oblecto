@@ -28,7 +28,8 @@
     "episodeBannerLocation": "/etc/oblecto/assets/episodeBanners/",
     "showPosterLocation": "/etc/oblecto/assets/showPosters/",
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
-    "movieFanartLocation": "/etc/oblecto/assets/movieFanart/"
+    "movieFanartLocation": "/etc/oblecto/assets/movieFanart/",
+    "userAvatarLocation": "/etc/oblecto/assets/userAvatars/"
   },
   "database": {
     "dialect": "sqlite",
@@ -92,7 +93,11 @@
   "authentication": {
     "secret": "secret",
     "saltRounds": 10,
-    "allowPasswordlessLogin": true
+    "allowPasswordlessLogin": true,
+    "profilePicker": true,
+    "localPasswordlessLogin": false,
+    "localSubnets": [],
+    "trustProxy": false
   },
   "tracker": {
     "interval": 10
