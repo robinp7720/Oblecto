@@ -217,3 +217,29 @@ function fakeResponse() {
         send(body: unknown) { this.body = body; return this; }
     };
 }
+
+describe('settings validation against the template', () => {
+    const current = { server: { port: 8080, legacyFlag: true }, authentication: { secret: 'x'.repeat(32) }, streaming: {} };
+
+    it('refuses fields nothing reads, but keeps ones the config already has', () => {
+        assert.equal(validateSettings({ server: { prot: 80 } }, current)['server.prot'], 'Unknown setting.');
+        assert.deepEqual(validateSettings({ server: { legacyFlag: false } }, current), {});
+        assert.deepEqual(validateSettings({ streaming: { cacheDirectory: '/var/cache/oblecto' } }, current), {});
+    });
+
+    it('checks each value has the same kind as the template', () => {
+        assert.match(validateSettings({ queue: { concurrency: '4' } }, current)['queue.concurrency'], /number/);
+        assert.equal(validateSettings({ web: { enabled: 'yes' } }, current)['web.enabled'], 'Expected an on/off value.');
+        assert.match(validateSettings({ fileExtensions: { video: 'mkv' } }, current)['fileExtensions.video'], /list/);
+    });
+
+    it('refuses a short, placeholder or non-text signing secret, but lets the masked value through', () => {
+        for (const secret of ['short', 'secret', 42]) assert.ok(validateSettings({ authentication: { secret } }, current)['authentication.secret'], String(secret));
+        assert.deepEqual(validateSettings({ authentication: { secret: '***' } }, current), {});
+        assert.deepEqual(validateSettings({ authentication: { secret: 'a-long-random-signing-secret' } }, current), {});
+    });
+
+    it('stays lenient about unknown fields when checking a config at startup', () => {
+        assert.deepEqual(validateSettings({ server: { prot: 80 } }), {});
+    });
+});

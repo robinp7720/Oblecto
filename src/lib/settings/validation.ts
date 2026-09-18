@@ -1,4 +1,5 @@
 import { parseSubnet } from '../network/localNetwork.js';
+import defaults from '../../../res/config.json';
 
 export const allowedSections = [
     'indexer', 'cleaner', 'queue', 'tvdb', 'themoviedb', 'fanart.tv',
@@ -9,7 +10,24 @@ export const allowedSections = [
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === 'object' && !Array.isArray(value);
 
-export function validateSettings(updates: unknown): Record<string, string> {
+// Settings the template leaves out because their defaults depend on the machine or are generated.
+const OPTIONAL_FIELDS: Record<string, string[]> = {
+    streaming: ['cacheDirectory', 'vaapiDevice'],
+    federation: ['uuid']
+};
+
+const TEMPLATE = defaults as unknown as Record<string, Record<string, unknown>>;
+
+const kind = (value: unknown): string => (Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value);
+
+/**
+ * Field-by-field problems with a settings change, keyed by "section.field".
+ * @param updates - The sections and fields being changed
+ * @param current - The configuration being changed. When given, fields that neither the template,
+ *   nor this configuration, nor the known optional settings contain are refused, so a typo cannot
+ *   quietly write a setting nothing reads. Startup checks leave it out, so old configs still load.
+ */
+export function validateSettings(updates: unknown, current?: Record<string, unknown>): Record<string, string> {
     const errors: Record<string, string> = {};
     if (!isRecord(updates) || !Object.keys(updates).length) return { settings: 'Provide settings to update.' };
     for (const [section, value] of Object.entries(updates)) {
@@ -17,9 +35,17 @@ export function validateSettings(updates: unknown): Record<string, string> {
         if (section === 'seedboxes' && Array.isArray(value)) continue;
         if (!isRecord(value)) { errors[section] = 'Expected a settings object.'; continue; }
         if (!Object.keys(value).length) { errors[section] = 'Provide settings to update.'; continue; }
+        const template = TEMPLATE[section] ?? {};
+        const existing = isRecord(current?.[section]) ? current[section] : {};
+
         for (const [field, entry] of Object.entries(value)) {
             const key = `${section}.${field}`;
-            if (['__proto__', 'constructor', 'prototype'].includes(field)) errors[key] = 'Invalid field.';
+            if (['__proto__', 'constructor', 'prototype'].includes(field)) { errors[key] = 'Invalid field.'; continue; }
+            const known = field in template || field in existing || (OPTIONAL_FIELDS[section] ?? []).includes(field);
+            if (current && !known) { errors[key] = 'Unknown setting.'; continue; }
+            // Same kind of value as the template has, unless a rule below says more precisely what is wrong.
+            if (field in template && template[field] !== null && kind(entry) !== kind(template[field])) errors[key] = `Expected ${kind(template[field]) === 'array' ? 'a list' : kind(template[field]) === 'object' ? 'a group of settings' : `a ${kind(template[field])}`}.`;
+            if (current && section === 'authentication' && field === 'secret' && entry !== '***' && (typeof entry !== 'string' || entry.trim().length < 16 || entry === 'secret')) errors[key] = 'Use a random value of at least 16 characters.';
             if (field === 'directories' && (!Array.isArray(entry) || entry.some(item => !isRecord(item) || typeof item.path !== 'string' || !item.path.trim() || item.path.includes('\0')))) errors[key] = 'Enter valid library paths.';
             if (section === 'artwork') {
                 if (!['poster', 'fanart', 'banner'].includes(field) || !isRecord(entry)) { errors[key] = 'Expected image widths.'; continue; }
