@@ -86,10 +86,11 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         const info = await fetch(`${base}/System/Info/Public`);
 
         assert.equal(info.status, 200);
-        const body = await info.json() as { Id: string; Version: string };
+        const body = await info.json() as { Id: string; Version: string; LocalAddress: string };
 
         assert.equal(body.Id, emby.serverId);
         assert.match(body.Version, /^\d+\.\d+\.\d+$/);
+        assert.equal(body.LocalAddress, base);
     });
 
     it('refuses the library, user list and user data without a token', async () => {

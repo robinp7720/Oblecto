@@ -16,7 +16,7 @@ export default (server: Application, _embyEmulation: EmbyEmulation): void => {
                 'PrimaryImageHeight':250,
                 'PrimaryImageWidth':250,
                 'CustomPrefs':{
-                    'chromecastVersion':'stable','skipForwardLength':'30000','skipBackLength':'10000','enableNextVideoInfoOverlay':'False','tvhome':null,'dashboardTheme':null,'http://192.168.176.55:30013/web/index.htmlmoviecollections':'{\u0022SortBy\u0022:\u0022SortName\u0022,\u0022SortOrder\u0022:\u0022Ascending\u0022}','http://192.168.176.55:30013/web/index.htmlseries':'{\u0022SortBy\u0022:\u0022SortName\u0022,\u0022SortOrder\u0022:\u0022Ascending\u0022}','file:///app/share/jellyfinmediaplayer/web-client/desktop/index.htmltrailers':'{\u0022SortBy\u0022:\u0022SortName\u0022,\u0022SortOrder\u0022:\u0022Ascending\u0022}','file:///app/share/jellyfinmediaplayer/web-client/desktop/index.htmlseries':'{\u0022SortBy\u0022:\u0022SortName\u0022,\u0022SortOrder\u0022:\u0022Ascending\u0022}'
+                    'chromecastVersion':'stable','skipForwardLength':'30000','skipBackLength':'10000','enableNextVideoInfoOverlay':'False','tvhome':null,'dashboardTheme':null
                 },
                 'ScrollDirection':'Horizontal',
                 'ShowBackdrop':true,
