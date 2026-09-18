@@ -328,6 +328,43 @@ Everything here needs `users.manage`, except that users may read their own recor
 - **Remove:** `DELETE /user/:id/avatar` — returns the updated user.
 - Files are stored in `assets.userAvatarLocation` (default `/etc/oblecto/assets/userAvatars/`).
 
+## Account (V1)
+
+The signed-in user's own account. These need a session but no permission. Username, group and the sign-in flags are not editable here; they belong to whoever holds `users.manage`.
+
+The account object is the user object plus:
+```json
+{
+  "hasPassword": true,
+  "group": { "id": 2, "name": "Users" },
+  "permissions": [],
+  "preferences": {
+    "language": null,
+    "audioLanguage": null,
+    "subtitleLanguage": null,
+    "subtitleMode": "auto",
+    "quality": "original",
+    "autoplayNext": true
+  }
+}
+```
+
+`preferences` always carries every key, with defaults filled in:
+- `language`: interface language as a BCP 47 tag (`"en"`, `"pt-BR"`); `null` follows the browser.
+- `audioLanguage`, `subtitleLanguage`: preferred track languages (ISO 639 code as found in the media, e.g. `"en"` or `"jpn"`); `null` keeps the file's default track.
+- `subtitleMode`: `off`, `auto` or `forced`.
+- `quality`: `original`, `auto`, `360`, `480`, `720` or `1080`.
+- `autoplayNext`: start the next episode when one ends.
+
+The Jellyfin emulation reports these as the user's audio and subtitle language, subtitle mode and next-episode autoplay.
+
+- **Get:** `GET /api/v1/me`
+- **Update:** `PATCH /api/v1/me` with any of `{ "name": "...", "email": "...", "preferences": { "subtitleMode": "off" } }`. Preferences are merged, so send only the ones that changed. Empty `name` or `email` clears it. Unknown or invalid preferences return `400` with `{ "error": "Check the highlighted preferences.", "fields": { "quality": "..." } }` and nothing is saved.
+- **Change password:** `PUT /api/v1/me/password` with `{ "currentPassword": "...", "newPassword": "..." }`. `currentPassword` may be omitted only when the account has no password. `403` when it is wrong, `400` when the new one is shorter than four characters.
+- **Avatar:** `PUT /api/v1/me/avatar` (multipart, one image) and `DELETE /api/v1/me/avatar`, with the same processing and errors as `PUT /user/:id/avatar`.
+
+Each returns the updated account object.
+
 ## Clients (Remote Control)
 
 Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/playback` were removed: device discovery, playback commands and playback state all travel over the realtime socket, which is the only transport that can acknowledge a command and stream state back. See [REALTIME_API.md](REALTIME_API.md).
