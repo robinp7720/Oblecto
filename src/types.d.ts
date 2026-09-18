@@ -1,5 +1,4 @@
 declare module 'guessit-exec';
-declare module 'mdns';
 declare module 'node-tvdb';
 declare module 'neo-blessed' {
     // Only the surface used by src/core/graphical.ts

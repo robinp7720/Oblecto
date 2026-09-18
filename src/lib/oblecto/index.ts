@@ -2,6 +2,7 @@ import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
 import { unconfiguredClient } from '../common/unconfiguredClient.js';
 import { describeMissingTools, probeTools, type ToolReport } from './tools.js';
+import { maintenanceWork } from '../maintenance/dispatch.js';
 import { MovieDb } from 'moviedb-promise';
 
 import Queue from '../queue/index.js';
@@ -170,6 +171,13 @@ export default class Oblecto {
 
         // Jellyfin-compatible API for Jellyfin apps
         if (this.config.jellyfin.enabled) this.embyServer = new EmbyEmulation(this);
+
+        // Tracked like jobs started from the maintenance page, so they show up there.
+        for (const [enabled, action] of [[this.config.cleaner.runAtBoot, 'clean'], [this.config.indexer.runAtBoot, 'scan']] as const) {
+            const work = enabled ? maintenanceWork(this, action, 'all') : undefined;
+
+            if (work) this.queue.maintenance.start(action, 'all', work);
+        }
     }
 
     private async prepareGroups(): Promise<void> {

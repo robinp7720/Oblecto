@@ -7,10 +7,7 @@
     "runAtBoot": false
   },
   "cleaner": {
-    "runAtBoot": true
-  },
-  "mdns": {
-    "enable": false
+    "runAtBoot": false
   },
   "queue": {
     "concurrency": 1
@@ -25,7 +22,6 @@
     "key": ""
   },
   "assets": {
-    "storeWithFile": false,
     "episodeBannerLocation": "/etc/oblecto/assets/episodeBanners/",
     "showPosterLocation": "/etc/oblecto/assets/showPosters/",
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
@@ -64,9 +60,6 @@
       "tmdb",
       "tvdb"
     ],
-    "doReIndex": false,
-    "ignoreSeriesMismatch": true,
-    "indexBroken": false,
     "directories": []
   },
   "movies": {
@@ -76,8 +69,6 @@
     "movieUpdaters": [
       "tmdb"
     ],
-    "doReIndex": false,
-    "indexBroken": false,
     "directories": []
   },
   "files": {
@@ -127,11 +118,7 @@
     "maxFiles": 5,
     "file": true
   },
-  "tracker": {
-    "interval": 10
-  },
   "transcoding": {
-    "transcodeEverything": false,
     "hardwareAcceleration": false,
     "hardwareAccelerator": "cuda"
   },

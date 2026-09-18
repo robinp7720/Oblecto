@@ -3,14 +3,12 @@ export interface IConfig {
         'pathFFmpeg': string | null,
         'pathFFprobe': string | null
     },
+    // Start a full library scan, or a clean-up of missing files, each time Oblecto starts
     'indexer': {
         'runAtBoot': boolean
     },
     'cleaner': {
         'runAtBoot': boolean
-    },
-    'mdns': {
-        'enable': boolean
     },
     'queue': {
         'concurrency': number
@@ -25,7 +23,6 @@ export interface IConfig {
         'key': string
     },
     'assets': {
-        'storeWithFile': boolean,
         'episodeBannerLocation': string,
         'showPosterLocation': string,
         'moviePosterLocation': string,
@@ -64,9 +61,6 @@ export interface IConfig {
         'episodeUpdaters': [
             string
         ],
-        'doReIndex': boolean,
-        'ignoreSeriesMismatch': boolean,
-        'indexBroken': boolean,
         'directories': { path: string }[]
     },
     'movies': {
@@ -76,8 +70,6 @@ export interface IConfig {
         'movieUpdaters': [
             string
         ],
-        'doReIndex': boolean,
-        'indexBroken': boolean,
         'directories': { path: string }[]
     },
     'files': {
@@ -130,11 +122,7 @@ string
         // Write log files at all; the console always gets the log
         'file'?: boolean
     },
-    'tracker': {
-        'interval': number
-    },
     'transcoding': {
-        'transcodeEverything': boolean,
         'hardwareAcceleration': boolean,
         'hardwareAccelerator': string
     },
@@ -143,7 +131,6 @@ string
     },
     'streaming': {
         'defaultTargetLanguageCode': string,
-        'hlsMaxSegmentLead'?: number;
         encodingConcurrency?: number;
         maxQueue?: number;
         cacheBytes?: number;
