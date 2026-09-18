@@ -11,9 +11,10 @@
   },
   "files": [
     "dist/",
-    "res/",
+    "res/config.json",
     "Oblecto-Web/dist/",
-    "images/"
+    "images/",
+    "docs/"
   ],
   "type": "module",
   "engines": {
