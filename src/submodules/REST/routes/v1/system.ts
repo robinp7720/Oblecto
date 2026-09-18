@@ -72,7 +72,7 @@ export default (server: Express, oblecto: any) => {
     // GET /api/v1/system/info
     server.get('/api/v1/system/info', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
         const info = {
-            version: process.env.npm_package_version || 'unknown',
+            version: oblecto.version,
             platform: process.platform,
             arch: process.arch,
             uptime: process.uptime(),

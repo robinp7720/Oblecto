@@ -1,27 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import express, { Express, Request, Response } from 'express';
 import path from 'path';
+import { findPackageRoot } from '../../../lib/packageRoot.js';
 
-const webDir = path.join(process.cwd(), 'Oblecto-Web/dist/web/');
+export default (server: Express): void => {
+    const root = findPackageRoot();
+    const webDir = path.join(root, 'Oblecto-Web/dist/web');
+    const logo = path.join(root, 'images/logomark.png');
 
-export default (server: Express, oblecto: any) => {
     server.use('/web', express.static(webDir));
 
     server.get('/web/logo.png', (req: Request, res: Response) => {
-        try {
-            const logoPath = path.join(process.cwd(), 'images/logomark.png');
-
-            res.sendFile(logoPath);
-        } catch (error) {
-            res.status(500).send('Error serving logo image');
-        }
+        res.sendFile(logo, error => {
+            if (error && !res.headersSent) res.status(404).send('Not Found');
+        });
     });
 
     server.use('/web/*route', (req: Request, res: Response) => {
-        res.sendFile(path.join(webDir, 'index.html'));
+        res.sendFile(path.join(webDir, 'index.html'), error => {
+            if (error && !res.headersSent) res.status(404).send('The web interface has not been built.');
+        });
     });
 
-    server.get('/', async (req: Request, res: Response) => {
-        // res.redirect('/web', (v) => v);
+    server.get('/', (req: Request, res: Response) => {
+        res.redirect('/web/');
     });
 };
