@@ -9,12 +9,13 @@ import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import logger from '../../../../../submodules/logger/index.js';
-import { Op } from 'sequelize';
+import { Op, type Includeable } from 'sequelize';
 
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
 import { getRequestValue } from '../../requestUtils.js';
+import { libraryViews } from '../../../views.js';
 import { isLocalRequest } from '../../../../network/localNetwork.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
@@ -238,101 +239,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/users/:userid/views', (req: Request, res: Response) => {
-        res.send({
-            'Items': [
-                {
-                    'Name': 'Movies',
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                    'Etag': 'cf36c1cd9bcd03c80bd92c9570ec620b',
-                    'DateCreated': '2020-08-31T16:25:53.2124461Z',
-                    'CanDelete': false,
-                    'CanDownload': false,
-                    'SortName': 'movies',
-                    'ExternalUrls': [],
-                    'Path': '/config/data/root/default/Movies',
-                    'EnableMediaSourceDisplay': true,
-                    'Taglines': [],
-                    'Genres': [],
-                    'PlayAccess': 'Full',
-                    'RemoteTrailers': [],
-                    'ProviderIds': {},
-                    'IsFolder': true,
-                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                    'Type': 'CollectionFolder',
-                    'People': [],
-                    'Studios': [],
-                    'GenreItems': [],
-                    'LocalTrailerCount': 0,
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': 'f137a2dd-21bb-c1b9-9aa5-c0f6bf02a805'
-                    },
-                    'ChildCount': 2,
-                    'SpecialFeatureCount': 0,
-                    'DisplayPreferencesId': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                    'Tags': [],
-                    'PrimaryImageAspectRatio': 1,
-                    'CollectionType': 'movies',
-                    // 'ImageTags': {'Primary': '8d5abf60711bc8af6ef4063baf6b67e4'},
-                    'BackdropImageTags': [],
-                    'ScreenshotImageTags': [],
-                    // 'ImageBlurHashes': {'Primary': {'8d5abf60711bc8af6ef4063baf6b67e4': 'WvIE5t05-gs,RVt6a%s,axa#fRodETt0WGa#fha$Rot3WBj[oLaf'}},
-                    'LocationType': 'FileSystem',
-                    'LockedFields': [],
-                    'LockData': false
-                }, {
-                    'Name': 'TV Shows',
-                    'ServerId': embyEmulation.serverId,
-                    'Id': '767bffe4f11c93ef34b805451a696a4e',
-                    'Etag': '838cbe93f5d829a9df3df680e4d14065',
-                    'DateCreated': '2020-08-31T04:36:37.8321784Z',
-                    'CanDelete': false,
-                    'CanDownload': false,
-                    'SortName': 'tv shows',
-                    'ExternalUrls': [],
-                    'Path': '/config/data/root/default/TV Shows',
-                    'EnableMediaSourceDisplay': true,
-                    'Taglines': [],
-                    'Genres': [],
-                    'PlayAccess': 'Full',
-                    'RemoteTrailers': [],
-                    'ProviderIds': {},
-                    'IsFolder': true,
-                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                    'Type': 'CollectionFolder',
-                    'People': [],
-                    'Studios': [],
-                    'GenreItems': [],
-                    'LocalTrailerCount': 0,
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': '767bffe4-f11c-93ef-34b8-05451a696a4e'
-                    },
-                    'ChildCount': 9,
-                    'SpecialFeatureCount': 0,
-                    'DisplayPreferencesId': '767bffe4f11c93ef34b805451a696a4e',
-                    'Tags': [],
-                    'PrimaryImageAspectRatio': 1,
-                    'CollectionType': 'tvshows',
-                    // 'ImageTags': {'Primary': '12c129f756f9ae7ca28c3d87ac4aa3b5'},
-                    'BackdropImageTags': [],
-                    'ScreenshotImageTags': [],
-                    // 'ImageBlurHashes': {'Primary': {'12c129f756f9ae7ca28c3d87ac4aa3b5': 'WrHeF9~X%gt7e-Rjs.WBoft7xutRR,t7s:aebHofoft7WBWBRjRj'}},
-                    'LocationType': 'FileSystem',
-                    'LockedFields': [],
-                    'LockData': false
-                }
-            ],
-            'TotalRecordCount': 2,
-            'StartIndex': 0
-        });
+        res.send(libraryViews(embyEmulation.serverId));
     });
 
     server.get('/users/:userid/items', async (req: EmbyRequest, res: Response) => {
@@ -552,6 +459,55 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
+    // Recently added items for a library view. Always answers: a parent Oblecto has no latest items
+    // for (collections, a series, an unknown id) gets an empty list rather than a hung request.
+    const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const parentId = getRequestValue(req, 'ParentId');
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 16, 1), 100);
+        const userId = req.embyUserId;
+        const items: Record<string, unknown>[] = [];
+
+        if (!parentId || parentId === 'movies') {
+            const include: Includeable[] = [{ model: File, include: [{ model: Stream }] }];
+
+            if (userId) {
+                include.push({
+                    model: TrackMovie,
+                    required: false,
+                    where: { userId }
+                });
+            }
+
+            const movies = await Movie.findAll({
+                include,
+                order: [['createdAt', 'DESC']],
+                limit
+            });
+
+            items.push(...movies.map(movie => formatMediaItem(movie as unknown as MediaItem, 'movie', embyEmulation)));
+        }
+
+        if (!parentId || parentId === 'shows') {
+            const series = await Series.findAll({ order: [['createdAt', 'DESC']], limit });
+
+            items.push(...series.map(show => formatMediaItem(show as unknown as MediaItem, 'series', embyEmulation)));
+        }
+
+        res.send(items.slice(0, limit));
+    };
+
+    server.get('/users/:userid/items/latest', getLatestItems);
+    server.get('/items/latest', getLatestItems);
+
+    server.get('/users/:userid/items/resume', (req, res) => {
+        res.send({
+            'Items': [],
+            'TotalRecordCount': 0,
+            'StartIndex': 0
+        });
+    });
+
+    // Registered after /items/latest and /items/resume above, which it would otherwise swallow as an item id.
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
@@ -655,129 +611,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             'StartIndex': 0
         });
     });
-
-    server.get('/users/:userid/items/resume', (req, res) => {
-        res.send({
-            'Items': [],
-            'TotalRecordCount': 0,
-            'StartIndex': 0
-        });
-    });
-
-    const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
-        const parentId = getRequestValue(req, 'ParentId');
-
-        if (parentId === 'movies') {
-            const results = await Movie.findAll({
-                /* include: [
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
-                    }
-                ],*/
-                order: [['releaseDate', 'DESC']],
-                limit: 50,
-                offset: 0
-            });
-
-            const movies = results.map((movie) => {
-                return {
-                    'Name': movie.movieName,
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'movie' + movie.id,
-                    'HasSubtitles': true,
-                    'Container': 'mkv,webm',
-                    'PremiereDate': movie.releaseDate,
-                    'CriticRating': 82,
-                    'OfficialRating': 'PG-13',
-                    'CommunityRating': 2.6,
-                    'RunTimeTicks': (movie.runtime || 0) * 10000000,
-                    'ProductionYear': (movie.releaseDate || '').substring(0, 4),
-                    'IsFolder': false,
-                    'Type': 'Movie',
-                    'PrimaryImageAspectRatio': 0.6666666666666666,
-                    'VideoType': 'VideoFile',
-                    'LocationType': 'FileSystem',
-                    'MediaType': 'Video',
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': true,
-                        'Played': false,
-                        'Key': '337401'
-                    },
-                    'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
-
-                };
-            });
-
-            res.send(movies);
-        }
-
-        if (parentId === 'shows') {
-            const results = await Series.findAll({
-                /* include: [
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
-                    }
-                ],*/
-                order: [['firstAired', 'DESC']],
-                limit: 50,
-                offset: 0
-            });
-
-            const series = results.map((show) => {
-                return {
-                    'Name': show.seriesName,
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'series' + show.id,
-                    'PremiereDate': show.firstAired,
-                    // 'Path': '/family_series/WeCrashed',
-                    'OfficialRating': show.rating,
-                    'ChannelId': null,
-                    'CommunityRating': show.siteRating,
-                    'RunTimeTicks': 0,
-                    'ProductionYear': 2022,
-                    'IsFolder': true,
-                    'Type': 'Series',
-                    'UserData': {
-                        'UnplayedItemCount': 4,
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': '393499',
-                        'ItemId': '00000000000000000000000000000000'
-                    },
-                    'ChildCount': 8,
-                    'Status': show.status,
-                    'AirDays': [],
-                    'PrimaryImageAspectRatio': 0.6666666666666666,
-                    'ImageTags': {
-                        'Primary': '687b9e86c50b8d8ee6e3ade59f98f679',
-                        'Thumb': '89f4741c490314f9e9cbee489c61067c'
-                    },
-                    'BackdropImageTags': ['5dc42ac73670938f5fc63cc6ad6b5b81'],
-                    'ImageBlurHashes': {
-                        'Backdrop': { '5dc42ac73670938f5fc63cc6ad6b5b81': 'WH8;=O4mtSxbE1-;%hS%oJWBWXx]IU.8M_Rk%NMxOZxvM{oft8M|' },
-                        'Primary': { '687b9e86c50b8d8ee6e3ade59f98f679': 'd77B$VRjwcD%$jxCacS3yFoeR4Ri*0IVn$ofVsIAozxu' },
-                        'Thumb': { '89f4741c490314f9e9cbee489c61067c': 'WcI4;OWBo|xZD%xZ~qs.I:ozROsm-;nhR*W?M{WE?aRPf+oyM{t7' }
-                    },
-                    'LocationType': 'FileSystem',
-                    'MediaType': 'Unknown',
-                    'EndDate': '2022-04-22T00:00:00.0000000Z'
-                };
-            });
-
-            res.send(series);
-        }
-    };
-
-    server.get('/users/:userid/items/latest', getLatestItems as any);
-    server.get('/items/latest', getLatestItems as any);
 
     server.get('/useritems/resume', (req, res) => {
         res.send({

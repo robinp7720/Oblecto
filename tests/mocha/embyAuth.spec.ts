@@ -170,6 +170,31 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         assert.equal((await fetch(`${base}/System/Info`, { headers: AUTH(token) })).status, 401);
     });
 
+    it('answers latest items for every library view instead of hanging', async () => {
+        const { base } = await start();
+        const token = await tokenFor(base);
+
+        for (const parent of ['movies', 'shows', 'collections', 'f137a2dd21bbc1b99aa5c0f6bf02a805']) {
+            const response = await fetch(`${base}/Users/${formatUuid(alice.id)}/Items/Latest?ParentId=${parent}`, { headers: AUTH(token), signal: AbortSignal.timeout(5000) });
+
+            assert.equal(response.status, 200, parent);
+            assert.ok(Array.isArray(await response.json()), parent);
+        }
+
+        const movies = await (await fetch(`${base}/Items/Latest?ParentId=movies`, { headers: AUTH(token) })).json() as { Name: string }[];
+
+        assert.deepEqual(movies.map(movie => movie.Name), ['Recent']);
+    });
+
+    it('lists the same library views from both view endpoints', async () => {
+        const { base } = await start();
+        const token = await tokenFor(base);
+        const ids = async (path: string) => ((await (await fetch(base + path, { headers: AUTH(token) })).json()) as { Items: { Id: string }[] }).Items.map(item => item.Id);
+
+        assert.deepEqual(await ids(`/Users/${formatUuid(alice.id)}/Views`), await ids('/UserViews'));
+        assert.deepEqual(await ids('/UserViews'), ['movies', 'shows', 'collections']);
+    });
+
     describe('pinToUser', function () {
         const request = (url: string, body?: object) => ({ url, body }) as unknown as EmbyRequest;
 
