@@ -71,14 +71,16 @@ function initAssociations(): void {
     User.belongsTo(Group, { foreignKey: 'groupId', onDelete: 'SET NULL' });
     Group.hasMany(User, { foreignKey: 'groupId' });
 
-    TrackEpisode.belongsTo(User);
-    TrackEpisode.belongsTo(Episode);
+    // The tracking models declare userId, episodeId and movieId. Naming them here keeps Sequelize from
+    // adding a second, capitalised key that databases treat as the same column.
+    TrackEpisode.belongsTo(User, { foreignKey: 'userId' });
+    TrackEpisode.belongsTo(Episode, { foreignKey: 'episodeId' });
 
-    TrackMovie.belongsTo(User);
-    TrackMovie.belongsTo(Movie);
+    TrackMovie.belongsTo(User, { foreignKey: 'userId' });
+    TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
 
-    Episode.hasMany(TrackEpisode);
-    Movie.hasMany(TrackMovie);
+    Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
+    Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
 }
 
 /**
