@@ -1,37 +1,50 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/unbound-method, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import fs from 'fs/promises';
-import sharp from 'sharp';
-import type { UploadedFile } from 'express-fileupload';
 import config from '../../../config.js';
 import authMiddleWare from '../middleware/auth.js';
 import { User } from '../../../models/user.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
-import { AVATAR_SIZE, avatarDirectory, avatarPath, removeAvatarFile } from '../../../lib/users/avatars.js';
+import errors from '../errors.js';
+import { avatarPath, clearAvatar, firstUpload, removeAvatarFile, saveAvatar } from '../../../lib/users/avatars.js';
+import { Group } from '../../../models/group.js';
+import { defaultGroupId, withAdminGuard } from '../../../lib/auth/permissions.js';
 
-const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar'];
+const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar', 'groupId'];
 
 // Everything but the password hash.
-const publicUser = (user: User) => ({
+export const publicUser = (user: User) => ({
     id: user.id,
     username: user.username,
     email: user.email,
     name: user.name,
     publicProfile: user.publicProfile,
     passwordlessLocal: user.passwordlessLocal,
-    avatar: user.avatar
+    avatar: user.avatar,
+    groupId: user.groupId
 });
 
+// undefined when the request doesn't mention a group; throws on an unknown one.
+async function requestedGroupId(value: unknown): Promise<number | null | undefined> {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+
+    const group = await Group.findByPk(Number(value));
+
+    if (!group) throw new errors.BadRequestError('Group does not exist');
+
+    return group.id;
+}
+
 export default (server: Express, oblecto: Oblecto) => {
-    server.get('/users', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/users', authMiddleWare.requiresPermission('users.manage'), async function (req: Request, res: Response) {
         const users = await User.findAll({ attributes: USER_ATTRIBUTES });
 
         res.send(users);
     });
 
-    server.get('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/user/:id', authMiddleWare.requiresSelfOrPermission('users.manage'), async function (req: Request, res: Response) {
         const user = await User.findOne({
             where: { id: req.params.id },
             attributes: USER_ATTRIBUTES
@@ -40,7 +53,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(user);
     });
 
-    server.delete('/user/:id', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.delete('/user/:id', authMiddleWare.requiresPermission('users.manage'), async function (req: Request, res: Response) {
         const user = await User.findOne({
             where: { id: req.params.id },
             attributes: USER_ATTRIBUTES
@@ -51,16 +64,14 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        // Send the user information of the user to the client first
-        res.send(user);
-
-        // Now delete the user
-        await user.destroy();
+        await withAdminGuard(transaction => user.destroy({ transaction }));
         await removeAvatarFile(oblecto.config, user.avatar);
+
+        res.send(user);
     });
 
     // Endpoint to update the entries of a certain user
-    server.put('/user/:id', authMiddleWare.requiresAuth,  async function (req: OblectoRequest, res: Response) {
+    server.put('/user/:id', authMiddleWare.requiresPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
         const user = await User.findByPk(req.params.id);
 
         if (!user) {
@@ -94,7 +105,13 @@ export default (server: Express, oblecto: Oblecto) => {
             user.passwordlessLocal = params.passwordlessLocal;
         }
 
-        await user.save();
+        const groupId = await requestedGroupId(params.groupId);
+
+        if (groupId !== undefined) {
+            user.groupId = groupId;
+        }
+
+        await withAdminGuard(transaction => user.save({ transaction }));
 
         res.send(publicUser(user));
     });
@@ -115,7 +132,7 @@ export default (server: Express, oblecto: Oblecto) => {
         });
     });
 
-    server.put('/user/:id/avatar', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
         const user = await User.findByPk(req.params.id as string);
 
         if (!user) {
@@ -123,42 +140,12 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        const files = (req.files ?? {}) as Record<string, UploadedFile | UploadedFile[]>;
-        const first = Object.values(files)[0];
-        const upload = Array.isArray(first) ? first[0] : first;
-
-        if (!upload) {
-            res.status(400).send({ message: 'Image file is missing' });
-            return;
-        }
-
-        const avatar = `${user.id}-${Date.now()}.webp`;
-
-        await fs.mkdir(avatarDirectory(oblecto.config), { recursive: true });
-
-        try {
-            await sharp(upload.tempFilePath || upload.data)
-                .rotate()
-                .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
-                .webp()
-                .toFile(avatarPath(oblecto.config, avatar));
-        } catch {
-            res.status(422).send({ message: 'File is not an image' });
-            return;
-        } finally {
-            if (upload.tempFilePath) await fs.rm(upload.tempFilePath, { force: true });
-        }
-
-        const previous = user.avatar;
-
-        user.avatar = avatar;
-        await user.save();
-        await removeAvatarFile(oblecto.config, previous);
+        await saveAvatar(oblecto.config, user, firstUpload(req.files));
 
         res.send(publicUser(user));
     });
 
-    server.delete('/user/:id/avatar', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.delete('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), async function (req: Request, res: Response) {
         const user = await User.findByPk(req.params.id as string);
 
         if (!user) {
@@ -166,16 +153,12 @@ export default (server: Express, oblecto: Oblecto) => {
             return;
         }
 
-        const previous = user.avatar;
-
-        user.avatar = null;
-        await user.save();
-        await removeAvatarFile(oblecto.config, previous);
+        await clearAvatar(oblecto.config, user);
 
         res.send(publicUser(user));
     });
 
-    server.post('/user', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.post('/user', authMiddleWare.requiresPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
         const params = req.combined_params!;
 
         if (!params.username)
@@ -191,6 +174,8 @@ export default (server: Express, oblecto: Oblecto) => {
         if (params.password)
             passwordHash = await bcrypt.hash(params.password as string, oblecto.config.authentication.saltRounds);
 
+        const groupId = await requestedGroupId(params.groupId);
+
         const [user] = await User.findOrCreate({
             where: { username: params.username },
             defaults: {
@@ -200,7 +185,8 @@ export default (server: Express, oblecto: Oblecto) => {
                 password: passwordHash || null,
                 publicProfile: params.publicProfile === true,
                 passwordlessLocal: params.passwordlessLocal === true,
-                avatar: null
+                avatar: null,
+                groupId: groupId === undefined ? await defaultGroupId() : groupId
             }
         });
 

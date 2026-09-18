@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/check-tag-names, jsdoc/tag-lines, jsdoc/check-types, @typescript-eslint/unbound-method, @typescript-eslint/no-unused-vars */
+/* eslint-disable jsdoc/check-tag-names, jsdoc/tag-lines, jsdoc/check-types, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import Oblecto from '../../../../lib/oblecto/index.js';
@@ -11,14 +11,12 @@ export default (server: Express, oblecto: Oblecto) => {
      * @apiName GetSessions
      * @apiGroup Status
      * @apiVersion 1.0.0
-     * @apiPermission admin
+     * @apiPermission user
      *
      * @apiSuccess {Object[]} sessions List of active media sessions
      */
     server.get('/api/v1/status/sessions', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
-        // TODO: specific permission check for admin/monitoring? 
-        // For now, requiresAuth is standard, assuming all auth users can see this or logic elsewhere handles roles.
-        // Current existing routes don't seem to have role-based middleware visible here, usually just requiresAuth.
+        // Scoped to the caller's own sessions, so no permission is needed.
 
         const sessions = oblecto.playback.diagnostics(`user:${(req as OblectoRequest).authorization?.user?.id}`);
 
@@ -35,9 +33,8 @@ export default (server: Express, oblecto: Oblecto) => {
      * @apiSuccess {Object[]} clients List of the authenticated user's connected devices
      */
     server.get('/api/v1/status/clients', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
-        // Scoped to the caller. There is no role system to gate an all-users
-        // view on, and the previous unfiltered listing was an enumeration
-        // oracle for other people's devices.
+        // Scoped to the caller: the previous unfiltered listing was an
+        // enumeration oracle for other people's devices.
         const user = (req as OblectoRequest).authorization?.user as { id?: number } | undefined;
         const userId = user?.id;
 
@@ -66,11 +63,11 @@ export default (server: Express, oblecto: Oblecto) => {
      * @apiName GetSeedboxStatus
      * @apiGroup Status
      * @apiVersion 1.0.0
-     * @apiPermission admin
+     * @apiPermission system.manage
      *
      * @apiSuccess {Object} status Seedbox status object
      */
-    server.get('/api/v1/status/seedbox', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+    server.get('/api/v1/status/seedbox', authMiddleWare.requiresPermission('system.manage'), (req: Request, res: Response) => {
         const seedboxes = oblecto.seedboxController.seedBoxes.map(sb => ({
             name: sb.name,
             // We can't access enabled state easily from the instance as it's not stored on the class, 

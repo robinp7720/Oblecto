@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/unbound-method, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response } from 'express';
 import errors from '../errors.js';
 import authMiddleWare from '../middleware/auth.js';
@@ -7,7 +7,7 @@ import { SeriesSet } from '../../../models/seriesSet.js';
 
 export default (server: Express, oblecto: any) => {
 
-    server.post('/set/movie', authMiddleWare.requiresAuth, async function (req: any, res: any) {
+    server.post('/set/movie', authMiddleWare.requiresPermission('libraries.manage'), async function (req: any, res: any) {
         if (typeof req.combined_params.public !== 'boolean') {
             return new errors.InvalidArgumentError('Argument public is not a boolean');
         }
@@ -24,7 +24,7 @@ export default (server: Express, oblecto: any) => {
         res.send(set);
     });
 
-    server.post('/set/series', authMiddleWare.requiresAuth, async function (req: any, res: any) {
+    server.post('/set/series', authMiddleWare.requiresPermission('libraries.manage'), async function (req: any, res: any) {
         if (typeof req.combined_params.public !== 'boolean') {
             return new errors.InvalidArgumentError('Argument public is not a boolean');
         }
@@ -41,7 +41,7 @@ export default (server: Express, oblecto: any) => {
         res.send(set);
     });
 
-    server.delete('/set/movie/:id', authMiddleWare.requiresAuth, async function (req: any, res: any) {
+    server.delete('/set/movie/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: any, res: any) {
         const set = await MovieSet.findByPk(req.params.id);
 
         if (!set) throw new errors.NotFoundError('Set not found');
@@ -49,7 +49,7 @@ export default (server: Express, oblecto: any) => {
         res.send({ success: true });
     });
 
-    server.delete('/set/series/:id', authMiddleWare.requiresAuth, async function (req: any, res: any) {
+    server.delete('/set/series/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: any, res: any) {
         const set = await SeriesSet.findByPk(req.params.id);
 
         if (!set) throw new errors.NotFoundError('Set not found');

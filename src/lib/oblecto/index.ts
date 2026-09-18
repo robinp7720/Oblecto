@@ -42,6 +42,8 @@ import FileCleaner from '../cleaners/FileCleaner.js';
 import FileIndexer from '../indexers/files/FileIndexer.js';
 
 import { initDatabase } from '../../submodules/database.js';
+import { countAdmins, seedGroups } from '../auth/permissions.js';
+import logger from '../../submodules/logger/index.js';
 import { PlaybackService } from '../playback/PlaybackService.js';
 import { connectPlaybackPeer } from '../playback/federation.js';
 import SeedboxController from '../seedbox/SeedboxController.js';
@@ -93,6 +95,7 @@ export default class Oblecto {
         this.config = config;
 
         this.database = initDatabase();
+        void this.prepareGroups();
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
         this.tvdb = new (TVDB)(this.config.tvdb.key);
@@ -150,6 +153,19 @@ export default class Oblecto {
 
         // Emby Server emulation
         this.embyServer = new EmbyEmulation(this);
+    }
+
+    private async prepareGroups(): Promise<void> {
+        try {
+            await seedGroups();
+
+            if (await countAdmins() === 0) {
+                logger.warn('No user can manage users or server settings yet. Make one an administrator with:');
+                logger.warn('    oblecto usergroup USERNAME Administrators');
+            }
+        } catch (error) {
+            logger.error('Could not prepare user groups. Does the Groups table exist?', error);
+        }
     }
 
     async close(): Promise<void> {

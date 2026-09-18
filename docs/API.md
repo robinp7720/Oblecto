@@ -50,6 +50,28 @@ What the login screen should offer this client. No authentication required.
 ### Local network
 A client is local when its address is loopback, private (10/8, 172.16/12, 192.168/16, fc00::/7) or link-local, or falls in one of `authentication.localSubnets` (CIDRs). The TCP peer address is used; `X-Forwarded-For` is only honoured when `authentication.trustProxy` is on, so enable that only behind a reverse proxy that sets it.
 
+### Permissions and groups
+Every user belongs to at most one group, and a group grants a fixed set of permissions. Signing in, browsing, playback and managing your own account need none. Endpoints that need a permission answer `403` without it (and `401` without a valid token, or when the token's user has been deleted). Permissions are looked up on every request, so moving someone to another group applies to tokens they already hold.
+
+| Permission | Grants |
+|---|---|
+| `settings.manage` | All of `/api/v1/settings` (reading included, since it exposes the configuration) |
+| `users.manage` | `/users`, creating, editing and deleting users, other users' avatars, and `/api/v1/groups` |
+| `libraries.manage` | Library path and indexer changes, creating and deleting sets, putting items in sets, uploading artwork, and `/files` (duplicates, problem files, retries) |
+| `system.manage` | Maintenance jobs, remote imports and seedbox status |
+
+Two built-in groups exist and are recreated if missing: **Administrators** (every permission) and **Users** (none). New users join **Users** unless told otherwise. Built-in groups cannot be renamed or deleted, and Administrators always keeps `users.manage`. Any change that would leave nobody holding `users.manage` (deleting or moving the last such user, or taking the permission away from their group) is refused with `409`.
+
+The first administrator is chosen on the server: `oblecto usergroup USERNAME Administrators`. Until someone is, the server logs a warning at startup.
+
+- **List permissions:** `GET /api/v1/permissions` → `[{ "key": "settings.manage", "description": "..." }]`
+- **List groups:** `GET /api/v1/groups` → `[{ "id": 1, "name": "Administrators", "permissions": ["settings.manage", ...], "builtIn": true, "members": 1 }]`
+- **Create group:** `POST /api/v1/groups` with `{ "name": "Family", "permissions": ["libraries.manage"] }`. `400` for an empty name or unknown permission, `409` if the name is taken.
+- **Update group:** `PATCH /api/v1/groups/:id` with `name` and/or `permissions` (the full list).
+- **Delete group:** `DELETE /api/v1/groups/:id`. Members move to **Users**.
+
+All group endpoints require `users.manage`.
+
 ## Movies
 
 ### List Movies
@@ -273,12 +295,13 @@ Federation media peers must both support protocol version 1; older peers are rej
 
 ## Users
 
-User objects look like `{ "id", "username", "name", "email", "publicProfile", "passwordlessLocal", "avatar" }`; the password hash is never returned. `publicProfile` shows the user on the local-network profile picker; `passwordlessLocal` lets them sign in there without a password (when the server allows it). `avatar` is the current avatar file name or `null`, and changes with every upload.
+User objects look like `{ "id", "username", "name", "email", "publicProfile", "passwordlessLocal", "avatar", "groupId" }`; the password hash is never returned. `publicProfile` shows the user on the local-network profile picker; `passwordlessLocal` lets them sign in there without a password (when the server allows it). `avatar` is the current avatar file name or `null`, and changes with every upload.
+
+Everything here needs `users.manage`, except that users may read their own record and change their own avatar.
 
 ### List Users
 - **URL:** `/users`
 - **Method:** `GET`
-- **Auth:** Required.
 
 ### Get User Info
 - **URL:** `/user/:id`
@@ -287,22 +310,60 @@ User objects look like `{ "id", "username", "name", "email", "publicProfile", "p
 ### Create User
 - **URL:** `/user`
 - **Method:** `POST`
-- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": false, "passwordlessLocal": false }`
+- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": false, "passwordlessLocal": false, "groupId": 2 }` (`groupId` optional; defaults to the **Users** group)
 
 ### Update User
 - **URL:** `/user/:id`
 - **Method:** `PUT`
-- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": true, "passwordlessLocal": false }` (all optional; the flags must be booleans)
+- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": true, "passwordlessLocal": false, "groupId": 1 }` (all optional; the flags must be booleans; `groupId` may be `null`). `400` for an unknown group, `409` if it would demote the last user who can manage users.
 
 ### Delete User
 - **URL:** `/user/:id`
 - **Method:** `DELETE`
+- `409` when deleting the last user who can manage users.
 
 ### User Avatar
 - **Get:** `GET /user/:id/avatar?v=<avatar>` — no authentication (the login screen shows it). 256×256 WebP; `404` when the user has none. Cached indefinitely when `v` matches the current `avatar`.
 - **Upload:** `PUT /user/:id/avatar` — multipart with one image file; cropped to a square. Returns the updated user. `400` without a file, `422` if it is not an image.
 - **Remove:** `DELETE /user/:id/avatar` — returns the updated user.
 - Files are stored in `assets.userAvatarLocation` (default `/etc/oblecto/assets/userAvatars/`).
+
+## Account (V1)
+
+The signed-in user's own account. These need a session but no permission. Username, group and the sign-in flags are not editable here; they belong to whoever holds `users.manage`.
+
+The account object is the user object plus:
+```json
+{
+  "hasPassword": true,
+  "group": { "id": 2, "name": "Users" },
+  "permissions": [],
+  "preferences": {
+    "language": null,
+    "audioLanguage": null,
+    "subtitleLanguage": null,
+    "subtitleMode": "auto",
+    "quality": "original",
+    "autoplayNext": true
+  }
+}
+```
+
+`preferences` always carries every key, with defaults filled in:
+- `language`: interface language as a BCP 47 tag (`"en"`, `"pt-BR"`); `null` follows the browser.
+- `audioLanguage`, `subtitleLanguage`: preferred track languages (ISO 639 code as found in the media, e.g. `"en"` or `"jpn"`); `null` keeps the file's default track.
+- `subtitleMode`: `off`, `auto` or `forced`.
+- `quality`: `original`, `auto`, `360`, `480`, `720` or `1080`.
+- `autoplayNext`: start the next episode when one ends.
+
+The Jellyfin emulation reports these as the user's audio and subtitle language, subtitle mode and next-episode autoplay.
+
+- **Get:** `GET /api/v1/me`
+- **Update:** `PATCH /api/v1/me` with any of `{ "name": "...", "email": "...", "preferences": { "subtitleMode": "off" } }`. Preferences are merged, so send only the ones that changed. Empty `name` or `email` clears it. Unknown or invalid preferences return `400` with `{ "error": "Check the highlighted preferences.", "fields": { "quality": "..." } }` and nothing is saved.
+- **Change password:** `PUT /api/v1/me/password` with `{ "currentPassword": "...", "newPassword": "..." }`. `currentPassword` may be omitted only when the account has no password. `403` when it is wrong, `400` when the new one is shorter than four characters.
+- **Avatar:** `PUT /api/v1/me/avatar` (multipart, one image) and `DELETE /api/v1/me/avatar`, with the same processing and errors as `PUT /user/:id/avatar`.
+
+Each returns the updated account object.
 
 ## Clients (Remote Control)
 
@@ -313,7 +374,7 @@ Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/play
 ## Settings & System (V1)
 
 ### Configuration
-Manage the core application configuration. All settings and system endpoints require the existing authenticated session.
+Manage the core application configuration. Settings endpoints need `settings.manage`; library mutations need `libraries.manage`; maintenance and imports need `system.manage` (see [Permissions and groups](#permissions-and-groups)). Reading library paths, system info and capabilities only needs a session.
 
 Configuration and library mutations are serialized and persisted by atomic file replacement before success is returned. A failed write leaves the active configuration unchanged and returns an error. Object sections use shallow field merging; send the complete nested width object when changing artwork sizes. Unchanged fields should be omitted. Masked `***` credential values in object sections are treated as unchanged.
 

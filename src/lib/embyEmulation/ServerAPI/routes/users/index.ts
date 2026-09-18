@@ -18,8 +18,21 @@ import { getRequestValue } from '../../requestUtils.js';
 import { isLocalRequest } from '../../../../network/localNetwork.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
+import { permissionsOf } from '../../../../auth/permissions.js';
+import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
 
-const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password)): Record<string, unknown> => {
+// Jellyfin clients show their admin dashboard to administrators.
+const isAdministrator = async (user: User | null): Promise<boolean> => user !== null && (await permissionsOf(user)).includes('settings.manage');
+
+const JELLYFIN_SUBTITLE_MODES: Record<SubtitleMode, string> = {
+    off: 'None',
+    auto: 'Default',
+    forced: 'OnlyForced'
+};
+
+const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password), IsAdministrator = false): Record<string, unknown> => {
+    const preferences = resolvePreferences(user.preferences);
+
     return {
         Name: user.name,
         ServerId: embyEmulation.serverId,
@@ -32,11 +45,12 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
         LastLoginDate: '2020-09-11T23:37:27.3042432Z',
         LastActivityDate: '2020-09-11T23:37:27.3042432Z',
         Configuration: {
-            PlayDefaultAudioTrack: true,
-            SubtitleLanguagePreference: '',
+            PlayDefaultAudioTrack: preferences.audioLanguage === null,
+            AudioLanguagePreference: preferences.audioLanguage ?? '',
+            SubtitleLanguagePreference: preferences.subtitleLanguage ?? '',
             DisplayMissingEpisodes: false,
             GroupedFolders: [],
-            SubtitleMode: 'Default',
+            SubtitleMode: JELLYFIN_SUBTITLE_MODES[preferences.subtitleMode],
             DisplayCollectionsView: false,
             EnableLocalPassword: false,
             OrderedViews: [],
@@ -45,10 +59,10 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
             HidePlayedInLatest: true,
             RememberAudioSelections: true,
             RememberSubtitleSelections: true,
-            EnableNextEpisodeAutoPlay: true
+            EnableNextEpisodeAutoPlay: preferences.autoplayNext
         },
         Policy: {
-            IsAdministrator: true,
+            IsAdministrator,
             IsHidden: false,
             IsDisabled: false,
             BlockedTags: [],
@@ -126,8 +140,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
     server.get('/users', async (req: Request, res: Response) => {
         const users = await User.findAll();
+        const admins = await Promise.all(users.map(isAdministrator));
 
-        res.send(users.map((user) => buildUserDto(user, embyEmulation)));
+        res.send(users.map((user, index) => buildUserDto(user, embyEmulation, Boolean(user.password), admins[index])));
     });
 
     server.post('/users/authenticatebyname', async (req: EmbyRequest, res: Response) => {
@@ -146,6 +161,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         logger.debug(JSON.stringify(embyEmulation.sessions[sessionId]));
 
         const session = embyEmulation.sessions[sessionId];
+        const IsAdministrator = await isAdministrator(await User.findByPk(session.Id));
 
         res.send({
             'User': {
@@ -163,7 +179,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                     'AudioLanguagePreference': '', 'PlayDefaultAudioTrack': true, 'SubtitleLanguagePreference': '', 'DisplayMissingEpisodes': false, 'GroupedFolders': [], 'SubtitleMode': 'Default', 'DisplayCollectionsView': false, 'EnableLocalPassword': true, 'OrderedViews': ['9d7ad6afe9afa2dab1a2f6e00ad28fa6', 'f137a2dd21bbc1b99aa5c0f6bf02a805', 'a656b907eb3a73532e40e44b968d0225'], 'LatestItemsExcludes': [], 'MyMediaExcludes': [], 'HidePlayedInLatest': false, 'RememberAudioSelections': true, 'RememberSubtitleSelections': true, 'EnableNextEpisodeAutoPlay': true, 'CastReceiverId': 'F007D354'
                 },
                 'Policy': {
-                    'IsAdministrator': true, 'IsHidden': false, 'EnableCollectionManagement': true, 'EnableSubtitleManagement': true, 'EnableLyricManagement': false, 'IsDisabled': false, 'BlockedTags': [], 'AllowedTags': [], 'EnableUserPreferenceAccess': true, 'AccessSchedules': [], 'BlockUnratedItems': [], 'EnableRemoteControlOfOtherUsers': true, 'EnableSharedDeviceControl': true, 'EnableRemoteAccess': true, 'EnableLiveTvManagement': true, 'EnableLiveTvAccess': true, 'EnableMediaPlayback': true, 'EnableAudioPlaybackTranscoding': true, 'EnableVideoPlaybackTranscoding': true, 'EnablePlaybackRemuxing': true, 'ForceRemoteSourceTranscoding': false, 'EnableContentDeletion': true, 'EnableContentDeletionFromFolders': [], 'EnableContentDownloading': true, 'EnableSyncTranscoding': true, 'EnableMediaConversion': true, 'EnabledDevices': [], 'EnableAllDevices': true, 'EnabledChannels': [], 'EnableAllChannels': true, 'EnabledFolders': [], 'EnableAllFolders': true, 'InvalidLoginAttemptCount': 0, 'LoginAttemptsBeforeLockout': -1, 'MaxActiveSessions': 0, 'EnablePublicSharing': true, 'BlockedMediaFolders': [], 'BlockedChannels': [], 'RemoteClientBitrateLimit': 0, 'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider', 'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider', 'SyncPlayAccess': 'CreateAndJoinGroups'
+                    IsAdministrator, 'IsHidden': false, 'EnableCollectionManagement': true, 'EnableSubtitleManagement': true, 'EnableLyricManagement': false, 'IsDisabled': false, 'BlockedTags': [], 'AllowedTags': [], 'EnableUserPreferenceAccess': true, 'AccessSchedules': [], 'BlockUnratedItems': [], 'EnableRemoteControlOfOtherUsers': true, 'EnableSharedDeviceControl': true, 'EnableRemoteAccess': true, 'EnableLiveTvManagement': true, 'EnableLiveTvAccess': true, 'EnableMediaPlayback': true, 'EnableAudioPlaybackTranscoding': true, 'EnableVideoPlaybackTranscoding': true, 'EnablePlaybackRemuxing': true, 'ForceRemoteSourceTranscoding': false, 'EnableContentDeletion': true, 'EnableContentDeletionFromFolders': [], 'EnableContentDownloading': true, 'EnableSyncTranscoding': true, 'EnableMediaConversion': true, 'EnabledDevices': [], 'EnableAllDevices': true, 'EnabledChannels': [], 'EnableAllChannels': true, 'EnabledFolders': [], 'EnableAllFolders': true, 'InvalidLoginAttemptCount': 0, 'LoginAttemptsBeforeLockout': -1, 'MaxActiveSessions': 0, 'EnablePublicSharing': true, 'BlockedMediaFolders': [], 'BlockedChannels': [], 'RemoteClientBitrateLimit': 0, 'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider', 'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider', 'SyncPlayAccess': 'CreateAndJoinGroups'
                 }
             },
             'SessionInfo': {
@@ -209,7 +225,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             return;
         }
 
-        res.send(buildUserDto(user, embyEmulation));
+        res.send(buildUserDto(user, embyEmulation, Boolean(user.password), await isAdministrator(user)));
     });
 
     server.get('/users/:userid/views', (req: Request, res: Response) => {

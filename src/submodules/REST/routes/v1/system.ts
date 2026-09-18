@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
@@ -7,10 +7,10 @@ import { maintenanceWork } from '../../../../lib/maintenance/dispatch.js';
 
 export default (server: Express, oblecto: any) => {
 
-    server.get('/api/v1/system/maintenance/jobs', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+    server.get('/api/v1/system/maintenance/jobs', authMiddleWare.requiresPermission('system.manage'), (req: Request, res: Response) => {
         res.send(oblecto.queue.maintenance.list());
     });
-    server.post('/api/v1/system/maintenance', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+    server.post('/api/v1/system/maintenance', authMiddleWare.requiresPermission('system.manage'), (req: Request, res: Response) => {
         const { action, target } = (req.body ?? {}) as { action?: unknown; target?: unknown };
         if (typeof action !== 'string' || typeof target !== 'string') return res.status(400).send({ error: 'Action and target are required' });
         const work = maintenanceWork(oblecto as Oblecto, action, target);
@@ -25,7 +25,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // POST /api/v1/system/imports
-    server.post('/api/v1/system/imports', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
+    server.post('/api/v1/system/imports', authMiddleWare.requiresPermission('system.manage'), async (req: Request, res: Response, next: NextFunction) => {
         const { source, type } = req.body;
 
         if (!type) return next(new errors.BadRequestError('Type is required (movies|tvshows)'));
