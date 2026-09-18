@@ -3,7 +3,7 @@ import { parseSubnet } from '../network/localNetwork.js';
 export const allowedSections = [
     'indexer', 'cleaner', 'mdns', 'queue', 'tvdb', 'themoviedb', 'fanart.tv',
     'assets', 'server', 'jellyfin', 'files', 'artwork', 'fileExtensions', 'tracker',
-    'transcoding', 'web', 'streaming', 'authentication', 'federation',
+    'transcoding', 'web', 'streaming', 'authentication', 'federation', 'logging',
     'seedboxes', 'movies', 'tvshows'
 ];
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -35,6 +35,10 @@ export function validateSettings(updates: unknown): Record<string, string> {
             if (section === 'authentication' && field === 'localSubnets' && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !parseSubnet(item)))) errors[key] = 'Enter subnets like 192.168.1.0/24.';
             if (((section === 'server' || section === 'jellyfin') && field === 'port') && (!Number.isInteger(entry) || Number(entry) < 0 || Number(entry) > 65535)) errors[key] = 'Enter a port from 0 to 65535.';
             if (section === 'jellyfin' && field === 'host' && (typeof entry !== 'string' || !entry.trim())) errors[key] = 'Enter an address to listen on, such as 0.0.0.0.';
+            if (section === 'logging' && field === 'level' && !['error', 'warn', 'info', 'debug'].includes(entry as string)) errors[key] = 'Choose error, warn, info or debug.';
+            if (section === 'logging' && ['maxSizeMB', 'maxFiles'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1)) errors[key] = 'Enter a whole number of at least 1.';
+            if (section === 'logging' && field === 'file' && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';
+            if (section === 'logging' && field === 'directory' && (typeof entry !== 'string' || entry.includes('\0'))) errors[key] = 'Enter a directory path, or leave it empty.';
             if (section === 'federation' && ['dataPort', 'mediaPort'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1 || Number(entry) > 65535)) errors[key] = 'Enter a port from 1 to 65535.';
             if ((field.endsWith('Identifiers') || field.endsWith('Updaters') || (section === 'fileExtensions' && field === 'video')) && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !item.trim()))) errors[key] = 'Choose a list of non-empty values.';
         }

@@ -2,16 +2,48 @@ import { EventEmitter } from 'events';
 import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
+import config, { configPath } from '../../config.js';
 
-// Ensure logs directory exists
-const logDir = path.join(process.cwd(), 'logs');
+const LEVELS = ['error', 'warn', 'info', 'debug'] as const;
 
-if (!fs.existsSync(logDir)) {
+type LogLevel = typeof LEVELS[number];
+
+const settings = config.logging ?? {};
+const level: LogLevel = LEVELS.includes(settings.level as LogLevel) ? settings.level as LogLevel : 'info';
+
+// Beside the config file (/etc/oblecto/logs by default), never wherever the process was started from.
+const logDirectory = settings.directory || path.join(path.dirname(configPath()), 'logs');
+
+/** Rotating file transports, or none when file logging is off or the directory cannot be created. */
+function fileTransports(format: winston.Logform.Format): winston.transport[] {
+    if (settings.file === false) return [];
+
     try {
-        fs.mkdirSync(logDir);
-    } catch (e) {
-        console.error('Could not create logs directory', e);
+        fs.mkdirSync(logDirectory, { recursive: true });
+    } catch (error) {
+        console.error(`Not writing log files: could not create ${logDirectory}: ${(error as Error).message}`);
+        return [];
     }
+
+    const rotation = {
+        maxsize: Math.max(1, settings.maxSizeMB ?? 10) * 1024 * 1024,
+        maxFiles: Math.max(1, settings.maxFiles ?? 5),
+        tailable: true,
+        format
+    };
+
+    return [
+        new winston.transports.File({
+            ...rotation,
+            filename: path.join(logDirectory, 'error.log'),
+            level: 'error'
+        }),
+        new winston.transports.File({
+            ...rotation,
+            filename: path.join(logDirectory, 'combined.log'),
+            level
+        })
+    ];
 }
 
 class Logger extends EventEmitter {
@@ -38,18 +70,11 @@ class Logger extends EventEmitter {
         );
 
         this.winston = winston.createLogger({
-            level: 'debug', // Capture everything, filtering happens in transports/logic
-            format: fileFormat,
-            transports: [
-                new winston.transports.File({
-                    filename: path.join(logDir, 'error.log'),
-                    level: 'error'
-                }),
-                new winston.transports.File({ filename: path.join(logDir, 'combined.log') })
-            ]
+            level,
+            transports: fileTransports(fileFormat)
         });
 
-        this.consoleTransport = new winston.transports.Console({ format: consoleFormat });
+        this.consoleTransport = new winston.transports.Console({ format: consoleFormat, level });
 
         this.winston.add(this.consoleTransport);
     }

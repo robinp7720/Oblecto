@@ -120,6 +120,13 @@
     "localSubnets": [],
     "trustProxy": false
   },
+  "logging": {
+    "directory": "",
+    "level": "info",
+    "maxSizeMB": 10,
+    "maxFiles": 5,
+    "file": true
+  },
   "tracker": {
     "interval": 10
   },

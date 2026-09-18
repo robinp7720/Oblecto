@@ -120,6 +120,16 @@ string
         // Take the client address from X-Forwarded-For (only behind a reverse proxy)
         'trustProxy'?: boolean
     },
+    'logging'?: {
+        // Where error.log and combined.log go; empty means a logs directory beside the config file
+        'directory'?: string,
+        'level'?: 'error' | 'warn' | 'info' | 'debug',
+        // Rotate a log file when it reaches this size, keeping this many
+        'maxSizeMB'?: number,
+        'maxFiles'?: number,
+        // Write log files at all; the console always gets the log
+        'file'?: boolean
+    },
     'tracker': {
         'interval': number
     },
