@@ -32,6 +32,6 @@ export default defineConfig({
     webServer: [
         // Reads the mocha fixture config, never the machine's /etc/oblecto.
         { command: 'node --import tsx tests/browser/server.ts', env: { OBLECTO_CONFIG_PATH: 'tests/fixtures/config.json' }, url: 'http://127.0.0.1:4187', timeout: 60000, reuseExistingServer: false },
-        { command: 'npx vite --port 8123 --strictPort --host 127.0.0.1', cwd: 'Oblecto-Web', url: UI_URL, timeout: 120000, reuseExistingServer: true }
+        { command: 'npx vite --port 8123 --strictPort --host 127.0.0.1', cwd: 'Oblecto-Web', url: UI_URL, timeout: 120000, reuseExistingServer: !process.env.CI }
     ]
 });
