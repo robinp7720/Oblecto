@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
@@ -26,17 +26,17 @@ const scrubConfig = (conf: any) => {
 export default (server: Express, oblecto: any) => {
     
     // GET /api/v1/settings - Get full config
-    server.get('/api/v1/settings', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
+    server.get('/api/v1/settings', authMiddleWare.requiresPermission('settings.manage'), (req: Request, res: Response) => {
         res.send(scrubConfig(oblecto.config));
     });
 
-    server.post('/api/v1/settings/providers/:provider/test', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
+    server.post('/api/v1/settings/providers/:provider/test', authMiddleWare.requiresPermission('settings.manage'), async (req: Request, res: Response) => {
         const provider = req.params.provider as typeof providers[number];
         if (!providers.includes(provider)) return res.status(400).send({ error: 'Unknown provider' });
         res.send(await testProvider(provider, oblecto.config[provider]?.key || ''));
     });
 
-    server.patch('/api/v1/settings', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
+    server.patch('/api/v1/settings', authMiddleWare.requiresPermission('settings.manage'), async (req: Request, res: Response) => {
         const fields = validateSettings(req.body);
         if (Object.keys(fields).length) return res.status(400).send({ error: 'Check the highlighted settings.', fields });
         await ConfigManager.updateConfig(draft => mergeSettings(draft, req.body), oblecto.config);
@@ -44,7 +44,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // GET /api/v1/settings/:section
-    server.get('/api/v1/settings/:section', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
+    server.get('/api/v1/settings/:section', authMiddleWare.requiresPermission('settings.manage'), (req: Request, res: Response, next: NextFunction) => {
         const section = req.params.section as string;
 
         if (!ALLOWED_SECTIONS.includes(section)) {
@@ -65,7 +65,7 @@ export default (server: Express, oblecto: any) => {
         res.send(dataToSend);
     });
 
-    server.patch('/api/v1/settings/:section', authMiddleWare.requiresAuth, async (req: Request, res: Response) => {
+    server.patch('/api/v1/settings/:section', authMiddleWare.requiresPermission('settings.manage'), async (req: Request, res: Response) => {
         const section = req.params.section as string;
         const updates = { [section]: req.body };
         const fields = validateSettings(updates);

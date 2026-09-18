@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/unbound-method, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
@@ -30,7 +30,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // PATCH /api/v1/libraries/:type - Update general library settings (identifiers, updaters, etc)
-    server.patch('/api/v1/libraries/:type', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
+    server.patch('/api/v1/libraries/:type', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
         const type = req.params.type as string;
 
         if (!ALLOWED_LIBRARIES.includes(type)) {
@@ -51,7 +51,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // POST /api/v1/libraries/:type/paths - Add a source directory
-    server.post('/api/v1/libraries/:type/paths', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
+    server.post('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
         const type = req.params.type as string;
 
         if (!ALLOWED_LIBRARIES.includes(type)) {
@@ -74,7 +74,7 @@ export default (server: Express, oblecto: any) => {
     });
 
     // DELETE /api/v1/libraries/:type/paths - Remove a source directory
-    server.delete('/api/v1/libraries/:type/paths', authMiddleWare.requiresAuth, async (req: Request, res: Response, next: NextFunction) => {
+    server.delete('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
         const type = req.params.type as string;
 
         if (!ALLOWED_LIBRARIES.includes(type)) {

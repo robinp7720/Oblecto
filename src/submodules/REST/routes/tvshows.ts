@@ -1,6 +1,6 @@
 import path from 'path';
 import { promises as fs } from 'fs';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/unbound-method, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import { Op, literal, where } from 'sequelize';
 import sharp from 'sharp';
@@ -316,7 +316,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(series ? series.SeriesSets : []);
     });
 
-    server.put('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.put('/series/:id/sets', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response) {
         try {
             const series = await Series.findByPk(req.params.id as string);
             const set = await SeriesSet.findByPk(req.body.setId);
@@ -372,7 +372,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(imagePath);
     });
 
-    server.put('/series/:id/poster', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+    server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) {

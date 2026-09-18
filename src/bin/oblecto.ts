@@ -58,6 +58,12 @@ async function run(): Promise<void> {
                 await (removepassword as Runner)(args);
                 break;
             }
+            case 'usergroup': {
+                const { default: usergroup } = await import('./scripts/usergroup.js');
+
+                await (usergroup as Runner)(args);
+                break;
+            }
             case 'deluser': {
                 const { default: deluser } = await import('./scripts/deluser.js');
 
@@ -76,10 +82,11 @@ async function run(): Promise<void> {
                 console.log('  oblecto start-tui      (TUI mode)');
                 console.log();
                 console.log('User maintenance:');
-                console.log('  oblecto adduser USERNAME PASSWORD REALNAME EMAIL');
+                console.log('  oblecto adduser USERNAME PASSWORD REALNAME EMAIL [GROUP]');
                 console.log('  oblecto deluser USERNAME');
                 console.log('  oblecto changepassword USERNAME PASSWORD');
                 console.log('  oblecto removepassword USERNAME');
+                console.log('  oblecto usergroup USERNAME GROUP     (e.g. Administrators)');
                 console.log();
                 console.log('Server maintenance:');
                 console.log('  oblecto init assets');

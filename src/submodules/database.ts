@@ -13,6 +13,7 @@ import { SeriesSet, seriesSetColumns } from '../models/seriesSet.js';
 import { TrackMovie, trackMovieColumns } from '../models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../models/trackEpisode.js';
 import { User, userColumns } from '../models/user.js';
+import { Group, groupColumns } from '../models/group.js';
 import { Stream, streamColumns } from '../models/stream.js';
 
 const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
@@ -42,6 +43,7 @@ function initModels(sequelize: Sequelize): void {
     TrackEpisode.init(trackEpisodesColumns, modelOptions('TrackEpisode'));
 
     User.init(userColumns, modelOptions('User'));
+    Group.init(groupColumns, modelOptions('Group'));
 }
 
 /**
@@ -65,6 +67,9 @@ function initAssociations(): void {
     File.belongsToMany(Movie, { through: MovieFiles });
     Stream.belongsTo(File);
     File.hasMany(Stream);
+
+    User.belongsTo(Group, { foreignKey: 'groupId', onDelete: 'SET NULL' });
+    Group.hasMany(User, { foreignKey: 'groupId' });
 
     TrackEpisode.belongsTo(User);
     TrackEpisode.belongsTo(Episode);

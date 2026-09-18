@@ -13,6 +13,8 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
     declare passwordlessLocal: CreationOptional<boolean>;
     // Avatar file name in assets.userAvatarLocation; changes with each upload
     declare avatar: string | null;
+    // Grants permissions; null means none
+    declare groupId: CreationOptional<number | null>;
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
@@ -34,6 +36,7 @@ export const userColumns = {
         type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false
     },
     avatar: { type: DataTypes.STRING, allowNull: true },
+    groupId: { type: DataTypes.INTEGER, allowNull: true },
 
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
