@@ -84,8 +84,8 @@ async function run(): Promise<void> {
                 console.log(`Oblecto ${packageInfo.version ?? ''}`);
                 console.log();
                 console.log('First time setup:');
-                console.log('  oblecto init');
-                console.log('  oblecto init database');
+                console.log('  oblecto init [--config-dir DIR] [--force]   (config, secret, artwork folders and keys)');
+                console.log('  oblecto init database                      (optional: start creates it too)');
                 console.log();
                 console.log('Start oblecto:');
                 console.log('  oblecto start          (Standard mode)');

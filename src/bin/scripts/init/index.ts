@@ -1,9 +1,10 @@
 type Runner = (args: string[]) => Promise<void> | void;
 
 export default async (args: string[]): Promise<void> => {
-    if (args.length === 1) args[1] = 'oblecto';
+    // `oblecto init [database|assets] [--options]`: without a sub-command, set up the configuration.
+    const command = args[1] !== undefined && !args[1].startsWith('--') ? args[1] : 'oblecto';
 
-    switch (args[1]) {
+    switch (command) {
         case 'oblecto': {
             const { default: general } = await import('./general.js');
 
@@ -22,5 +23,8 @@ export default async (args: string[]): Promise<void> => {
             await (assets as Runner)(args);
             break;
         }
+        default:
+            console.log(`Unknown init step "${command}". Use: oblecto init [database|assets] [--config-dir DIR] [--force]`);
+            process.exitCode = 1;
     }
 };
