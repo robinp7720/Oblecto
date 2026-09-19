@@ -1,5 +1,8 @@
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
+import { unconfiguredClient } from '../common/unconfiguredClient.js';
+import { describeMissingTools, probeTools, type ToolReport } from './tools.js';
+import { maintenanceWork } from '../maintenance/dispatch.js';
 import { MovieDb } from 'moviedb-promise';
 
 import Queue from '../queue/index.js';
@@ -89,17 +92,24 @@ export default class Oblecto {
     public federationMovieIndexer?: FederationMovieIndexer;
     public oblectoAPI: OblectoAPI;
     public realTimeController: RealtimeController;
-    public embyServer: EmbyEmulation;
+    public embyServer?: EmbyEmulation;
+    public tools: ToolReport;
 
     constructor(config: IConfig) {
         this.config = config;
+
+        this.tools = probeTools(config);
+        for (const problem of describeMissingTools(this.tools)) logger.warn(problem);
 
         this.database = initDatabase();
         void this.prepareGroups();
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        this.tvdb = new (TVDB)(this.config.tvdb.key);
-        this.tmdb = new MovieDb(this.config.themoviedb.key);
+        this.tvdb = this.config.tvdb.key ? new (TVDB)(this.config.tvdb.key) : unconfiguredClient('TVDB', 'tvdb.key');
+        this.tmdb = this.config.themoviedb.key ? new MovieDb(this.config.themoviedb.key) : unconfiguredClient<MovieDb>('TMDb', 'themoviedb.key');
+
+        for (const [provider, key] of [['TVDB', this.config.tvdb.key], ['TMDb', this.config.themoviedb.key], ['fanart.tv', this.config['fanart.tv'].key]])
+            if (!key) logger.warn(`No ${provider} API key is set, so ${provider} lookups will fail until a key is added and Oblecto is restarted`);
 
         this.queue = new Queue(this.config.queue.concurrency);
 
@@ -139,20 +149,35 @@ export default class Oblecto {
         void this.seedboxController.loadAllSeedboxes();
 
         if (this.config.federation.enable) {
-            this.federationController = new FederationController(this);
-            this.federationClientController = new FederationClientController(this);
+            // Federation needs key and certificate files; without them the rest of Oblecto still runs.
+            try {
+                this.federationController = new FederationController(this);
+                this.federationClientController = new FederationClientController(this);
 
-            this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
-            this.federationMovieIndexer = new FederationMovieIndexer(this);
+                this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
+                this.federationMovieIndexer = new FederationMovieIndexer(this);
 
-            void this.federationClientController.addAllSyncMasters();
+                void this.federationClientController.addAllSyncMasters();
+            } catch (error) {
+                logger.error('Federation is enabled but could not start, so it is off until this is fixed', error);
+                this.federationController?.close();
+                this.federationController = undefined;
+                this.federationClientController = undefined;
+            }
         }
 
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);
 
-        // Emby Server emulation
-        this.embyServer = new EmbyEmulation(this);
+        // Jellyfin-compatible API for Jellyfin apps
+        if (this.config.jellyfin.enabled) this.embyServer = new EmbyEmulation(this);
+
+        // Tracked like jobs started from the maintenance page, so they show up there.
+        for (const [enabled, action] of [[this.config.cleaner.runAtBoot, 'clean'], [this.config.indexer.runAtBoot, 'scan']] as const) {
+            const work = enabled ? maintenanceWork(this, action, 'all') : undefined;
+
+            if (work) this.queue.maintenance.start(action, 'all', work);
+        }
     }
 
     private async prepareGroups(): Promise<void> {
@@ -175,7 +200,8 @@ export default class Oblecto {
         const closers: (() => unknown)[] = [
             () => this.oblectoAPI.close(),
             () => this.realTimeController.close(),
-            () => this.embyServer.close(),
+            () => this.embyServer?.close(),
+            () => this.seedboxController.close(),
             () => this.federationController?.close(),
             () => this.federationClientController?.close()
         ];

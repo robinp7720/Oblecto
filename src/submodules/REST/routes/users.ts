@@ -10,6 +10,7 @@ import errors from '../errors.js';
 import { avatarPath, clearAvatar, firstUpload, removeAvatarFile, saveAvatar } from '../../../lib/users/avatars.js';
 import { Group } from '../../../models/group.js';
 import { defaultGroupId, withAdminGuard } from '../../../lib/auth/permissions.js';
+import upload from '../middleware/upload.js';
 
 const USER_ATTRIBUTES = ['username', 'name', 'email', 'id', 'publicProfile', 'passwordlessLocal', 'avatar', 'groupId'];
 
@@ -72,14 +73,15 @@ export default (server: Express, oblecto: Oblecto) => {
 
     // Endpoint to update the entries of a certain user
     server.put('/user/:id', authMiddleWare.requiresPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
-        const user = await User.findByPk(req.params.id);
+        const user = await User.findByPk(String(req.params.id));
 
         if (!user) {
             res.status(400).send({ message: 'User with id does not exist' });
             return;
         }
 
-        const params = req.combined_params!;
+        // The body only: a password in the query string would end up in access logs.
+        const params = (req.body ?? {}) as Record<string, unknown>;
 
         if (params.username) {
             user.username = params.username as string;
@@ -132,7 +134,7 @@ export default (server: Express, oblecto: Oblecto) => {
         });
     });
 
-    server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const user = await User.findByPk(req.params.id as string);
 
         if (!user) {

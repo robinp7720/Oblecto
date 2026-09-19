@@ -73,7 +73,7 @@ export default class FederationServerConnection {
         this.key = new (NodeRSA)(key);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        this.write('CHALLENGE', (this.key as any).encrypt(this.challenge, 'base64') as string);
+        this.write('CHALLENGE', this.key.encrypt(this.challenge, 'base64'));
     }
 
     authHandler(data: string): void {

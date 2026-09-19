@@ -1,5 +1,4 @@
 import { Express, Response, NextFunction } from 'express';
-import bcrypt from 'bcrypt';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
 import { OblectoRequest } from '../../index.js';
@@ -9,8 +8,8 @@ import { publicUser } from '../users.js';
 import { clearAvatar, firstUpload, saveAvatar } from '../../../../lib/users/avatars.js';
 import { resolvePreferences, validatePreferences } from '../../../../lib/users/preferences.js';
 import type Oblecto from '../../../../lib/oblecto/index.js';
-
-const MIN_PASSWORD_LENGTH = 4;
+import upload from '../../middleware/upload.js';
+import { changeOwnPassword } from '../../../../lib/users/password.js';
 
 async function currentUser(req: OblectoRequest): Promise<User> {
     const id = (req.authorization?.user as { id?: number } | undefined)?.id;
@@ -83,17 +82,7 @@ export default (server: Express, oblecto: Oblecto) => {
             const user = await currentUser(req);
             const { currentPassword, newPassword } = (req.body ?? {}) as { currentPassword?: unknown; newPassword?: unknown };
 
-            if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH)
-                throw new errors.BadRequestError(`The new password needs at least ${MIN_PASSWORD_LENGTH} characters`);
-
-            // An account without a password has nothing to confirm.
-            if (user.password) {
-                if (typeof currentPassword !== 'string' || !await bcrypt.compare(currentPassword, user.password))
-                    throw new errors.ForbiddenError('Current password is incorrect');
-            }
-
-            user.password = await bcrypt.hash(newPassword, oblecto.config.authentication.saltRounds);
-            await user.save();
+            await changeOwnPassword(user, currentPassword, newPassword, oblecto.config.authentication.saltRounds);
 
             res.send(await describe(user));
         } catch (error) {
@@ -101,7 +90,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.put('/api/v1/me/avatar', authMiddleWare.requiresAuth, async (req: OblectoRequest, res: Response, next: NextFunction) => {
+    server.put('/api/v1/me/avatar', authMiddleWare.requiresAuth, upload, async (req: OblectoRequest, res: Response, next: NextFunction) => {
         try {
             const user = await currentUser(req);
 

@@ -1,7 +1,9 @@
 import blessed from 'neo-blessed';
 
 import Oblecto from '../lib/oblecto/index.js';
-import config from '../config.js';
+import config, { ConfigManager } from '../config.js';
+import { startupProblems } from '../lib/settings/startupChecks.js';
+import { prepareDatabase } from './database.js';
 import logger from '../submodules/logger/index.js';
 
 type TaskAttr = {
@@ -27,7 +29,7 @@ const graphical = {
     initScreen(): void {
         // Create a screen object.
 
-        this.screen.title = 'my window title';
+        this.screen.title = 'Oblecto';
 
         // Create a box perfectly centered horizontally and vertically.
         this.streamerSessionsBox = blessed.list({
@@ -83,7 +85,14 @@ const graphical = {
         this.screen.render();
     },
 
-    start(): void {
+    async start(): Promise<void> {
+        const problems = startupProblems(config, ConfigManager.loadProblem());
+
+        if (problems.length) throw new Error(`Oblecto cannot start:\n  - ${problems.join('\n  - ')}`);
+
+        // Before the screen takes over the terminal, so a database problem is readable.
+        await prepareDatabase(config);
+
         this.initScreen();
 
         logger.silent = true;

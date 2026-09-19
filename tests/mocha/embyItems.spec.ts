@@ -303,8 +303,7 @@ describe('Emby items routes', () => {
             itemsRoutes(server as any, mockEmbyEmulation);
             
             const routes = [
-                'POST /items/remotesearch/apply/:itemid',
-                'POST /items/:itemid/refresh'
+                'POST /items/remotesearch/apply/:itemid'
             ];
             
             for (const route of routes) {
@@ -315,6 +314,16 @@ describe('Emby items routes', () => {
                 await handler(req, res);
                 assert.equal(res.statusCode, 204, `Should be 204 for ${route}`);
             }
+        });
+
+        it('refuses a metadata refresh from a user who cannot manage libraries', async () => {
+            const server = makeServer();
+            itemsRoutes(server as any, mockEmbyEmulation);
+
+            const res = makeRes();
+
+            await server.handlers.get('POST /items/:itemid/refresh')({ params: { itemid: '1' } }, res);
+            assert.equal(res.statusCode, 403);
         });
     });
 });

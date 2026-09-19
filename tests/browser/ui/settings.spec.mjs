@@ -5,11 +5,11 @@ const headers = { 'access-control-allow-origin': '*', 'access-control-allow-meth
 const reply = (route, body, status = 200) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) })
 const config = () => ({
   indexer: { runAtBoot: false }, cleaner: { runAtBoot: false }, files: { doHash: false }, fileExtensions: { video: ['mkv'] },
-  assets: { storeWithFile: false, showPosterLocation: '/shows', episodeBannerLocation: '/episodes', moviePosterLocation: '/posters', movieFanartLocation: '/fanart' },
+  assets: { showPosterLocation: '/shows', episodeBannerLocation: '/episodes', moviePosterLocation: '/posters', movieFanartLocation: '/fanart' },
   artwork: Object.fromEntries(['poster', 'fanart', 'banner'].map(key => [key, { small: 100, medium: 300, large: 800 }])),
   themoviedb: { key: 'saved-key' }, tvdb: { key: '' }, 'fanart.tv': { key: '' },
-  movies: { directories: [{ path: '/movies' }], movieIdentifiers: [], movieUpdaters: [], doReIndex: false, indexBroken: false },
-  tvshows: { directories: [], seriesIdentifiers: [], episodeIdentifiers: [], seriesUpdaters: [], episodeUpdaters: [], doReIndex: false, indexBroken: false, ignoreSeriesMismatch: true }
+  movies: { directories: [{ path: '/movies' }], movieIdentifiers: [], movieUpdaters: [] },
+  tvshows: { directories: [], seriesIdentifiers: [], episodeIdentifiers: [], seriesUpdaters: [], episodeUpdaters: [] }
 })
 async function boot (page, path, handle = () => false) {
   await page.route('**oblecto.test/**', async route => {

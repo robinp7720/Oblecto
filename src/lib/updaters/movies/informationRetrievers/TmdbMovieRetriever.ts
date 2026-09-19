@@ -1,3 +1,4 @@
+import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import type { Movie } from '../../../../models/movie.js';
 import type Oblecto from '../../../oblecto/index.js';
 
@@ -26,6 +27,8 @@ export default class TmdbMovieRetriever {
      * @returns - Movie metadata
      */
     async retrieveInformation(movie: MovieWithTmdb): Promise<Record<string, unknown>> {
+        if (movie.tmdbid === null) throw new DebugExtendableError('No tmdbid attached to movie');
+
         const movieInfo = await this.oblecto.tmdb.movieInfo({ id: movie.tmdbid });
 
         const data: Record<string, unknown> = {
@@ -34,7 +37,7 @@ export default class TmdbMovieRetriever {
             movieName: movieInfo.title,
             originalName: movieInfo.original_title,
             tagline: movieInfo.tagline,
-            genres: JSON.stringify(movieInfo.genres.map((i: { name: string }) => i.name)),
+            genres: JSON.stringify((movieInfo.genres ?? []).map(genre => genre.name)),
 
             originalLanguage: movieInfo.original_language,
 

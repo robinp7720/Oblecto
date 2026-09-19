@@ -14,6 +14,7 @@ export default class SeedboxController {
     public oblecto: Oblecto;
     public seedBoxes: Seedbox[];
     public importQueue: Queue;
+    private poller?: NodeJS.Timeout;
 
     /**
      *
@@ -41,7 +42,7 @@ export default class SeedboxController {
         await this.importAllEpisodes();
         await this.importAllMovies();
 
-        setInterval(() => {
+        this.poller = setInterval(() => {
             void (async () => {
                 await this.importAllEpisodes();
                 await this.importAllMovies();
@@ -51,7 +52,11 @@ export default class SeedboxController {
         );
     }
 
-    async addSeedbox(seedboxConfig: Parameters<typeof Seedbox>[0]): Promise<void> {
+    close(): void {
+        if (this.poller) clearInterval(this.poller);
+    }
+
+    async addSeedbox(seedboxConfig: ConstructorParameters<typeof Seedbox>[0]): Promise<void> {
         const newSeedbox = new Seedbox(seedboxConfig);
 
         await newSeedbox.setupDriver();
@@ -124,12 +129,12 @@ export default class SeedboxController {
 
     async importMovie(seedbox: Seedbox, origin: string, destination: string): Promise<void> {
         await this.importFile(seedbox, origin, destination);
-        await this.oblecto.movieCollector.collectFile(destination);
+        this.oblecto.movieCollector.collectFile(destination);
     }
 
     async importEpisode(seedbox: Seedbox, origin: string, destination: string): Promise<void> {
         await this.importFile(seedbox, origin, destination);
-        await this.oblecto.seriesCollector.collectFile(destination);
+        this.oblecto.seriesCollector.collectFile(destination);
     }
 
     alreadyImportingFile(filePath: string): boolean {
@@ -151,30 +156,9 @@ export default class SeedboxController {
         return file !== null;
     }
 
-    async shouldImportMovie(filePath: string, movie_match: { tmdbid?: number; movieName?: string }): Promise<boolean | undefined> {
-        const method = 'file';
-
-        if (method === 'movie') {
-            const movie = await Movie.findOne({ where: { tmdbid: movie_match.tmdbid } });
-
-            return movie === null;
-        }
-
-        if (method === 'file') {
-            return !await this.fileAlreadyImported(filePath);
-        }
-    }
-
-    async shouldImportEpisode(filePath: string): Promise<boolean | undefined> {
-        const method = 'file';
-
-        if (method === 'episode') {
-            // TODO: Add filter based on if episode exits
-        }
-
-        if (method === 'file') {
-            return !await this.fileAlreadyImported(filePath);
-        }
+    /** Whether a file on the seedbox still needs importing. Matching by file name catches re-downloads under the same name. */
+    async shouldImport(filePath: string): Promise<boolean> {
+        return !await this.fileAlreadyImported(filePath);
     }
 
     /**
@@ -192,7 +176,7 @@ export default class SeedboxController {
             if (this.alreadyImportingFile(file)) continue;
             if (await this.fileAlreadyImported(file)) continue;
 
-            let movie_match: { tmdbid?: number; movieName?: string } | null = null;
+            let movie_match: Awaited<ReturnType<Oblecto['movieIndexer']['matchFile']>> | null = null;
 
             try {
                 movie_match = await this.oblecto.movieIndexer.matchFile(file);
@@ -203,19 +187,26 @@ export default class SeedboxController {
 
             if (!movie_match) continue;
 
-            if (!await this.shouldImportMovie(file, movie_match)) {
+            if (!await this.shouldImport(file)) {
                 logger.info( `Not importing ${movie_match.movieName}`);
                 continue;
             }
 
             logger.info( `Found new movie on ${seedbox.name}: ${basename(file)}`);
 
-            const movie_data = await this.oblecto.movieUpdater.aggregateMovieUpdateRetriever.retrieveInformation(movie_match as any) as { releaseDate?: string };
+            const movie_data = await this.oblecto.movieUpdater.aggregateMovieUpdateRetriever.retrieveInformation(movie_match) as { releaseDate?: string };
 
             const releaseYear = movie_data.releaseDate ? movie_data.releaseDate.substr(0, 4) : '0000';
 
+            const library = this.oblecto.config.movies.directories[0];
+
+            if (!library) {
+                logger.warn(`Not importing ${basename(file)} from ${seedbox.name}: no movie library is configured`);
+                return;
+            }
+
             const destination = path.join(
-                this.oblecto.config.movies.directories[0].path,
+                library.path,
                 `${movie_match.movieName} (${releaseYear})`,
                 basename(file)
             );
@@ -244,7 +235,7 @@ export default class SeedboxController {
 
             if (this.alreadyImportingFile(file)) continue;
 
-            let identification: { series: { seriesName: string } } | undefined;
+            let identification: Awaited<ReturnType<Oblecto['seriesIndexer']['identify']>> | undefined;
 
             try {
                 identification = await this.oblecto.seriesIndexer.identify(file);
@@ -254,12 +245,19 @@ export default class SeedboxController {
 
             if (!identification) continue;
 
-            if (!await this.shouldImportEpisode(file)) continue;
+            if (!await this.shouldImport(file)) continue;
 
             logger.info( `Found new episode on ${seedbox.name}: ${basename(file)}`);
 
+            const library = this.oblecto.config.tvshows.directories[0];
+
+            if (!library || !identification.series.seriesName) {
+                logger.warn(`Not importing ${basename(file)} from ${seedbox.name}: ${library ? 'the series has no name' : 'no TV library is configured'}`);
+                continue;
+            }
+
             const destination = path.join(
-                this.oblecto.config.tvshows.directories[0].path,
+                library.path,
                 identification.series.seriesName,
                 basename(file)
             );

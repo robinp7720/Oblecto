@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions */
-import jwt from 'jsonwebtoken';
 import { Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import config from '../../../config.js';
 import { OblectoRequest } from '../index.js';
 import { User } from '../../../models/user.js';
 import { Permission, permissionsOf } from '../../../lib/auth/permissions.js';
+import { verifyAccessToken } from '../../../lib/auth/tokens.js';
 
 /**
- * The caller's current permissions. Looked up rather than read from the token:
- * tokens never expire, so a demotion has to apply to ones already issued.
+ * The caller's current permissions. Looked up rather than read from the token,
+ * so a demotion applies to tokens issued before it.
  */
 export async function principalOf(req: OblectoRequest): Promise<{ id: number; permissions: Permission[] } | null> {
     const authorization = req.authorization;
@@ -28,16 +28,15 @@ const requiresAuth = (req: OblectoRequest, res: Response, next: NextFunction) =>
     if (req.authorization === undefined)
         return next(new errors.UnauthorizedError('Session is not authenticated'));
 
-    jwt.verify(req.authorization.credentials || (req.combined_params?.auth), config.authentication.secret, function (err: any, decoded: any) {
-        if (err)
-            return next(new errors.UnauthorizedError('An error has occurred during session authentication'));
+    const authorization = req.authorization;
 
-        if (req.authorization) {
-            req.authorization.user = decoded;
-        }
+    verifyAccessToken(authorization.credentials, config.authentication).then(claims => {
+        if (!claims)
+            return next(new errors.UnauthorizedError('Your session has expired. Please sign in again.'));
 
+        authorization.user = claims;
         next();
-    });
+    }).catch(next);
 };
 
 const check = (permission: Permission, allowSelf: boolean) => (req: OblectoRequest, res: Response, next: NextFunction) => {

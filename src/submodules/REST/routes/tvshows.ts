@@ -1,9 +1,6 @@
-import path from 'path';
-import { promises as fs } from 'fs';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import { Op, literal, where } from 'sequelize';
-import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth.js';
 import errors from '../errors.js';
@@ -15,7 +12,11 @@ import { SeriesSet } from '../../../models/seriesSet.js';
 import { File } from '../../../models/file.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
-import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor, escapeLike } from './helpers/browse.js';
+import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor } from './helpers/browse.js';
+import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
+import { firstUpload } from '../../../lib/users/avatars.js';
+import upload from '../middleware/upload.js';
+import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -51,7 +52,10 @@ const buildSeriesProgressLiteral = (
     conditionType: 'watched' | 'inprogress' | 'hasProgress',
     negate = false
 ): any => {
-    const queryGenerator = Series.sequelize?.getQueryInterface().queryGenerator;
+    const queryGenerator = Series.sequelize?.getQueryInterface().queryGenerator as {
+        quoteTable(table: unknown): string;
+        quoteIdentifier(identifier: string): string;
+    } | undefined;
 
     if (!queryGenerator) {
         return null;
@@ -108,11 +112,11 @@ export default (server: Express, oblecto: Oblecto) => {
             if (LEGACY_ALLOWED_ORDERS.indexOf(legacyOrder) === -1)
                 return res.status(400).send({ message: 'Sorting order is invalid' });
 
-            if (!(req.params.sorting in Series.rawAttributes))
+            if (!(String(req.params.sorting) in Series.rawAttributes))
                 return res.status(400).send({ message: 'Sorting method is invalid' });
 
             const results = await Series.findAll({
-                order: [[req.params.sorting, legacyOrder]],
+                order: [[String(req.params.sorting), legacyOrder]],
                 limit,
                 offset: limit * page
             });
@@ -120,7 +124,7 @@ export default (server: Express, oblecto: Oblecto) => {
             return res.send(results);
         }
 
-        const sorting = req.params.sorting;
+        const sorting = String(req.params.sorting);
         if (!BROWSE_SORT_FIELDS.has(sorting)) {
             return res.status(400).send({ message: 'Sorting method is invalid' });
         }
@@ -129,11 +133,10 @@ export default (server: Express, oblecto: Oblecto) => {
         const includeClauses: any[] = [];
 
         if (browseParams.q) {
-            const query = `%${escapeLike(browseParams.q)}%`;
             whereClauses.push({
                 [Op.or]: [
-                    { seriesName: { [Op.like]: query } },
-                    { alias: { [Op.like]: query } }
+                    containsText('seriesName', browseParams.q),
+                    containsText('alias', browseParams.q)
                 ]
             });
         }
@@ -141,7 +144,7 @@ export default (server: Express, oblecto: Oblecto) => {
         if (browseParams.genres.length > 0) {
             whereClauses.push({
                 [Op.or]: browseParams.genres.map((genre: string) => {
-                    return { genre: { [Op.like]: `%${escapeLike(genre)}%` } };
+                    return containsText('genre', genre);
                 })
             });
         }
@@ -182,11 +185,7 @@ export default (server: Express, oblecto: Oblecto) => {
                         attributes: [],
                         through: { attributes: [] },
                         required: true,
-                        where: {
-                            path: {
-                                [Op.like]: `${escapeLike(browseParams.libraryPath)}%`
-                            }
-                        }
+                        where: startsWithText('path', browseParams.libraryPath)
                     }
                 ]
             });
@@ -362,6 +361,8 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(show);
     });
 
+    // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
+    // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/series/:id/poster', async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
@@ -372,52 +373,20 @@ export default (server: Express, oblecto: Oblecto) => {
         res.sendFile(imagePath);
     });
 
-    server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) {
             return res.status(404).send({ message: 'Series does not exist' });
         }
 
-        let posterPath = path.normalize(oblecto.config.assets.showPosterLocation) + '/' + show.id + '.jpg';
+        await saveArtwork(oblecto, firstUpload(req.files), 'poster', size => oblecto.artworkUtils.seriesPosterPath(show, size));
 
-        if (oblecto.config.assets.storeWithFile) {
-            const showPath = show.directory;
-
-            if (showPath) {
-                posterPath = path.join(showPath, (show.seriesName || show.id.toString()) + '-poster.jpg');
-            }
-        }
-
-        if (!req.files || Object.keys(req.files).length === 0) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if (ratio < 1 || ratio > 2) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        try {
-            await fs.copyFile(uploadPath, posterPath);
-            res.send(['success']);
-        } catch (e) {
-            return res.status(500).send({ message: 'An error has occurred during upload of poster' });
-        }
+        res.send(['success']);
     });
 
     server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const series = await Series.findAll({ where: { seriesName: { [Op.like]: '%' + req.params.name + '%' } } });
+        const series = await Series.findAll({ where: containsText('seriesName', String(req.params.name)) });
 
         res.send(series);
     });

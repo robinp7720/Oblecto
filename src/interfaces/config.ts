@@ -3,14 +3,12 @@ export interface IConfig {
         'pathFFmpeg': string | null,
         'pathFFprobe': string | null
     },
+    // Start a full library scan, or a clean-up of missing files, each time Oblecto starts
     'indexer': {
         'runAtBoot': boolean
     },
     'cleaner': {
         'runAtBoot': boolean
-    },
-    'mdns': {
-        'enable': boolean
     },
     'queue': {
         'concurrency': number
@@ -25,7 +23,6 @@ export interface IConfig {
         'key': string
     },
     'assets': {
-        'storeWithFile': boolean,
         'episodeBannerLocation': string,
         'showPosterLocation': string,
         'moviePosterLocation': string,
@@ -38,10 +35,20 @@ export interface IConfig {
         'username': string,
         'password': string,
         'database': string,
-        'storage'?: string
+        'storage'?: string,
+        // Update the schema when Oblecto starts; off means refuse to start until `oblecto migrate` has run
+        'migrateOnStart'?: boolean
     },
     'server': {
-        'port': number
+        'port': number,
+        // Other web origins allowed to call the APIs from a browser, e.g. "http://localhost:5173"; "*" for any
+        'corsOrigins'?: string[]
+    },
+    // The Jellyfin-compatible API for Jellyfin apps
+    'jellyfin': {
+        'enabled': boolean,
+        'port': number,
+        'host': string
     },
     'tvshows': {
         'seriesIdentifiers': [
@@ -56,9 +63,6 @@ export interface IConfig {
         'episodeUpdaters': [
             string
         ],
-        'doReIndex': boolean,
-        'ignoreSeriesMismatch': boolean,
-        'indexBroken': boolean,
         'directories': { path: string }[]
     },
     'movies': {
@@ -68,8 +72,6 @@ export interface IConfig {
         'movieUpdaters': [
             string
         ],
-        'doReIndex': boolean,
-        'indexBroken': boolean,
         'directories': { path: string }[]
     },
     'files': {
@@ -100,6 +102,8 @@ string
     'authentication': {
         'secret': string,
         'saltRounds': number,
+        // Days a web sign-in lasts before the user must sign in again
+        'tokenLifetimeDays'?: number,
         'allowPasswordlessLogin': boolean,
         // Show the profile picker instead of the login form on the local network
         'profilePicker'?: boolean,
@@ -110,11 +114,17 @@ string
         // Take the client address from X-Forwarded-For (only behind a reverse proxy)
         'trustProxy'?: boolean
     },
-    'tracker': {
-        'interval': number
+    'logging'?: {
+        // Where error.log and combined.log go; empty means a logs directory beside the config file
+        'directory'?: string,
+        'level'?: 'error' | 'warn' | 'info' | 'debug',
+        // Rotate a log file when it reaches this size, keeping this many
+        'maxSizeMB'?: number,
+        'maxFiles'?: number,
+        // Write log files at all; the console always gets the log
+        'file'?: boolean
     },
     'transcoding': {
-        'transcodeEverything': boolean,
         'hardwareAcceleration': boolean,
         'hardwareAccelerator': string
     },
@@ -123,7 +133,6 @@ string
     },
     'streaming': {
         'defaultTargetLanguageCode': string,
-        'hlsMaxSegmentLead'?: number;
         encodingConcurrency?: number;
         maxQueue?: number;
         cacheBytes?: number;
@@ -133,6 +142,8 @@ string
     },
     'federation': {
         'key': string,
+        // TLS certificate presented to federation peers
+        'cert'?: string,
         'dataPort': number,
         'mediaPort': number,
         'enable': boolean,

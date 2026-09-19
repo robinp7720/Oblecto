@@ -148,7 +148,7 @@ export default class FileIndexer {
                     index: stream.index,
                     codec_name: stream.codec_name,
                 },
-                defaults: stream as InferCreationAttributes<Stream>
+                defaults: stream as unknown as InferCreationAttributes<Stream>
             });
         }
 

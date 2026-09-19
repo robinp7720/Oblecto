@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "v0.3.2",
+  "version": "1.0.0",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -11,9 +11,10 @@
   },
   "files": [
     "dist/",
-    "res/",
+    "res/config.json",
     "Oblecto-Web/dist/",
-    "images/"
+    "images/",
+    "docs/"
   ],
   "type": "module",
   "engines": {
@@ -39,7 +40,11 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test:playback:browser": "playwright test --project=chromium --project=firefox --project=webkit",
-    "test:player:ui": "playwright test --project=player-desktop --project=player-phone"
+    "test:player:ui": "playwright test --project=player-desktop --project=player-phone",
+    "typecheck": "tsc --noEmit -p tsconfig.src.json",
+    "lint:src": "eslint src",
+    "test:network": "mocha --config tests/network/.mocharc.cjs",
+    "verify": "npm run lint:src && npm run typecheck && npm test"
   },
   "dependencies": {
     "async": "^3.2.6",
@@ -68,6 +73,7 @@
     "socket.io": "^4.8.1",
     "sqlite3": "^5.1.7",
     "ssh2-sftp-client": "^12.0.1",
+    "umzug": "^3.8.3",
     "uuid": "^13.0.0",
     "which": "^6.0.0",
     "winston": "^3.19.0"
@@ -84,7 +90,9 @@
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.10",
     "@types/primus": "^7.3.9",
+    "@types/recursive-readdir": "^2.2.4",
     "@types/socket.io": "^3.0.2",
+    "@types/ssh2-sftp-client": "^9.0.6",
     "@types/which": "^3.0.4",
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.50.0",

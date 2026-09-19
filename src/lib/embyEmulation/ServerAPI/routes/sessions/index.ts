@@ -73,7 +73,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const entry = getPlaybackEntry(embyEmulation, token, playId);
         const playback = entry?.streamSessionId ? embyEmulation.oblecto.playback?.sessions.get(String(entry.streamSessionId)) : undefined;
         if (playback && playback.owner === `emby:${token}`) {
-            await embyEmulation.oblecto.playback.report(playback, { revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' });
+            await embyEmulation.oblecto.playback.report(playback, {
+ revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' 
+});
             if (stop) await embyEmulation.oblecto.playback.stop(playback);
         } else {
             const { id, type } = parseId(String(itemId));
@@ -106,15 +108,19 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.post('/sessions/:sessionid/viewing', (req, res) => { res.status(204).send(); });
     server.get('/sessions/capabilities', (req, res) => { res.send({}); });
     server.post('/sessions/capabilities/full', (req, res) => { res.status(204).send(); });
-    server.post('/sessions/logout', (req, res) => { res.status(204).send(); });
+    server.post('/sessions/logout', (req: EmbyRequest, res: Response) => {
+        if (req.embyToken) embyEmulation.endSession(req.embyToken, true);
+        res.status(204).send();
+    });
     server.get('/sessions/viewing', (req, res) => { res.send([]); });
 
     // SyncPlay
+    // Before /syncplay/:id, which would otherwise take "list" as a group id.
+    server.get('/syncplay/list', (req, res) => { res.send([]); });
     server.get('/syncplay/:id', (req, res) => { res.status(404).send('Not Found'); });
     server.post('/syncplay/buffering', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/join', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/leave', (req, res) => { res.status(204).send(); });
-    server.get('/syncplay/list', (req, res) => { res.send([]); });
     server.post('/syncplay/moveplaylistitem', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/new', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/nextitem', (req, res) => { res.status(204).send(); });

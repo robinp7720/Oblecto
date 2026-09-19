@@ -19,3 +19,6 @@ qodana.sarif.json
 # Playback browser test artifacts
 /test-results/
 /playwright-report/
+
+# Fetched by scripts/fetch-jellyfin-openapi.sh
+/jellyfin-openapi-stable.json

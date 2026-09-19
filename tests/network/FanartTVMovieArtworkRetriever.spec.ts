@@ -4,6 +4,8 @@ import * as chai from 'chai';
 import FanarttvMovieArtworkRetriever from '../../src/lib/artwork/movies/artworkRetrievers/FanarttvMovieArtworkRetriever.js';
 import Queue from '../../src/lib/queue/index.js';
 
+import { FANART_KEY } from './keys.js';
+
 chai.should();
 
 const TMDBID_TEST_ID = '299534';
@@ -11,7 +13,7 @@ const IMDBD_TEST_ID = 'tt4154796';
 
 const oblecto = {
     queue: new Queue(1),
-    config: { 'fanart.tv': { key: 'b6821e30b1a791e04d43543936de1fd0' } }
+    config: { 'fanart.tv': { key: FANART_KEY } }
 };
 
 describe('FanartTV Movie Artwork Retriever', function () {

@@ -6,11 +6,16 @@ import SeriesIndexer from '../../src/lib/indexers/series/SeriesIndexer.js';
 import guessit from '../../src/submodules/guessit.js';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
+import { TMDB_KEY, TVDB_KEY } from './keys.js';
+
+// Uses the project keys from res/config.json unless OBLECTO_TVDB_KEY or OBLECTO_TMDB_KEY is set.
+const tvdbKey = TVDB_KEY;
+const tmdbKey = TMDB_KEY;
 
 function createOblectoFixture() {
     return {
-        tvdb: new TVDB( '4908EBCEE2556E3D'),
-        tmdb: new MovieDb('b06b4917705eeed4e4b273d4c90fe158'),
+        tvdb: new TVDB(tvdbKey),
+        tmdb: new MovieDb(tmdbKey),
 
         queue: new Queue(1),
         config: {

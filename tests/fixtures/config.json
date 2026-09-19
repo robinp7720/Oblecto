@@ -1,0 +1,14 @@
+{
+  "authentication": {
+    "secret": "mocha-test-secret",
+    "saltRounds": 4
+  },
+  "database": {
+    "dialect": "sqlite",
+    "storage": ":memory:"
+  },
+  "logging": {
+    "file": false,
+    "level": "warn"
+  }
+}

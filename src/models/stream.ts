@@ -1,7 +1,8 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, ForeignKey } from 'sequelize';
 
 export class Stream extends Model<InferAttributes<Stream>, InferCreationAttributes<Stream>> {
     declare id: CreationOptional<number>;
+    declare FileId: ForeignKey<number>;
 
     declare index: number | null;
     declare codec_name: string | null;

@@ -28,8 +28,8 @@ export default class TmdbEpisodeRetriever {
 
         const episodeInfo = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
             id: series.tmdbid,
-            season_number: episode.airedSeason,
-            episode_number: episode.airedEpisodeNumber
+            season_number: Number(episode.airedSeason),
+            episode_number: Number(episode.airedEpisodeNumber)
         }, { timeout: 5000 }));
 
         logger.debug(`Episode information for ${episode.episodeName} retrieved from tmdb`);
@@ -42,15 +42,15 @@ export default class TmdbEpisodeRetriever {
             firstAired: episodeInfo.air_date
         };
 
-        let externalIds: { tvdb_id?: number; imdb_id?: string } = {};
+        let externalIds: { tvdb_id?: number | null; imdb_id?: string | null } = {};
 
         if (!(episode.tvdbid && episode.imdbid)) {
             logger.debug(`External ids for ${episode.episodeName} missing`);
 
             externalIds = await promiseTimeout(this.oblecto.tmdb.episodeExternalIds({
                 id: series.tmdbid,
-                season_number: episode.airedSeason,
-                episode_number: episode.airedEpisodeNumber
+                season_number: Number(episode.airedSeason),
+                episode_number: Number(episode.airedEpisodeNumber)
             }, { timeout: 5000 }));
 
             logger.debug(`External ids for ${episode.episodeName} retrieved`);

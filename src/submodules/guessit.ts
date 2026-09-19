@@ -1,6 +1,6 @@
 import binary from 'guessit-exec';
 import which from 'which';
-import logger from './logger/index.js';
+import IdentificationError from '../lib/errors/IdentificationError.js';
 
 export interface GuessitIdentification {
     title: string;
@@ -21,15 +21,10 @@ export interface GuessitIdentification {
     streaming_service?: string;
 }
 
-try {
-    which.sync('guessit');
-    logger.info('Guessit binary has been found');
-    logger.info('Using local guessit binary');
-} catch {
-    logger.info('Guessit binary has not been found');
-    logger.info('Please install guessit from your package manager');
-    process.exit(1);
-}
+let available: boolean | undefined;
+
+/** Whether the guessit program is on the PATH. Checked once, when first needed. */
+export const guessitAvailable = (): boolean => (available ??= which.sync('guessit', { nothrow: true }) !== null);
 
 export default {
     /**
@@ -37,6 +32,9 @@ export default {
      * @returns - Guessit Identification object
      */
     identify(search: string): Promise<GuessitIdentification> {
+        // Without guessit nothing can be identified; say so per file rather than stopping the server.
+        if (!guessitAvailable()) return Promise.reject(new IdentificationError('guessit is not installed'));
+
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         return binary(search) as Promise<GuessitIdentification>;
     }

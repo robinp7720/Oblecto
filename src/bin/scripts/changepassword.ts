@@ -1,34 +1,37 @@
+import bcrypt from 'bcrypt';
+import config from '../../config.js';
 import { User } from '../../models/user.js';
 import { initDatabase } from '../../submodules/database.js';
 import argumentError from './helpers/argumentError.js';
-import bcrypt from 'bcrypt';
-import { promises as fs } from 'fs';
+import { passwordArgument } from './helpers/readPassword.js';
 
-type AuthConfig = {
-    authentication: {
-        saltRounds: number;
-    };
-};
-
+// oblecto changepassword USERNAME [PASSWORD|-]
 export default async (args: string[]): Promise<void> => {
-    const sequelize = initDatabase();
-
-    const config = JSON.parse(await fs.readFile('/etc/oblecto/config.json', 'utf8')) as AuthConfig;
-
-    if (args.length < 3) {
-        argumentError('changepassword', ['username', 'password']);
+    if (args.length < 2) {
+        argumentError('changepassword', ['username', '[password, or - or nothing to be asked]']);
         return;
     }
 
-    const user = await User.findOne({ where: { username: args[1] } });
+    const sequelize = initDatabase();
 
-    if (user == null){
-        console.log(`User ${args[1]} was not found, please check your spelling`);
-    } else {
-        const hash = await bcrypt.hash(args[2], config.authentication.saltRounds);
+    try {
+        const user = await User.findOne({ where: { username: args[1] } });
 
-        await user.update({ password: hash });
-        console.log(`User ${args[1]}'s password has been changed`);
+        if (user == null) {
+            console.log(`User ${args[1]} was not found, please check your spelling`);
+            return;
+        }
+
+        const password = await passwordArgument(args[2]);
+
+        if (!password) {
+            console.log('No password given; nothing changed. Use "oblecto removepassword" to remove one.');
+            return;
+        }
+
+        await user.update({ password: await bcrypt.hash(password, config.authentication.saltRounds) });
+        console.log(`${args[1]}'s password has been changed, which signs them out everywhere`);
+    } finally {
+        await sequelize.close();
     }
-    await sequelize.close();
 };

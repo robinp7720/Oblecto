@@ -9,20 +9,28 @@ import { Series } from '../../../../../models/series';
 import { Episode } from '../../../../../models/episode';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import logger from '../../../../../submodules/logger/index.js';
-import { Op } from 'sequelize';
+import { Op, type Includeable } from 'sequelize';
 
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
 import { getRequestValue } from '../../requestUtils.js';
-import { isLocalRequest } from '../../../../network/localNetwork.js';
+import { libraryViews } from '../../../views.js';
+import { clientAddress, isLocalRequest } from '../../../../network/localNetwork.js';
+import { loginThrottle } from '../../../../auth/loginThrottle.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
+import { setPlayed } from '../../../../playback/progress.js';
+import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
+import { containsText } from '../../../../common/textSearch.js';
 
 // Jellyfin clients show their admin dashboard to administrators.
 const isAdministrator = async (user: User | null): Promise<boolean> => user !== null && (await permissionsOf(user)).includes('settings.manage');
+
+// Oblecto does not track sign-ins; the last change to the account is the closest honest date.
+const lastChanged = (user: User): string => new Date((user as unknown as { updatedAt?: Date }).updatedAt ?? Date.now()).toISOString();
 
 const JELLYFIN_SUBTITLE_MODES: Record<SubtitleMode, string> = {
     off: 'None',
@@ -42,8 +50,8 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
         HasConfiguredPassword: HasPassword,
         HasConfiguredEasyPassword: false,
         EnableAutoLogin: false,
-        LastLoginDate: '2020-09-11T23:37:27.3042432Z',
-        LastActivityDate: '2020-09-11T23:37:27.3042432Z',
+        LastLoginDate: lastChanged(user),
+        LastActivityDate: lastChanged(user),
         Configuration: {
             PlayDefaultAudioTrack: preferences.audioLanguage === null,
             AudioLanguagePreference: preferences.audioLanguage ?? '',
@@ -154,33 +162,51 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             return;
         }
 
-        const local = isLocalRequest(req, embyEmulation.oblecto.config.authentication);
-        const sessionId = await embyEmulation.handleLogin(Username, Pw, local);
+        const authentication = embyEmulation.oblecto.config.authentication;
+        const address = clientAddress(req, authentication);
+        const wait = loginThrottle.retryAfter(address, Username);
 
-        logger.debug('Jellyfin Session ID: ' + sessionId);
-        logger.debug(JSON.stringify(embyEmulation.sessions[sessionId]));
+        if (wait > 0) {
+            res.set('Retry-After', String(wait)).status(429).send('Too many failed sign-ins');
+            return;
+        }
 
-        const session = embyEmulation.sessions[sessionId];
-        const IsAdministrator = await isAdministrator(await User.findByPk(session.Id));
+        const local = isLocalRequest(req, authentication);
+        const client = req.headers.emby ?? {};
+        let accessToken: string;
+
+        try {
+            accessToken = await embyEmulation.handleLogin(Username, Pw, local, {
+                Client: client.Client,
+                Device: client.Device,
+                DeviceId: client.DeviceId,
+                Version: client.Version,
+                RemoteEndPoint: req.ip
+            });
+        } catch {
+            // Jellyfin answers a failed sign-in with 401, which clients show as "wrong username or password"
+            loginThrottle.failed(address, Username);
+            res.status(401).send('Invalid username or password');
+            return;
+        }
+
+        loginThrottle.succeeded(address, Username);
+
+        const session = embyEmulation.sessions[accessToken];
+        const user = await User.findByPk(session.Id);
+
+        if (!user) {
+            res.status(401).send('Invalid username or password');
+            return;
+        }
+
+        const userDto = buildUserDto(user, embyEmulation, session.HasPassword, await isAdministrator(user));
 
         res.send({
             'User': {
-                'Name': session.Name,
-                'ServerId': session.ServerId,
-                'Id': formatUuid(session.Id),
-                'PrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
-                'HasPassword': session.HasPassword,
-                'HasConfiguredPassword': session.HasConfiguredPassword,
-                'HasConfiguredEasyPassword': session.HasConfiguredEasyPassword,
-                'EnableAutoLogin': session.EnableAutoLogin,
-                'LastLoginDate': session.LastLoginDate,
-                'LastActivityDate': session.LastActivityDate,
-                'Configuration': {
-                    'AudioLanguagePreference': '', 'PlayDefaultAudioTrack': true, 'SubtitleLanguagePreference': '', 'DisplayMissingEpisodes': false, 'GroupedFolders': [], 'SubtitleMode': 'Default', 'DisplayCollectionsView': false, 'EnableLocalPassword': true, 'OrderedViews': ['9d7ad6afe9afa2dab1a2f6e00ad28fa6', 'f137a2dd21bbc1b99aa5c0f6bf02a805', 'a656b907eb3a73532e40e44b968d0225'], 'LatestItemsExcludes': [], 'MyMediaExcludes': [], 'HidePlayedInLatest': false, 'RememberAudioSelections': true, 'RememberSubtitleSelections': true, 'EnableNextEpisodeAutoPlay': true, 'CastReceiverId': 'F007D354'
-                },
-                'Policy': {
-                    IsAdministrator, 'IsHidden': false, 'EnableCollectionManagement': true, 'EnableSubtitleManagement': true, 'EnableLyricManagement': false, 'IsDisabled': false, 'BlockedTags': [], 'AllowedTags': [], 'EnableUserPreferenceAccess': true, 'AccessSchedules': [], 'BlockUnratedItems': [], 'EnableRemoteControlOfOtherUsers': true, 'EnableSharedDeviceControl': true, 'EnableRemoteAccess': true, 'EnableLiveTvManagement': true, 'EnableLiveTvAccess': true, 'EnableMediaPlayback': true, 'EnableAudioPlaybackTranscoding': true, 'EnableVideoPlaybackTranscoding': true, 'EnablePlaybackRemuxing': true, 'ForceRemoteSourceTranscoding': false, 'EnableContentDeletion': true, 'EnableContentDeletionFromFolders': [], 'EnableContentDownloading': true, 'EnableSyncTranscoding': true, 'EnableMediaConversion': true, 'EnabledDevices': [], 'EnableAllDevices': true, 'EnabledChannels': [], 'EnableAllChannels': true, 'EnabledFolders': [], 'EnableAllFolders': true, 'InvalidLoginAttemptCount': 0, 'LoginAttemptsBeforeLockout': -1, 'MaxActiveSessions': 0, 'EnablePublicSharing': true, 'BlockedMediaFolders': [], 'BlockedChannels': [], 'RemoteClientBitrateLimit': 0, 'AuthenticationProviderId': 'Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider', 'PasswordResetProviderId': 'Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider', 'SyncPlayAccess': 'CreateAndJoinGroups'
-                }
+                ...userDto,
+                LastLoginDate: session.LastLoginDate,
+                LastActivityDate: session.LastActivityDate
             },
             'SessionInfo': {
                 'PlayState': {
@@ -190,17 +216,17 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'Capabilities': {
                     'PlayableMediaTypes': [], 'SupportedCommands': [], 'SupportsMediaControl': false, 'SupportsPersistentIdentifier': true
                 },
-                'RemoteEndPoint': '192.168.176.206',
+                'RemoteEndPoint': session.client.RemoteEndPoint ?? '',
                 'PlayableMediaTypes': [],
-                'Id': sessionId,
+                'Id': session.client.DeviceId ?? accessToken.slice(0, 16),
                 'UserId': formatUuid(session.Id),
                 'UserName': session.Name,
-                'Client': 'Delfin',
+                'Client': session.client.Client ?? '',
                 'LastActivityDate': session.LastActivityDate,
                 'LastPlaybackCheckIn': '0001-01-01T00:00:00.0000000Z',
-                'DeviceName': 'tria',
-                'DeviceId': 'd0ecd4d3-8e3d-4c1b-add4-0d1e1dd24794',
-                'ApplicationVersion': '0.4.8',
+                'DeviceName': session.client.Device ?? '',
+                'DeviceId': session.client.DeviceId ?? '',
+                'ApplicationVersion': session.client.Version ?? '',
                 'IsActive': true,
                 'SupportsMediaControl': false,
                 'SupportsRemoteControl': false,
@@ -208,17 +234,17 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'NowPlayingQueueFullItems': [],
                 'HasCustomDeviceName': false,
                 'ServerId': session.ServerId,
-                'UserPrimaryImageTag': 'd62dc9f98bfae3c2c8a1bbe092d94e1c',
+                'UserPrimaryImageTag': user.avatar ?? undefined,
                 'SupportedCommands': []
             },
-            'AccessToken': sessionId,
+            'AccessToken': accessToken,
             'ServerId': session.ServerId
         });
     });
 
-    server.get('/users/:userid', async (req: Request, res: Response) => {
-        // let user = await User.findByPk(parseUuid(req.query.userid));
-        const user = await User.findByPk(1);
+    // Always the signed-in user: the session guard pins :userid to them, and "me" resolves the same way.
+    server.get('/users/:userid', async (req: EmbyRequest, res: Response) => {
+        const user = await User.findByPk(req.embyUserId);
 
         if (!user) {
             res.status(404).send('User not found');
@@ -229,101 +255,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/users/:userid/views', (req: Request, res: Response) => {
-        res.send({
-            'Items': [
-                {
-                    'Name': 'Movies',
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                    'Etag': 'cf36c1cd9bcd03c80bd92c9570ec620b',
-                    'DateCreated': '2020-08-31T16:25:53.2124461Z',
-                    'CanDelete': false,
-                    'CanDownload': false,
-                    'SortName': 'movies',
-                    'ExternalUrls': [],
-                    'Path': '/config/data/root/default/Movies',
-                    'EnableMediaSourceDisplay': true,
-                    'Taglines': [],
-                    'Genres': [],
-                    'PlayAccess': 'Full',
-                    'RemoteTrailers': [],
-                    'ProviderIds': {},
-                    'IsFolder': true,
-                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                    'Type': 'CollectionFolder',
-                    'People': [],
-                    'Studios': [],
-                    'GenreItems': [],
-                    'LocalTrailerCount': 0,
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': 'f137a2dd-21bb-c1b9-9aa5-c0f6bf02a805'
-                    },
-                    'ChildCount': 2,
-                    'SpecialFeatureCount': 0,
-                    'DisplayPreferencesId': 'f137a2dd21bbc1b99aa5c0f6bf02a805',
-                    'Tags': [],
-                    'PrimaryImageAspectRatio': 1,
-                    'CollectionType': 'movies',
-                    // 'ImageTags': {'Primary': '8d5abf60711bc8af6ef4063baf6b67e4'},
-                    'BackdropImageTags': [],
-                    'ScreenshotImageTags': [],
-                    // 'ImageBlurHashes': {'Primary': {'8d5abf60711bc8af6ef4063baf6b67e4': 'WvIE5t05-gs,RVt6a%s,axa#fRodETt0WGa#fha$Rot3WBj[oLaf'}},
-                    'LocationType': 'FileSystem',
-                    'LockedFields': [],
-                    'LockData': false
-                }, {
-                    'Name': 'TV Shows',
-                    'ServerId': embyEmulation.serverId,
-                    'Id': '767bffe4f11c93ef34b805451a696a4e',
-                    'Etag': '838cbe93f5d829a9df3df680e4d14065',
-                    'DateCreated': '2020-08-31T04:36:37.8321784Z',
-                    'CanDelete': false,
-                    'CanDownload': false,
-                    'SortName': 'tv shows',
-                    'ExternalUrls': [],
-                    'Path': '/config/data/root/default/TV Shows',
-                    'EnableMediaSourceDisplay': true,
-                    'Taglines': [],
-                    'Genres': [],
-                    'PlayAccess': 'Full',
-                    'RemoteTrailers': [],
-                    'ProviderIds': {},
-                    'IsFolder': true,
-                    'ParentId': 'e9d5075a555c1cbc394eec4cef295274',
-                    'Type': 'CollectionFolder',
-                    'People': [],
-                    'Studios': [],
-                    'GenreItems': [],
-                    'LocalTrailerCount': 0,
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': '767bffe4-f11c-93ef-34b8-05451a696a4e'
-                    },
-                    'ChildCount': 9,
-                    'SpecialFeatureCount': 0,
-                    'DisplayPreferencesId': '767bffe4f11c93ef34b805451a696a4e',
-                    'Tags': [],
-                    'PrimaryImageAspectRatio': 1,
-                    'CollectionType': 'tvshows',
-                    // 'ImageTags': {'Primary': '12c129f756f9ae7ca28c3d87ac4aa3b5'},
-                    'BackdropImageTags': [],
-                    'ScreenshotImageTags': [],
-                    // 'ImageBlurHashes': {'Primary': {'12c129f756f9ae7ca28c3d87ac4aa3b5': 'WrHeF9~X%gt7e-Rjs.WBoft7xutRR,t7s:aebHofoft7WBWBRjRj'}},
-                    'LocationType': 'FileSystem',
-                    'LockedFields': [],
-                    'LockData': false
-                }
-            ],
-            'TotalRecordCount': 2,
-            'StartIndex': 0
-        });
+        res.send(libraryViews(embyEmulation.serverId));
     });
 
     server.get('/users/:userid/items', async (req: EmbyRequest, res: Response) => {
@@ -367,7 +299,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = {};
 
             if (searchTerm) {
-                where = { movieName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('movieName', searchTerm);
             }
 
             const results = await Movie.findAll({
@@ -390,7 +322,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             let where: any = {};
 
             if (searchTerm) {
-                where = { seriesName: { [Op.like]: `%${searchTerm}%` } };
+                where = containsText('seriesName', searchTerm);
             }
 
             const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby')
@@ -436,7 +368,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
                 'StartIndex': startIndex
             });
         } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
-            const userId = req.params.userid; // Route parameter
+            const userId = String(req.params.userid ?? ''); // Route parameter
             const parsedUserId = userId ? parseUuid(userId) : null;
             const where: any = {};
 
@@ -450,7 +382,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
 
             if (searchTerm) {
-                where.episodeName = { [Op.like]: `%${searchTerm}%` };
+                where[Op.and] = [containsText('episodeName', searchTerm)];
             }
 
             const count = await Episode.count({ where });
@@ -543,10 +475,158 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
     });
 
+    const trackFor = (userId: number, type: string, id: number) => (type === 'movie'
+        ? TrackMovie.findOne({ where: { userId, movieId: id } })
+        : TrackEpisode.findOne({ where: { userId, episodeId: id } }));
+
+    /** The UserItemDataDto for one movie or episode, from the user's own progress. */
+    const userDataFor = async (userId: number | undefined, itemId: string): Promise<Record<string, unknown> | null> => {
+        const { id, type } = parseId(itemId);
+
+        if (!userId || !Number.isFinite(id) || !['movie', 'episode'].includes(type)) return null;
+
+        const track = await trackFor(userId, type, id);
+        const played = (track?.progress ?? 0) >= 1;
+
+        return {
+            PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
+            PlayCount: played ? 1 : 0,
+            IsFavorite: false,
+            Played: played,
+            LastPlayedDate: track?.updatedAt?.toISOString(),
+            Key: itemId,
+            ItemId: itemId
+        };
+    };
+
+    /** Mark a movie, an episode, or every episode of a series, as watched or unwatched. */
+    const markPlayed = (played: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
+        const itemId = String(req.params.itemid);
+        const { id, type } = parseId(itemId);
+        const userId = req.embyUserId;
+
+        if (!userId || !Number.isFinite(id)) {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        if (type === 'series') {
+            const episodes = await Episode.findAll({ where: { SeriesId: id }, attributes: ['id'] });
+
+            for (const episode of episodes) await setPlayed(userId, 'episode', episode.id, played);
+            res.send({
+                Played: played,
+                PlayCount: played ? 1 : 0,
+                PlaybackPositionTicks: 0,
+                IsFavorite: false,
+                Key: itemId,
+                ItemId: itemId
+            });
+            return;
+        }
+
+        if (type !== 'movie' && type !== 'episode') {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        await setPlayed(userId, type, id, played);
+        res.send(await userDataFor(userId, itemId));
+    };
+
+    /** Started but unfinished movies and episodes, most recently watched first. */
+    const resumeItems = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const userId = req.embyUserId;
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 12, 1), 100);
+        const inProgress = {
+            userId,
+            progress: { [Op.gt]: 0, [Op.lt]: 0.9 }
+        };
+        const recent = {
+            where: inProgress,
+            order: [['updatedAt', 'DESC']] as [string, string][],
+            limit
+        };
+        const [movieTracks, episodeTracks] = await Promise.all([TrackMovie.findAll(recent), TrackEpisode.findAll(recent)]);
+        const files: Includeable = { model: File, include: [{ model: Stream }] };
+        const ownProgress = (model: typeof TrackMovie | typeof TrackEpisode): Includeable => ({
+            model,
+            required: false,
+            where: { userId }
+        });
+        const [movies, episodes] = await Promise.all([
+            Movie.findAll({
+                where: { id: movieTracks.map(track => track.movieId) },
+                include: [files, ownProgress(TrackMovie)]
+            }),
+            Episode.findAll({
+                where: { id: episodeTracks.map(track => track.episodeId) },
+                include: [Series, files, ownProgress(TrackEpisode)]
+            })
+        ]);
+        const watched = new Map<string, number>([
+            ...movieTracks.map(track => [`movie:${track.movieId}`, track.updatedAt.getTime()] as [string, number]),
+            ...episodeTracks.map(track => [`episode:${track.episodeId}`, track.updatedAt.getTime()] as [string, number])
+        ]);
+        const items = [
+            ...movies.map(movie => ({ at: watched.get(`movie:${movie.id}`) ?? 0, item: formatMediaItem(movie as unknown as MediaItem, 'movie', embyEmulation) })),
+            ...episodes.map(episode => ({ at: watched.get(`episode:${episode.id}`) ?? 0, item: formatMediaItem(episode as unknown as MediaItem, 'episode', embyEmulation) }))
+        ].sort((a, b) => b.at - a.at).slice(0, limit).map(entry => entry.item);
+
+        res.send({
+            Items: items,
+            TotalRecordCount: items.length,
+            StartIndex: 0
+        });
+    };
+
+    // Recently added items for a library view. Always answers: a parent Oblecto has no latest items
+    // for (collections, a series, an unknown id) gets an empty list rather than a hung request.
+    const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const parentId = getRequestValue(req, 'ParentId');
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 16, 1), 100);
+        const userId = req.embyUserId;
+        const items: Record<string, unknown>[] = [];
+
+        if (!parentId || parentId === 'movies') {
+            const include: Includeable[] = [{ model: File, include: [{ model: Stream }] }];
+
+            if (userId) {
+                include.push({
+                    model: TrackMovie,
+                    required: false,
+                    where: { userId }
+                });
+            }
+
+            const movies = await Movie.findAll({
+                include,
+                order: [['createdAt', 'DESC']],
+                limit
+            });
+
+            items.push(...movies.map(movie => formatMediaItem(movie as unknown as MediaItem, 'movie', embyEmulation)));
+        }
+
+        if (!parentId || parentId === 'shows') {
+            const series = await Series.findAll({ order: [['createdAt', 'DESC']], limit });
+
+            items.push(...series.map(show => formatMediaItem(show as unknown as MediaItem, 'series', embyEmulation)));
+        }
+
+        res.send(items.slice(0, limit));
+    };
+
+    server.get('/users/:userid/items/latest', getLatestItems);
+    server.get('/items/latest', getLatestItems);
+
+    server.get('/users/:userid/items/resume', (req: EmbyRequest, res: Response) => resumeItems(req, res));
+
+    // Registered after /items/latest and /items/resume above, which it would otherwise swallow as an item id.
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
-        const userId = parseUuid(req.params.userid);
+        const userId = parseUuid(String(req.params.userid));
         let resolvedType = parsed.type;
         let item = null;
 
@@ -647,136 +727,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/users/:userid/items/resume', (req, res) => {
-        res.send({
-            'Items': [],
-            'TotalRecordCount': 0,
-            'StartIndex': 0
-        });
-    });
-
-    const getLatestItems = async (req: EmbyRequest, res: Response): Promise<void> => {
-        const parentId = getRequestValue(req, 'ParentId');
-
-        if (parentId === 'movies') {
-            const results = await Movie.findAll({
-                /* include: [
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
-                    }
-                ],*/
-                order: [['releaseDate', 'DESC']],
-                limit: 50,
-                offset: 0
-            });
-
-            const movies = results.map((movie) => {
-                return {
-                    'Name': movie.movieName,
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'movie' + movie.id,
-                    'HasSubtitles': true,
-                    'Container': 'mkv,webm',
-                    'PremiereDate': movie.releaseDate,
-                    'CriticRating': 82,
-                    'OfficialRating': 'PG-13',
-                    'CommunityRating': 2.6,
-                    'RunTimeTicks': (movie.runtime || 0) * 10000000,
-                    'ProductionYear': (movie.releaseDate || '').substring(0, 4),
-                    'IsFolder': false,
-                    'Type': 'Movie',
-                    'PrimaryImageAspectRatio': 0.6666666666666666,
-                    'VideoType': 'VideoFile',
-                    'LocationType': 'FileSystem',
-                    'MediaType': 'Video',
-                    'UserData': {
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': true,
-                        'Played': false,
-                        'Key': '337401'
-                    },
-                    'ImageTags': { 'Primary': 'WhyIsThisEvenNeeded' }
-
-                };
-            });
-
-            res.send(movies);
-        }
-
-        if (parentId === 'shows') {
-            const results = await Series.findAll({
-                /* include: [
-                    {
-                        model: TrackMovie,
-                        required: false,
-                        where: { userId: embyEmulation.sessions[req.headers.emby.Token].Id }
-                    }
-                ],*/
-                order: [['firstAired', 'DESC']],
-                limit: 50,
-                offset: 0
-            });
-
-            const series = results.map((show) => {
-                return {
-                    'Name': show.seriesName,
-                    'ServerId': embyEmulation.serverId,
-                    'Id': 'series' + show.id,
-                    'PremiereDate': show.firstAired,
-                    // 'Path': '/family_series/WeCrashed',
-                    'OfficialRating': show.rating,
-                    'ChannelId': null,
-                    'CommunityRating': show.siteRating,
-                    'RunTimeTicks': 0,
-                    'ProductionYear': 2022,
-                    'IsFolder': true,
-                    'Type': 'Series',
-                    'UserData': {
-                        'UnplayedItemCount': 4,
-                        'PlaybackPositionTicks': 0,
-                        'PlayCount': 0,
-                        'IsFavorite': false,
-                        'Played': false,
-                        'Key': '393499',
-                        'ItemId': '00000000000000000000000000000000'
-                    },
-                    'ChildCount': 8,
-                    'Status': show.status,
-                    'AirDays': [],
-                    'PrimaryImageAspectRatio': 0.6666666666666666,
-                    'ImageTags': {
-                        'Primary': '687b9e86c50b8d8ee6e3ade59f98f679',
-                        'Thumb': '89f4741c490314f9e9cbee489c61067c'
-                    },
-                    'BackdropImageTags': ['5dc42ac73670938f5fc63cc6ad6b5b81'],
-                    'ImageBlurHashes': {
-                        'Backdrop': { '5dc42ac73670938f5fc63cc6ad6b5b81': 'WH8;=O4mtSxbE1-;%hS%oJWBWXx]IU.8M_Rk%NMxOZxvM{oft8M|' },
-                        'Primary': { '687b9e86c50b8d8ee6e3ade59f98f679': 'd77B$VRjwcD%$jxCacS3yFoeR4Ri*0IVn$ofVsIAozxu' },
-                        'Thumb': { '89f4741c490314f9e9cbee489c61067c': 'WcI4;OWBo|xZD%xZ~qs.I:ozROsm-;nhR*W?M{WE?aRPf+oyM{t7' }
-                    },
-                    'LocationType': 'FileSystem',
-                    'MediaType': 'Unknown',
-                    'EndDate': '2022-04-22T00:00:00.0000000Z'
-                };
-            });
-
-            res.send(series);
-        }
-    };
-
-    server.get('/users/:userid/items/latest', getLatestItems as any);
-    server.get('/items/latest', getLatestItems as any);
-
-    server.get('/useritems/resume', (req, res) => {
-        res.send({
-            'Items': [],
-            'TotalRecordCount': 0,
-            'StartIndex': 0
-        });
-    });
+    server.get('/useritems/resume', (req: EmbyRequest, res: Response) => resumeItems(req, res));
 
     // TODO: Implement Auth routes
     server.get('/auth/keys', (req, res) => {
@@ -805,29 +756,73 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     // Additional User Routes
-    server.get('/users/:userid/policy', (req, res) => { res.send({}); });
+    server.get('/users/:userid/policy', async (req: EmbyRequest, res: Response) => {
+        const user = await User.findByPk(req.embyUserId);
+
+        if (!user) return res.status(404).send('User not found');
+
+        res.send(buildUserDto(user, embyEmulation, Boolean(user.password), await isAdministrator(user)).Policy);
+    });
     server.post('/users/authenticatewithquickconnect', (req, res) => { res.status(501).send('Not Implemented'); });
     server.get('/users/configuration', (req, res) => { res.send([]); });
     server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/me', (req, res) => { res.status(401).send('Unauthorized'); }); // Needs auth middleware
     server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.post('/users/password', (req, res) => { res.status(501).send('Not Implemented'); });
+    // Changing the password signs this and every other session out, so the app asks to sign in again.
+    const changePassword = async (req: EmbyRequest, res: Response) => {
+        if (getRequestValue(req, 'ResetPassword') === 'true' || (req.body as { ResetPassword?: unknown })?.ResetPassword === true) {
+            res.status(501).send('Removing a password is done with "oblecto removepassword"');
+            return;
+        }
+
+        const user = await User.findByPk(req.embyUserId);
+
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+
+        try {
+            await changeOwnPassword(user, getRequestValue(req, 'CurrentPw'), getRequestValue(req, 'NewPw'), embyEmulation.oblecto.config.authentication.saltRounds);
+            res.status(204).send();
+        } catch (error) {
+            if (!(error instanceof PasswordChangeError)) throw error;
+            res.status(error.statusCode).send(error.message);
+        }
+    };
+
+    server.post('/users/password', changePassword);
+    server.post('/users/:userid/password', changePassword);
 
     // UserImage
     server.get('/userimage', (req, res) => { res.status(404).send('Not Found'); }); // This seems to be POST in some docs or GET specific image? Spec says GET /UserImage (truncated?)
 
     // UserItems
-    server.get('/useritems/:itemid/userdata', (req, res) => { res.send({}); });
-    server.post('/useritems/:itemid/rating', (req, res) => { res.send({}); });
+    server.get('/useritems/:itemid/userdata', async (req: EmbyRequest, res: Response) => {
+        const data = await userDataFor(req.embyUserId, String(req.params.itemid));
 
-    // UserPlayedItems
-    server.post('/userplayeditems/:itemid', (req, res) => { res.send({}); });
-    server.delete('/userplayeditems/:itemid', (req, res) => { res.send({}); });
+        if (!data) return res.status(404).send('Item not found');
+        res.send(data);
+    });
 
-    // UserFavoriteItems
-    server.post('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
-    server.delete('/userfavoriteitems/:itemid', (req, res) => { res.send({}); });
+    // Oblecto has no favourites or ratings yet; say so rather than pretend the change was kept.
+    const unsupported = (feature: string) => (_req: Request, res: Response) => { res.status(501).send(`${feature} are not supported by Oblecto yet`); };
+
+    server.post('/useritems/:itemid/rating', unsupported('Ratings'));
+    server.delete('/useritems/:itemid/rating', unsupported('Ratings'));
+    server.post('/users/:userid/items/:itemid/rating', unsupported('Ratings'));
+    server.delete('/users/:userid/items/:itemid/rating', unsupported('Ratings'));
+
+    // Played state, at the current path and the one older apps use
+    for (const path of ['/userplayeditems/:itemid', '/users/:userid/playeditems/:itemid']) {
+        server.post(path, markPlayed(true));
+        server.delete(path, markPlayed(false));
+    }
+
+    for (const path of ['/userfavoriteitems/:itemid', '/users/:userid/favoriteitems/:itemid']) {
+        server.post(path, unsupported('Favourites'));
+        server.delete(path, unsupported('Favourites'));
+    }
 
     // UserViews
     server.get('/userviews/groupingoptions', (req, res) => { res.send([]); });

@@ -3,6 +3,7 @@ import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
 import type { Series } from '../../../../models/series.js';
 import type Oblecto from '../../../oblecto/index.js';
+import type { TvdbSeries } from '../../../common/tvdbTypes.js';
 
 type SeriesWithTvdb = Series & {
     tvdbid: number | null;
@@ -26,8 +27,8 @@ export default class TvdbSeriesRetriever {
     async retrieveInformation(series: SeriesWithTvdb): Promise<Record<string, unknown>> {
         if (!series.tvdbid) throw new DebugExtendableError('No tvdbid attached to series');
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        const seriesInfo = await promiseTimeout(this.oblecto.tvdb.getSeriesById(series.tvdbid));
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+        const seriesInfo = await promiseTimeout<TvdbSeries>(this.oblecto.tvdb.getSeriesById(series.tvdbid));
 
         // TODO: TMDB Voting should be separated from TVDB voting
 

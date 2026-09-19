@@ -1,4 +1,5 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToGetAssociationMixin } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToGetAssociationMixin, BelongsToManyAddAssociationMixin } from 'sequelize';
+import type { File } from './file.js';
 import { Series } from './series.js';
 
 export class Episode extends Model<InferAttributes<Episode>, InferCreationAttributes<Episode>> {
@@ -22,6 +23,8 @@ export class Episode extends Model<InferAttributes<Episode>, InferCreationAttrib
     declare overview: string | null;
 
     declare SeriesId: CreationOptional<number>;
+
+    declare addFile: BelongsToManyAddAssociationMixin<File, number>;
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;

@@ -43,7 +43,7 @@ export default (server: Express, oblecto: any) => {
             return next(new errors.BadRequestError('Empty configuration provided'));
         }
 
-        const fields = validateSettings({ [type]: updates });
+        const fields = validateSettings({ [type]: updates }, oblecto.config);
         if (Object.keys(fields).length) return res.status(400).send({ error: 'Check library settings.', fields });
         await ConfigManager.updateConfig(draft => mergeSettings(draft, { [type]: updates }), oblecto.config);
 

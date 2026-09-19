@@ -72,6 +72,33 @@ describe('FileCleaner', function () {
         });
     });
 
+    describe('removedDeletedFiled with an offline library', function () {
+        it('keeps every file under a library folder that is missing or empty', async function () {
+            const destroyedIds: number[] = [];
+            const originalReaddir = fs.readdir;
+
+            fileCleaner.oblecto = { ...mockOblecto, config: { movies: { directories: [{ path: '/mnt/share' }, { path: '/local' }] }, tvshows: { directories: [] } } };
+
+            // @ts-ignore
+            File.findAll = async () => [
+                { id: 1, path: '/mnt/share/film.mkv', destroy: async () => { destroyedIds.push(1); } },
+                { id: 2, path: '/local/gone.mkv', destroy: async () => { destroyedIds.push(2); } }
+            ];
+            // @ts-ignore
+            fs.stat = async () => { throw new Error('File not found'); };
+            // @ts-ignore
+            fs.readdir = async (path: string) => (path === '/mnt/share' ? [] : ['other.mkv']);
+
+            try {
+                await fileCleaner.removedDeletedFiled();
+            } finally {
+                fs.readdir = originalReaddir;
+            }
+
+            expect(destroyedIds).to.eql([2]);
+        });
+    });
+
     describe('removeAssoclessFiles', function () {
         it('should remove files with no movies or episodes', async function () {
             const destroyedIds: number[] = [];

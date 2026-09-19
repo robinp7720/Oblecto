@@ -2,7 +2,7 @@
 
 Scope
 - Backend Node/ESM server lives in `src/`.
-- Default Vue 2 frontend lives in `Oblecto-Web/` and builds to `Oblecto-Web/dist/`.
+- Default Vue 3 + Vite frontend lives in `Oblecto-Web/` and builds to `Oblecto-Web/dist/`.
 - Backend tests are in `tests/`; helper scripts in `scripts/`.
 
 Quick commands (from repo root)
@@ -13,11 +13,14 @@ Quick commands (from repo root)
 - `npm run oblecto` / `npm run oblecto:dev` (CLI)
 - `npm run build:web` (Oblecto-Web build; runs npm ci inside `Oblecto-Web/`)
 - `npm run build:jellyfin-web` (Jellyfin web build; runs npm ci inside `jellyfin-web/`)
-- `npm test` / `npm run test:mocha` / `npm run test:startup`
+- `npm run verify` (lint:src, typecheck and mocha, as CI runs them)
+- `npm test` / `npm run test:startup` / `npm run test:network` (live metadata APIs, opt-in)
 
 Config and data
-- Config is read from `/etc/oblecto/config.json` (see `src/config.ts`).
-- Default sqlite DB is `/etc/oblecto/database.sqlite` (see `src/submodules/database.js`).
+- Config is read from `OBLECTO_CONFIG_PATH`, else `/etc/oblecto/config.json` (see `src/config.ts`); missing keys come from `res/config.json`.
+- Mocha reads `tests/fixtures/config.json`; never point tests or scratch servers at a real config.
+- Default sqlite DB is `/etc/oblecto/database.sqlite` (see `src/submodules/database.ts`).
+- Schema changes need a migration in `src/submodules/migrations/index.ts`: add a new one, never edit a released one.
 - External metadata uses TVDB/TMDB keys from config.
 
 Conventions

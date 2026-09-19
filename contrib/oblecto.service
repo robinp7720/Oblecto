@@ -1,0 +1,36 @@
+# Runs Oblecto from a global npm install as its own user.
+# Install:
+#   sudo useradd --system --home /etc/oblecto --shell /usr/sbin/nologin oblecto
+#   sudo install -d -o oblecto -g oblecto /etc/oblecto
+#   sudo -u oblecto oblecto init
+#   sudo cp contrib/oblecto.service /etc/systemd/system/ && sudo systemctl enable --now oblecto
+# The oblecto user needs read access to your library folders.
+
+[Unit]
+Description=Oblecto media server
+Documentation=https://github.com/robinp7720/Oblecto
+After=network-online.target
+Wants=network-online.target
+# With MariaDB on the same machine, also: After=mariadb.service
+
+[Service]
+Type=simple
+User=oblecto
+Group=oblecto
+Environment=OBLECTO_CONFIG_PATH=/etc/oblecto/config.json
+WorkingDirectory=/etc/oblecto
+ExecStart=/usr/bin/env oblecto start
+Restart=on-failure
+RestartSec=5s
+# Let running streams finish their segment before the process is stopped hard.
+TimeoutStopSec=20s
+
+# Hardening: only the data directory is writable.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/etc/oblecto /tmp
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

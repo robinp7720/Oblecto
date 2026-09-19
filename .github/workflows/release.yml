@@ -1,0 +1,50 @@
+name: Release
+
+# Publishes to npm when a version tag is pushed, e.g. v1.0.0. The Docker workflow builds the
+# image for the same tag. Needs an NPM_TOKEN secret with publish rights for the oblecto package.
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg python3-guessit
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run verify
+
+      # prepack runs the full build: both web frontends and the server bundle
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Smoke-test the published tarball layout
+        run: npm pack --dry-run --ignore-scripts | tee pack.txt && grep -q 'Oblecto-Web/dist/web/index.html' pack.txt && grep -q 'dist/bin/oblecto.js' pack.txt

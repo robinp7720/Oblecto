@@ -22,22 +22,37 @@ async function run(): Promise<void> {
         const command = args[0];
 
         switch (command) {
+            case '--version':
+            case '-v':
+            case 'version':
+                console.log(packageInfo.version ?? 'unknown');
+                break;
             case 'start': {
                 const { default: core } = await import('../core/index.js');
+                const { installLifecycle } = await import('../core/lifecycle.js');
 
-                core.start();
+                installLifecycle(() => core.close());
+                await core.start();
                 break;
             }
             case 'start-tui': {
                 const { default: graphical } = await import('../core/graphical.js');
+                const { installLifecycle } = await import('../core/lifecycle.js');
 
-                graphical.start();
+                installLifecycle(() => graphical.close());
+                await graphical.start();
                 break;
             }
             case 'init': {
                 const { default: init } = await import('./scripts/init/index.js');
 
                 await (init as Runner)(args);
+                break;
+            }
+            case 'migrate': {
+                const { default: migrate } = await import('./scripts/migrate.js');
+
+                await (migrate as Runner)(args);
                 break;
             }
             case 'adduser': {
@@ -71,28 +86,36 @@ async function run(): Promise<void> {
                 break;
             }
             default:
+                if (command !== undefined && !['--help', '-h', 'help'].includes(command)) {
+                    console.log(`Unknown command "${command}"`);
+                    console.log();
+                    process.exitCode = 1;
+                }
+
                 console.log(`Oblecto ${packageInfo.version ?? ''}`);
                 console.log();
                 console.log('First time setup:');
-                console.log('  oblecto init');
-                console.log('  oblecto init database');
+                console.log('  oblecto init [--config-dir DIR] [--force]   (config, secret, artwork folders and keys)');
+                console.log('  oblecto init database                      (optional: start creates it too)');
                 console.log();
                 console.log('Start oblecto:');
                 console.log('  oblecto start          (Standard mode)');
                 console.log('  oblecto start-tui      (TUI mode)');
                 console.log();
                 console.log('User maintenance:');
-                console.log('  oblecto adduser USERNAME PASSWORD REALNAME EMAIL [GROUP]');
+                console.log('  oblecto adduser USERNAME - REALNAME EMAIL [GROUP]   (- asks for the password)');
                 console.log('  oblecto deluser USERNAME');
-                console.log('  oblecto changepassword USERNAME PASSWORD');
+                console.log('  oblecto changepassword USERNAME                  (asks for the password)');
                 console.log('  oblecto removepassword USERNAME');
                 console.log('  oblecto usergroup USERNAME GROUP     (e.g. Administrators)');
                 console.log();
                 console.log('Server maintenance:');
+                console.log('  oblecto migrate [--status]  (update the database after an upgrade; also runs at start)');
                 console.log('  oblecto init assets');
         }
     } catch (e) {
-        console.error('An error has occurred: ', e);
+        // Startup and CLI failures carry a readable message; the stack only helps when debugging.
+        console.error(e instanceof Error && !process.env.OBLECTO_DEBUG ? e.message : e);
         process.exit(1);
     }
 }

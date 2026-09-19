@@ -140,4 +140,20 @@ describe('login options and local-network sign-in', () => {
         assert.equal((await call('POST', '/auth/login', { username: 'nobody' })).status, 401);
         assert.equal((await call('POST', '/auth/login', {})).status, 400);
     });
+
+    it('asks a client to wait after repeated wrong passwords for one account', async () => {
+        // An address of its own, since the throttle outlives this spec.
+        const from = { 'X-Forwarded-For': '203.0.113.99' };
+
+        for (let i = 0; i < 5; i++) assert.equal((await call('POST', '/auth/login', { username: 'bob', password: 'wrong' }, from)).status, 401);
+
+        const response = await fetch(`${base}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...from },
+            body: JSON.stringify({ username: 'bob', password: 'hunter2' })
+        });
+
+        assert.equal(response.status, 429);
+        assert.ok(Number(response.headers.get('Retry-After')) > 0);
+    });
 });

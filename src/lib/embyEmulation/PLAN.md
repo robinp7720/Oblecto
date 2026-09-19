@@ -2,7 +2,7 @@
 
 Scope
 - This document compares the current Jellyfin/Emby emulation layer to the Jellyfin API specification and records what is implemented, partially implemented, and missing.
-- Source of truth for spec comparison: `jellyfin-openapi-stable.json` in the repo, which mirrors the official Jellyfin OpenAPI stable spec. See the official spec location for reference. (https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json)
+- Source of truth for spec comparison: `jellyfin-openapi-stable.json`, fetched by `scripts/fetch-jellyfin-openapi.sh`, which mirrors the official Jellyfin OpenAPI stable spec. See the official spec location for reference. (https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json)
 
 How to read
 - Implemented: Endpoints return real data or perform real actions in Oblecto (DB reads/writes, streaming, image serving).

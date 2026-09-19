@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions */
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../../lib/auth/tokens.js';
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import { User } from '../../../models/user.js';
-import { isLocalRequest } from '../../../lib/network/localNetwork.js';
+import { clientAddress, isLocalRequest } from '../../../lib/network/localNetwork.js';
+import { loginThrottle } from '../../../lib/auth/loginThrottle.js';
+import { HttpError } from '../errors.js';
 import { canSignInWithoutPassword, checkLogin } from '../../../lib/auth/loginPolicy.js';
 
 export default (server: Express, oblecto: any) => {
@@ -40,8 +42,18 @@ export default (server: Express, oblecto: any) => {
     });
 
     server.post('/auth/login', async function (req: Request, res: Response, next: NextFunction) {
+        const authentication = oblecto.config.authentication;
+        const address = clientAddress(req, authentication);
+        const account = req.body?.username ? String(req.body.username) : `id:${String(req.body?.userId)}`;
+
         try {
-            const authentication = oblecto.config.authentication;
+            const wait = loginThrottle.retryAfter(address, account);
+
+            if (wait > 0) {
+                res.set('Retry-After', String(wait));
+                throw new HttpError(429, `Too many failed sign-ins. Try again in ${Math.ceil(wait / 60)} minutes.`);
+            }
+
             const local = isLocalRequest(req, authentication);
             const userId = Number(req.body.userId);
 
@@ -63,17 +75,12 @@ export default (server: Express, oblecto: any) => {
             if (!await checkLogin(user, req.body.password, local, authentication))
                 throw new errors.UnauthorizedError('Password is incorrect');
 
-            const tokenPayload = {
-                id: user.id,
-                username: user.username,
-                name: user.name,
-                email: user.email
-            };
+            const accessToken = issueAccessToken(user, authentication);
 
-            const accessToken = jwt.sign(tokenPayload, authentication.secret);
-
+            loginThrottle.succeeded(address, account);
             res.send({ accessToken });
         } catch (error) {
+            if (error instanceof HttpError && error.statusCode === 401) loginThrottle.failed(address, account);
             next(error);
         }
     });

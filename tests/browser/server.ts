@@ -3,7 +3,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { build } from 'esbuild';
-import jwt from 'jsonwebtoken';
+import { issueAccessToken } from '../../src/lib/auth/tokens.js';
+import { User } from '../../src/models/user.js';
 import config from '../../src/config.js';
 import { File } from '../../src/models/file.js';
 import { PlaybackService } from '../../src/lib/playback/PlaybackService.js';
@@ -17,6 +18,7 @@ await run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=64
 const service = new PlaybackService({ config: { ffmpeg: {}, streaming: { cacheDirectory: path.join(directory, 'cache') }, transcoding: {} } } as unknown as Oblecto);
 const create = service.create.bind(service);
 service.create = (file, owner, _userId, options) => create(file, owner, null, options);
+User.findByPk = (async (id: number) => ({ id, password: null }) as User) as typeof User.findByPk;
 File.findByPk = (async () => ({ id: 1, path: path.join(directory, 'source.mp4'), extension: 'mp4', host: 'local' })) as typeof File.findByPk;
 await build({ entryPoints: ['tests/browser/entry.js'], bundle: true, format: 'esm', outfile: path.join(directory, 'entry.js') });
 const app = express(); app.use(express.json());
@@ -24,7 +26,7 @@ app.use((req: OblectoRequest, _res, next) => { if (req.headers.authorization) re
 streamingRoutes(app, { playback: service } as unknown as Oblecto);
 app.get('/debug', (_req, res) => res.json(service.diagnostics()));
 app.get('/entry.js', (_req, res) => res.sendFile(path.join(directory, 'entry.js')));
-app.get('/', (_req, res) => res.type('html').send(`<!doctype html><video id="video" muted playsinline controls></video><button id="start">Play</button><button id="stop">Stop</button><div role="alert" id="error"></div><script>window.token=${JSON.stringify(jwt.sign({ id: 1 }, config.authentication.secret))}</script><script type="module" src="/entry.js"></script>`));
+app.get('/', (_req, res) => res.type('html').send(`<!doctype html><video id="video" muted playsinline controls></video><button id="start">Play</button><button id="stop">Stop</button><div role="alert" id="error"></div><script>window.token=${JSON.stringify(issueAccessToken({ id: 1, password: null }, config.authentication))}</script><script type="module" src="/entry.js"></script>`));
 app.use((error: { statusCode?: number; message: string }, _req: express.Request, res: express.Response, _next: express.NextFunction) => { if (!res.headersSent) res.status(error.statusCode ?? 500).json({ message: error.message }); });
 const server = app.listen(Number(process.env.PLAYBACK_TEST_PORT ?? 4187), '127.0.0.1');
 async function close() { await service.close(); server.close(); await fs.rm(directory, { recursive: true, force: true }); }

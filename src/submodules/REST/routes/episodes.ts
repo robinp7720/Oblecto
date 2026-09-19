@@ -1,9 +1,7 @@
 import { Op, and, col, fn, where } from 'sequelize';
-import { promises as fs } from 'fs';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
-import sharp from 'sharp';
 
 import authMiddleWare from '../middleware/auth.js';
 import { Episode } from '../../../models/episode.js';
@@ -13,6 +11,10 @@ import { File } from '../../../models/file.js';
 import { Stream } from '../../../models/stream.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
+import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
+import { firstUpload } from '../../../lib/users/avatars.js';
+import upload from '../middleware/upload.js';
+import { containsText } from '../../../lib/common/textSearch.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -23,10 +25,12 @@ export default (server: Express, oblecto: Oblecto) => {
         const combined_params = req.combined_params!;
         const AllowedOrders = ['desc', 'asc'];
 
-        if (AllowedOrders.indexOf((combined_params.order as string).toLowerCase()) === -1)
+        const order = String(combined_params.order ?? '').toLowerCase();
+
+        if (AllowedOrders.indexOf(order) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
 
-        if (!(req.params.sorting in Episode.rawAttributes))
+        if (!(String(req.params.sorting) in Episode.rawAttributes))
             return res.status(400).send({ message: 'Sorting method is invalid' });
 
         if (combined_params.count && Number.isInteger(parseInt(combined_params.count as string)))
@@ -44,7 +48,7 @@ export default (server: Express, oblecto: Oblecto) => {
                     where: { userId: req.authorization!.user.id }
                 }
             ],
-            order: [[req.params.sorting, combined_params.order as string]],
+            order: [[String(req.params.sorting), order]],
             limit,
             offset: limit * page
         });
@@ -53,58 +57,28 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Endpoint to get a banner image for an episode based on the local episode ID
+    // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
+    // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/episode/:id/banner', async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
+
+        if (!episode) return res.status(404).send({ message: 'Episode does not exist' });
 
         const imagePath = oblecto.artworkUtils.episodeBannerPath(episode, (req.combined_params?.size as string) || 'medium');
 
         res.sendFile(imagePath);
     });
 
-    server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+    server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 
         if (!episode) {
             return res.status(404).send({ message: 'Episode does not exist' });
         }
 
-        const thumbnailPath = oblecto.artworkUtils.episodeBannerPath(episode);
+        await saveArtwork(oblecto, firstUpload(req.files), 'banner', size => oblecto.artworkUtils.episodeBannerPath(episode, size));
 
-        if (!req.files || Object.keys(req.files).length < 1) {
-            return res.status(400).send({ message: 'Image file is missing' });
-        }
-
-        const uploadPath = req.files[Object.keys(req.files)[0]].path;
-
-        try {
-            const image = await sharp(uploadPath);
-            const metadata = await image.metadata();
-            const ratio = (metadata.height || 0) / (metadata.width || 1);
-
-            if ( !(1 <= ratio && ratio <= 2)) {
-                return res.status(422).send({ message: 'Image aspect ratio is incorrect' });
-            }
-
-        } catch (e) {
-            return res.status(422).send({ message: 'File is not an image' });
-        }
-
-        try {
-            await fs.copyFile(uploadPath, thumbnailPath);
-
-            for (const size of Object.keys(oblecto.config.artwork.poster)) {
-                oblecto.queue.pushJob('rescaleImage', {
-                    from: oblecto.artworkUtils.episodeBannerPath(episode),
-                    to: oblecto.artworkUtils.episodeBannerPath(episode, size),
-                    width: (oblecto.config.artwork.poster as any)[size]
-                });
-            }
-
-            res.send(['success']);
-        } catch (e) {
-            console.log(e);
-            return res.status(500).send({ message: 'An error has occured during upload of banner' });
-        }
+        res.send(['success']);
     });
 
     // Endpoint to list all stored files for the specific episode
@@ -171,7 +145,7 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/episodes/search/:name', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
         const episode = await Episode.findAll({
-            where: { episodeName: { [Op.like]: '%' + req.params.name + '%' } },
+            where: containsText('episodeName', String(req.params.name)),
             include: [
                 File,
                 Series,

@@ -21,7 +21,7 @@ import Oblecto from '../../../lib/oblecto/index.js';
 
 export default (server: Express, oblecto: Oblecto): void => {
     if (oblecto.config.web.enabled) {
-        web(server, oblecto);
+        web(server);
     }
 
     auth(server, oblecto);

@@ -10,12 +10,25 @@ export async function saveProgress(
     time: number,
     duration: number
 ): Promise<void> {
+    await writeProgress(userId, type, itemId, {
+        time,
+        progress: duration > 0 ? Math.min(1, time / duration) : 0
+    });
+}
+
+/** Mark an item watched, or back to unwatched, as "mark played" in a Jellyfin app does. */
+export async function setPlayed(userId: number, type: 'movie' | 'episode', itemId: number, played: boolean): Promise<void> {
+    await writeProgress(userId, type, itemId, { time: 0, progress: played ? 1 : 0 });
+}
+
+async function writeProgress(
+    userId: number,
+    type: 'movie' | 'episode',
+    itemId: number,
+    values: { time: number; progress: number }
+): Promise<void> {
     const key = `${userId}:${type}:${itemId}`;
     const save = async () => {
-        const values = {
-            time,
-            progress: duration > 0 ? Math.min(1, time / duration) : 0
-        };
         const [track, created] =
             type === 'movie'
                 ? await TrackMovie.findOrCreate({

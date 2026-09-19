@@ -28,7 +28,7 @@ export default class EpisodeIdentifier extends MediaIdentifier {
      * @returns - Episode identification object
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification | undefined> {
-
+    identify(path: string, guessitIdentification: EpisodeGuessitIdentification, series: SeriesIdentification): Promise<EpisodeIdentification | undefined> {
+        return Promise.reject(new Error(`${this.constructor.name} does not implement identify`));
     }
 }

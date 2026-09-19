@@ -1,14 +1,22 @@
-# Backend tests (tests/)
+# Tests (tests/)
 
 What lives here
-- Mocha specs in `tests/mocha/`.
-- Startup smoke tests: `tests/startup.js` and `tests/startupTui.js`.
+- Mocha specs in `tests/mocha/`, reading `tests/fixtures/config.json`.
+- Specs that call the real TMDb, TVDB and fanart.tv APIs in `tests/network/` (opt-in).
+- Startup smoke tests: `tests/startup.ts` (the built server) and `tests/startupTui.ts`.
+- Playwright suites in `tests/browser/`: `playback.spec.ts` drives PlaybackController against a real
+  PlaybackService; `ui/*.spec.mjs` drive the Vue app against a stubbed API.
 
 How to run
-- Unit tests: `npm run test:mocha`.
-- Smoke tests: `npm run test:startup` (runs `scripts/test.sh`).
+- Unit tests: `npm test`.
+- Network tests: `npm run test:network`, with the project keys from `res/config.json`; set `OBLECTO_TMDB_KEY`,
+  `OBLECTO_TVDB_KEY` or `OBLECTO_FANART_KEY` to use others.
+- Smoke tests: `npm run test:startup` after `npm run build`, or set `OBLECTO_SERVER_BUNDLE` to test
+  another bundle without touching `dist/`.
+- Browser tests: `npm run test:playback:browser`, `npm run test:player:ui`.
 
 Notes
-- `scripts/test.sh` may create `/etc/oblecto` and run `oblecto init`.
+- Smoke tests use a throwaway config, in-memory database and ephemeral ports.
+- Model classes are shared across specs; when a spec declares associations, check
+  `Model.associations` first so it does not add a second alias.
 - If you change CLI commands or startup flow, update the smoke tests accordingly.
-- **Migration**: Tests will be migrated to TS in Phase 6. Ensure type checking is run on tests once migrated.

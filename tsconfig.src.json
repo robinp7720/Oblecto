@@ -1,0 +1,5 @@
+{
+  // The typecheck gate: server sources only. tests/ still has loose mock typings to clean up.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*"]
+}

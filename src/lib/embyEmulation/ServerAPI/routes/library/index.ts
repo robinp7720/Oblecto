@@ -1,7 +1,10 @@
 import type { Application, Request, Response } from 'express';
-import type EmbyEmulation from '../../index.js';
+import type EmbyEmulation from '../../../index.js';
+import type { EmbyRequest } from '../../index.js';
+import { embyUserCan } from '../../permission.js';
+import { maintenanceWork } from '../../../../maintenance/dispatch.js';
 
-export default (server: Application, _embyEmulation: EmbyEmulation): void => {
+export default (server: Application, embyEmulation: EmbyEmulation): void => {
     // Collections
     server.get('/collections', (_req: Request, res: Response) => { res.send([]); });
     server.get('/collections/:collectionid/items', (_req: Request, res: Response) => { res.send([]); });
@@ -16,7 +19,15 @@ export default (server: Application, _embyEmulation: EmbyEmulation): void => {
     server.get('/library/movies/added', (_req: Request, res: Response) => { res.send([]); });
     server.get('/library/movies/updated', (_req: Request, res: Response) => { res.send([]); });
     server.get('/library/physicalpaths', (_req: Request, res: Response) => { res.send([]); });
-    server.post('/library/refresh', (_req: Request, res: Response) => { res.status(204).send(); });
+    // "Scan all libraries" in a Jellyfin app's dashboard: the same scan as the maintenance page's.
+    server.post('/library/refresh', async (req: EmbyRequest, res: Response) => {
+        if (!await embyUserCan(req, 'libraries.manage')) return res.status(403).send('Forbidden');
+
+        const work = maintenanceWork(embyEmulation.oblecto, 'scan', 'all');
+
+        if (work) embyEmulation.oblecto.queue.maintenance.start('scan', 'all', work);
+        res.status(204).send();
+    });
     server.get('/library/series/added', (_req: Request, res: Response) => { res.send([]); });
     server.get('/library/series/updated', (_req: Request, res: Response) => { res.send([]); });
     server.get('/library/virtualfolders', (_req: Request, res: Response) => { res.send([]); });

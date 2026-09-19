@@ -20,6 +20,8 @@ export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
         if (series.tmdbid === null || series.tmdbid === undefined) throw new IdentificationError('Series does not have a TMDB ID');
         const tmdbid = series.tmdbid;
 
+        if (guessitIdentification.episode === undefined) throw new IdentificationError('The file name has no episode number');
+
         const episode = await promiseTimeout(this.oblecto.tmdb.episodeInfo({
             id: tmdbid,
             season_number: guessitIdentification.season ?? 1,

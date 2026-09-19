@@ -24,16 +24,44 @@ export default class FileCleaner {
     async removedDeletedFiled(): Promise<void> {
         logger.info( 'Removing all non existent files from the database');
         const files = await File.findAll();
+        const offline = await this.offlineLibraries();
 
         for (const file of files) {
+            const path = file.path as string;
+
+            // An unmounted share looks exactly like every file in it having been deleted.
+            if (offline.some(root => path.startsWith(root))) continue;
+
             try {
-                await fs.stat(file.path as string);
+                await fs.stat(path);
             } catch (_) {
                 logger.info( file.path, 'not found. Removing from database');
 
                 await file.destroy();
             }
         }
+    }
+
+    /**
+     * Library folders that are missing or empty, with a trailing slash. Their files are left alone:
+     * that is how a network share that has not mounted yet looks, and cleaning it would drop the
+     * whole library and everyone's watch progress with it.
+     */
+    async offlineLibraries(): Promise<string[]> {
+        const config = this.oblecto.config as Oblecto['config'] | undefined;
+        const roots = [...config?.movies?.directories ?? [], ...config?.tvshows?.directories ?? []].map(directory => directory.path);
+        const offline: string[] = [];
+
+        for (const root of roots) {
+            const entries = await fs.readdir(root).catch(() => [] as string[]);
+
+            if (entries.length === 0) {
+                logger.warn(`Library folder ${root} is missing or empty; not removing its files from the database`);
+                offline.push(root.endsWith('/') ? root : `${root}/`);
+            }
+        }
+
+        return offline;
     }
 
     /**
