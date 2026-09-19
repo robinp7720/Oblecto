@@ -1,9 +1,9 @@
 import { User } from '../../models/user.js';
-import { initDatabase } from '../../submodules/database.js';
+import { openDatabase } from './helpers/openDatabase.js';
 import argumentError from './helpers/argumentError.js';
 
 export default async (args: string[]): Promise<void> => {
-    const sequelize = initDatabase();
+    const sequelize = await openDatabase();
 
     if (args.length < 2) {
         argumentError('removepassword', ['username']);

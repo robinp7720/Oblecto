@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import { once } from 'node:events';
@@ -58,7 +59,7 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         ((await (await signIn(base, username, password)).json()) as { AccessToken: string }).AccessToken;
 
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
         User.init(userColumns, { sequelize, modelName: 'User' });
         Group.init(groupColumns, { sequelize, modelName: 'Group' });
         Movie.init(movieColumns, { sequelize, modelName: 'Movie' });

@@ -1,6 +1,6 @@
 {
   "name": "oblecto",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Oblecto is a frontend agnostic media butler bringing high performance high quality media streaming to the home ",
   "author": "Robin <robin@mysunland.org>",
   "repository": "robinp7720/Oblecto",
@@ -71,7 +71,6 @@
     "sequelize": "^6.37.7",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7",
     "ssh2-sftp-client": "^12.0.1",
     "umzug": "^3.8.3",
     "uuid": "^13.0.0",
@@ -89,6 +88,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mime-types": "^3.0.1",
     "@types/mocha": "^10.0.10",
+    "@types/node": "^24.13.6",
     "@types/primus": "^7.3.9",
     "@types/recursive-readdir": "^2.2.4",
     "@types/socket.io": "^3.0.2",
@@ -109,5 +109,11 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0"
+  },
+  "optionalDependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "allowScripts": {
+    "sqlite3": true
   }
 }

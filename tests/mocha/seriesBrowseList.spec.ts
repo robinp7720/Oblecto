@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { Sequelize } from 'sequelize';
 import seriesRoutes from '../../src/submodules/REST/routes/tvshows.js';
@@ -41,7 +42,7 @@ describe('Series browse list route', () => {
     let sequelize: Sequelize;
 
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
 
         Series.init(seriesColumns, { sequelize, modelName: 'Series' });
         Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });

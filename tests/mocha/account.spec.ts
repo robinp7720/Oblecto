@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
 import { Server } from 'node:http';
@@ -57,7 +58,7 @@ describe('account self-service', () => {
         oblecto.config.assets.userAvatarLocation = avatarDir;
 
         sequelize = new Sequelize({
-            dialect: 'sqlite', storage: ':memory:', logging: false
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
         User.init(userColumns, { sequelize, modelName: 'User' });
         Group.init(groupColumns, { sequelize, modelName: 'Group' });

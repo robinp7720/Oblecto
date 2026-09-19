@@ -1,5 +1,5 @@
 import { User } from '../../models/user.js';
-import { initDatabase } from '../../submodules/database.js';
+import { openDatabase } from './helpers/openDatabase.js';
 import { LockoutError, countAdmins, withAdminGuard } from '../../lib/auth/permissions.js';
 import argumentError from './helpers/argumentError.js';
 
@@ -9,7 +9,7 @@ export default async (args: string[]): Promise<void> => {
         return;
     }
 
-    const sequelize = initDatabase();
+    const sequelize = await openDatabase();
 
     try {
         const user = await User.findOne({ where: { username: args[1] } });

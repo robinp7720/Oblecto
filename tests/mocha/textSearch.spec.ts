@@ -1,3 +1,4 @@
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { DataTypes, Model, Sequelize } from 'sequelize';
 import { containsText, startsWithText } from '../../src/lib/common/textSearch.js';
@@ -10,7 +11,7 @@ describe('Text search', () => {
     let sequelize: Sequelize;
 
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
         Title.init({ name: DataTypes.STRING }, { sequelize, modelName: 'Title' });
         await sequelize.sync();
         await Title.bulkCreate(['Up_Down', 'UpXDown', '100% Wolf', '100 Wolves', 'C:\\Films', '/tv_shows/a.mkv', '/tvXshows/b.mkv'].map(name => ({ name })));

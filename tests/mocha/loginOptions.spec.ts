@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { AddressInfo } from 'node:net';
 import { Server } from 'node:http';
@@ -31,7 +32,7 @@ describe('login options and local-network sign-in', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', storage: ':memory:', logging: false
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
         User.init(userColumns, { sequelize, modelName: 'User' });
         await sequelize.sync();

@@ -1,3 +1,4 @@
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { DataTypes, Sequelize } from 'sequelize';
 import { MIGRATIONS, migrate, pendingMigrations } from '../../src/submodules/migrations/index.js';
@@ -7,7 +8,7 @@ import { File, fileColumns } from '../../src/models/file.js';
 
 // A throwaway database with the models the migrations touch registered on it.
 async function database(): Promise<Sequelize> {
-    const sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+    const sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
 
     User.init(userColumns, { sequelize, modelName: 'User' });
     Group.init(groupColumns, { sequelize, modelName: 'Group' });

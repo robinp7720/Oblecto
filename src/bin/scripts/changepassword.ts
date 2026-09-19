@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import config from '../../config.js';
 import { User } from '../../models/user.js';
-import { initDatabase } from '../../submodules/database.js';
+import { openDatabase } from './helpers/openDatabase.js';
 import argumentError from './helpers/argumentError.js';
 import { passwordArgument } from './helpers/readPassword.js';
 
@@ -12,7 +12,7 @@ export default async (args: string[]): Promise<void> => {
         return;
     }
 
-    const sequelize = initDatabase();
+    const sequelize = await openDatabase();
 
     try {
         const user = await User.findOne({ where: { username: args[1] } });
