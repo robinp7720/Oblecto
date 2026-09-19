@@ -1,6 +1,7 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import type { Movie } from '../../../../models/movie.js';
 import type Oblecto from '../../../oblecto/index.js';
+import type { RetrievedCredit } from '../../common/CreditSync.js';
 
 type MovieWithTmdb = Movie & {
     tmdbid: number | null;
@@ -29,7 +30,32 @@ export default class TmdbMovieRetriever {
     async retrieveInformation(movie: MovieWithTmdb): Promise<Record<string, unknown>> {
         if (movie.tmdbid === null) throw new DebugExtendableError('No tmdbid attached to movie');
 
-        const movieInfo = await this.oblecto.tmdb.movieInfo({ id: movie.tmdbid });
+        const [movieInfo, movieCredits] = await Promise.all([
+            this.oblecto.tmdb.movieInfo({ id: movie.tmdbid }),
+            this.oblecto.tmdb.movieCredits({ id: movie.tmdbid })
+        ]);
+
+        const credits: RetrievedCredit[] = [
+            ...(movieCredits.cast ?? []).map((credit, index) => ({
+                tmdbid: credit.id ?? 0,
+                name: credit.name ?? '',
+                profilePath: credit.profile_path,
+                knownForDepartment: credit.known_for_department,
+                creditType: 'cast' as const,
+                character: credit.character,
+                sortOrder: credit.order ?? index
+            })),
+            ...(movieCredits.crew ?? []).map((credit, index) => ({
+                tmdbid: credit.id ?? 0,
+                name: credit.name ?? '',
+                profilePath: credit.profile_path,
+                knownForDepartment: credit.known_for_department,
+                creditType: 'crew' as const,
+                job: credit.job,
+                department: credit.department,
+                sortOrder: index
+            }))
+        ];
 
         const data: Record<string, unknown> = {
             imdbid: movieInfo.imdb_id,
@@ -48,9 +74,12 @@ export default class TmdbMovieRetriever {
 
             overview: movieInfo.overview,
             popularity: movieInfo.popularity,
+            siteRating: movieInfo.vote_average,
+            siteRatingCount: movieInfo.vote_count,
             releaseDate: movieInfo.release_date,
 
-            _set: movieInfo.belongs_to_collection as MovieSetInfo | null
+            _set: movieInfo.belongs_to_collection as MovieSetInfo | null,
+            _credits: credits
         };
 
         return data;

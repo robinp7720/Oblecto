@@ -21,6 +21,9 @@ export class Episode extends Model<InferAttributes<Episode>, InferCreationAttrib
 
     declare firstAired: string | null;
     declare overview: string | null;
+    declare runtime: number | null;
+    declare siteRating: number | null;
+    declare siteRatingCount: number | null;
 
     declare SeriesId: CreationOptional<number>;
 
@@ -54,6 +57,9 @@ export const episodeColumns = {
 
     firstAired: { type: DataTypes.DATEONLY, allowNull: true },
     overview: { type: DataTypes.TEXT, allowNull: true },
+    runtime: { type: DataTypes.INTEGER, allowNull: true },
+    siteRating: { type: DataTypes.DOUBLE, allowNull: true },
+    siteRatingCount: { type: DataTypes.INTEGER, allowNull: true },
 
     SeriesId: DataTypes.INTEGER,
     createdAt: DataTypes.DATE,

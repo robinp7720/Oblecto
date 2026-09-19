@@ -28,6 +28,7 @@ export interface IConfig {
         'moviePosterLocation': string,
         'movieFanartLocation': string,
         'userAvatarLocation'?: string
+        'personProfileLocation': string
     },
     'database': {
         'dialect': string,

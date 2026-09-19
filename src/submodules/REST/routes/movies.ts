@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import { Op } from 'sequelize';
@@ -10,6 +10,7 @@ import { File } from '../../../models/file.js';
 import { Stream } from '../../../models/stream.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
+import { MovieCredit } from '../../../models/movieCredit.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor } from './helpers/browse.js';
@@ -17,6 +18,7 @@ import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
+import { creditsFor } from './helpers/credits.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -165,6 +167,21 @@ export default (server: Express, oblecto: Oblecto) => {
             });
         }
 
+        if (browseParams.personId) {
+            const creditWhere: any = { personId: browseParams.personId };
+            if (browseParams.creditRole === 'cast') creditWhere.creditType = 'cast';
+            if (browseParams.creditRole === 'director') creditWhere.job = 'Director';
+            if (browseParams.creditRole === 'writer') creditWhere.job = { [Op.in]: ['Writer', 'Screenplay', 'Story'] };
+            if (browseParams.creditRole === 'creator') creditWhere.job = 'Creator';
+            includeClauses.push({
+                model: MovieCredit,
+                as: 'Credits',
+                attributes: [],
+                required: true,
+                where: creditWhere
+            });
+        }
+
         const baseWhereClauses = [...whereClauses];
 
         const facetQueryOptions: any = {
@@ -251,7 +268,9 @@ export default (server: Express, oblecto: Oblecto) => {
                 yearFrom: browseParams.yearFrom,
                 yearTo: browseParams.yearTo,
                 watched: browseParams.watched,
-                libraryPath: browseParams.libraryPath
+                libraryPath: browseParams.libraryPath,
+                personId: browseParams.personId,
+                creditRole: browseParams.creditRole
             },
             facets: {
                 genres,
@@ -358,7 +377,8 @@ export default (server: Express, oblecto: Oblecto) => {
             ]
         });
 
-        res.send(movie);
+        if (!movie) return res.status(404).send({ message: 'Movie not found' });
+        res.send({ ...movie.toJSON(), credits: await creditsFor('movie', movie.id, Movie.sequelize) });
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

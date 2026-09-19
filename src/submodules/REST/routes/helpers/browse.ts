@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 
 const ALLOWED_ORDERS = new Set(['asc', 'desc']);
 const ALLOWED_WATCHED = new Set(['all', 'watched', 'unwatched', 'inprogress']);
+const ALLOWED_CREDIT_ROLES = new Set(['any', 'cast', 'director', 'writer', 'creator']);
 
 export interface BrowseParams {
     mode: 'legacy' | 'browse';
@@ -16,6 +17,8 @@ export interface BrowseParams {
     yearTo: number | null;
     watched: 'all' | 'watched' | 'unwatched' | 'inprogress';
     libraryPath: string | null;
+    personId: number | null;
+    creditRole: 'any' | 'cast' | 'director' | 'writer' | 'creator';
     filterHash: string;
 }
 
@@ -115,6 +118,12 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
 
     const watched = rawWatched as 'all' | 'watched' | 'unwatched' | 'inprogress';
     const libraryPath = asString(rawParams.libraryPath);
+    const rawPersonId = asString(rawParams.personId);
+    const personId = rawPersonId === null ? null : asInteger(rawPersonId, Number.NaN);
+    if (personId !== null && (!Number.isInteger(personId) || personId < 1)) throw new Error('personId is invalid');
+    const rawCreditRole = (asString(rawParams.creditRole) || 'any').toLowerCase();
+    if (!ALLOWED_CREDIT_ROLES.has(rawCreditRole)) throw new Error('creditRole is invalid');
+    const creditRole = rawCreditRole as BrowseParams['creditRole'];
 
     const filterHash = hashFilters({
         q,
@@ -122,7 +131,9 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
         yearFrom,
         yearTo,
         watched,
-        libraryPath
+        libraryPath,
+        personId,
+        creditRole
     });
 
     return {
@@ -137,6 +148,8 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
         yearTo,
         watched,
         libraryPath,
+        personId,
+        creditRole,
         filterHash
     };
 }

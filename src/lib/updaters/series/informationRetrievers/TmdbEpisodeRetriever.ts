@@ -5,6 +5,7 @@ import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import type Oblecto from '../../../oblecto/index.js';
 import type { Episode } from '../../../../models/episode.js';
 import type { Series } from '../../../../models/series.js';
+import type { RetrievedCredit } from '../../common/CreditSync.js';
 
 type EpisodeWithSeries = Episode & {
     airedSeason: string;
@@ -34,12 +35,37 @@ export default class TmdbEpisodeRetriever {
 
         logger.debug(`Episode information for ${episode.episodeName} retrieved from tmdb`);
 
+        const credits: RetrievedCredit[] = [
+            ...(episodeInfo.guest_stars ?? []).map((credit, index) => ({
+                tmdbid: credit.id ?? 0,
+                name: credit.name ?? '',
+                profilePath: credit.profile_path,
+                creditType: 'cast' as const,
+                character: credit.character,
+                sortOrder: credit.order ?? index
+            })),
+            ...(episodeInfo.crew ?? []).map((credit, index) => ({
+                tmdbid: credit.id ?? 0,
+                name: credit.name ?? '',
+                profilePath: credit.profile_path,
+                knownForDepartment: credit.known_for_department,
+                creditType: 'crew' as const,
+                job: credit.job,
+                department: credit.department,
+                sortOrder: index
+            }))
+        ];
+
         const data: Record<string, unknown> = {
             episodeName: episodeInfo.name,
             airedEpisodeNumber: episodeInfo.episode_number,
             airedSeason: episodeInfo.season_number,
             overview: episodeInfo.overview,
-            firstAired: episodeInfo.air_date
+            firstAired: episodeInfo.air_date,
+            runtime: episodeInfo.runtime,
+            siteRating: episodeInfo.vote_average,
+            siteRatingCount: episodeInfo.vote_count,
+            _credits: credits
         };
 
         let externalIds: { tvdb_id?: number | null; imdb_id?: string | null } = {};

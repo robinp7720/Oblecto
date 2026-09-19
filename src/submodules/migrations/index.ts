@@ -17,6 +17,12 @@ async function hasColumn(queryInterface: QueryInterface, table: string, column: 
     return Object.keys(description).some(name => sameName(name, column));
 }
 
+async function hasTable(queryInterface: QueryInterface, table: string): Promise<boolean> {
+    const tables = await queryInterface.showAllTables();
+
+    return tables.some(entry => sameName(typeof entry === 'string' ? entry : String(entry), table));
+}
+
 /**
  * Add a column unless it is there already. Every migration is written this way: databases upgraded
  * by hand from docs/UPGRADING.md, or created fresh by the baseline, already have these columns.
@@ -26,6 +32,12 @@ async function addColumnIfMissing(queryInterface: QueryInterface, table: string,
 
     logger.info(`Migrating: adding ${table}.${column}`);
     await queryInterface.addColumn(table, column, definition);
+}
+
+async function addIndexIfMissing(queryInterface: QueryInterface, table: string, fields: string[], name: string): Promise<void> {
+    const indexes = await queryInterface.showIndex(table) as Array<{ name: string }>;
+    if (indexes.some(index => sameName(index.name, name))) return;
+    await queryInterface.addIndex(table, fields, { name });
 }
 
 type ColumnDefinition = ModelAttributeColumnOptions;
@@ -92,6 +104,86 @@ export const MIGRATIONS: Migration[] = [
             await addColumnIfMissing(queryInterface, 'Files', 'error', optional(DataTypes.TEXT));
             await addColumnIfMissing(queryInterface, 'Files', 'problemStage', optional(DataTypes.STRING));
             await addColumnIfMissing(queryInterface, 'Files', 'problemIgnored', FLAG);
+        }
+    },
+    {
+        name: '0006-rich-media-metadata',
+        up: async ({ queryInterface }) => {
+            if (await hasTable(queryInterface, 'Movies')) {
+                await addColumnIfMissing(queryInterface, 'Movies', 'siteRating', optional(DataTypes.DOUBLE));
+                await addColumnIfMissing(queryInterface, 'Movies', 'siteRatingCount', optional(DataTypes.INTEGER));
+            }
+            if (await hasTable(queryInterface, 'Episodes')) {
+                await addColumnIfMissing(queryInterface, 'Episodes', 'runtime', optional(DataTypes.INTEGER));
+                await addColumnIfMissing(queryInterface, 'Episodes', 'siteRating', optional(DataTypes.DOUBLE));
+                await addColumnIfMissing(queryInterface, 'Episodes', 'siteRatingCount', optional(DataTypes.INTEGER));
+            }
+
+            if (!await hasTable(queryInterface, 'People')) {
+                await queryInterface.createTable('People', {
+                    id: {
+                        type: DataTypes.INTEGER,
+                        primaryKey: true,
+                        autoIncrement: true
+                    },
+                    tmdbid: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                        unique: true
+                    },
+                    name: { type: DataTypes.STRING, allowNull: false },
+                    biography: optional(DataTypes.TEXT),
+                    birthday: optional(DataTypes.DATEONLY),
+                    deathday: optional(DataTypes.DATEONLY),
+                    placeOfBirth: optional(DataTypes.STRING),
+                    knownForDepartment: optional(DataTypes.STRING),
+                    profilePath: optional(DataTypes.STRING),
+                    metadataUpdatedAt: optional(DataTypes.DATE),
+                    createdAt: { type: DataTypes.DATE, allowNull: false },
+                    updatedAt: { type: DataTypes.DATE, allowNull: false }
+                });
+            }
+
+            const createCredits = async (table: string, mediaColumn: string, mediaTable: string, includeEpisodeCount = false): Promise<void> => {
+                if (!await hasTable(queryInterface, table)) {
+                    const columns: Record<string, ColumnDefinition> = {
+                        id: {
+                            type: DataTypes.INTEGER,
+                            primaryKey: true,
+                            autoIncrement: true
+                        },
+                        [mediaColumn]: {
+                            type: DataTypes.INTEGER,
+                            allowNull: false,
+                            references: { model: mediaTable, key: 'id' },
+                            onDelete: 'CASCADE'
+                        },
+                        personId: {
+                            type: DataTypes.INTEGER,
+                            allowNull: false,
+                            references: { model: 'People', key: 'id' },
+                            onDelete: 'CASCADE'
+                        },
+                        creditType: { type: DataTypes.STRING, allowNull: false },
+                        character: optional(DataTypes.STRING),
+                        job: optional(DataTypes.STRING),
+                        department: optional(DataTypes.STRING),
+                        sortOrder: optional(DataTypes.INTEGER),
+                        createdAt: { type: DataTypes.DATE, allowNull: false },
+                        updatedAt: { type: DataTypes.DATE, allowNull: false }
+                    };
+
+                    if (includeEpisodeCount) columns.episodeCount = optional(DataTypes.INTEGER);
+                    await queryInterface.createTable(table, columns);
+                }
+                await addIndexIfMissing(queryInterface, table, [mediaColumn], `${table}_${mediaColumn}`);
+                await addIndexIfMissing(queryInterface, table, ['personId'], `${table}_personId`);
+                await addIndexIfMissing(queryInterface, table, [mediaColumn, 'creditType'], `${table}_${mediaColumn}_creditType`);
+            };
+
+            await createCredits('MovieCredits', 'movieId', 'Movies');
+            await createCredits('SeriesCredits', 'seriesId', 'Series', true);
+            await createCredits('EpisodeCredits', 'episodeId', 'Episodes');
         }
     }
 ];

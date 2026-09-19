@@ -92,6 +92,7 @@ Retrieve detailed information about a specific movie.
 
 - **URL:** `/movie/:id/info`
 - **Method:** `GET`
+- **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles.
 - **Response:** Movie object with `Files` and `TrackMovie` (user progress) included.
 
 ### Search Movies
@@ -156,6 +157,7 @@ Get a paginated list of TV shows.
 ### Get Series Info
 - **URL:** `/series/:id/info`
 - **Method:** `GET`
+- **Response:** Series details, audience score fields, and aggregate `credits.cast` / `credits.crew` arrays. Series credits may include `episodeCount`.
 
 ### List Episodes in Series
 - **URL:** `/series/:id/episodes`
@@ -188,6 +190,7 @@ Get a paginated list of episodes from all series.
 ### Get Episode Info
 - **URL:** `/episode/:id/info`
 - **Method:** `GET`
+- **Response:** Episode details, files and streams, runtime, audience score fields, guest cast, and episode crew.
 
 ### Get Next Episode
 Get the next episode in the series relative to the given episode ID.
@@ -226,6 +229,34 @@ Redirects to the stream URL for the episode's file.
 
 - **URL:** `/episode/:id/play`
 - **Method:** `GET`
+
+## People and Credits
+
+People are created from credits attached to media in the local library. Person detail and search routes require authentication; profile artwork follows the same public artwork policy as movie and series images.
+
+### Get Person Info
+- **URL:** `/person/:id/info`
+- **Method:** `GET`
+- **Response:** Biography fields and `credits.movies`, `credits.series`, and `credits.episodes`. Each entry contains a local media item and the person's roles; movie and episode items include watch progress for the signed-in user.
+
+### Search People
+- **URL:** `/people/search/:name`
+- **Method:** `GET`
+- **Query Params:** `count` (1–50, default 20).
+- **Response:** People referenced by the local library.
+
+### Person Profile
+- **URL:** `/person/:id/profile`
+- **Method:** `GET`
+- **Query Params:** `size`: `small`, `medium`, or `large` (default `medium`).
+
+### Filter Libraries by Person
+The browse form of `GET /movies/list/:sorting` and `GET /series/list/:sorting` accepts:
+
+- `personId`: local person ID.
+- `creditRole`: `any`, `cast`, `director`, `writer`, or `creator` (default `any`).
+
+Both values are included in cursor validation and `appliedFilters`.
 
 ## Streaming
 

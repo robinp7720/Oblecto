@@ -16,6 +16,10 @@ import { TrackEpisode, trackEpisodesColumns } from '../models/trackEpisode.js';
 import { User, userColumns } from '../models/user.js';
 import { Group, groupColumns } from '../models/group.js';
 import { Stream, streamColumns } from '../models/stream.js';
+import { Person, personColumns } from '../models/person.js';
+import { MovieCredit, movieCreditColumns } from '../models/movieCredit.js';
+import { SeriesCredit, seriesCreditColumns } from '../models/seriesCredit.js';
+import { EpisodeCredit, episodeCreditColumns } from '../models/episodeCredit.js';
 
 const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
 
@@ -30,6 +34,10 @@ function initModels(sequelize: Sequelize): void {
     Episode.init(episodeColumns, modelOptions('Episode'));
     Movie.init(movieColumns, modelOptions('Movie'));
     Series.init(seriesColumns, modelOptions('Series'));
+    Person.init(personColumns, modelOptions('Person'));
+    MovieCredit.init(movieCreditColumns, modelOptions('MovieCredit'));
+    SeriesCredit.init(seriesCreditColumns, modelOptions('SeriesCredit'));
+    EpisodeCredit.init(episodeCreditColumns, modelOptions('EpisodeCredit'));
 
     File.init(fileColumns, modelOptions('File'));
     Stream.init(streamColumns, modelOptions('Stream'));
@@ -82,6 +90,44 @@ function initAssociations(): void {
 
     Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
     Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
+
+    Movie.hasMany(MovieCredit, {
+        foreignKey: 'movieId',
+        as: 'Credits',
+        onDelete: 'CASCADE'
+    });
+    MovieCredit.belongsTo(Movie, { foreignKey: 'movieId' });
+    Series.hasMany(SeriesCredit, {
+        foreignKey: 'seriesId',
+        as: 'Credits',
+        onDelete: 'CASCADE'
+    });
+    SeriesCredit.belongsTo(Series, { foreignKey: 'seriesId' });
+    Episode.hasMany(EpisodeCredit, {
+        foreignKey: 'episodeId',
+        as: 'Credits',
+        onDelete: 'CASCADE'
+    });
+    EpisodeCredit.belongsTo(Episode, { foreignKey: 'episodeId' });
+
+    Person.hasMany(MovieCredit, {
+        foreignKey: 'personId',
+        as: 'MovieCredits',
+        onDelete: 'CASCADE'
+    });
+    MovieCredit.belongsTo(Person, { foreignKey: 'personId' });
+    Person.hasMany(SeriesCredit, {
+        foreignKey: 'personId',
+        as: 'SeriesCredits',
+        onDelete: 'CASCADE'
+    });
+    SeriesCredit.belongsTo(Person, { foreignKey: 'personId' });
+    Person.hasMany(EpisodeCredit, {
+        foreignKey: 'personId',
+        as: 'EpisodeCredits',
+        onDelete: 'CASCADE'
+    });
+    EpisodeCredit.belongsTo(Person, { foreignKey: 'personId' });
 }
 
 /**

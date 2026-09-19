@@ -1,5 +1,5 @@
 import { Op, and, col, fn, where } from 'sequelize';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 
@@ -15,6 +15,7 @@ import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText } from '../../../lib/common/textSearch.js';
+import { creditsFor } from './helpers/credits.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -107,7 +108,8 @@ export default (server: Express, oblecto: Oblecto) => {
             ]
         });
 
-        res.send(episode);
+        if (!episode) return res.status(404).send({ message: 'Episode not found' });
+        res.send({ ...episode.toJSON(), credits: await creditsFor('episode', episode.id, Episode.sequelize) });
     });
 
     // Endpoint to retrieve the episode next in series based on the local episode ID
