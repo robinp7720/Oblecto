@@ -154,13 +154,15 @@ export default class EmbyServerAPI {
         // Start express server
         const { port, host } = embyEmulation.oblecto.config.jellyfin;
 
-        this.server = this.app.listen(port, host, () => {
-            logger.info(`Jellyfin emulation server listening at http://${host}:${(this.server.address() as AddressInfo).port}`);
-        });
+        // Express 5 calls this on failure too, with the error. A port already in use should not take
+        // the rest of Oblecto down with it.
+        this.server = this.app.listen(port, host, (error?: NodeJS.ErrnoException) => {
+            if (error) {
+                logger.error(`Jellyfin emulation server could not listen on ${host}:${port}: ${error.code ?? error.message}`);
+                return;
+            }
 
-        // A port already in use should not take the rest of Oblecto down with it.
-        this.server.on('error', (error: NodeJS.ErrnoException) => {
-            logger.error(`Jellyfin emulation server could not listen on ${host}:${port}: ${error.code ?? error.message}`);
+            logger.info(`Jellyfin emulation server listening at http://${host}:${(this.server.address() as AddressInfo).port}`);
         });
     }
 }

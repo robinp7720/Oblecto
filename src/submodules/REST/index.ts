@@ -80,8 +80,14 @@ export default class OblectoAPI {
         });
 
         // Start express server
-        this.server = app.listen(this.oblecto.config.server.port, () => {
-            logger.info( 'REST API Listening at', `http://localhost:${this.oblecto.config.server.port}`);
+        // Express 5 calls this on failure too, with the error. Without its main port Oblecto is of no
+        // use, so stop and let a supervisor such as systemd try again.
+        const port = this.oblecto.config.server.port;
+
+        this.server = app.listen(port, (error?: NodeJS.ErrnoException) => {
+            if (error) throw new Error(`Could not listen on port ${port}: ${error.code ?? error.message}. Is another server already using it?`);
+
+            logger.info( 'REST API Listening at', `http://localhost:${port}`);
         });
     }
 
