@@ -126,6 +126,14 @@ describe('SQLite driver choice', () => {
         });
 
         assert.equal(driver.name, 'node:sqlite');
-        assert.equal(driver.fallbackReason, 'sqlite3 could not load (Could not locate the bindings file. Tried:)');
+        assert.equal(driver.fallbackReason, "sqlite3's binary was not installed");
+    });
+
+    it('says why sqlite3 failed to load for any other reason', () => {
+        const driver = chooseSqliteDriver(() => {
+            throw new Error('Module did not self-register\nmore detail');
+        });
+
+        assert.equal(driver.fallbackReason, 'sqlite3 could not load (Module did not self-register)');
     });
 });

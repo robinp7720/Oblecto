@@ -33,7 +33,9 @@ export function chooseSqliteDriver(load: () => unknown = () => require('sqlite3'
             name: 'node:sqlite',
             fallbackReason: (error as { code?: string }).code === 'MODULE_NOT_FOUND' && message.includes("'sqlite3'")
                 ? 'sqlite3 is not installed'
-                : `sqlite3 could not load (${message.split('\n')[0]})`
+                : message.includes('bindings file')
+                    ? "sqlite3's binary was not installed"
+                    : `sqlite3 could not load (${message.split('\n')[0]})`
         };
     }
 }
