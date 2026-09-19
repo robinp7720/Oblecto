@@ -22,6 +22,11 @@ async function run(): Promise<void> {
         const command = args[0];
 
         switch (command) {
+            case '--version':
+            case '-v':
+            case 'version':
+                console.log(packageInfo.version ?? 'unknown');
+                break;
             case 'start': {
                 const { default: core } = await import('../core/index.js');
                 const { installLifecycle } = await import('../core/lifecycle.js');
@@ -81,6 +86,12 @@ async function run(): Promise<void> {
                 break;
             }
             default:
+                if (command !== undefined && !['--help', '-h', 'help'].includes(command)) {
+                    console.log(`Unknown command "${command}"`);
+                    console.log();
+                    process.exitCode = 1;
+                }
+
                 console.log(`Oblecto ${packageInfo.version ?? ''}`);
                 console.log();
                 console.log('First time setup:');
