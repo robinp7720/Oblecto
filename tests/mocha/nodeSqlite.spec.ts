@@ -3,7 +3,9 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DataTypes, Model, Sequelize, UniqueConstraintError, ForeignKeyConstraintError } from 'sequelize';
+import { createRequire } from 'node:module';
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
+import { chooseSqliteDriver } from '../../src/submodules/sqliteDriver.js';
 
 class Thing extends Model {
     declare id: number;
@@ -17,11 +19,17 @@ class Part extends Model {
     declare thingId: number;
 }
 
-describe('SQLite on node:sqlite', () => {
+// The same behaviour through both drivers Oblecto can pick; native only where its binary is installed.
+const drivers: [string, object][] = [['node:sqlite', nodeSqlite]];
+const native = chooseSqliteDriver(() => createRequire(import.meta.url)('sqlite3'));
+
+if (native.name === 'sqlite3') drivers.push(['sqlite3', native.module]);
+
+for (const [driverName, dialectModule] of drivers) describe(`SQLite through ${driverName}`, () => {
     let directory: string;
 
     const open = async (storage: string): Promise<Sequelize> => {
-        const sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage, logging: false });
+        const sequelize = new Sequelize({ dialect: 'sqlite', dialectModule, storage, logging: false });
 
         Thing.init({
             name: { type: DataTypes.STRING, unique: true },
@@ -92,5 +100,32 @@ describe('SQLite on node:sqlite', () => {
 
         assert.equal((await Thing.findOne())?.name, 'persisted');
         await second.close();
+    });
+});
+
+describe('SQLite driver choice', () => {
+    it('uses the native sqlite3 module when it loads', () => {
+        class Database {}
+
+        assert.equal(chooseSqliteDriver(() => ({ Database })).name, 'sqlite3');
+    });
+
+    it('falls back to node:sqlite when sqlite3 is not installed', () => {
+        const driver = chooseSqliteDriver(() => {
+            throw Object.assign(new Error("Cannot find module 'sqlite3'"), { code: 'MODULE_NOT_FOUND' });
+        });
+
+        assert.equal(driver.name, 'node:sqlite');
+        assert.equal(driver.module, nodeSqlite);
+        assert.equal(driver.fallbackReason, 'sqlite3 is not installed');
+    });
+
+    it('falls back when sqlite3 is installed without its binary, as npm 12 leaves it', () => {
+        const driver = chooseSqliteDriver(() => {
+            throw new Error('Could not locate the bindings file. Tried:\n → /usr/lib/node_modules/oblecto/node_modules/sqlite3/build/node_sqlite3.node');
+        });
+
+        assert.equal(driver.name, 'node:sqlite');
+        assert.equal(driver.fallbackReason, 'sqlite3 could not load (Could not locate the bindings file. Tried:)');
     });
 });

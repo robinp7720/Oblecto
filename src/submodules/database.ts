@@ -1,7 +1,7 @@
 import { Sequelize, Dialect, Options } from 'sequelize';
 import config from '../config.js';
 import logger from './logger/index.js';
-import nodeSqlite from './nodeSqlite.js';
+import { chooseSqliteDriver } from './sqliteDriver.js';
 
 import { Episode, episodeColumns } from '../models/episode.js';
 import { EpisodeFiles, episodeFilesColumns } from '../models/episodeFiles.js';
@@ -95,10 +95,6 @@ export function initDatabase(): Sequelize {
     const dialect = (config.database.dialect as Dialect) || 'sqlite';
     const poolMax = dialect === 'sqlite' ? 1 : config.queue.concurrency;
 
-    if (dialect === 'sqlite') {
-        logger.info('Using SQLITE, setting pool max to 1');
-    }
-
     const options: Options = {
         dialect,
         logging: false,
@@ -115,8 +111,15 @@ export function initDatabase(): Sequelize {
         options.host = config.database.host || 'localhost';
     } else {
         options.storage = config.database.storage ?? DEFAULT_SQLITE_STORAGE;
-        // Node's built-in SQLite instead of the native sqlite3 package, which needs an install script
-        options.dialectModule = nodeSqlite;
+
+        const driver = chooseSqliteDriver();
+
+        options.dialectModule = driver.module;
+        if (driver.fallbackReason) {
+            logger.info(`Using SQLite through Node's built-in node:sqlite: ${driver.fallbackReason}. For the native module, reinstall with --allow-scripts=sqlite3`);
+        } else {
+            logger.info('Using SQLite through the native sqlite3 module');
+        }
     }
 
     sequelizeInstance = new Sequelize({

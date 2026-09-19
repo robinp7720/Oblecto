@@ -37,6 +37,14 @@ oblecto start
 
 `oblecto adduser` asks for the password when you pass `-`. Then open `http://localhost:8080` and sign in. Add your library folders under Settings.
 
+With SQLite, Oblecto uses the native `sqlite3` module when its binary is installed, and Node's built-in `node:sqlite` otherwise. The native module keeps the server responsive during long queries, which matters for large libraries. npm 12 skips the step that installs its binary, so to get it, allow that step:
+
+```sh
+npm install -g --allow-scripts=sqlite3 oblecto
+```
+
+The startup log says which one is in use. Installs from a checkout and the Docker image get the native module on their own.
+
 To keep your data somewhere else, run `oblecto init --config-dir DIR` and set `OBLECTO_CONFIG_PATH=DIR/config.json` for every later command.
 
 ### As a service
