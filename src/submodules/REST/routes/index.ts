@@ -7,6 +7,7 @@ import users from './users.js';
 import web from './web.js';
 import sets from './sets.js';
 import files from './files.js';
+import people from './people.js';
 
 // V1 Routes
 import v1Settings from './v1/settings.js';
@@ -30,6 +31,7 @@ export default (server: Express, oblecto: Oblecto): void => {
     files(server, oblecto);
     movies(server, oblecto);
     tvshows(server, oblecto);
+    people(server, oblecto);
     users(server, oblecto);
     sets(server, oblecto);
 

@@ -2,6 +2,7 @@ import type Oblecto from '../oblecto/index.js';
 import type { Episode } from '../../models/episode.js';
 import type { Series } from '../../models/series.js';
 import type { Movie } from '../../models/movie.js';
+import type { Person } from '../../models/person.js';
 
 export default class ArtworkUtils {
     public oblecto: Oblecto;
@@ -36,5 +37,9 @@ export default class ArtworkUtils {
         if (size !== undefined && size !== '' && (this.oblecto.config.artwork.fanart as any)[size] !== undefined)
             return `${this.oblecto.config.assets.movieFanartLocation}/${size}/${movie.id}.jpg`;
         return `${this.oblecto.config.assets.movieFanartLocation}/original/${movie.id}.jpg`;
+    }
+
+    personProfilePath(person: Person, size = 'medium'): string {
+        return `${this.oblecto.config.assets.personProfileLocation}/${size}-${person.id}.jpg`;
     }
 }

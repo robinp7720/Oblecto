@@ -11,6 +11,7 @@ import { Episode } from '../../../models/episode.js';
 import logger from '../../../submodules/logger/index.js';
 
 import type Oblecto from '../../oblecto/index.js';
+import { syncCredits, type RetrievedCredit } from '../common/CreditSync.js';
 
 type UpdaterConstructor = new (oblecto: Oblecto) => {
     // Method syntax on purpose: each retriever narrows the entity it accepts.
@@ -72,8 +73,11 @@ export default class SeriesUpdater {
      */
     async updateSeries(series: Series): Promise<void> {
         const { id: _ignoredId, ...data } = await this.aggregateSeriesUpdateRetriever.retrieveInformation(series);
+        const credits = data._credits as RetrievedCredit[] | undefined;
+        delete data._credits;
 
         await series.update(data);
+        if (credits) await syncCredits('series', series.id, credits);
     }
 
     /**
@@ -82,7 +86,10 @@ export default class SeriesUpdater {
      */
     async updateEpisode(episode: Episode): Promise<void> {
         const { id: _ignoredId, ...data } = await this.aggregateEpisodeUpdaterRetriever.retrieveInformation(episode);
+        const credits = data._credits as RetrievedCredit[] | undefined;
+        delete data._credits;
 
         await episode.update(data);
+        if (credits) await syncCredits('episode', episode.id, credits);
     }
 }

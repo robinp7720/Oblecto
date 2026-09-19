@@ -2,6 +2,7 @@ cache/episodes/*.png
 cache/poster/*.png
 node_modules
 .idea
+.claude
 .vscode-upload.json
 dist/
 build/

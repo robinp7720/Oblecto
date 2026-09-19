@@ -26,7 +26,8 @@
     "showPosterLocation": "/etc/oblecto/assets/showPosters/",
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
     "movieFanartLocation": "/etc/oblecto/assets/movieFanart/",
-    "userAvatarLocation": "/etc/oblecto/assets/userAvatars/"
+    "userAvatarLocation": "/etc/oblecto/assets/userAvatars/",
+    "personProfileLocation": "/etc/oblecto/assets/personProfiles/"
   },
   "database": {
     "dialect": "sqlite",

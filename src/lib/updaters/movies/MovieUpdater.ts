@@ -5,6 +5,7 @@ import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 
 import type Oblecto from '../../oblecto/index.js';
+import { syncCredits, type RetrievedCredit } from '../common/CreditSync.js';
 
 type MovieSetInfo = {
     id: number;
@@ -13,6 +14,7 @@ type MovieSetInfo = {
 
 type MovieUpdateData = Record<string, unknown> & {
     _set?: MovieSetInfo | null;
+    _credits?: RetrievedCredit[];
 };
 
 type UpdaterConstructor = new (oblecto: Oblecto) => {
@@ -75,6 +77,10 @@ export default class MovieUpdater {
             }
         }
 
+        const credits = data._credits;
+        delete data._credits;
+
         await movie.update(data as Parameters<Movie['update']>[0]);
+        if (credits) await syncCredits('movie', movie.id, credits);
     }
 }

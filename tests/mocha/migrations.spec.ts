@@ -5,6 +5,13 @@ import { MIGRATIONS, migrate, pendingMigrations } from '../../src/submodules/mig
 import { User, userColumns } from '../../src/models/user.js';
 import { Group, groupColumns } from '../../src/models/group.js';
 import { File, fileColumns } from '../../src/models/file.js';
+import { Movie, movieColumns } from '../../src/models/movie.js';
+import { Series, seriesColumns } from '../../src/models/series.js';
+import { Episode, episodeColumns } from '../../src/models/episode.js';
+import { Person, personColumns } from '../../src/models/person.js';
+import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
+import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
+import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
 
 // A throwaway database with the models the migrations touch registered on it.
 async function database(): Promise<Sequelize> {
@@ -13,6 +20,13 @@ async function database(): Promise<Sequelize> {
     User.init(userColumns, { sequelize, modelName: 'User' });
     Group.init(groupColumns, { sequelize, modelName: 'Group' });
     File.init(fileColumns, { sequelize, modelName: 'File' });
+    Movie.init(movieColumns, { sequelize, modelName: 'Movie' });
+    Series.init(seriesColumns, { sequelize, modelName: 'Series' });
+    Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+    Person.init(personColumns, { sequelize, modelName: 'Person' });
+    MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
+    SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
+    EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
 
     return sequelize;
 }
@@ -25,6 +39,9 @@ describe('Database migrations', () => {
 
         assert.deepEqual(await migrate(sequelize), MIGRATIONS.map(migration => migration.name));
         assert.ok((await columns(sequelize, 'Users')).includes('groupId'));
+        assert.ok((await columns(sequelize, 'Movies')).includes('siteRating'));
+        assert.ok((await columns(sequelize, 'Episodes')).includes('runtime'));
+        for (const table of ['People', 'MovieCredits', 'SeriesCredits', 'EpisodeCredits']) assert.ok(await sequelize.getQueryInterface().tableExists(table), table);
         assert.deepEqual(await pendingMigrations(sequelize), []);
         await sequelize.close();
     });

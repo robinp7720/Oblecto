@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/restrict-plus-operands, @typescript-eslint/await-thenable, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import { Op, literal, where } from 'sequelize';
 
@@ -9,6 +9,7 @@ import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { SeriesSet } from '../../../models/seriesSet.js';
+import { SeriesCredit } from '../../../models/seriesCredit.js';
 import { File } from '../../../models/file.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
@@ -17,6 +18,7 @@ import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
+import { creditsFor } from './helpers/credits.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -191,6 +193,21 @@ export default (server: Express, oblecto: Oblecto) => {
             });
         }
 
+        if (browseParams.personId) {
+            const creditWhere: any = { personId: browseParams.personId };
+            if (browseParams.creditRole === 'cast') creditWhere.creditType = 'cast';
+            if (browseParams.creditRole === 'director') creditWhere.job = 'Director';
+            if (browseParams.creditRole === 'writer') creditWhere.job = { [Op.in]: ['Writer', 'Screenplay', 'Story'] };
+            if (browseParams.creditRole === 'creator') creditWhere.job = 'Creator';
+            includeClauses.push({
+                model: SeriesCredit,
+                as: 'Credits',
+                attributes: [],
+                required: true,
+                where: creditWhere
+            });
+        }
+
         const baseWhereClauses = [...whereClauses];
 
         const facetQueryOptions: any = {
@@ -276,7 +293,9 @@ export default (server: Express, oblecto: Oblecto) => {
                 yearFrom: browseParams.yearFrom,
                 yearTo: browseParams.yearTo,
                 watched: browseParams.watched,
-                libraryPath: browseParams.libraryPath
+                libraryPath: browseParams.libraryPath,
+                personId: browseParams.personId,
+                creditRole: browseParams.creditRole
             },
             facets: {
                 genres,
@@ -336,6 +355,7 @@ export default (server: Express, oblecto: Oblecto) => {
         const data: any = show.toJSON();
 
         if (data.genre) data.genre = JSON.parse(data.genre);
+        data.credits = await creditsFor('series', show.id, Series.sequelize);
 
         res.send(data);
     });
