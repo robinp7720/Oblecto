@@ -70,6 +70,6 @@ export default async (args: string[]): Promise<void> => {
     await fs.writeFile(config.federation.key, key.exportKey('pkcs1-private-pem'), { mode: 0o600 });
     await fs.writeFile(`${config.federation.key}.pub`, key.exportKey('pkcs1-public-pem'));
 
-    console.log('Done. Next: add your TMDb, TVDB and fanart.tv keys and library folders, then run "oblecto start".');
+    console.log('Done. Next: add your library folders, then run "oblecto start".');
     console.log('Federation also needs a TLS certificate at federation.cert, but only if you turn federation on.');
 };

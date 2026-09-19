@@ -13,13 +13,13 @@
     "concurrency": 1
   },
   "tvdb": {
-    "key": ""
+    "key": "4908EBCEE2556E3D"
   },
   "themoviedb": {
-    "key": ""
+    "key": "b06b4917705eeed4e4b273d4c90fe158"
   },
   "fanart.tv": {
-    "key": ""
+    "key": "b6821e30b1a791e04d43543936de1fd0"
   },
   "assets": {
     "episodeBannerLocation": "/etc/oblecto/assets/episodeBanners/",

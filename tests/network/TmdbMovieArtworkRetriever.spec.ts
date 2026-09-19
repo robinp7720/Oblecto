@@ -5,21 +5,19 @@ import TmdbMovieArtworkRetriever from '../../src/lib/artwork/movies/artworkRetri
 import Queue from '../../src/lib/queue/index.js';
 import { MovieDb } from 'moviedb-promise';
 
+import { FANART_KEY, TMDB_KEY } from './keys.js';
+
 chai.should();
 
 const TMDBID_TEST_ID = '299534';
 
 const oblecto = {
     queue: new Queue(1),
-    config: { 'fanart.tv': { key: process.env.OBLECTO_FANART_KEY ?? '' } },
-    tmdb: new MovieDb(process.env.OBLECTO_TMDB_KEY ?? '')
+    config: { 'fanart.tv': { key: FANART_KEY } },
+    tmdb: new MovieDb(TMDB_KEY)
 };
 
 describe('Tmdb Movie Artwork Retriever', function () {
-    before(function () {
-        if (!process.env.OBLECTO_FANART_KEY || !process.env.OBLECTO_TMDB_KEY) this.skip();
-    });
-
     const ArtworkRetriever = new TmdbMovieArtworkRetriever(oblecto);
 
     it('Fanart artwork retrieval using TMDBID', async function () {

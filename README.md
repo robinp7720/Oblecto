@@ -12,7 +12,7 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 ## Features
 
 - Movie and TV libraries, identified and kept up to date in the background.
-- Metadata and artwork from TMDb, TVDB and fanart.tv, with your own API keys.
+- Metadata and artwork from TMDb, TVDB and fanart.tv. Oblecto ships with the project's API keys; you can use your own.
 - A web app with browsing, search, continue watching, a full player and remote control of other devices.
 - Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
 - A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in and play.
@@ -35,7 +35,7 @@ oblecto adduser USERNAME - "Your Name" you@example.com Administrators
 oblecto start
 ```
 
-`oblecto adduser` asks for the password when you pass `-`. Then open `http://localhost:8080` and sign in. Add your library folders and API keys under Settings.
+`oblecto adduser` asks for the password when you pass `-`. Then open `http://localhost:8080` and sign in. Add your library folders under Settings.
 
 To keep your data somewhere else, run `oblecto init --config-dir DIR` and set `OBLECTO_CONFIG_PATH=DIR/config.json` for every later command.
 
@@ -68,7 +68,7 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `database` | `sqlite` with `storage` for the file, or `mariadb`/`mysql` with `host`, `username`, `password` and `database` |
 | `database.migrateOnStart` | Update the database schema when Oblecto starts (on) |
 | `movies.directories`, `tvshows.directories` | Library folders |
-| `themoviedb.key`, `tvdb.key`, `fanart.tv.key` | Metadata and artwork API keys |
+| `themoviedb.key`, `tvdb.key`, `fanart.tv.key` | Metadata and artwork API keys (the project's, unless you set your own) |
 | `authentication.secret` | Signs sign-ins; `oblecto init` generates it |
 | `authentication.tokenLifetimeDays` | How long a web sign-in lasts (30) |
 | `authentication.profilePicker`, `localPasswordlessLogin`, `allowPasswordlessLogin` | Sign-in without typing a username or password on the local network (all off) |
@@ -117,7 +117,7 @@ OBLECTO_CONFIG_PATH=/path/to/dev-config.json npm run dev
 npm run verify           # lint, typecheck and tests, as CI runs them
 ```
 
-`npm run build` builds both web apps and the server into `dist/`. `npm run test:network` runs the tests that call the real metadata services; set `OBLECTO_TMDB_KEY`, `OBLECTO_TVDB_KEY` and `OBLECTO_FANART_KEY`. The Playwright suites run with `npm run test:player:ui` and `npm run test:playback:browser`.
+`npm run build` builds both web apps and the server into `dist/`. `npm run test:network` runs the tests that call the real metadata services. The Playwright suites run with `npm run test:player:ui` and `npm run test:playback:browser`.
 
 To run the web app from Vite's dev server against a local Oblecto, add its origin to `server.corsOrigins`.
 

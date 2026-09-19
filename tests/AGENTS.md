@@ -9,7 +9,8 @@ What lives here
 
 How to run
 - Unit tests: `npm test`.
-- Network tests: `OBLECTO_TMDB_KEY=... OBLECTO_TVDB_KEY=... OBLECTO_FANART_KEY=... npm run test:network`.
+- Network tests: `npm run test:network`, with the project keys from `res/config.json`; set `OBLECTO_TMDB_KEY`,
+  `OBLECTO_TVDB_KEY` or `OBLECTO_FANART_KEY` to use others.
 - Smoke tests: `npm run test:startup` after `npm run build`, or set `OBLECTO_SERVER_BUNDLE` to test
   another bundle without touching `dist/`.
 - Browser tests: `npm run test:playback:browser`, `npm run test:player:ui`.

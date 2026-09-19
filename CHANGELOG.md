@@ -25,7 +25,7 @@ Upgrading from 0.3? Read [docs/UPGRADING.md](docs/UPGRADING.md) first: everyone 
 - Other websites can no longer call the APIs from a user's browser.
 - Uploads are limited to 25 MB and accepted only after the permission check.
 - Access tokens are no longer written to the log.
-- The shipped config no longer contains API keys, and `config.json` and the federation key are created owner-only.
+- `config.json` and the federation key are created owner-only.
 
 ### Fixed
 

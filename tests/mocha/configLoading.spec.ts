@@ -92,7 +92,8 @@ describe('Config loading', function () {
             assert.equal(template.authentication.profilePicker, false);
             assert.deepEqual(template.federation.servers, {});
             assert.deepEqual(template.federation.clients, {});
-            for (const provider of ['tvdb', 'themoviedb', 'fanart.tv'] as const) assert.equal(template[provider].key, '');
+            // The project's metadata keys ship with it, so a new install can identify files straight away.
+            for (const provider of ['tvdb', 'themoviedb', 'fanart.tv'] as const) assert.ok(template[provider].key);
         });
     });
 });

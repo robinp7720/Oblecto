@@ -6,11 +6,11 @@ import SeriesIndexer from '../../src/lib/indexers/series/SeriesIndexer.js';
 import guessit from '../../src/submodules/guessit.js';
 import TVDB from 'node-tvdb';
 import { MovieDb } from 'moviedb-promise';
+import { TMDB_KEY, TVDB_KEY } from './keys.js';
 
-// Provide real keys to run this suite:
-//   OBLECTO_TVDB_KEY=... OBLECTO_TMDB_KEY=... OBLECTO_FANART_KEY=... npm run test:network
-const tvdbKey = process.env.OBLECTO_TVDB_KEY ?? '';
-const tmdbKey = process.env.OBLECTO_TMDB_KEY ?? '';
+// Uses the project keys from res/config.json unless OBLECTO_TVDB_KEY or OBLECTO_TMDB_KEY is set.
+const tvdbKey = TVDB_KEY;
+const tmdbKey = TMDB_KEY;
 
 function createOblectoFixture() {
     return {
@@ -28,10 +28,6 @@ function createOblectoFixture() {
 }
 
 describe('SeriesIndexer', function () {
-    before(function () {
-        if (!tvdbKey || !tmdbKey) this.skip();
-    });
-
     describe('Aggregate Series Identifier', function () {
         this.timeout(100000);
         it('/mnt/SMB/TV Shows/stargirl.s02e03.1080p.web.h264-cakes.mkv', async function () {

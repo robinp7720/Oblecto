@@ -41,4 +41,3 @@ Put everyone else in **Users**, or in a group of your own, from the Users page u
 - It refuses to start without `authentication.secret`, or with the old placeholder `secret`. `oblecto init` writes a random one.
 - Settings missing from your file take their defaults from `res/config.json`. Two defaults changed: `authentication.allowPasswordlessLogin` and `authentication.profilePicker` are now off. Set them to `true` to keep the old behaviour.
 - The Jellyfin API has its own section, `jellyfin`, with `enabled`, `port` (8096) and `host` (0.0.0.0).
-- The provider keys that shipped in the sample config are gone. Add your own TMDb, TVDB and fanart.tv keys.
