@@ -115,11 +115,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/sessions/viewing', (req, res) => { res.send([]); });
 
     // SyncPlay
+    // Before /syncplay/:id, which would otherwise take "list" as a group id.
+    server.get('/syncplay/list', (req, res) => { res.send([]); });
     server.get('/syncplay/:id', (req, res) => { res.status(404).send('Not Found'); });
     server.post('/syncplay/buffering', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/join', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/leave', (req, res) => { res.status(204).send(); });
-    server.get('/syncplay/list', (req, res) => { res.send([]); });
     server.post('/syncplay/moveplaylistitem', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/new', (req, res) => { res.status(204).send(); });
     server.post('/syncplay/nextitem', (req, res) => { res.status(204).send(); });
