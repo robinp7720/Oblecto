@@ -57,6 +57,8 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Endpoint to get a banner image for an episode based on the local episode ID
+    // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
+    // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/episode/:id/banner', async function (req: OblectoRequest, res: Response) {
         const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
 

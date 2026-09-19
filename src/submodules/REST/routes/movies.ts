@@ -297,6 +297,8 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(results);
     });
 
+    // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
+    // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/movie/:id/poster', async function (req: OblectoRequest, res: Response) {
         const movie = await Movie.findByPk(req.params.id as string);
 

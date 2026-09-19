@@ -1,63 +1,137 @@
 [![npmjs](https://img.shields.io/npm/dw/oblecto.svg)](https://www.npmjs.com/package/oblecto)
-[![Join the chat at https://gitter.im/robinp7720/Oblecto](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/robinp7720/Oblecto?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![CI](https://github.com/robinp7720/Oblecto/actions/workflows/ci.yml/badge.svg)](https://github.com/robinp7720/Oblecto/actions/workflows/ci.yml)
 [![DeepSource](https://app.deepsource.com/gh/robinp7720/Oblecto.svg/?label=code+coverage&show_trend=true&token=HzJA1q_cYjpl2IVSVTB4Tgz6)](https://app.deepsource.com/gh/robinp7720/Oblecto/)
 [![DeepSource](https://app.deepsource.com/gh/robinp7720/Oblecto.svg/?label=active+issues&show_trend=true&token=HzJA1q_cYjpl2IVSVTB4Tgz6)](https://app.deepsource.com/gh/robinp7720/Oblecto/)
-[![DeepSource](https://app.deepsource.com/gh/robinp7720/Oblecto.svg/?label=resolved+issues&show_trend=true&token=HzJA1q_cYjpl2IVSVTB4Tgz6)](https://app.deepsource.com/gh/robinp7720/Oblecto/)
 
 ![Oblecto logo](https://github.com/robinp7720/Oblecto/blob/master/images/logotype.png?raw=true)
+
 # Oblecto
-## What is it?
-Oblecto is a self-hosted media server for streaming the media you already own. It indexes Movies and TV Shows, enriches them with metadata and artwork, and serves them through a web interface or compatible clients.
+
+Oblecto is a self-hosted media server for the movies and TV shows you already own. It indexes your folders, fetches metadata and artwork, and streams to its own web app and to Jellyfin apps.
 
 ## Features
-- Movie and TV library indexing with background updates.
-- Metadata and artwork from TMDb, TVDB, and Fanart.tv (bring your own API keys).
-- Built-in web UI (Oblecto-Web) served by the backend.
-- Jellyfin/Emby API emulation for compatible clients (port `8096`).
-- Streaming sessions with direct play and recode/HLS support (via FFmpeg).
-- Optional federation and seedbox import support.
-- CLI tools for setup, database init, and user management.
 
-## What Oblecto can do
-- Scan folders of Movies/TV, identify items, and keep your library organized.
-- Fetch posters, fanart, episode banners, descriptions, and ratings.
-- Serve your library to the web UI and compatible Jellyfin clients.
-- Track playback progress and provide "Next Up" for TV series.
-- Store assets and metadata in a local database (SQLite by default).
+- Movie and TV libraries, identified and kept up to date in the background.
+- Metadata and artwork from TMDb, TVDB and fanart.tv, with your own API keys.
+- A web app with browsing, search, continue watching, a full player and remote control of other devices.
+- Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
+- A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in and play.
+- Accounts with groups and permissions, per-user preferences and avatars, and an optional profile picker on the local network.
+- A problem files page for anything that could not be identified or read, with retry.
+- Optional federation between Oblecto servers and seedbox import.
 
-## Setup
-Oblecto can be installed using NPM or directly from Git. We recommend NPM unless you plan to develop.
+Planned for later releases: watchlists, favourites and ratings, editing metadata by hand, and music.
 
-### Quick start (npm)
-1. Install: `npm install -g oblecto`
-2. Initialize config and assets: `oblecto init`
-3. Edit `/etc/oblecto/config.json` and set:
-   - `movies.directories` and `tvshows.directories`
-   - API keys: `themoviedb.key`, `tvdb.key`, `fanart.tv.key`
-   - Database settings (SQLite by default)
-4. Initialize the database: `oblecto init database`
-5. Start the server: `oblecto start` (or `oblecto start-tui`)
-6. Open the web UI at `http://localhost:8080/web` (or the port set in `server.port`)
+## Install
 
-### From source (development)
-1. Fetch the web frontends: `git submodule update --init`
-2. Install dependencies: `npm install`
-3. Build or run:
-   - `npm run build` (both web UIs and the backend) then `npm run start`, or
-   - `npm run build:web` then `npm run dev` for live backend development
-4. Use the CLI if needed: `npm run oblecto` (or `npm run oblecto:dev`)
+Oblecto needs Node.js 24 or newer, FFmpeg, and guessit (`python3-guessit` on Debian and Ubuntu, or `pip install guessit`).
 
-### Configuration notes
-- Config file: `OBLECTO_CONFIG_PATH` when set, otherwise `/etc/oblecto/config.json`. Anything the file leaves out is taken from `res/config.json`.
-- Oblecto refuses to start without `authentication.secret`; `oblecto init` generates one.
-- For development against a scratch config: `OBLECTO_CONFIG_PATH=/path/to/dev-config.json npm run dev`
-- Default SQLite file: `/etc/oblecto/database.sqlite`
-- Defaults and template: `res/config.json`
+### With npm
 
-Need help? Ask in the gitter chat or check the setup guide:
-https://github.com/robinp7720/Oblecto/wiki/Getting-Started
+```sh
+npm install -g oblecto
+oblecto init            # writes /etc/oblecto/config.json with a random secret
+oblecto adduser USERNAME - "Your Name" you@example.com Administrators
+oblecto start
+```
 
+`oblecto adduser` asks for the password when you pass `-`. Then open `http://localhost:8080` and sign in. Add your library folders and API keys under Settings.
+
+To keep your data somewhere else, run `oblecto init --config-dir DIR` and set `OBLECTO_CONFIG_PATH=DIR/config.json` for every later command.
+
+### As a service
+
+`contrib/oblecto.service` runs Oblecto as its own user under systemd. The install steps are at the top of that file.
+
+### With Docker
+
+```sh
+docker run -d --name oblecto \
+  -p 8080:8080 -p 8096:8096 \
+  -v oblecto-data:/etc/oblecto \
+  -v /path/to/movies:/movies:ro \
+  -v /path/to/shows:/shows:ro \
+  ghcr.io/robinp7720/oblecto
+docker exec -it oblecto oblecto adduser USERNAME - "Your Name" you@example.com Administrators
+```
+
+The first start writes a config into the `/etc/oblecto` volume. Everything Oblecto keeps lives there: config, SQLite database, artwork and logs.
+
+## Configuration
+
+Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the file leaves out takes its default from [`res/config.json`](res/config.json). Most settings can be changed in the web app under Settings.
+
+| Setting | What it does |
+|---|---|
+| `server.port` | Web app and API port (8080) |
+| `jellyfin.enabled`, `jellyfin.port`, `jellyfin.host` | The Jellyfin-compatible API (on, 8096, all interfaces) |
+| `database` | `sqlite` with `storage` for the file, or `mariadb`/`mysql` with `host`, `username`, `password` and `database` |
+| `database.migrateOnStart` | Update the database schema when Oblecto starts (on) |
+| `movies.directories`, `tvshows.directories` | Library folders |
+| `themoviedb.key`, `tvdb.key`, `fanart.tv.key` | Metadata and artwork API keys |
+| `authentication.secret` | Signs sign-ins; `oblecto init` generates it |
+| `authentication.tokenLifetimeDays` | How long a web sign-in lasts (30) |
+| `authentication.profilePicker`, `localPasswordlessLogin`, `allowPasswordlessLogin` | Sign-in without typing a username or password on the local network (all off) |
+| `authentication.localSubnets`, `trustProxy` | What counts as the local network, and whether to trust `X-Forwarded-For` |
+| `server.corsOrigins` | Other web origins allowed to call the APIs from a browser (none) |
+| `logging` | Log `directory` (beside the config file), `level`, `maxSizeMB`, `maxFiles` |
+| `indexer.runAtBoot`, `cleaner.runAtBoot` | Scan the libraries, or clean up missing files, at every start (off) |
+
+Oblecto refuses to start without a config file or a signing secret, and says why.
+
+## Groups and permissions
+
+The first start creates two groups. **Administrators** may change settings, manage users and libraries, and run maintenance. **Users** may watch. Put people in groups on the Users settings page, or from the command line:
+
+```sh
+oblecto usergroup USERNAME Administrators
+```
+
+Oblecto will not delete or demote the last administrator.
+
+## Command line
+
+```
+oblecto start | start-tui            Run the server, or with a terminal dashboard
+oblecto init [--config-dir DIR]      Write a config, artwork folders and federation keys
+oblecto migrate [--status]           Update the database (also runs at start)
+oblecto adduser USERNAME - NAME EMAIL [GROUP]
+oblecto changepassword USERNAME
+oblecto removepassword USERNAME
+oblecto usergroup USERNAME GROUP
+oblecto deluser USERNAME
+```
+
+## Upgrading
+
+Back up your database, install the new version and start it. See [docs/UPGRADING.md](docs/UPGRADING.md) for what changes and what to check.
+
+## Development
+
+```sh
+git clone --recurse-submodules https://github.com/robinp7720/Oblecto.git
+cd Oblecto
+npm ci
+npm run build:web
+OBLECTO_CONFIG_PATH=/path/to/dev-config.json npm run dev
+npm run verify           # lint, typecheck and tests, as CI runs them
+```
+
+`npm run build` builds both web apps and the server into `dist/`. `npm run test:network` runs the tests that call the real metadata services; set `OBLECTO_TMDB_KEY`, `OBLECTO_TVDB_KEY` and `OBLECTO_FANART_KEY`. The Playwright suites run with `npm run test:player:ui` and `npm run test:playback:browser`.
+
+To run the web app from Vite's dev server against a local Oblecto, add its origin to `server.corsOrigins`.
+
+API references: [REST](docs/API.md), [realtime](docs/REALTIME_API.md), [streaming](docs/STREAMING.md), and [Jellyfin compatibility](docs/JELLYFIN.md).
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for what Oblecto protects, what it leaves public on purpose, and how to report a problem.
+
+## License
+
+AGPL-3.0-or-later. The bundled Jellyfin web client is GPL-2.0, from [jellyfin-web](https://github.com/jellyfin/jellyfin-web).
 
 ## Powered by
+
 <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg" height="150" title="TMDb API">&emsp;
 <img src="https://www.thetvdb.com/images/attribution/logo2.png" height="150" title="tvdb API">
