@@ -18,6 +18,7 @@ COPY --from=build /build/res ./res
 COPY --from=build /build/images ./images
 COPY --from=build /build/Oblecto-Web/dist ./Oblecto-Web/dist
 COPY docker/entrypoint.sh /usr/local/bin/oblecto-entrypoint
+RUN chmod +x /opt/oblecto/dist/bin/oblecto.js && ln -s /opt/oblecto/dist/bin/oblecto.js /usr/local/bin/oblecto
 
 # Configuration, the SQLite database, artwork and logs all live in this volume.
 RUN mkdir -p /etc/oblecto && chown node:node /etc/oblecto
