@@ -1,3 +1,4 @@
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
 import { Sequelize } from 'sequelize';
@@ -13,7 +14,7 @@ describe('Access tokens', () => {
     let user: User;
 
     before(async () => {
-        sequelize = new Sequelize({ dialect: 'sqlite', storage: ':memory:', logging: false });
+        sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
         User.init(userColumns, { sequelize, modelName: 'User' });
         Group.init(groupColumns, { sequelize, modelName: 'Group' });
         await sequelize.sync();

@@ -1,6 +1,7 @@
 import { Sequelize, Dialect, Options } from 'sequelize';
 import config from '../config.js';
 import logger from './logger/index.js';
+import nodeSqlite from './nodeSqlite.js';
 
 import { Episode, episodeColumns } from '../models/episode.js';
 import { EpisodeFiles, episodeFilesColumns } from '../models/episodeFiles.js';
@@ -114,6 +115,8 @@ export function initDatabase(): Sequelize {
         options.host = config.database.host || 'localhost';
     } else {
         options.storage = config.database.storage ?? DEFAULT_SQLITE_STORAGE;
+        // Node's built-in SQLite instead of the native sqlite3 package, which needs an install script
+        options.dialectModule = nodeSqlite;
     }
 
     sequelizeInstance = new Sequelize({

@@ -86,7 +86,7 @@ export class FramedPeer {
             this.socket.resume();
         }
     }
-    send(message: Message, bytes = Buffer.alloc(0)): Promise<void> {
+    send(message: Message, bytes: Buffer = Buffer.alloc(0)): Promise<void> {
         const header = Buffer.from(JSON.stringify(message));
         const prefix = Buffer.alloc(8);
         prefix.writeUInt32BE(4 + header.length + bytes.length, 0);

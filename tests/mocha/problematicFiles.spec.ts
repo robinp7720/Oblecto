@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'fs';
 import { Sequelize } from 'sequelize';
@@ -124,7 +125,7 @@ describe('Problematic files', function () {
         }) as typeof fs.access;
 
         sequelize = new Sequelize({
-            dialect: 'sqlite',
+            dialect: 'sqlite', dialectModule: nodeSqlite,
             storage: ':memory:',
             logging: false
         });

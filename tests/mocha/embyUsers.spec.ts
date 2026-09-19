@@ -1,5 +1,6 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { Sequelize } from 'sequelize';
 import usersRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/users/index.js';
@@ -58,7 +59,7 @@ describe('Emby users routes', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
         });
 
         // Initialize models

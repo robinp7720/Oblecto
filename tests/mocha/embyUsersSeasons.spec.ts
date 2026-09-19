@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import usersRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/users/index.js';
 import { Series } from '../../src/models/series.js';
@@ -49,7 +50,7 @@ describe('Emby users routes - seasons', () => {
     before(async () => {
         ownsSequelize = !Series.sequelize;
         sequelize = Series.sequelize || new Sequelize({
-            dialect: 'sqlite', storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
         });
         if (ownsSequelize) {
             Series.init(seriesColumns, { sequelize, modelName: 'Series' });

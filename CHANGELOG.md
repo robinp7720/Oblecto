@@ -29,6 +29,7 @@ Upgrading from 0.3? Read [docs/UPGRADING.md](docs/UPGRADING.md) first: everyone 
 
 ### Fixed
 
+- A global npm install could not open its SQLite database, because npm 12 skips the install step of the native sqlite3 package. SQLite now runs on Node's built-in `node:sqlite`, so nothing is compiled or downloaded at install time.
 - Artwork uploads failed for every poster, fanart and episode image.
 - A TVDB metadata refresh could write one episode's data into an unrelated episode.
 - `oblecto init database` failed on a new database with "duplicate column name".

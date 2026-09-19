@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
+import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { Sequelize } from 'sequelize';
 import sessionsRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/sessions/index.js';
@@ -50,7 +51,7 @@ describe('Emby sessions playing progress route', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
         });
 
         // Initialize models
