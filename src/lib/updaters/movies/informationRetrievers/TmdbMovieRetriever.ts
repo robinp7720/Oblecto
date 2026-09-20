@@ -1,3 +1,5 @@
+import promiseTimeout from '../../../../submodules/promiseTimeout.js';
+import { optionalMetadata, validCreditLists } from '../../common/optionalMetadata.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import type { Movie } from '../../../../models/movie.js';
 import type Oblecto from '../../../oblecto/index.js';
@@ -30,13 +32,14 @@ export default class TmdbMovieRetriever {
     async retrieveInformation(movie: MovieWithTmdb): Promise<Record<string, unknown>> {
         if (movie.tmdbid === null) throw new DebugExtendableError('No tmdbid attached to movie');
 
-        const [movieInfo, movieCredits] = await Promise.all([
-            this.oblecto.tmdb.movieInfo({ id: movie.tmdbid }),
-            this.oblecto.tmdb.movieCredits({ id: movie.tmdbid })
+        const [retrievedInfo, movieCredits] = await Promise.all([
+            optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.movieInfo({ id: movie.tmdbid! }, { timeout: 5000 })), `TMDB movie ${movie.id} metadata`),
+            optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.movieCredits({ id: movie.tmdbid! }, { timeout: 5000 })), `TMDB movie ${movie.id} credits`, validCreditLists)
         ]);
+        const movieInfo = retrievedInfo ?? {};
 
         const credits: RetrievedCredit[] = [
-            ...(movieCredits.cast ?? []).map((credit, index) => ({
+            ...(validCreditLists(movieCredits) ? movieCredits?.cast ?? [] : []).map((credit, index) => ({
                 tmdbid: credit.id ?? 0,
                 name: credit.name ?? '',
                 profilePath: credit.profile_path,
@@ -45,7 +48,7 @@ export default class TmdbMovieRetriever {
                 character: credit.character,
                 sortOrder: credit.order ?? index
             })),
-            ...(movieCredits.crew ?? []).map((credit, index) => ({
+            ...(validCreditLists(movieCredits) ? movieCredits?.crew ?? [] : []).map((credit, index) => ({
                 tmdbid: credit.id ?? 0,
                 name: credit.name ?? '',
                 profilePath: credit.profile_path,
@@ -74,12 +77,13 @@ export default class TmdbMovieRetriever {
 
             overview: movieInfo.overview,
             popularity: movieInfo.popularity,
+            siteRatingSource: 'tmdb',
             siteRating: movieInfo.vote_average,
             siteRatingCount: movieInfo.vote_count,
             releaseDate: movieInfo.release_date,
 
             _set: movieInfo.belongs_to_collection as MovieSetInfo | null,
-            _credits: credits
+            ...(validCreditLists(movieCredits) ? { _credits: credits } : {})
         };
 
         return data;

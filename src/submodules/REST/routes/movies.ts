@@ -1,3 +1,4 @@
+import { relatedTitles } from './helpers/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
@@ -360,6 +361,13 @@ export default (server: Express, oblecto: Oblecto) => {
         await saveArtwork(oblecto, firstUpload(req.files), 'fanart', size => oblecto.artworkUtils.movieFanartPath(movie, size));
 
         res.send(['success']);
+    });
+
+    server.get('/movie/:id/related', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const item = await Movie.findByPk(req.params.id as string);
+        if (!item) return res.status(404).send({ message: 'Movie not found' });
+        const items = await relatedTitles(Movie.sequelize!, 'movie', item.id, item.genres);
+        res.send({ items });
     });
 
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

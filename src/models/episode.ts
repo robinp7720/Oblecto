@@ -22,6 +22,7 @@ export class Episode extends Model<InferAttributes<Episode>, InferCreationAttrib
     declare firstAired: string | null;
     declare overview: string | null;
     declare runtime: number | null;
+    declare siteRatingSource: string | null;
     declare siteRating: number | null;
     declare siteRatingCount: number | null;
 
@@ -58,6 +59,7 @@ export const episodeColumns = {
     firstAired: { type: DataTypes.DATEONLY, allowNull: true },
     overview: { type: DataTypes.TEXT, allowNull: true },
     runtime: { type: DataTypes.INTEGER, allowNull: true },
+    siteRatingSource: { type: DataTypes.STRING, allowNull: true },
     siteRating: { type: DataTypes.DOUBLE, allowNull: true },
     siteRatingCount: { type: DataTypes.INTEGER, allowNull: true },
 

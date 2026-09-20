@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
-import type { Transaction } from 'sequelize';
+import { Op, type Transaction } from 'sequelize';
 import { Person } from '../../../models/person.js';
 import { MovieCredit } from '../../../models/movieCredit.js';
 import { SeriesCredit } from '../../../models/seriesCredit.js';
@@ -33,7 +33,7 @@ const mediaKey = {
 } as const;
 
 /** Atomically replace one title's credits after a successful provider response. */
-export async function syncCredits(mediaType: MediaType, mediaId: number, credits: RetrievedCredit[]): Promise<void> {
+export async function syncCredits(mediaType: MediaType, mediaId: number, credits: RetrievedCredit[], preserveCreators = false): Promise<void> {
     // The three models intentionally share a runtime shape; Sequelize's static union cannot express it.
     const model = creditModel[mediaType] as any;
     const sequelize = model.sequelize;
@@ -41,10 +41,16 @@ export async function syncCredits(mediaType: MediaType, mediaId: number, credits
     if (!sequelize) throw new Error('Credit models are not initialized');
 
     await sequelize.transaction(async (transaction: Transaction) => {
-        await model.destroy({ where: { [mediaKey[mediaType]]: mediaId }, transaction } as never);
+        const where = { [mediaKey[mediaType]]: mediaId, ...(preserveCreators ? { [Op.or]: [{ job: { [Op.ne]: 'Creator' } }, { job: null }] } : {}) };
+        await model.destroy({ where, transaction } as never);
 
+        const seen = new Set<string>();
         for (const credit of credits) {
-            if (!Number.isInteger(credit.tmdbid) || !credit.name) continue;
+            if (preserveCreators && credit.job === 'Creator') continue;
+            if (!Number.isInteger(credit.tmdbid) || credit.tmdbid <= 0 || !credit.name.trim()) continue;
+            const key = JSON.stringify([credit.tmdbid, credit.creditType, credit.character ?? null, credit.job ?? null, credit.department ?? null]);
+            if (seen.has(key)) continue;
+            seen.add(key);
 
             const [person] = await Person.findOrCreate({
                 where: { tmdbid: credit.tmdbid },

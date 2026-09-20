@@ -76,8 +76,10 @@ export default class SeriesUpdater {
         const credits = data._credits as RetrievedCredit[] | undefined;
         delete data._credits;
 
+        const preserveCreators = data._preserveCreators === true;
+        delete data._preserveCreators;
         await series.update(data);
-        if (credits) await syncCredits('series', series.id, credits);
+        if (credits) await syncCredits('series', series.id, credits, preserveCreators);
     }
 
     /**

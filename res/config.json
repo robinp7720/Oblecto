@@ -23,6 +23,7 @@
   },
   "assets": {
     "episodeBannerLocation": "/etc/oblecto/assets/episodeBanners/",
+    "showFanartLocation": "/etc/oblecto/assets/showFanart/",
     "showPosterLocation": "/etc/oblecto/assets/showPosters/",
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
     "movieFanartLocation": "/etc/oblecto/assets/movieFanart/",

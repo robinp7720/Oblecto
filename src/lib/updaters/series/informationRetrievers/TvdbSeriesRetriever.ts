@@ -42,6 +42,7 @@ export default class TvdbSeriesRetriever {
              
             overview: seriesInfo.overview,
              
+            siteRatingSource: 'tvdb',
             siteRating: seriesInfo.siteRating,
              
             siteRatingCount: seriesInfo.siteRatingCount,

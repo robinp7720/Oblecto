@@ -25,6 +25,7 @@ export interface IConfig {
     'assets': {
         'episodeBannerLocation': string,
         'showPosterLocation': string,
+        'showFanartLocation': string,
         'moviePosterLocation': string,
         'movieFanartLocation': string,
         'userAvatarLocation'?: string

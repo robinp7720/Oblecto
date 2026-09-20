@@ -1,3 +1,4 @@
+import { optionalMetadata, validCreditLists } from '../../common/optionalMetadata.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
@@ -29,13 +30,14 @@ export default class TmdbSeriesRetriever {
     async retrieveInformation(series: SeriesWithTmdb): Promise<Record<string, unknown>> {
         if (!series.tmdbid) throw new DebugExtendableError('No tmdbid attached to series');
 
-        const [seriesInfo, aggregateCredits] = await Promise.all([
-            promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid }, { timeout: 5000 })),
-            promiseTimeout(this.oblecto.tmdb.tvAggregateCredits({ id: series.tmdbid }, { timeout: 5000 }))
+        const [retrievedInfo, aggregateCredits] = await Promise.all([
+            optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.tvInfo({ id: series.tmdbid! }, { timeout: 5000 })), `TMDB series ${series.id} metadata`),
+            optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.tvAggregateCredits({ id: series.tmdbid! }, { timeout: 5000 })), `TMDB series ${series.id} credits`, validCreditLists)
         ]);
+        const seriesInfo = retrievedInfo ?? {};
 
         const credits: RetrievedCredit[] = [];
-        for (const credit of aggregateCredits.cast ?? []) {
+        for (const credit of validCreditLists(aggregateCredits) ? aggregateCredits?.cast ?? [] : []) {
             const roles = credit.roles?.length ? credit.roles : [{ character: credit.name, episode_count: credit.total_episode_count }];
             for (const role of roles) credits.push({
                 tmdbid: credit.id ?? 0,
@@ -48,7 +50,7 @@ export default class TmdbSeriesRetriever {
                 sortOrder: credit.order
             });
         }
-        for (const credit of aggregateCredits.crew ?? []) {
+        for (const credit of validCreditLists(aggregateCredits) ? aggregateCredits?.crew ?? [] : []) {
             const jobs = credit.jobs?.length ? credit.jobs : [];
             for (const job of jobs) credits.push({
                 tmdbid: credit.id ?? 0,
@@ -79,18 +81,19 @@ export default class TmdbSeriesRetriever {
             firstAired: seriesInfo.first_air_date,
             overview: seriesInfo.overview,
             popularity: seriesInfo.popularity,
+            siteRatingSource: 'tmdb',
             siteRating: seriesInfo.vote_average,
             siteRatingCount: seriesInfo.vote_count,
             genre: JSON.stringify((seriesInfo.genres ?? []).map(genre => genre.name)),
             runtime: seriesInfo.episode_run_time?.[0] ?? null,
             network: seriesInfo.networks?.[0]?.name ?? null,
-            _credits: credits
+            ...(validCreditLists(aggregateCredits) ? { _credits: credits, _preserveCreators: retrievedInfo === undefined } : {})
         };
 
         let externalIds: { tvdb_id?: number | null; imdb_id?: string | null } = {};
 
         if (!(series.tvdbid && series.imdbid)) {
-            externalIds = await promiseTimeout(this.oblecto.tmdb.tvExternalIds({ id: series.tmdbid }, { timeout: 5000 }));
+            externalIds = await optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.tvExternalIds({ id: series.tmdbid! }, { timeout: 5000 })), `TMDB series ${series.id} external IDs`) ?? {};
         }
 
         if (!series.tvdbid) {

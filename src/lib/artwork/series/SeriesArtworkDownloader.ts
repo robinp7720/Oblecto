@@ -1,3 +1,6 @@
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import Downloader from '../../downloader/index.js';
 import AggregateSeriesArtworkRetriever from './AggregateSeriesArtworkRetriever.js';
 import TmdbSeriesArtworkRetriever from './artworkRetrievers/TmdbSeriesArtworkRetriever.js';
 import TvdbSeriesArtworkRetriever from './artworkRetrievers/TvdbSeriesArtworkRetriever.js';
@@ -29,6 +32,7 @@ export default class SeriesArtworkDownloader {
 
         // Register task availability to Oblecto queue
         this.oblecto.queue.registerJob('downloadEpisodeBanner', (episode: Episode) => this.downloadEpisodeBanner(episode));
+        this.oblecto.queue.registerJob('downloadSeriesFanart', (series: Series) => this.downloadSeriesFanart(series));
         this.oblecto.queue.registerJob('downloadSeriesPoster', (series: Series) => this.downloadSeriesPoster(series));
     }
 
@@ -51,10 +55,22 @@ export default class SeriesArtworkDownloader {
         }
     }
 
-    /**
-     *
-     * @param series - Series for which to download a poster for
-     */
+    /** Download landscape artwork and queue the configured fanart sizes. */
+    async downloadSeriesFanart(series: Series): Promise<void> {
+        const urls = await new TmdbSeriesArtworkRetriever(this.oblecto).retrieveSeriesFanart(series);
+        if (!urls.length) return;
+        await mkdir(dirname(this.oblecto.artworkUtils.seriesFanartPath(series)), { recursive: true });
+        await Downloader.attemptDownload(urls, this.oblecto.artworkUtils.seriesFanartPath(series));
+        for (const [size, width] of Object.entries(this.oblecto.config.artwork.fanart)) {
+            await mkdir(dirname(this.oblecto.artworkUtils.seriesFanartPath(series, size)), { recursive: true });
+            this.oblecto.queue.pushJob('rescaleImage', {
+                from: this.oblecto.artworkUtils.seriesFanartPath(series),
+                to: this.oblecto.artworkUtils.seriesFanartPath(series, size),
+                width
+            } as RescaleJob);
+        }
+    }
+
     async downloadSeriesPoster(series: Series): Promise<void> {
         await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
 

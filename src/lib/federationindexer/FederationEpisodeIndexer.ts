@@ -77,5 +77,6 @@ export default class FederationEpisodeIndexer {
         if (!seriesInserted) return;
         await this.oblecto.seriesUpdateCollector.collectSeries(series);
         await this.oblecto.seriesArtworkCollector.collectArtworkSeriesPoster(series);
+        await this.oblecto.seriesArtworkCollector.collectArtworkSeriesFanart(series);
     }
 }

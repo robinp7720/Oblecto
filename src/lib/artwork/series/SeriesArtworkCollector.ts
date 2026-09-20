@@ -49,11 +49,17 @@ export default class SeriesArtworkCollector {
     /**
      *
      */
+    async collectArtworkSeriesFanart(series: Series): Promise<void> {
+        if (await fileExists(this.oblecto.artworkUtils.seriesFanartPath(series))) return;
+        this.oblecto.queue.queueJob('downloadSeriesFanart', series);
+    }
+
     async collectAllSeriesPosters(): Promise<void> {
         const allSeries = await Series.findAll();
 
         for (const series of allSeries) {
             await this.collectArtworkSeriesPoster(series);
+            await this.collectArtworkSeriesFanart(series);
         }
     }
 

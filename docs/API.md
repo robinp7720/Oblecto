@@ -602,3 +602,32 @@ Hides a problematic file from the default listing and from Retry All, e.g. sampl
 - **Method:** `PATCH`
 - **Body:** `{ "problemIgnored": true }`
 - **Response:** `{ "id": 42, "problemIgnored": true }`
+
+### Media detail metadata and related titles
+
+Movie, series, and episode metadata includes nullable `siteRatingSource` (`tmdb`,
+`tvdb`, or `null`) alongside `siteRating` and `siteRatingCount`. Scores and counts
+are refreshed together from a single provider. Existing scores have unknown
+provenance until refreshed; clients should label unknown sources “Community
+rating.” A missing count is `null`, not a count from a different provider.
+Automatic metadata refreshes preserve existing scalar values when a provider
+omits them. Optional credit and external-ID failures do not discard successful
+core metadata; failed or malformed credit responses preserve existing credits.
+
+`GET /movie/:id/related` and `GET /series/:id/related` require authentication and
+return `{ "items": [...] }` using media model/card fields, with at most 12 titles
+of the same media type already in the library. Ranking is shared public
+collections, shared credited people, then shared genres, each descending;
+ties use title then ID ascending. Results contain no ranking internals or
+other users’ watch histories. The current title is excluded. Movie collection
+members are excluded because the movie detail collection shelves already show
+them. Private collections do not contribute to ranking. Unknown titles return
+404; no matches return an empty `items` array. No external catalog is queried.
+
+`GET /series/:id/fanart` serves series landscape artwork and accepts the same
+`size` parameter as movie fanart (default `large`). Like other artwork routes,
+it is public for image clients. Unknown titles or unavailable image files return
+404. Clients should fall back to the series poster, then a plain background.
+Originals and resized variants use `assets.showFanartLocation` (default
+`/etc/oblecto/assets/showFanart/`) and existing `artwork.fanart` sizes. Missing
+artwork is collected on new-series indexing and normal artwork maintenance.

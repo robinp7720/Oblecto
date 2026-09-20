@@ -46,6 +46,23 @@ describe('Database migrations', () => {
         await sequelize.close();
     });
 
+    it('adds unknown rating provenance without rewriting existing scores', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const movie = await Movie.create({ movieName: 'Existing', siteRating: 8, siteRatingCount: 42 });
+            const query = sequelize.getQueryInterface();
+            for (const table of ['Movies', 'Series', 'Episodes']) await query.removeColumn(table, 'siteRatingSource');
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0007-rating-source'");
+            assert.deepEqual(await migrate(sequelize), ['0007-rating-source']);
+            await movie.reload();
+            assert.equal(movie.siteRating, 8);
+            assert.equal(movie.siteRatingCount, 42);
+            assert.equal(movie.siteRatingSource, null);
+            for (const table of ['Movies', 'Series', 'Episodes']) assert.ok((await columns(sequelize, table)).includes('siteRatingSource'));
+        } finally { await sequelize.close(); }
+    });
+
     it('does nothing the second time', async () => {
         const sequelize = await database();
 

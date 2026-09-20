@@ -22,6 +22,7 @@ export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes
     declare runtime: number | null;
 
     declare popularity: number | null;
+    declare siteRatingSource: string | null;
     declare siteRating: number | null;
     declare siteRatingCount: number | null;
 
@@ -56,6 +57,7 @@ export const movieColumns = {
     runtime: DataTypes.INTEGER,
 
     popularity: DataTypes.FLOAT,
+    siteRatingSource: DataTypes.STRING,
     siteRating: DataTypes.DOUBLE,
     siteRatingCount: DataTypes.INTEGER,
 

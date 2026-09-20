@@ -25,6 +25,13 @@ export default class ArtworkUtils {
         return `${this.oblecto.config.assets.showPosterLocation}/original/${series.id}.jpg`;
     }
 
+    seriesFanartPath(series: Series, size?: string): string {
+        const sizes = this.oblecto.config.artwork.fanart as Record<string, number>;
+        const variant = size && sizes[size] !== undefined ? size : 'original';
+
+        return `${this.oblecto.config.assets.showFanartLocation}/${variant}/${series.id}.jpg`;
+    }
+
     moviePosterPath(movie: Movie, size?: string): string {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         if (size !== undefined && size !== '' && (this.oblecto.config.artwork.poster as any)[size] !== undefined)

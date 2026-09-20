@@ -20,6 +20,7 @@ export class Series extends Model<InferAttributes<Series>, InferCreationAttribut
     declare rating: string | null;
     declare popularity: number | null;
 
+    declare siteRatingSource: string | null;
     declare siteRating: number | null;
     declare siteRatingCount: number | null;
 
@@ -59,6 +60,7 @@ export const seriesColumns = {
     rating: DataTypes.STRING,
     popularity: DataTypes.FLOAT,
 
+    siteRatingSource: DataTypes.STRING,
     siteRating: DataTypes.DOUBLE,
     siteRatingCount: DataTypes.INTEGER,
 

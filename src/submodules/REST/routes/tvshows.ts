@@ -1,3 +1,4 @@
+import { relatedTitles } from './helpers/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
 import { Op, literal, where } from 'sequelize';
@@ -347,6 +348,13 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
+    server.get('/series/:id/related', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const item = await Series.findByPk(req.params.id as string);
+        if (!item) return res.status(404).send({ message: 'Series not found' });
+        const items = await relatedTitles(Series.sequelize!, 'series', item.id, item.genre);
+        res.send({ items });
+    });
+
     server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
@@ -383,6 +391,12 @@ export default (server: Express, oblecto: Oblecto) => {
 
     // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
     // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
+    server.get('/series/:id/fanart', async function (req: OblectoRequest, res: Response) {
+        const show = await Series.findByPk(req.params.id as string);
+        if (!show) return res.status(404).send({ message: 'Series not found' });
+        res.sendFile(oblecto.artworkUtils.seriesFanartPath(show, (req.combined_params?.size as string) || 'large'));
+    });
+
     server.get('/series/:id/poster', async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 

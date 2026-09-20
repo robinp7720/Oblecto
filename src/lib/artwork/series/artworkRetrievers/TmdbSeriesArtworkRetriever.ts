@@ -42,11 +42,14 @@ export default class TmdbSeriesArtworkRetriever {
         return (stills as TmdbImage[]).map(image => `https://image.tmdb.org/t/p/original${image.file_path}`);
     }
 
-    /**
-     *
-     * @param series - Series for which to retrieve a poster for
-     * @returns - Array of banner urls
-     */
+    /** Return landscape backdrop candidates for this series. */
+    async retrieveSeriesFanart(series: Series): Promise<string[]> {
+        if (!series.tmdbid) throw new DebugExtendableError(`No TMDB ID for series ${series.id}`);
+        const { backdrops } = await promiseTimeout(this.oblecto.tmdb.tvImages({ id: series.tmdbid }));
+
+        return (backdrops ?? []).flatMap(image => image.file_path ? [`https://image.tmdb.org/t/p/original${image.file_path}`] : []);
+    }
+
     async retrieveSeriesPoster(series: Series): Promise<string[]> {
         if (series.tmdbid === null || series.tmdbid === undefined) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
          

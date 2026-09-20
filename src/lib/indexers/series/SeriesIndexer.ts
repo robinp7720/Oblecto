@@ -135,6 +135,7 @@ export default class SeriesIndexer {
 });
             this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.queueJob('downloadSeriesPoster', series);
+            this.oblecto.queue.queueJob('downloadSeriesFanart', series);
         }
 
         return series;

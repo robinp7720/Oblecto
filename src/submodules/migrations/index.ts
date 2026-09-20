@@ -185,6 +185,14 @@ export const MIGRATIONS: Migration[] = [
             await createCredits('SeriesCredits', 'seriesId', 'Series', true);
             await createCredits('EpisodeCredits', 'episodeId', 'Episodes');
         }
+    },
+    {
+        name: '0007-rating-source',
+        up: async ({ queryInterface }) => {
+            for (const table of ['Movies', 'Series', 'Episodes']) {
+                await addColumnIfMissing(queryInterface, table, 'siteRatingSource', optional(DataTypes.STRING));
+            }
+        }
     }
 ];
 

@@ -1,3 +1,4 @@
+import { optionalMetadata, validCreditLists } from '../../common/optionalMetadata.js';
 import logger from '../../../../submodules/logger/index.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
@@ -36,7 +37,7 @@ export default class TmdbEpisodeRetriever {
         logger.debug(`Episode information for ${episode.episodeName} retrieved from tmdb`);
 
         const credits: RetrievedCredit[] = [
-            ...(episodeInfo.guest_stars ?? []).map((credit, index) => ({
+            ...(validCreditLists(episodeInfo, 'guest_stars') ? episodeInfo.guest_stars ?? [] : []).map((credit, index) => ({
                 tmdbid: credit.id ?? 0,
                 name: credit.name ?? '',
                 profilePath: credit.profile_path,
@@ -44,7 +45,7 @@ export default class TmdbEpisodeRetriever {
                 character: credit.character,
                 sortOrder: credit.order ?? index
             })),
-            ...(episodeInfo.crew ?? []).map((credit, index) => ({
+            ...(validCreditLists(episodeInfo, 'guest_stars') ? episodeInfo.crew ?? [] : []).map((credit, index) => ({
                 tmdbid: credit.id ?? 0,
                 name: credit.name ?? '',
                 profilePath: credit.profile_path,
@@ -63,9 +64,10 @@ export default class TmdbEpisodeRetriever {
             overview: episodeInfo.overview,
             firstAired: episodeInfo.air_date,
             runtime: episodeInfo.runtime,
+            siteRatingSource: 'tmdb',
             siteRating: episodeInfo.vote_average,
             siteRatingCount: episodeInfo.vote_count,
-            _credits: credits
+            ...(validCreditLists(episodeInfo, 'guest_stars') ? { _credits: credits } : {})
         };
 
         let externalIds: { tvdb_id?: number | null; imdb_id?: string | null } = {};
@@ -73,11 +75,11 @@ export default class TmdbEpisodeRetriever {
         if (!(episode.tvdbid && episode.imdbid)) {
             logger.debug(`External ids for ${episode.episodeName} missing`);
 
-            externalIds = await promiseTimeout(this.oblecto.tmdb.episodeExternalIds({
-                id: series.tmdbid,
+            externalIds = await optionalMetadata(() => promiseTimeout(this.oblecto.tmdb.episodeExternalIds({
+                id: series.tmdbid!,
                 season_number: Number(episode.airedSeason),
                 episode_number: Number(episode.airedEpisodeNumber)
-            }, { timeout: 5000 }));
+            }, { timeout: 5000 })), `TMDB episode ${episode.id} external IDs`) ?? {};
 
             logger.debug(`External ids for ${episode.episodeName} retrieved`);
         }

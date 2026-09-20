@@ -50,7 +50,7 @@ test.describe('@desktop browsing', () => {
       if (url.pathname.includes('/search/new')) { await reply(route, url.pathname.startsWith('/movies/') ? [{ ...movie, movieName: 'New result' }] : []); return true }
       return false
     })
-    await expect.poll(() => held.length).toBe(3)
+    await expect.poll(() => held.length).toBe(4)
     await page.getByRole('searchbox', { name: 'Search all media' }).fill('new')
     await page.getByRole('button', { name: 'Search', exact: true }).click()
     await expect(page.getByText('1 result', { exact: true })).toBeVisible()
@@ -59,7 +59,7 @@ test.describe('@desktop browsing', () => {
     await expect(page.getByRole('link', { name: 'New result', exact: true })).toBeVisible()
     await page.getByRole('searchbox', { name: 'Search all media' }).fill('old')
     await page.getByRole('button', { name: 'Search', exact: true }).click()
-    await expect.poll(() => held.length).toBe(3)
+    await expect.poll(() => held.length).toBe(4)
     await page.getByRole('searchbox', { name: 'Search all media' }).fill('')
     await page.getByRole('button', { name: 'Search', exact: true }).click()
     for (const route of held) await reply(route, [movie])
