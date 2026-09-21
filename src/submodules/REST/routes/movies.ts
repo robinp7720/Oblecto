@@ -367,7 +367,15 @@ export default (server: Express, oblecto: Oblecto) => {
         const item = await Movie.findByPk(req.params.id as string);
         if (!item) return res.status(404).send({ message: 'Movie not found' });
         const items = await relatedTitles(Movie.sequelize!, 'movie', item.id, item.genres);
-        res.send({ items });
+        const ids = items.map(candidate => Number(candidate.id)).filter(Number.isSafeInteger);
+        const tracks = ids.length ? await TrackMovie.findAll({ where: { movieId: { [Op.in]: ids }, userId: req.authorization!.user.id } }) : [];
+        const byMovie = new Map(tracks.map(track => [Number(track.movieId), track.toJSON()]));
+        res.send({
+            items: items.map(candidate => ({
+                ...candidate,
+                TrackMovies: byMovie.has(Number(candidate.id)) ? [byMovie.get(Number(candidate.id))] : []
+            }))
+        });
     });
 
     server.get('/movie/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

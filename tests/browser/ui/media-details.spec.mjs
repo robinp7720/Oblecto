@@ -64,7 +64,9 @@ test('@desktop @phone series suggests the latest unfinished episode and falls ba
   await expect(page.locator('.detail-subtitle')).toContainText('Community rating 7')
   await expect.poll(() => imageRequests.includes('/series/1/fanart') && imageRequests.includes('/series/1/poster')).toBe(true)
   await expect(page.locator('.detail-backdrop')).toHaveCount(0)
-  await page.getByLabel('Select season').selectOption('1')
+  const seasonButton = page.getByRole('button', { name: /Season 1.*watched/ })
+  if (await seasonButton.isVisible()) await seasonButton.click()
+  else await page.getByLabel('Select season').selectOption('1')
   await expect(page.getByRole('link', { name: 'Old episode', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Resume S2 E1', exact: true })).toBeVisible()
   await page.evaluate(async () => {
@@ -76,6 +78,44 @@ test('@desktop @phone series suggests the latest unfinished episode and falls ba
   await expect(page.getByRole('button', { name: 'Resume S1 E1', exact: true })).toBeVisible()
   await expect(page.getByLabel('Select season')).toHaveValue('1')
 
+})
+
+test('@desktop @phone movie explains recommendations and summarizes playable media', async ({ page }) => {
+  await boot(page, '/movie/1', async (route, url) => {
+    if (url.pathname === '/movie/1/info') {
+      await reply(route, { ...movie, Files: [{ id: 1, Streams: [
+        { codec_type: 'video', width: 3840, color_transfer: 'smpte2084' },
+        { codec_type: 'audio', channels: 6, tags_language: 'eng' }
+      ] }] }); return true
+    }
+    if (url.pathname === '/movie/1/sets') { await reply(route, []); return true }
+    if (url.pathname === '/movie/1/related') {
+      await reply(route, { items: [{ ...movie, id: 2, movieName: 'Connected title', relationship: { sharedPeople: [{ id: 4, name: 'Amy Adams' }] } }] }); return true
+    }
+    return false
+  })
+  await expect(page.getByText('4K', { exact: true })).toBeVisible()
+  await expect(page.getByText('HDR10', { exact: true })).toBeVisible()
+  await expect(page.getByText('With Amy Adams', { exact: true })).toBeVisible()
+})
+
+test('@desktop @phone episode shows season context and adjacent navigation', async ({ page }) => {
+  await boot(page, '/episode/2', async (route, url) => {
+    if (url.pathname === '/episode/2/info') {
+      await reply(route, { id: 2, episodeName: 'Middle', airedSeason: '1', airedEpisodeNumber: '2', Series: { id: 8, seriesName: 'Show' }, Files: [] }); return true
+    }
+    if (url.pathname === '/episode/2/context') {
+      await reply(route, {
+        previous: { id: 1, episodeName: 'Before', airedSeason: '1', airedEpisodeNumber: '1' },
+        next: { id: 3, episodeName: 'After', airedSeason: '1', airedEpisodeNumber: '3' },
+        season: { number: '1', position: 2, episodeCount: 8, watchedCount: 1, runtimeMinutes: 360, averageRating: 8.2 }
+      }); return true
+    }
+    return false
+  })
+  await expect(page.getByText(/Season 1 · Episode 2 of 8/)).toBeVisible()
+  await expect(page.getByRole('link', { name: /Previous.*Before/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Next.*After/ })).toBeVisible()
 })
 
 test('@desktop detail navigation discards stale collections and related-title responses', async ({ page }) => {

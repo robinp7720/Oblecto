@@ -5,7 +5,8 @@ import AggregateUpdateRetriever from '../../src/lib/common/AggregateUpdateRetrie
 import TmdbMovieRetriever from '../../src/lib/updaters/movies/informationRetrievers/TmdbMovieRetriever.js';
 import TmdbSeriesRetriever from '../../src/lib/updaters/series/informationRetrievers/TmdbSeriesRetriever.js';
 import { relatedTitles } from '../../src/submodules/REST/routes/helpers/related.js';
-import { nextSeriesEpisode, ratingLabel } from '../../Oblecto-Web/src/utils/media.js';
+import { buildEpisodeContext } from '../../src/submodules/REST/routes/helpers/episodeContext.js';
+import { libraryConnectionLabel, mediaCapabilities, nextSeriesEpisode, ratingLabel, relationshipLabel, seasonSummary } from '../../Oblecto-Web/src/utils/media.js';
 
 async function merge(...responses: Record<string, unknown>[]) {
     const aggregate = new AggregateUpdateRetriever();
@@ -97,6 +98,40 @@ describe('Detail playback decisions', () => {
         assert.equal(ratingLabel({ siteRating: 8 }), 'Community rating 8');
         assert.equal(ratingLabel({ siteRating: 8, siteRatingSource: 'tvdb' }), 'TVDB 8');
     });
+    it('summarizes seasons, discovery relationships, connections and media streams', () => {
+        const episodes = [
+            { runtime: 40, siteRating: 8, TrackEpisodes: [{ progress: 1 }] },
+            { runtime: 50, siteRating: 7, TrackEpisodes: [{ progress: 0.4 }] }
+        ];
+        assert.deepEqual(seasonSummary(episodes), { episodeCount: 2, watchedCount: 1, runtimeMinutes: 90, averageRating: 7.5 });
+        assert.equal(relationshipLabel({ sharedPeople: [{ name: 'Actor' }, { name: 'Writer' }] }), 'With Actor +1');
+        assert.equal(libraryConnectionLabel({ movies: 1, series: 2 }), 'Also in 1 movie and 2 shows');
+        assert.deepEqual(mediaCapabilities([{ Streams: [
+            { codec_type: 'video', width: 3840, color_transfer: 'smpte2084' },
+            { codec_type: 'audio', channels: 6, tags_language: 'eng' },
+            { codec_type: 'subtitle', tags_language: 'deu' }
+        ] }]), ['4K', 'HDR10', '5.1 audio', 'Audio · ENG', 'Subtitles · DEU']);
+    });
+});
+
+describe('Episode detail context', () => {
+    const episode = (id: number, season: string, number: string, progress = 0) => ({
+        id, airedSeason: season, airedEpisodeNumber: number, runtime: 45, siteRating: id + 5,
+        TrackEpisodes: [{ progress }]
+    });
+    it('orders numeric episode numbers and crosses regular season boundaries', () => {
+        const context = buildEpisodeContext([
+            episode(3, '2', '1'), episode(2, '1', '10'), episode(1, '1', '2', 1), episode(4, '0', '1')
+        ], 2) as any;
+        assert.equal(context.previous.id, 1);
+        assert.equal(context.next.id, 3);
+        assert.deepEqual(context.season, { number: '1', position: 2, episodeCount: 2, watchedCount: 1, runtimeMinutes: 90, averageRating: 6.5 });
+    });
+    it('keeps specials in their own sequence', () => {
+        const context = buildEpisodeContext([episode(1, '1', '1'), episode(2, '0', '1'), episode(3, '0', '2')], 2) as any;
+        assert.equal(context.previous, null);
+        assert.equal(context.next.id, 3);
+    });
 });
 
 describe('Library related titles', () => {
@@ -107,9 +142,10 @@ describe('Library related titles', () => {
             const movie = type === 'Movie';
             db.define(type, { id: { type: DataTypes.INTEGER, primaryKey: true }, [movie ? 'movieName' : 'seriesName']: DataTypes.STRING, [movie ? 'genres' : 'genre']: DataTypes.STRING }, { timestamps: false, tableName: movie ? 'Movies' : 'Series' });
             db.define(`${type}Credit`, { [movie ? 'movieId' : 'seriesId']: DataTypes.INTEGER, personId: DataTypes.INTEGER }, { timestamps: false });
-            db.define(`${type}Set`, { public: DataTypes.BOOLEAN }, { timestamps: false });
+            db.define(`${type}Set`, { public: DataTypes.BOOLEAN, setName: DataTypes.STRING }, { timestamps: false });
             db.define(`${type}SetAllocation`, { [`${type}Id`]: DataTypes.INTEGER, [`${type}SetId`]: DataTypes.INTEGER }, { timestamps: false });
         }
+        db.define('Person', { id: { type: DataTypes.INTEGER, primaryKey: true }, name: DataTypes.STRING }, { timestamps: false });
         await db.sync();
     });
     afterEach(async () => db.close());
@@ -119,12 +155,16 @@ describe('Library related titles', () => {
             { id: 2, seriesName: 'Collection' }, { id: 3, seriesName: 'Person' },
             { id: 4, seriesName: 'Genre', genre: 'Comedy, Drama' }, { id: 5, seriesName: 'Private' }
         ]);
-        await db.models.SeriesSet.bulkCreate([{ id: 1, public: true }, { id: 2, public: false }]);
+        await db.models.SeriesSet.bulkCreate([{ id: 1, public: true, setName: 'Public set' }, { id: 2, public: false, setName: 'Secret set' }]);
         await db.models.SeriesSetAllocation.bulkCreate([{ SeriesId: 1, SeriesSetId: 1 }, { SeriesId: 2, SeriesSetId: 1 }, { SeriesId: 1, SeriesSetId: 2 }, { SeriesId: 5, SeriesSetId: 2 }]);
+        await db.models.Person.create({ id: 7, name: 'Shared person' });
         await db.models.SeriesCredit.bulkCreate([{ seriesId: 1, personId: 7 }, { seriesId: 3, personId: 7 }, { seriesId: 3, personId: 7 }]);
         const items = await relatedTitles(db, 'series', 1, '["Drama"]');
         assert.deepEqual(items.map(item => item.id), [2, 3, 4]);
         assert.equal(items[0]._collections, undefined);
+        assert.deepEqual((items[0].relationship as any).sharedCollections, [{ id: 1, name: 'Public set' }]);
+        assert.deepEqual((items[1].relationship as any).sharedPeople, [{ id: 7, name: 'Shared person' }]);
+        assert.deepEqual((items[2].relationship as any).sharedGenres, ['Drama']);
     });
     it('excludes current and already shelved collection movies; caps results deterministically', async () => {
         await db.models.Movie.bulkCreate(Array.from({ length: 16 }, (_, id) => ({ id: id + 1, movieName: 'Same', genres: '["Drama"]' })));

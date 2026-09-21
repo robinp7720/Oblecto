@@ -16,6 +16,7 @@ import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
+import { buildEpisodeContext } from './helpers/episodeContext.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -110,6 +111,23 @@ export default (server: Express, oblecto: Oblecto) => {
 
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
         res.send({ ...episode.toJSON(), credits: await creditsFor('episode', episode.id, Episode.sequelize) });
+    });
+
+    server.get('/episode/:id/context', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const current = await Episode.findByPk(req.params.id as string);
+        if (!current) return res.status(404).send({ message: 'Episode not found' });
+        const episodes = await Episode.findAll({
+            where: { SeriesId: current.SeriesId },
+            include: [
+                {
+                    model: TrackEpisode,
+                    required: false,
+                    where: { userId: req.authorization!.user.id }
+                }
+            ]
+        });
+        const context = buildEpisodeContext(episodes.map(episode => episode.toJSON()), current.id);
+        res.send(context);
     });
 
     // Endpoint to retrieve the episode next in series based on the local episode ID

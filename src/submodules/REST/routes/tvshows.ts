@@ -329,7 +329,7 @@ export default (server: Express, oblecto: Oblecto) => {
     server.get('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
         const series: any = await Series.findByPk(req.params.id as string, {
             attributes: [],
-            include: [{ model: SeriesSet }]
+            include: [{ model: SeriesSet, include: [{ model: Series }] }]
         });
 
         res.send(series ? series.SeriesSets : []);

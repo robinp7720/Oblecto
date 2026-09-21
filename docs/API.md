@@ -92,7 +92,7 @@ Retrieve detailed information about a specific movie.
 
 - **URL:** `/movie/:id/info`
 - **Method:** `GET`
-- **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles.
+- **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
 - **Response:** Movie object with `Files` and `TrackMovie` (user progress) included.
 
 ### Search Movies
@@ -157,12 +157,17 @@ Get a paginated list of TV shows.
 ### Get Series Info
 - **URL:** `/series/:id/info`
 - **Method:** `GET`
-- **Response:** Series details, audience score fields, and aggregate `credits.cast` / `credits.crew` arrays. Series credits may include `episodeCount`.
+- **Response:** Series details, audience score fields, and aggregate `credits.cast` / `credits.crew` arrays. Series credits may include `episodeCount`. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
 
 ### List Episodes in Series
 - **URL:** `/series/:id/episodes`
 - **Method:** `GET`
 - **Response:** Array of Episode objects, ordered by season and episode number.
+
+### Get Sets for Series
+- **URL:** `/series/:id/sets`
+- **Method:** `GET`
+- **Response:** Sets containing the series. Each set includes its member titles in `Series`.
 
 ### Series Poster
 - **URL:** `/series/:id/poster`
@@ -190,7 +195,12 @@ Get a paginated list of episodes from all series.
 ### Get Episode Info
 - **URL:** `/episode/:id/info`
 - **Method:** `GET`
-- **Response:** Episode details, files and streams, runtime, audience score fields, guest cast, and episode crew.
+- **Response:** Episode details, files and streams, runtime, audience score fields, guest cast, and episode crew. Every credit includes `libraryConnections: { movies, series }`, excluding the current parent series.
+
+### Get Episode Context
+- **URL:** `/episode/:id/context`
+- **Method:** `GET`
+- **Response:** `{ previous, next, season }`, where adjacent episode summaries include current-user tracking and `season` contains `number`, `position`, `episodeCount`, `watchedCount`, `runtimeMinutes`, and `averageRating`. Regular episodes cross season boundaries in numeric order; specials remain in their own sequence.
 
 ### Get Next Episode
 Get the next episode in the series relative to the given episode ID.
@@ -619,7 +629,9 @@ return `{ "items": [...] }` using media model/card fields, with at most 12 title
 of the same media type already in the library. Ranking is shared public
 collections, shared credited people, then shared genres, each descending;
 ties use title then ID ascending. Results contain no ranking internals or
-other users’ watch histories. The current title is excluded. Movie collection
+other users’ watch histories. Every item includes `relationship` with capped
+`sharedCollections`, `sharedPeople`, and `sharedGenres` arrays; movie items also
+include the requesting user's `TrackMovies` entry when present. The current title is excluded. Movie collection
 members are excluded because the movie detail collection shelves already show
 them. Private collections do not contribute to ranking. Unknown titles return
 404; no matches return an empty `items` array. No external catalog is queried.

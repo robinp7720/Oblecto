@@ -46,5 +46,53 @@ export async function relatedTitles(sequelize: Sequelize, type: 'movie' | 'serie
     ) ranked WHERE ${q('_collections')} > 0 OR ${q('_people')} > 0 OR ${q('_genres')} > 0
     ORDER BY ${q('_collections')} DESC, ${q('_people')} DESC, ${q('_genres')} DESC, ${title} ASC, ${q('id')} ASC LIMIT 12`, {replacements: { id, visible: true }, type: QueryTypes.SELECT});
 
-    return rows.map(({ _collections: _c, _people: _p, _genres: _g, ...item }) => item);
+    const sourceGenres = new Set(genresFrom(genres).map(value => value.toLocaleLowerCase()));
+    const candidateIds = rows.map(row => Number(row.id)).filter(Number.isSafeInteger);
+    const sharedPeople = new Map<number, Array<{ id: number; name: string }>>();
+    const sharedCollections = new Map<number, Array<{ id: number; name: string }>>();
+
+    // Only the twelve selected candidates are expanded. These are deliberately
+    // batched so richer recommendation explanations do not become an N+1 query.
+    if (candidateIds.length && Object.hasOwn(sequelize.models, 'Person')) {
+        const people = q('People');
+        const personRows = await sequelize.query<{ candidateId: number; id: number; name: string }>(`SELECT DISTINCT c.${mediaKey} AS ${q('candidateId')}, p.${q('id')} AS ${q('id')}, p.${q('name')} AS ${q('name')}
+            FROM ${credits} c JOIN ${credits} d ON c.${q('personId')} = d.${q('personId')}
+            JOIN ${people} p ON p.${q('id')} = c.${q('personId')}
+            WHERE d.${mediaKey} = :id AND c.${mediaKey} IN (:candidateIds)
+            ORDER BY p.${q('name')} ASC`, { replacements: { id, candidateIds }, type: QueryTypes.SELECT });
+        for (const person of personRows) {
+            const list = sharedPeople.get(Number(person.candidateId)) ?? [];
+            if (list.length < 3) list.push({ id: Number(person.id), name: String(person.name) });
+            sharedPeople.set(Number(person.candidateId), list);
+        }
+    }
+
+    const setModel = sequelize.models[movie ? 'MovieSet' : 'SeriesSet'];
+    if (candidateIds.length && setModel !== undefined && Object.hasOwn(setModel.rawAttributes, 'setName')) {
+        const collectionRows = await sequelize.query<{ candidateId: number; id: number; name: string }>(`SELECT DISTINCT a.${allocationMedia} AS ${q('candidateId')}, s.${q('id')} AS ${q('id')}, s.${q('setName')} AS ${q('name')}
+            FROM ${allocations} a JOIN ${allocations} b ON a.${allocationSet} = b.${allocationSet}
+            JOIN ${sets} s ON s.${q('id')} = a.${allocationSet}
+            WHERE b.${allocationMedia} = :id AND a.${allocationMedia} IN (:candidateIds) AND s.${q('public')} = :visible
+            ORDER BY s.${q('setName')} ASC`, {
+                replacements: {
+                    id, candidateIds, visible: true
+                },
+                type: QueryTypes.SELECT
+            });
+        for (const collection of collectionRows) {
+            const list = sharedCollections.get(Number(collection.candidateId)) ?? [];
+            if (list.length < 2) list.push({ id: Number(collection.id), name: String(collection.name) });
+            sharedCollections.set(Number(collection.candidateId), list);
+        }
+    }
+
+    return rows.map(({ _collections: _c, _people: _p, _genres: _g, ...item }) => ({
+        ...item,
+        relationship: {
+            sharedCollections: sharedCollections.get(Number(item.id)) ?? [],
+            sharedPeople: sharedPeople.get(Number(item.id)) ?? [],
+            sharedGenres: genresFrom(item[movie ? 'genres' : 'genre'])
+                .filter(value => sourceGenres.has(value.toLocaleLowerCase())).slice(0, 3)
+        }
+    }));
 }
