@@ -6,7 +6,7 @@ import TmdbMovieRetriever from '../../src/lib/updaters/movies/informationRetriev
 import TmdbSeriesRetriever from '../../src/lib/updaters/series/informationRetrievers/TmdbSeriesRetriever.js';
 import { relatedTitles } from '../../src/submodules/REST/routes/helpers/related.js';
 import { buildEpisodeContext } from '../../src/submodules/REST/routes/helpers/episodeContext.js';
-import { libraryConnectionLabel, mediaCapabilities, nextSeriesEpisode, ratingLabel, relationshipLabel, seasonSummary } from '../../Oblecto-Web/src/utils/media.js';
+import { libraryConnectionLabel, mediaCapabilities, nextSeriesEpisode, playbackLabel, ratingLabel, relationshipLabel, seasonSummary } from '../../Oblecto-Web/src/utils/media.js';
 
 async function merge(...responses: Record<string, unknown>[]) {
     const aggregate = new AggregateUpdateRetriever();
@@ -97,6 +97,10 @@ describe('Detail playback decisions', () => {
     it('does not invent rating provenance', () => {
         assert.equal(ratingLabel({ siteRating: 8 }), 'Community rating 8');
         assert.equal(ratingLabel({ siteRating: 8, siteRatingSource: 'tvdb' }), 'TVDB 8');
+    });
+    it('offers completed items as an intentional replay', () => {
+        assert.equal(playbackLabel('movie', { TrackMovies: [{ progress: 1, time: 0 }] }), 'Watch again');
+        assert.equal(playbackLabel('episode', { TrackEpisodes: [{ progress: 0, time: 0 }] }), 'Play');
     });
     it('summarizes seasons, discovery relationships, connections and media streams', () => {
         const episodes = [

@@ -20,6 +20,7 @@ import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
+import { setPlayed } from '../../../lib/playback/progress.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -387,6 +388,26 @@ export default (server: Express, oblecto: Oblecto) => {
         });
 
         res.send(show);
+    });
+
+    server.put('/series/:id/seasons/:season/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.watched !== 'boolean') return res.status(400).send({ message: 'watched must be a boolean' });
+        const watched: boolean = req.body.watched;
+        const series = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!series) return res.status(404).send({ message: 'Series not found' });
+        const episodes = await Episode.findAll({
+            attributes: ['id'],
+            where: { SeriesId: series.id, airedSeason: String(req.params.season) }
+        });
+        if (!episodes.length) return res.status(404).send({ message: 'Season not found' });
+        const userId = Number(req.authorization!.user.id);
+        await Promise.all(episodes.map(episode => setPlayed(userId, 'episode', episode.id, watched)));
+        const tracks = await TrackEpisode.findAll({ where: { userId, episodeId: { [Op.in]: episodes.map(episode => episode.id) } } });
+        const byEpisode = new Map(tracks.map(track => [Number(track.episodeId), track.toJSON()]));
+        res.send({
+            watched,
+            episodes: episodes.map(episode => ({ id: episode.id, track: byEpisode.get(episode.id) }))
+        });
     });
 
     // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which

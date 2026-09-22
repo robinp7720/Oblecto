@@ -17,6 +17,7 @@ import upload from '../middleware/upload.js';
 import { containsText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
 import { buildEpisodeContext } from './helpers/episodeContext.js';
+import { setPlayed } from '../../../lib/playback/progress.js';
 
 export default (server: Express, oblecto: Oblecto) => {
     // Endpoint to get a list of episodes from all series
@@ -111,6 +112,17 @@ export default (server: Express, oblecto: Oblecto) => {
 
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
         res.send({ ...episode.toJSON(), credits: await creditsFor('episode', episode.id, Episode.sequelize) });
+    });
+
+    server.put('/episode/:id/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.watched !== 'boolean') return res.status(400).send({ message: 'watched must be a boolean' });
+        const watched: boolean = req.body.watched;
+        const episode = await Episode.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!episode) return res.status(404).send({ message: 'Episode not found' });
+        const userId = Number(req.authorization!.user.id);
+        await setPlayed(userId, 'episode', episode.id, watched);
+        const track = await TrackEpisode.findOne({ where: { userId, episodeId: episode.id } });
+        res.send({ watched, track });
     });
 
     server.get('/episode/:id/context', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

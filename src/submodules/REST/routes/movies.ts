@@ -20,6 +20,7 @@ import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
+import { setPlayed } from '../../../lib/playback/progress.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -395,6 +396,17 @@ export default (server: Express, oblecto: Oblecto) => {
 
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
         res.send({ ...movie.toJSON(), credits: await creditsFor('movie', movie.id, Movie.sequelize) });
+    });
+
+    server.put('/movie/:id/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.watched !== 'boolean') return res.status(400).send({ message: 'watched must be a boolean' });
+        const watched: boolean = req.body.watched;
+        const movie = await Movie.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!movie) return res.status(404).send({ message: 'Movie not found' });
+        const userId = Number(req.authorization!.user.id);
+        await setPlayed(userId, 'movie', movie.id, watched);
+        const track = await TrackMovie.findOne({ where: { userId, movieId: movie.id } });
+        res.send({ watched, track });
     });
 
     server.get('/movie/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

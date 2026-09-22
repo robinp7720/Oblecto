@@ -93,7 +93,12 @@ Retrieve detailed information about a specific movie.
 - **URL:** `/movie/:id/info`
 - **Method:** `GET`
 - **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
-- **Response:** Movie object with `Files` and `TrackMovie` (user progress) included.
+
+### Set Movie Watched State
+- **URL:** `/movie/:id/watched`
+- **Method:** `PUT`
+- **Body:** `{ "watched": true }`
+- **Response:** `{ "watched": true, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }`. Setting `watched` to false clears the resume position and writes progress `0`.
 
 ### Search Movies
 Search for movies by name.
@@ -164,6 +169,12 @@ Get a paginated list of TV shows.
 - **Method:** `GET`
 - **Response:** Array of Episode objects, ordered by season and episode number.
 
+### Set Season Watched State
+- **URL:** `/series/:id/seasons/:season/watched`
+- **Method:** `PUT`
+- **Body:** `{ "watched": true }`
+- **Response:** `{ "watched": true, "episodes": [{ "id": 1, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }] }`. Only episodes with the exact aired-season value are changed.
+
 ### Get Sets for Series
 - **URL:** `/series/:id/sets`
 - **Method:** `GET`
@@ -196,6 +207,12 @@ Get a paginated list of episodes from all series.
 - **URL:** `/episode/:id/info`
 - **Method:** `GET`
 - **Response:** Episode details, files and streams, runtime, audience score fields, guest cast, and episode crew. Every credit includes `libraryConnections: { movies, series }`, excluding the current parent series.
+
+### Set Episode Watched State
+- **URL:** `/episode/:id/watched`
+- **Method:** `PUT`
+- **Body:** `{ "watched": true }`
+- **Response:** `{ "watched": true, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }`. Setting `watched` to false clears the resume position and writes progress `0`.
 
 ### Get Episode Context
 - **URL:** `/episode/:id/context`

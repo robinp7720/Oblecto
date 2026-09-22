@@ -60,13 +60,12 @@ test('@desktop @phone series suggests the latest unfinished episode and falls ba
     return false
   })
   await expect(page.getByRole('button', { name: 'Resume S2 E1', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Select season')).toHaveValue('2')
+  await expect(page.getByRole('heading', { name: 'Season 1', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Season 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Specials', exact: true })).toBeVisible()
   await expect(page.locator('.detail-subtitle')).toContainText('Community rating 7')
   await expect.poll(() => imageRequests.includes('/series/1/fanart') && imageRequests.includes('/series/1/poster')).toBe(true)
   await expect(page.locator('.detail-backdrop')).toHaveCount(0)
-  const seasonButton = page.getByRole('button', { name: /Season 1.*watched/ })
-  if (await seasonButton.isVisible()) await seasonButton.click()
-  else await page.getByLabel('Select season').selectOption('1')
   await expect(page.getByRole('link', { name: 'Old episode', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Resume S2 E1', exact: true })).toBeVisible()
   await page.evaluate(async () => {
@@ -76,27 +75,125 @@ test('@desktop @phone series suggests the latest unfinished episode and falls ba
     } }])
   })
   await expect(page.getByRole('button', { name: 'Resume S1 E1', exact: true })).toBeVisible()
-  await expect(page.getByLabel('Select season')).toHaveValue('1')
+  await expect(page.getByRole('region', { name: 'Season 2', exact: true }).getByText('1 episode · 1 watched')).toBeVisible()
 
 })
 
 test('@desktop @phone movie explains recommendations and summarizes playable media', async ({ page }) => {
+  let watchedBody
   await boot(page, '/movie/1', async (route, url) => {
     if (url.pathname === '/movie/1/info') {
-      await reply(route, { ...movie, Files: [{ id: 1, Streams: [
+      await reply(route, {
+        ...movie,
+        TrackMovies: [{ progress: 1, time: 0 }],
+        credits: { cast: Array.from({ length: 11 }, (_, index) => ({ person: { id: index + 10, name: `Person ${index + 1}` }, character: 'Character' })), crew: [] },
+        Files: [{ id: 1, Streams: [
         { codec_type: 'video', width: 3840, color_transfer: 'smpte2084' },
         { codec_type: 'audio', channels: 6, tags_language: 'eng' }
-      ] }] }); return true
+        ] }]
+      }); return true
     }
     if (url.pathname === '/movie/1/sets') { await reply(route, []); return true }
     if (url.pathname === '/movie/1/related') {
       await reply(route, { items: [{ ...movie, id: 2, movieName: 'Connected title', relationship: { sharedPeople: [{ id: 4, name: 'Amy Adams' }] } }] }); return true
     }
+    if (url.pathname === '/movie/1/watched' && route.request().method() === 'PUT') {
+      watchedBody = route.request().postDataJSON()
+      await reply(route, { watched: false, track: { progress: 0, time: 0 } }); return true
+    }
     return false
   })
   await expect(page.getByText('4K', { exact: true })).toBeVisible()
   await expect(page.getByText('HDR10', { exact: true })).toBeVisible()
-  await expect(page.getByText('With Amy Adams', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'With Amy Adams', exact: true })).toHaveAttribute('href', '/person/4')
+  await expect(page.getByRole('button', { name: 'Watch again', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Mark unwatched', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Mark watched', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Person 11/ })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Show all 11', exact: true }).click()
+  await expect(page.getByRole('link', { name: /Person 11/ })).toBeVisible()
+  expect(watchedBody).toEqual({ watched: false })
+})
+
+test('@desktop @phone series filters every season from URL state and changes watch status on the card', async ({ page }) => {
+  const watchBodies = []
+  await boot(page, '/series/1?season=1&q=Return&watched=watched', async (route, url) => {
+    if (url.pathname === '/series/1/info') { await reply(route, { id: 1, seriesName: 'Searchable show' }); return true }
+    if (url.pathname === '/series/1/episodes') {
+      await reply(route, [
+        { id: 1, episodeName: 'Pilot', overview: 'The story starts.', airedSeason: '1', airedEpisodeNumber: '1', TrackEpisodes: [] },
+        { id: 2, episodeName: 'The Return', overview: 'Back together.', airedSeason: '2', airedEpisodeNumber: '1', TrackEpisodes: [{ progress: 1, time: 0 }] }
+      ]); return true
+    }
+    if (url.pathname === '/episode/1/watched' && route.request().method() === 'PUT') {
+      watchBodies.push(route.request().postDataJSON())
+      if (watchBodies.length === 1) await reply(route, {}, 503)
+      else await reply(route, { watched: true, track: { progress: 1, time: 0 } })
+      return true
+    }
+    return false
+  })
+  await expect(page.getByLabel('Watch state')).toHaveValue('watched')
+  await expect(page.getByRole('link', { name: 'The Return', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Pilot', exact: true })).toHaveCount(0)
+  await expect(page.getByText('1 match across all seasons', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Clear', exact: true }).click()
+  await expect(page).toHaveURL(/season=1/)
+  await expect(page).not.toHaveURL(/(?:\?|&)q=/)
+  await expect(page).not.toHaveURL(/(?:\?|&)watched=/)
+  await expect(page.getByRole('link', { name: 'Pilot', exact: true })).toBeVisible()
+  const pilot = page.getByRole('article').filter({ has: page.getByRole('link', { name: 'Pilot', exact: true }) })
+  await pilot.getByRole('button', { name: 'Mark Pilot watched', exact: true }).click()
+  await expect(pilot.getByRole('status')).toBeVisible()
+  await expect(pilot.getByRole('button', { name: 'Mark Pilot watched', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await pilot.getByRole('button', { name: 'Mark Pilot watched', exact: true }).click()
+  await expect(pilot.getByRole('button', { name: 'Mark Pilot unwatched', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('region', { name: 'Season 1', exact: true }).getByText('1 episode · 1 watched')).toBeVisible()
+  expect(watchBodies).toEqual([{ watched: true }, { watched: true }])
+})
+
+test('@desktop @phone all season shelves scroll independently and season links reveal the requested row', async ({ page }, testInfo) => {
+  await boot(page, '/series/1?season=2', async (route, url) => {
+    if (url.pathname === '/series/1/info') {
+      await reply(route, { id: 1, seriesName: 'The Long Way Home', overview: 'A small crew follows a mysterious signal beyond the edge of the known world.', genre: '["Drama", "Adventure"]', network: 'Oblecto' }); return true
+    }
+    if (url.pathname === '/series/1/episodes') {
+      await reply(route, [1, 2, 0].flatMap(season => Array.from({ length: season === 0 ? 2 : 8 }, (_, index) => ({
+        id: season * 10 + index + 1, episodeName: ['The Signal', 'Open Water', 'A Familiar Voice', 'The Crossing', 'After the Storm', 'On the Horizon', 'A Place to Stay', 'Home Again'][index],
+        airedSeason: String(season), airedEpisodeNumber: String(index + 1), runtime: 42,
+        overview: 'An unexpected discovery sends the crew in a new direction. Old promises begin to surface.',
+        TrackEpisodes: index === 0 ? [{ progress: 1, time: 0 }] : []
+      })))); return true
+    }
+    return false
+  })
+  const first = page.getByRole('region', { name: 'Season 1', exact: true })
+  const second = page.getByRole('region', { name: 'Season 2', exact: true })
+  await expect(second.getByRole('heading')).toBeInViewport()
+  await expect.poll(async () => {
+    const heading = await second.getByRole('heading').boundingBox()
+    const header = await page.locator('.shell-header').boundingBox()
+    return heading.y >= header.y + header.height
+  }).toBe(true)
+  await expect(first.getByRole('article')).toHaveCount(8)
+  await expect(second.getByRole('article')).toHaveCount(8)
+  await expect(page.getByRole('region', { name: 'Specials', exact: true }).getByRole('article')).toHaveCount(2)
+  await expect(page.getByLabel('Watch state')).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Mark season watched' })).toHaveCount(0)
+  await second.getByRole('button', { name: 'More episodes in Season 2', exact: true }).click()
+  await expect.poll(() => second.locator('.track').evaluate(el => el.scrollLeft)).toBeGreaterThan(100)
+  expect(await first.locator('.track').evaluate(el => el.scrollLeft)).toBeLessThanOrEqual(2)
+  await second.locator('.track').focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect.poll(() => second.locator('.track').evaluate(el => el.scrollLeft)).toBeLessThanOrEqual(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await second.getByRole('heading').click()
+  await page.screenshot({ path: testInfo.outputPath('season-shelves.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Find an episode', exact: true }).click()
+  await page.getByLabel('Find an episode', { exact: true }).fill('S02E05')
+  await expect(page.getByText('1 match across all seasons', { exact: true })).toBeVisible()
+  await expect(second.getByRole('link', { name: 'After the Storm', exact: true })).toBeVisible()
 })
 
 test('@desktop @phone episode shows season context and adjacent navigation', async ({ page }) => {
@@ -116,6 +213,7 @@ test('@desktop @phone episode shows season context and adjacent navigation', asy
   await expect(page.getByText(/Season 1 · Episode 2 of 8/)).toBeVisible()
   await expect(page.getByRole('link', { name: /Previous.*Before/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Next.*After/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'All episodes', exact: true })).toHaveAttribute('href', '/series/8?season=1')
 })
 
 test('@desktop detail navigation discards stale collections and related-title responses', async ({ page }) => {
