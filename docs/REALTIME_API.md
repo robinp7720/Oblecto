@@ -137,10 +137,10 @@ socket.on("remote:command", ({ from, command }, ack) => {
 
 ### Server → Client: `indexer`
 
-Emitted when new content is added or identified in the library.
+Emitted when content is added, identified, or its metadata finishes updating in the library. Clients coalesce these events and refresh current lists and detail resources without discarding filters or loaded pages. On reconnect, clients refetch those resources to recover missed events.
 
 ```json
-{ "event": "added", "type": "series" | "episode" | "movie", "id": "string" }
+{ "event": "added" | "updated" | "artwork", "type": "series" | "episode" | "movie", "id": 42 }
 ```
 
 It is also emitted when a file is flagged as problematic, or when its problem clears after a successful retry or rescan:
@@ -154,6 +154,20 @@ It is also emitted when a file is flagged as problematic, or when its problem cl
   "error": "Could not identify: /media/Movies/zzqx.mkv (TmdbMovie: ...)"
 }
 ```
+
+### Server → Client: `media:progress`
+
+Sent after playback progress or a manual watched/unwatched change is persisted, including changes made by Jellyfin-compatible clients. Only sockets authenticated as the affected user receive it. No subscription is required.
+
+```json
+{
+  "type": "episode",
+  "id": 42,
+  "track": { "time": 600, "progress": 0.25, "updatedAt": "2026-09-22T12:00:00.000Z" }
+}
+```
+
+`type` is `movie` or `episode`. Manual watched changes use time `0` and progress `1` or `0`. Clients merge by timestamp, update visible cards immediately, and refresh Continue Watching, Next Up, and watched filters when membership changes. Live device snapshots still provide playback positions between saves; they do not persist progress.
 
 ### Server → Client: `seedbox`
 

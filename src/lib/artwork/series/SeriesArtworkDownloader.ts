@@ -42,6 +42,9 @@ export default class SeriesArtworkDownloader {
      */
     async downloadEpisodeBanner(episode: Episode): Promise<void> {
         await this.seriesArtworkRetriever.retrieveEpisodeBanner(episode);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'artwork', type: 'episode', id: episode.id
+        });
 
         logger.debug( `Banner for ${episode.episodeName} downloaded`);
 
@@ -61,6 +64,9 @@ export default class SeriesArtworkDownloader {
         if (!urls.length) return;
         await mkdir(dirname(this.oblecto.artworkUtils.seriesFanartPath(series)), { recursive: true });
         await Downloader.attemptDownload(urls, this.oblecto.artworkUtils.seriesFanartPath(series));
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'artwork', type: 'series', id: series.id
+        });
         for (const [size, width] of Object.entries(this.oblecto.config.artwork.fanart)) {
             await mkdir(dirname(this.oblecto.artworkUtils.seriesFanartPath(series, size)), { recursive: true });
             this.oblecto.queue.pushJob('rescaleImage', {
@@ -73,6 +79,9 @@ export default class SeriesArtworkDownloader {
 
     async downloadSeriesPoster(series: Series): Promise<void> {
         await this.seriesArtworkRetriever.retrieveSeriesPoster(series);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'artwork', type: 'series', id: series.id
+        });
 
         logger.debug( `Poster for ${series.seriesName} downloaded`);
 

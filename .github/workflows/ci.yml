@@ -81,6 +81,7 @@ jobs:
 
       - run: npm ci
       - run: npm ci --prefix Oblecto-Web
+      - run: npm run test:build --prefix Oblecto-Web
       - run: npm run lint --prefix Oblecto-Web
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --project=chromium --project=player-desktop --project=player-phone

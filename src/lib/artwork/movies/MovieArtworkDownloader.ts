@@ -35,6 +35,9 @@ export default class MovieArtworkDownloader {
 
     async downloadMoviePoster(movie: Movie): Promise<void> {
         await this.movieArtworkRetriever.retrievePoster(movie);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'artwork', type: 'movie', id: movie.id
+        });
 
         logger.debug( `Poster for ${movie.movieName} downloaded`);
 
@@ -50,6 +53,9 @@ export default class MovieArtworkDownloader {
 
     async downloadMovieFanart(movie: Movie): Promise<void> {
         await this.movieArtworkRetriever.retrieveFanart(movie);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'artwork', type: 'movie', id: movie.id
+        });
 
         logger.debug( `Fanart for ${movie.movieName} downloaded`);
 

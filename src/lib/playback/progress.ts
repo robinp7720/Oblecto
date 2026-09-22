@@ -1,6 +1,15 @@
 import type { Model } from 'sequelize';
+import { EventEmitter } from 'node:events';
 import { TrackMovie } from '../../models/trackMovie.js';
 import { TrackEpisode } from '../../models/trackEpisode.js';
+
+export type ProgressChange = {
+    type: 'movie' | 'episode';
+    id: number;
+    track: { time: number; progress: number; updatedAt: string };
+};
+/** Emitted only after a successful database write; the realtime controller scopes delivery by user. */
+export const progressEvents = new EventEmitter();
 /** Serialize writes for each viewer/item so slower database writes cannot restore stale positions. */
 const pending = new Map<string, Promise<void>>();
 export async function saveProgress(
@@ -28,7 +37,7 @@ async function writeProgress(
     values: { time: number; progress: number }
 ): Promise<void> {
     const key = `${userId}:${type}:${itemId}`;
-    const save = async () => {
+    const save = async (): Promise<void> => {
         const [track, created] =
             type === 'movie'
                 ? await TrackMovie.findOrCreate({
@@ -48,6 +57,9 @@ async function writeProgress(
                       }
                   });
         if (!created) await (track as Model).update(values);
+        progressEvents.emit('saved', userId, {
+            type, id: itemId, track: { ...values, updatedAt: track.updatedAt.toISOString() }
+        } satisfies ProgressChange);
     };
     const promise = (pending.get(key) ?? Promise.resolve())
         .catch(() => {})

@@ -4,6 +4,8 @@ import { EventEmitter } from 'node:events';
 import DeviceRegistry from '../../src/lib/realtime/DeviceRegistry.js';
 import RealtimeClient from '../../src/lib/realtime/RealtimeClient.js';
 import RealtimeController from '../../src/lib/realtime/RealtimeController.js';
+import { progressEvents } from '../../src/lib/playback/progress.js';
+import { createServer } from 'node:http';
 
 import type { Socket } from 'socket.io';
 import type Oblecto from '../../src/lib/oblecto/index.js';
@@ -20,6 +22,30 @@ function fakeSocket(id: string): FakeSocket {
 }
 
 describe('Realtime shutdown', () => {
+    it('delivers persisted progress only to the owning user and unsubscribes on shutdown', async () => {
+        const server = createServer();
+        const listeners = progressEvents.listenerCount('saved');
+        const controller = new RealtimeController({ oblectoAPI: { server } } as Oblecto);
+        const received: Array<[number, unknown]> = [];
+        for (const [index, userId] of [1, 1, 2].entries()) {
+            const socket = fakeSocket(`socket-${index}`);
+            socket.on('media:progress', change => received.push([userId, change]));
+            controller.clients[socket.id] = new RealtimeClient(
+                controller.oblecto, controller, socket as unknown as Socket, { id: userId },
+                { deviceId: `device-${index}`, name: 'Test', capabilities: ['control'] }
+            );
+        }
+        const change = { type: 'movie', id: 4, track: { time: 0, progress: 1, updatedAt: new Date().toISOString() } };
+        try {
+            progressEvents.emit('saved', 1, change);
+            assert.deepEqual(received, [[1, change], [1, change]]);
+        } finally {
+            await controller.close();
+        }
+        assert.equal(progressEvents.listenerCount('saved'), listeners);
+        progressEvents.emit('saved', 1, change);
+        assert.equal(received.length, 2);
+    });
     it('disconnects every device and empties the registry before closing the server', async () => {
         const controller = Object.create(RealtimeController.prototype) as RealtimeController;
 

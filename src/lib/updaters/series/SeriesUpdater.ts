@@ -80,6 +80,9 @@ export default class SeriesUpdater {
         delete data._preserveCreators;
         await series.update(data);
         if (credits) await syncCredits('series', series.id, credits, preserveCreators);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'updated', type: 'series', id: series.id
+        });
     }
 
     /**
@@ -93,5 +96,8 @@ export default class SeriesUpdater {
 
         await episode.update(data);
         if (credits) await syncCredits('episode', episode.id, credits);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'updated', type: 'episode', id: episode.id
+        });
     }
 }

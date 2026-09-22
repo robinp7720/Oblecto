@@ -5,6 +5,7 @@ import logger from '../../submodules/logger/index.js';
 import RealtimeClient from './RealtimeClient.js';
 import DeviceRegistry from './DeviceRegistry.js';
 import { parseDeviceIdentity } from './types.js';
+import { progressEvents, type ProgressChange } from '../playback/progress.js';
 
 import type { Socket } from 'socket.io';
 import type { AuthUser } from './RealtimeClient.js';
@@ -34,6 +35,13 @@ export default class RealtimeController {
     public clients: Record<string, RealtimeClient>;
     public registry: DeviceRegistry<Socket>;
     public server: Server;
+    private unsubscribeProgress?: () => void;
+
+    publishProgress(userId: number, change: ProgressChange): void {
+        for (const client of Object.values(this.clients)) {
+            if (client.user.id === userId) client.socket.emit('media:progress', change);
+        }
+    }
 
     /**
      *
@@ -70,6 +78,9 @@ export default class RealtimeController {
         // subscription state to fall out of sync on reconnect.
         this.registry.on('changed', (userId: number) => this.publishDevices(userId));
         this.registry.on('state', (userId: number) => this.publishDevices(userId));
+        const onProgress = this.publishProgress.bind(this);
+        progressEvents.on('saved', onProgress);
+        this.unsubscribeProgress = () => { progressEvents.off('saved', onProgress); };
     }
 
     /**
@@ -205,6 +216,7 @@ export default class RealtimeController {
     }
 
     async close(): Promise<void> {
+        this.unsubscribeProgress?.();
         await Promise.all(Object.values(this.clients).map(client => client.disconnect()));
         this.registry.clear();
         await new Promise<void>((resolve, reject) => {

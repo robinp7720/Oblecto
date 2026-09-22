@@ -112,15 +112,16 @@ async function boot (page, options) {
   }, API)
   await page.goto('/')
   await page.waitForFunction(() => !!document.querySelector('#app')?.__vue_app__)
-  await page.evaluate(() => {
-    window.__store = document.querySelector('#app').__vue_app__.config.globalProperties.$store
+  await page.evaluate(async () => {
+    const { useAppStore } = await import('/src/stores/app.js')
+    window.__store = useAppStore()
   })
   return errors
 }
 
 async function play (page) {
   await page.evaluate(episode => {
-    window.__store.commit('setPlaying', { title: episode.episodeName, type: 'episode', entity: episode })
+    window.__store.setPlaying({ title: episode.episodeName, type: 'episode', entity: episode })
   }, EPISODE)
   await page.waitForSelector('.player-root video')
   await page.waitForFunction(() => {

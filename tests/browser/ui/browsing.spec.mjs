@@ -175,7 +175,7 @@ test('@desktop resume labels match the player completion threshold', async ({ pa
     return true
   })
   await expect(page.getByRole('button', { name: 'Resume · 80 min left In progress', exact: true })).toHaveCount(1)
-  await expect(page.getByRole('button', { name: 'Play Completed', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Watch again Completed', exact: true })).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Resume Unknown duration', exact: true })).toHaveCount(1)
 })
 
@@ -232,8 +232,8 @@ test('@desktop @phone split play button separates playback from device selection
     const { applyDevices } = await import('/src/remote/state.js')
     applyDevices([{ deviceId: 'tv', name: 'Living Room', capabilities: ['playback'], state: { status: 'idle' } }])
     window.playActions = []
-    const store = document.querySelector('#app').__vue_app__.config.globalProperties.$store
-    store.dispatch = async (...args) => { window.playActions.push(args) }
+    const { useAppStore } = await import('/src/stores/app.js')
+    useAppStore().playMovie = async id => { window.playActions.push(['playMovie', id]) }
   })
   const picker = page.getByRole('combobox', { name: 'Playback device', exact: true })
   await picker.selectOption('tv')

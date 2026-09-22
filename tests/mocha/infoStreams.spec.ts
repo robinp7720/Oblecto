@@ -14,6 +14,7 @@ import { MovieFiles, movieFileColumns } from '../../src/models/movieFiles.js';
 import { EpisodeFiles, episodeFilesColumns } from '../../src/models/episodeFiles.js';
 import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
+import { progressEvents, setPlayed, type ProgressChange } from '../../src/lib/playback/progress.js';
 
 const makeServer = () => {
     const handlers = new Map();
@@ -145,6 +146,26 @@ describe('Media info routes include stream metadata', () => {
             params: { id: '1' }, body: { watched: true }, authorization: { user: { id: 1 } }
         }, episodeRes);
         assert.equal(episodeRes.body.track.progress, 1);
+    });
+
+    it('publishes only successfully persisted watch changes with a timestamp', async () => {
+        const changes: Array<{ userId: number; change: ProgressChange }> = [];
+        const listener = (userId: number, change: ProgressChange) => changes.push({ userId, change });
+        progressEvents.on('saved', listener);
+        try {
+            await setPlayed(1, 'movie', 1, false);
+            assert.equal(changes.length, 1);
+            assert.equal(changes[0].userId, 1);
+            assert.equal(changes[0].change.track.progress, 0);
+            const track = await TrackMovie.findOne({ where: { userId: 1, movieId: 1 } });
+            assert.equal(changes[0].change.track.updatedAt, track?.updatedAt.toISOString());
+            TrackMovie.addHook('beforeUpdate', 'reject-watch', () => { throw new Error('write failed'); });
+            await assert.rejects(setPlayed(1, 'movie', 1, true), /write failed/);
+            assert.equal(changes.length, 1);
+        } finally {
+            TrackMovie.removeHook('beforeUpdate', 'reject-watch');
+            progressEvents.off('saved', listener);
+        }
     });
 
     it('validates watched bodies and updates only the requested season', async () => {

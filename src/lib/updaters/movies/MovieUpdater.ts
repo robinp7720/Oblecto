@@ -82,5 +82,8 @@ export default class MovieUpdater {
 
         await movie.update(data as Parameters<Movie['update']>[0]);
         if (credits) await syncCredits('movie', movie.id, credits);
+        this.oblecto.realTimeController?.broadcast('indexer', {
+            event: 'updated', type: 'movie', id: movie.id
+        });
     }
 }
