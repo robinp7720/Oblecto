@@ -530,7 +530,7 @@ Get list of available identifiers and updaters.
 
 ### Active Sessions
 
-`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
+`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `file.name`, `file.extension` (the file name without its directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
 
 ### Connected Clients
 Get the authenticated user's connected realtime devices. Scoped to the caller — there is no role system to gate an all-users view on, and an unfiltered listing was an enumeration oracle for other people's devices. `user` carries the id and nothing else.
