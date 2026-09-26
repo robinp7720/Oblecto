@@ -261,7 +261,7 @@ test.describe('@desktop player', () => {
 
     // Switching a track re-opens the session and re-attaches the element, which
     // resets rate and volume unless they are explicitly re-applied.
-    await page.click('button[role="radio"]:has-text("DEU")')
+    await page.click('button[role="radio"]:has-text("German")')
     await page.waitForFunction(() => document.querySelector('.player-root video').readyState >= 2, { timeout: 20000 })
 
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').playbackRate), { timeout: 8000 })
