@@ -73,7 +73,7 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 |---|---|
 | `server.port` | Web app and API port (8080) |
 | `jellyfin.enabled`, `jellyfin.port`, `jellyfin.host` | The Jellyfin-compatible API (on, 8096, all interfaces) |
-| `jellyfin.serverName`, `jellyfin.loginDisclaimer`, `jellyfin.customCss` | What Jellyfin apps call the server (Oblecto), text under their sign-in form, and extra CSS for the Jellyfin web client. Administrators can also change these from a Jellyfin app's dashboard |
+| `jellyfin.serverName`, `jellyfin.loginDisclaimer`, `jellyfin.customCss` | What Jellyfin apps call the server (Oblecto), text under their sign-in form, and extra CSS for the Jellyfin web client. Settings → Jellyfin apps in the web app edits these and the three above; administrators can also change the first three from a Jellyfin app's dashboard |
 | `database` | `sqlite` with `storage` for the file, or `mariadb`/`mysql` with `host`, `username`, `password` and `database` |
 | `database.migrateOnStart` | Update the database schema when Oblecto starts (on) |
 | `movies.directories`, `tvshows.directories` | Library folders |

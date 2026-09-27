@@ -9,7 +9,8 @@ const config = () => ({
   artwork: Object.fromEntries(['poster', 'fanart', 'banner'].map(key => [key, { small: 100, medium: 300, large: 800 }])),
   themoviedb: { key: 'saved-key' }, tvdb: { key: '' }, 'fanart.tv': { key: '' },
   movies: { directories: [{ path: '/movies' }], movieIdentifiers: [], movieUpdaters: [] },
-  tvshows: { directories: [], seriesIdentifiers: [], episodeIdentifiers: [], seriesUpdaters: [], episodeUpdaters: [] }
+  tvshows: { directories: [], seriesIdentifiers: [], episodeIdentifiers: [], seriesUpdaters: [], episodeUpdaters: [] },
+  jellyfin: { enabled: true, port: 8096, host: '0.0.0.0', serverName: 'Oblecto', loginDisclaimer: '', customCss: '' }
 })
 async function boot (page, path, handle = () => false) {
   await page.route('**oblecto.test/**', async route => {
@@ -99,6 +100,30 @@ test.describe('@desktop settings', () => {
     await page.locator('.settings-search-results').getByRole('link', { name: 'Series identifiers', exact: true }).click()
     await expect(page.locator('#setting-tvshows-seriesIdentifiers')).toBeFocused()
     await expect(page.locator('details[open]')).toHaveCount(1)
+  })
+  test('edits how Jellyfin apps reach and show the server', async ({ page }) => {
+    const bodies = []
+    await boot(page, '/settings/jellyfin', async route => {
+      if (route.request().method() !== 'PATCH') return false
+      bodies.push(route.request().postDataJSON()); await reply(route, config()); return true
+    })
+    const name = page.getByLabel('Server name')
+    await expect(name).toHaveValue('Oblecto')
+    // A switch saves at once, and only itself
+    await page.getByLabel('Let Jellyfin apps connect').uncheck()
+    await expect.poll(() => bodies.length).toBe(1)
+    expect(bodies[0]).toEqual({ jellyfin: { enabled: false } })
+    // Text is checked on leaving the field and saved with Save changes
+    await name.fill('   '); await name.blur()
+    await expect(name).toHaveAttribute('aria-invalid', 'true')
+    await name.fill('Den'); await name.blur()
+    await page.getByLabel('Text under the sign-in form').fill('Family only.')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect.poll(() => bodies.length).toBe(2)
+    expect(bodies[1]).toEqual({ jellyfin: { serverName: 'Den', loginDisclaimer: 'Family only.' } })
+    await page.getByRole('searchbox', { name: 'Find a setting' }).fill('jellyfin css')
+    await page.locator('.settings-search-results').getByRole('link', { name: 'Custom CSS for the Jellyfin web client', exact: true }).click()
+    await expect(page.locator('#setting-jellyfin-customCss')).toBeFocused()
   })
   test('masks provider keys and tests saved credentials', async ({ page }) => {
     await boot(page, '/settings/metadata', async (route, url) => {
