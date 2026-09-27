@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
-import { promises as fs } from 'fs';
 import { Express, Response } from 'express';
 import authMiddleWare from '../middleware/auth.js';
 import type Oblecto from '../../../lib/oblecto/index.js';
@@ -13,36 +12,8 @@ import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 import { TrackMovie } from '../../../models/trackMovie.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
-import Downloader from '../../../lib/downloader/index.js';
-import logger from '../../logger/index.js';
+import { enrichPerson, personProfileFile, PROFILE_SIZES, type ProfileSize } from '../../../lib/people/index.js';
 import { containsText } from '../../../lib/common/textSearch.js';
-
-const DETAIL_TTL = 30 * 24 * 60 * 60 * 1000;
-const imageSize = {
-    small: 'w185',
-    medium: 'w342',
-    large: 'h632'
-} as const;
-
-async function enrichPerson(oblecto: Oblecto, person: Person): Promise<void> {
-    if (person.metadataUpdatedAt && Date.now() - person.metadataUpdatedAt.getTime() < DETAIL_TTL) return;
-
-    try {
-        const data = await oblecto.tmdb.personInfo({ id: person.tmdbid });
-        await person.update({
-            name: data.name || person.name,
-            biography: data.biography || null,
-            birthday: data.birthday || null,
-            deathday: data.deathday || null,
-            placeOfBirth: data.place_of_birth || null,
-            knownForDepartment: data.known_for_department || person.knownForDepartment,
-            profilePath: data.profile_path || person.profilePath,
-            metadataUpdatedAt: new Date()
-        });
-    } catch (error) {
-        logger.warn(`Could not refresh metadata for person ${person.id}`, error);
-    }
-}
 
 function groupCredits(rows: Array<Record<string, any>>, mediaKey: string): unknown[] {
     const grouped = new Map<number, { item: unknown; roles: Array<Record<string, unknown>> }>();
@@ -131,21 +102,10 @@ export default (server: Express, oblecto: Oblecto): void => {
         if (!person?.profilePath) return res.status(404).send({ message: 'Profile image not found' });
 
         const requested = String(req.combined_params?.size || 'medium');
-        const size = requested in imageSize ? requested as keyof typeof imageSize : 'medium';
-        const path = oblecto.artworkUtils.personProfilePath(person, size);
+        const size = requested in PROFILE_SIZES ? requested as ProfileSize : 'medium';
+        const path = await personProfileFile(oblecto, person, size);
 
-        try {
-            await fs.access(path);
-        } catch {
-            await fs.mkdir(oblecto.config.assets.personProfileLocation, { recursive: true });
-            try {
-                await Downloader.download(`https://image.tmdb.org/t/p/${imageSize[size]}${person.profilePath}`, path);
-            } catch (error) {
-                // A concurrent request may have filled the cache while this download was in flight.
-                await fs.access(path).catch(() => { throw error; });
-            }
-        }
-
+        if (!path) return res.status(404).send({ message: 'Profile image not found' });
         res.sendFile(path);
     });
 };

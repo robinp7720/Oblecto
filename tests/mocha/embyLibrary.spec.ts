@@ -19,7 +19,11 @@ import { Person, personColumns } from '../../src/models/person.js';
 import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
-import { formatId } from '../../src/lib/embyEmulation/helpers.js';
+import { MovieSet, movieSetColumns } from '../../src/models/movieSet.js';
+import { SeriesSet, seriesSetColumns } from '../../src/models/seriesSet.js';
+import artistsRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/artists/index.js';
+import libraryRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/library/index.js';
+import { formatId, genreId } from '../../src/lib/embyEmulation/helpers.js';
 
 // A route table the handlers register into, and a response that records what they send.
 const makeServer = () => {
@@ -75,6 +79,8 @@ describe('Jellyfin library browsing', () => {
         MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
         SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
         EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
+        MovieSet.init(movieSetColumns, { sequelize, modelName: 'MovieSet' });
+        SeriesSet.init(seriesSetColumns, { sequelize, modelName: 'SeriesSet' });
 
         Episode.belongsTo(Series);
         Series.hasMany(Episode);
@@ -91,6 +97,11 @@ describe('Jellyfin library browsing', () => {
         MovieCredit.belongsTo(Person, { foreignKey: 'personId' });
         SeriesCredit.belongsTo(Person, { foreignKey: 'personId' });
         EpisodeCredit.belongsTo(Person, { foreignKey: 'personId' });
+        MovieSet.belongsToMany(Movie, { through: 'MovieSetAllocations' });
+        MovieSet.belongsToMany(User, { through: 'MovieSetUsers' });
+        Movie.belongsToMany(MovieSet, { through: 'MovieSetAllocations' });
+        SeriesSet.belongsToMany(Series, { through: 'SeriesSetAllocations' });
+        Series.belongsToMany(SeriesSet, { through: 'SeriesSetAllocations' });
 
         await sequelize.sync({ force: true });
 
@@ -119,6 +130,17 @@ describe('Jellyfin library browsing', () => {
         await MovieCredit.create({ movieId: movies[0].id, personId: director.id, creditType: 'crew', job: 'Director', department: 'Directing', sortOrder: 0 });
         await MovieCredit.create({ movieId: movies[0].id, personId: director.id, creditType: 'crew', job: 'Screenplay', department: 'Writing', sortOrder: 1 });
 
+        await actor.update({ biography: 'Canadian actor.', birthday: '1964-09-02', placeOfBirth: 'Beirut, Lebanon', metadataUpdatedAt: new Date() });
+
+        const trilogy = await MovieSet.create({ setName: 'Trilogy', public: true });
+        const privateSet = await MovieSet.create({ setName: 'Just for viewer', public: false });
+        const hiddenSet = await MovieSet.create({ setName: 'Someone else\'s', public: false });
+
+        await (trilogy as any).addMovies([movies[0].id, movies[1].id, movies[2].id]);
+        await (privateSet as any).addMovie(movies[5].id);
+        await (hiddenSet as any).addMovie(movies[6].id);
+        await (privateSet as any).addUser(user.id);
+
         const [firstEpisode] = await Episode.findAll({ where: { airedSeason: '1', airedEpisodeNumber: '1' } });
 
         await TrackEpisode.create({ userId: user.id, episodeId: firstEpisode.id, time: 0, progress: 1 });
@@ -131,6 +153,8 @@ describe('Jellyfin library browsing', () => {
         itemsRoutes(server as any, embyEmulation);
         usersRoutes(server as any, embyEmulation);
         showsRoutes(server as any, embyEmulation);
+        artistsRoutes(server as any, embyEmulation);
+        libraryRoutes(server as any, embyEmulation);
     });
 
     after(async () => { await sequelize.close(); });
@@ -288,6 +312,128 @@ describe('Jellyfin library browsing', () => {
             assert.equal(firstSeason.ChildCount, 3);
             assert.equal(firstSeason.UserData.UnplayedItemCount, 2);
             assert.equal(firstSeason.ParentBackdropItemId, series.Id);
+        });
+    });
+
+    describe('collections', () => {
+        it('lists the public sets and those shared with this user', async () => {
+            const res = await call('GET /items', { ParentId: 'collections' });
+            const trilogy = res.body.Items.find((item: any) => item.Name === 'Trilogy');
+
+            assert.deepEqual(names(res), ['Just for viewer', 'Trilogy']);
+            assert.equal(trilogy.Type, 'BoxSet');
+            assert.equal(trilogy.ChildCount, 3);
+            // Movie 01 and Movie 03 are watched
+            assert.equal(trilogy.UserData.UnplayedItemCount, 1);
+        });
+
+        it('lists a set\'s movies, and nothing of a set this user may not see', async () => {
+            const sets = await call('GET /items', { IncludeItemTypes: 'BoxSet', Recursive: 'true', SearchTerm: 'trilogy' });
+            const movies = await call('GET /items', { ParentId: sets.body.Items[0].Id });
+            const hidden = await MovieSet.findOne({ where: { setName: 'Someone else\'s' } });
+            const hiddenMovies = await call('GET /items', { ParentId: formatId(hidden!.id, 'boxset') });
+            const hiddenSet = await call('GET /items/:mediaid', {}, { mediaid: formatId(hidden!.id, 'boxset') });
+
+            assert.deepEqual(names(movies), ['Movie 01', 'Movie 02', 'Movie 03']);
+            assert.equal(hiddenMovies.body.TotalRecordCount, 0);
+            assert.equal(hiddenSet.statusCode, 404);
+        });
+
+        it('describes one set', async () => {
+            const sets = await call('GET /items', { ParentId: 'collections', SearchTerm: 'Trilogy' });
+            const res = await call('GET /users/:userid/items/:mediaid', {}, { userid: 'me', mediaid: sets.body.Items[0].Id });
+
+            assert.equal(res.body.Name, 'Trilogy');
+            assert.equal(res.body.ImageTags.Primary, 'primary');
+        });
+    });
+
+    describe('people', () => {
+        it('lists and finds the people credited in the library', async () => {
+            const list = await call('GET /persons', { SearchTerm: 'keanu' });
+            const byName = await call('GET /persons/:name', {}, { name: 'Keanu Reeves' });
+
+            assert.deepEqual(names(list), ['Keanu Reeves']);
+            assert.equal(byName.body.Type, 'Person');
+            assert.equal(byName.body.Overview, 'Canadian actor.');
+            assert.deepEqual(byName.body.ProductionLocations, ['Beirut, Lebanon']);
+            assert.equal(byName.body.ImageTags.Primary, 'primary');
+        });
+
+        it('describes a person by id, as a client opening a cast member does', async () => {
+            const list = await call('GET /persons', { SearchTerm: 'Keanu' });
+            const res = await call('GET /users/:userid/items/:mediaid', {}, { userid: 'me', mediaid: list.body.Items[0].Id });
+
+            assert.equal(res.body.Name, 'Keanu Reeves');
+            assert.match(res.body.PremiereDate, /^1964-09-02/);
+        });
+
+        it('lists what a person is credited in', async () => {
+            const list = await call('GET /persons', { SearchTerm: 'Keanu' });
+            const res = await call('GET /items', { PersonIds: list.body.Items[0].Id, IncludeItemTypes: 'Movie,Series', Recursive: 'true' });
+
+            assert.deepEqual(names(res), ['Movie 01']);
+        });
+    });
+
+    describe('genres', () => {
+        it('lists every genre once, per library view', async () => {
+            const all = await call('GET /genres');
+            const shows = await call('GET /genres', { ParentId: 'shows' });
+
+            assert.deepEqual(names(all), ['Comedy', 'Drama']);
+            assert.deepEqual(names(shows), ['Comedy']);
+            assert.equal(all.body.Items[0].Id, genreId('Comedy'));
+        });
+
+        it('filters items by genre id and describes a genre by id', async () => {
+            const res = await call('GET /items', { GenreIds: genreId('Comedy'), IncludeItemTypes: 'Series' });
+            const genre = await call('GET /items/:mediaid', {}, { mediaid: genreId('Drama') });
+
+            assert.deepEqual(names(res), ['Show A']);
+            assert.equal(genre.body.Type, 'Genre');
+            assert.equal(genre.body.Name, 'Drama');
+        });
+
+        it('offers the genres and years a view can be filtered by', async () => {
+            const filters = await call('GET /items/filters', { ParentId: 'movies' });
+            const filters2 = await call('GET /items/filters2', { ParentId: 'shows' });
+
+            assert.deepEqual(filters.body.Genres, ['Comedy', 'Drama']);
+            assert.equal(filters.body.Years.length, 25);
+            assert.deepEqual(filters2.body.Genres, [{ Name: 'Comedy', Id: genreId('Comedy') }]);
+        });
+    });
+
+    describe('around an item', () => {
+        it('finds similar titles, leaving out the ones its collection already shows', async () => {
+            const res = await call('GET /items/:mediaid/similar', { Limit: '5' }, { mediaid: formatId(movies[0].id, 'movie') });
+
+            assert.deepEqual(names(res), ['Movie 04', 'Movie 05', 'Movie 06', 'Movie 07', 'Movie 08']);
+        });
+
+        it('lists an episode\'s season, series and library view', async () => {
+            const episode = await Episode.findOne({ where: { airedSeason: '2' } });
+            const res = await call('GET /items/:mediaid/ancestors', {}, { mediaid: formatId(episode!.id, 'episode') });
+
+            assert.deepEqual(res.body.map((item: any) => item.Name), ['Season 2', 'Show A', 'Shows']);
+        });
+
+        it('counts the library', async () => {
+            const res = await call('GET /items/counts');
+
+            assert.equal(res.body.MovieCount, 25);
+            assert.equal(res.body.SeriesCount, 1);
+            assert.equal(res.body.EpisodeCount, 5);
+            assert.equal(res.body.BoxSetCount, 2);
+        });
+
+        it('recommends titles like the ones just watched', async () => {
+            const res = await call('GET /movies/recommendations', { CategoryLimit: '1', ItemLimit: '3' });
+
+            assert.equal(res.body.length, 1);
+            assert.equal(res.body[0].RecommendationType, 'SimilarToRecentlyPlayed');
+            assert.equal(res.body[0].Items.length, 3);
         });
     });
 });

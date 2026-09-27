@@ -10,6 +10,9 @@ import { File } from '../../../models/file.js';
 import { Stream } from '../../../models/stream.js';
 import { TrackMovie } from '../../../models/trackMovie.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
+import { MovieCredit } from '../../../models/movieCredit.js';
+import { SeriesCredit } from '../../../models/seriesCredit.js';
+import { EpisodeCredit } from '../../../models/episodeCredit.js';
 import { containsText } from '../../common/textSearch.js';
 import { genreCondition } from '../../common/genres.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
@@ -17,11 +20,12 @@ import { formatMediaItem, parseId, parseUuid, type MediaItem } from '../helpers.
 import { isLibraryView, type LibraryViewId } from '../views.js';
 import { getRequestList, getRequestValue } from './requestUtils.js';
 import { decorateItems } from './itemDetails.js';
+import { genreNames, listBoxSets, visibleSet } from './library.js';
 
 import type EmbyEmulation from '../index.js';
 import type { EmbyRequest } from './index.js';
 
-export type ItemKind = 'movie' | 'series' | 'season' | 'episode';
+export type ItemKind = 'movie' | 'series' | 'season' | 'episode' | 'boxset';
 
 export type ItemsResult = {
     Items: Record<string, unknown>[];
@@ -36,7 +40,8 @@ const JELLYFIN_TYPES: Record<string, ItemKind> = {
     movie: 'movie',
     series: 'series',
     season: 'season',
-    episode: 'episode'
+    episode: 'episode',
+    boxset: 'boxset'
 };
 
 export type ItemQuery = {
@@ -52,6 +57,9 @@ export type ItemQuery = {
     ids: Map<ItemKind, number[]> | null;
     years: number[];
     genres: string[];
+    genreIds: string[];
+    personIds: number[];
+    boxSetId: number | null;
     seriesId: number | null;
     season: number | null;
 };
@@ -77,9 +85,9 @@ export const requestUserId = (req: EmbyRequest): number | null => {
 
 /** The item kinds a parent lists when a client does not say, and the kinds it can hold at all. */
 const PARENT_KINDS: Record<LibraryViewId, { fallback: ItemKind[]; allowed: ItemKind[] }> = {
-    movies: { fallback: ['movie'], allowed: ['movie'] },
+    movies: { fallback: ['movie'], allowed: ['movie', 'boxset'] },
     shows: { fallback: ['series'], allowed: ['series', 'season', 'episode'] },
-    collections: { fallback: [], allowed: [] }
+    collections: { fallback: ['boxset'], allowed: ['boxset'] }
 };
 
 /**
@@ -98,9 +106,10 @@ export function readItemQuery(req: EmbyRequest): ItemQuery | null {
     const filters = new Set(getRequestList(req, 'Filters').map(filter => filter.toLowerCase()));
 
     let fallback: ItemKind[] = [];
-    let allowed: ItemKind[] = ['movie', 'series', 'season', 'episode'];
+    let allowed: ItemKind[] = ['movie', 'series', 'season', 'episode', 'boxset'];
     let seriesId: number | null = null;
     let season: number | null = null;
+    let boxSetId: number | null = null;
 
     if (parentId) {
         if (isLibraryView(parentId)) {
@@ -119,6 +128,10 @@ export function readItemQuery(req: EmbyRequest): ItemQuery | null {
                 season = parent.id % 1000;
                 fallback = ['episode'];
                 allowed = ['episode'];
+            } else if (parent.type === 'boxset') {
+                boxSetId = parent.id;
+                fallback = ['movie'];
+                allowed = ['movie'];
             } else {
                 return null;
             }
@@ -173,10 +186,16 @@ export function readItemQuery(req: EmbyRequest): ItemQuery | null {
         ids,
         years: getRequestList(req, 'Years').map(year => parseInt(year, 10)).filter(Number.isFinite),
         genres: getRequestList(req, 'Genres', '|'),
+        genreIds: getRequestList(req, 'GenreIds'),
+        personIds: getRequestList(req, 'PersonIds').map(id => parseId(id)).filter(id => id.type === 'person' && Number.isFinite(id.id)).map(id => id.id),
+        boxSetId,
         seriesId,
         season
     };
 }
+
+// The kinds that are rows of their own table
+type RowKind = 'movie' | 'series' | 'episode';
 
 type KindSpec = {
     model: typeof Movie | typeof Series | typeof Episode;
@@ -187,7 +206,7 @@ type KindSpec = {
     track: { model: typeof TrackMovie | typeof TrackEpisode; table: string; key: string } | null;
 };
 
-const SPECS: Record<Exclude<ItemKind, 'season'>, () => KindSpec> = {
+const SPECS: Record<RowKind, () => KindSpec> = {
     movie: () => ({
         model: Movie,
         alias: 'Movie',
@@ -228,7 +247,7 @@ const castNumber = (sequelize: Sequelize, column: string): ReturnType<typeof fn>
     fn('CAST', literal(`${column} AS ${sequelize.getDialect() === 'sqlite' ? 'INTEGER' : 'SIGNED'}`));
 
 /** SQL for "this user has watched / started / not finished this item", per kind. */
-function watchCondition(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, userId: number, state: 'played' | 'unplayed' | 'resumable'): string {
+function watchCondition(sequelize: Sequelize, kind: RowKind, userId: number, state: 'played' | 'unplayed' | 'resumable'): string {
     const q = quoter(sequelize);
     const user = Number(userId);
     const watched = `${q('t')}.${q('progress')} >= ${WATCHED_PROGRESS}`;
@@ -256,7 +275,7 @@ function watchCondition(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>,
 }
 
 /** When the user last watched this item: for a series, any of its episodes. */
-function lastPlayedSql(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, userId: number | null): string {
+function lastPlayedSql(sequelize: Sequelize, kind: RowKind, userId: number | null): string {
     const q = quoter(sequelize);
 
     if (!userId) return 'NULL';
@@ -280,7 +299,22 @@ function lastEpisodeAddedSql(sequelize: Sequelize): string {
     return `(SELECT MAX(${q('e')}.${q('createdAt')}) FROM ${q(Episode.getTableName() as string)} ${q('e')} WHERE ${q('e')}.${q('SeriesId')} = ${q('Series')}.${q('id')})`;
 }
 
-function whereFor(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, query: ItemQuery): WhereOptions | null {
+/** SQL for "one of these people is credited on this item"; a series counts its episodes' guests. */
+function personCondition(sequelize: Sequelize, kind: RowKind, personIds: number[]): string {
+    const q = quoter(sequelize);
+    const people = personIds.map(Number).join(', ');
+    const credited = (table: string, key: string): string => `SELECT ${q(key)} FROM ${q(table)} WHERE ${q('personId')} IN (${people})`;
+    const self = `${q(SPECS[kind]().alias)}.${q('id')}`;
+
+    if (kind === 'movie') return `${self} IN (${credited(MovieCredit.getTableName() as string, 'movieId')})`;
+    if (kind === 'episode') return `${self} IN (${credited(EpisodeCredit.getTableName() as string, 'episodeId')})`;
+
+    return `(${self} IN (${credited(SeriesCredit.getTableName() as string, 'seriesId')})
+        OR ${self} IN (SELECT ${q('e')}.${q('SeriesId')} FROM ${q(Episode.getTableName() as string)} ${q('e')}
+            WHERE ${q('e')}.${q('id')} IN (${credited(EpisodeCredit.getTableName() as string, 'episodeId')})))`;
+}
+
+function whereFor(sequelize: Sequelize, kind: RowKind, query: ItemQuery): WhereOptions | null {
     const spec = SPECS[kind]();
     const q = quoter(sequelize);
     const conditions: any[] = [];
@@ -297,6 +331,13 @@ function whereFor(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, query
     } else if (query.seriesId !== null && kind === 'series') {
         conditions.push({ id: query.seriesId });
     }
+
+    if (query.boxSetId !== null) {
+        if (kind !== 'movie') return null;
+        conditions.push(literal(`${q(spec.alias)}.${q('id')} IN (SELECT ${q('MovieId')} FROM ${q('MovieSetAllocations')} WHERE ${q('MovieSetId')} = ${Number(query.boxSetId)})`));
+    }
+
+    if (query.personIds.length > 0) conditions.push(literal(personCondition(sequelize, kind, query.personIds)));
 
     if (query.years.length > 0) {
         conditions.push(literal(`SUBSTR(${q(spec.alias)}.${q(spec.date)}, 1, 4) IN (${query.years.map(year => sequelize.escape(String(year))).join(', ')})`));
@@ -323,7 +364,7 @@ function whereFor(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, query
     return conditions.length > 0 ? { [Op.and]: conditions } : {};
 }
 
-function orderFor(sequelize: Sequelize, kind: Exclude<ItemKind, 'season'>, query: ItemQuery): Order {
+function orderFor(sequelize: Sequelize, kind: RowKind, query: ItemQuery): Order {
     const spec = SPECS[kind]();
     const q = quoter(sequelize);
     const direction = query.descending ? 'DESC' : 'ASC';
@@ -453,8 +494,32 @@ async function fetchSeasons(query: ItemQuery, embyEmulation: EmbyEmulation, limi
     };
 }
 
+async function fetchBoxSets(query: ItemQuery, embyEmulation: EmbyEmulation, limit: number, offset: number): Promise<{ total: number; rows: Fetched[] }> {
+    // Sets are not credited, dated or given genres; asking for any of those finds none
+    if (query.personIds.length > 0 || query.genres.length > 0 || query.years.length > 0 || query.seriesId !== null) return { total: 0, rows: [] };
+    if (query.isPlayed !== null || query.filters.has('isplayed') || query.filters.has('isunplayed') || query.filters.has('isresumable')) return { total: 0, rows: [] };
+
+    const { total, rows, items } = await listBoxSets({
+        userId: query.userId,
+        searchTerm: query.searchTerm,
+        ids: query.ids?.get('boxset') ?? null,
+        descending: query.descending,
+        byDate: query.sortBy[0] === 'datecreated',
+        limit,
+        offset
+    }, embyEmulation);
+
+    return {
+ total,
+rows: rows.map((row, index) => ({
+ kind: 'boxset', row, item: items[index] 
+})) 
+};
+}
+
 async function fetchKind(kind: ItemKind, query: ItemQuery, embyEmulation: EmbyEmulation, limit: number, offset: number): Promise<{ total: number; rows: Fetched[] }> {
     if (kind === 'season') return fetchSeasons(query, embyEmulation, limit, offset);
+    if (kind === 'boxset') return fetchBoxSets(query, embyEmulation, limit, offset);
 
     const spec = SPECS[kind]();
     const sequelize = spec.model.sequelize!;
@@ -538,6 +603,16 @@ function mergeOrder(entries: Fetched[], query: ItemQuery): Fetched[] {
  */
 export async function runItemQuery(query: ItemQuery, embyEmulation: EmbyEmulation): Promise<ItemsResult> {
     if (query.kinds.length === 0) return empty(query.startIndex);
+
+    if (query.genreIds.length > 0) {
+        const names = await genreNames(query.genreIds);
+
+        if (names.length === 0) return empty(query.startIndex);
+        query.genres = [...query.genres, ...names];
+    }
+
+    // A set this user may not see lists nothing, rather than its movies
+    if (query.boxSetId !== null && !await visibleSet(query.boxSetId, query.userId)) return empty(query.startIndex);
 
     if (query.kinds.length === 1) {
         const { total, rows } = await fetchKind(query.kinds[0], query, embyEmulation, query.limit, query.startIndex);

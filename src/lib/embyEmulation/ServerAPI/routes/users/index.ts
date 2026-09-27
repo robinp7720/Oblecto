@@ -25,6 +25,7 @@ import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.
 import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
 import { decorateItems, describeItem } from '../../itemDetails.js';
+import { isLibraryItemId, resolveLibraryItem } from '../../library.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 import { containsText } from '../../../../common/textSearch.js';
 
@@ -418,6 +419,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const userId = requestUserId(req);
         let resolvedType = parsed.type;
         let item = null;
+        const libraryItem = await resolveLibraryItem(String(req.params.mediaid), userId, embyEmulation);
+
+        if (libraryItem || isLibraryItemId(String(req.params.mediaid))) {
+            res.status(libraryItem ? 200 : 404).send(libraryItem ?? 'Item not found');
+            return;
+        }
 
         const resolveMovie = async (movieId: number | string): Promise<Movie | null> => Movie.findByPk(movieId, {
             include: [

@@ -3,6 +3,8 @@ import type EmbyEmulation from '../../../index.js';
 import type { EmbyRequest } from '../../index.js';
 import { embyUserCan } from '../../permission.js';
 import { maintenanceWork } from '../../../../maintenance/dispatch.js';
+import { getRequestList, getRequestValue } from '../../requestUtils.js';
+import { allGenres, formatGenre } from '../../library.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     // Collections
@@ -40,12 +42,30 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/libraries/availableoptions', (_req: Request, res: Response) => { res.send({}); });
 
     // Genres
-    server.get('/genres', (_req: Request, res: Response) => {
+    // Every genre in the library, or in one library view
+    server.get('/genres', async (req: EmbyRequest, res: Response) => {
+        const parent = getRequestValue(req, 'ParentId');
+        const types = getRequestList(req, 'IncludeItemTypes').map(type => type.toLowerCase());
+        const kinds: Array<'movie' | 'series'> = parent === 'movies' || types.includes('movie') ? ['movie']
+            : parent === 'shows' || types.includes('series') ? ['series'] : ['movie', 'series'];
+        const searchTerm = (getRequestValue(req, 'SearchTerm') ?? getRequestValue(req, 'NameStartsWith') ?? '').toLowerCase();
+        const startIndex = Math.max(0, Number(getRequestValue(req, 'StartIndex')) || 0);
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 1000, 1), 1000);
+        const genres = (await allGenres(kinds)).filter(genre => genre.toLowerCase().includes(searchTerm));
+
         res.send({
-            Items: [], TotalRecordCount: 0, StartIndex: 0
+            Items: genres.slice(startIndex, startIndex + limit).map(genre => formatGenre(genre, embyEmulation)),
+            TotalRecordCount: genres.length,
+            StartIndex: startIndex
         });
     });
-    server.get('/genres/:genrename', (_req: Request, res: Response) => { res.status(404).send('Not Found'); });
+    server.get('/genres/:genrename', async (req: EmbyRequest, res: Response) => {
+        const wanted = String(req.params.genrename).toLowerCase();
+        const genre = (await allGenres(['movie', 'series'])).find(name => name.toLowerCase() === wanted);
+
+        if (!genre) return res.status(404).send('Not Found');
+        res.send(formatGenre(genre, embyEmulation));
+    });
     server.get('/genres/:name/images/:imagetype', (_req: Request, res: Response) => { res.status(404).send('Not Found'); });
     server.get('/genres/:name/images/:imagetype/:imageindex', (_req: Request, res: Response) => { res.status(404).send('Not Found'); });
 

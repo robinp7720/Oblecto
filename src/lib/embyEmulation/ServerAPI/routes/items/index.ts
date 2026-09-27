@@ -3,7 +3,7 @@ import { embyIdentity, embyPlayback } from '../../playback.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
-import { createMediaSources, formatFileId, formatId, formatMediaItem, MediaItem, parseFileId, parseId, parseUuid, toSearchHint } from '../../../helpers';
+import { createMediaSources, formatFileId, formatId, formatMediaItem, genreId, MediaItem, parseFileId, parseId, parseUuid, toSearchHint } from '../../../helpers';
 import { Stream } from '../../../../../models/stream';
 import { Op } from 'sequelize';
 import { Series } from '../../../../../models/series';
@@ -15,6 +15,11 @@ import logger from '../../../../../submodules/logger/index.js';
 import { getEmbyToken, getRequestList, getRequestValue } from '../../requestUtils.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
 import { describeItem } from '../../itemDetails.js';
+import { allGenres, ancestorsOf, boxSetArtworkMovie, isLibraryItemId, resolveLibraryItem, similarItems, visibleSets } from '../../library.js';
+import { personProfileFile } from '../../../../people/index.js';
+import { WATCHED_PROGRESS } from '../../../../playback/progress.js';
+import { Person } from '../../../../../models/person.js';
+import { MovieSet } from '../../../../../models/movieSet.js';
 import { isLibraryView, libraryView, libraryViews } from '../../../views.js';
 import { embyUserCan } from '../../permission.js';
 import { getLastMediaSource, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
@@ -195,7 +200,23 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             if (!Number.isFinite(parsedIndex) || parsedIndex !== 0) return res.status(404).send();
         }
 
-        const candidates = resolveImageCandidates(item, String(type || ''), String(requestedType), (req.query || {}) as Record<string, any>);
+        const query = (req.query || {}) as Record<string, any>;
+
+        if (type === 'person') {
+            if (normalizeImageType(requestedType) !== 'primary') return res.status(404).send();
+
+            const width = readQueryNumber(query, 'maxwidth', 'width', 'fillwidth') ?? 342;
+            const path = await personProfileFile(embyEmulation.oblecto, item, width <= 185 ? 'small' : width <= 342 ? 'medium' : 'large').catch(() => null);
+
+            return path ? res.sendFile(path) : res.status(404).send();
+        }
+
+        // A collection shows its first movie's artwork
+        const source = type === 'boxset' ? await boxSetArtworkMovie(item) : item;
+
+        if (!source) return res.status(404).send();
+
+        const candidates = resolveImageCandidates(source, type === 'boxset' ? 'movie' : String(type || ''), String(requestedType), query);
 
         if (candidates.length === 0) return res.status(404).send();
 
@@ -251,6 +272,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             item = await Series.findByPk(numericId);
         } else if (resolvedType === 'episode' && Number.isFinite(numericId)) {
             item = await Episode.findByPk(numericId, { include: buildEpisodeInclude(userId) });
+        } else if (resolvedType === 'person' && Number.isFinite(numericId)) {
+            return { item: await Person.findByPk(numericId), type: 'person' };
+        } else if (resolvedType === 'boxset' && Number.isFinite(numericId)) {
+            return { item: await MovieSet.findByPk(numericId), type: 'boxset' };
         } else if (resolvedType === 'season' && Number.isFinite(numericId)) {
             const seriesId = Math.floor(numericId / 1000);
 
@@ -295,13 +320,20 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(await queryItems(req, embyEmulation));
     });
 
-    server.get('/items/:mediaid/similar', (req, res) => {
+    // Titles like this one. The same list at the current path and the older per-type ones.
+    const similar = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 12, 1), 12);
+        const items = await similarItems(String(req.params.mediaid), limit, requestUserId(req), embyEmulation);
+
         res.send({
-            Items: [],
-            TotalRecordCount: 0,
-            StartIndex: 0
+            Items: items, TotalRecordCount: items.length, StartIndex: 0
         });
-    });
+    };
+
+    server.get('/items/:mediaid/similar', similar);
+    server.get('/movies/:mediaid/similar', similar);
+    server.get('/shows/:mediaid/similar', similar);
+    server.get('/trailers/:mediaid/similar', similar);
 
     server.get('/items/:mediaid/thememedia', (req, res) => {
         res.send({
@@ -410,14 +442,138 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.post('/items/:mediaid/playbackinfo', playbackInfo);
     server.get('/items/:mediaid/playbackinfo', playbackInfo);
 
+    // The genres, years and ratings a library can be filtered by
+    const filterKinds = (req: EmbyRequest): Array<'movie' | 'series'> => {
+        const parent = getRequestValue(req, 'ParentId');
+        const types = getRequestList(req, 'IncludeItemTypes').map(type => type.toLowerCase());
+
+        if (parent === 'movies' || types.includes('movie')) return ['movie'];
+        if (parent === 'shows' || types.includes('series')) return ['series'];
+        return ['movie', 'series'];
+    };
+
+    server.get('/items/filters', async (req: EmbyRequest, res: Response) => {
+        const kinds = filterKinds(req);
+        const years = new Set<number>();
+        const ratings = new Set<string>();
+
+        if (kinds.includes('movie')) for (const movie of await Movie.findAll({ attributes: ['releaseDate'], raw: true })) years.add(parseInt(String(movie.releaseDate), 10));
+        if (kinds.includes('series')) {
+            for (const series of await Series.findAll({ attributes: ['firstAired', 'rating'], raw: true })) {
+                years.add(parseInt(String(series.firstAired), 10));
+                if (series.rating) ratings.add(series.rating);
+            }
+        }
+
+        res.send({
+            Genres: await allGenres(kinds),
+            Tags: [],
+            OfficialRatings: [...ratings].sort(),
+            Years: [...years].filter(Number.isFinite).sort((a, b) => a - b)
+        });
+    });
+    server.get('/items/filters2', async (req: EmbyRequest, res: Response) => {
+        res.send({
+            Genres: (await allGenres(filterKinds(req))).map(name => ({ Name: name, Id: genreId(name) })),
+            Tags: []
+        });
+    });
+
+    server.get('/items/counts', async (req: EmbyRequest, res: Response) => {
+        const [movies, series, episodes, sets] = await Promise.all([
+            Movie.count(),
+            Series.count(),
+            Episode.count(),
+            MovieSet.sequelize ? MovieSet.count({ where: visibleSets(requestUserId(req)) }) : 0
+        ]);
+
+        res.send({
+            MovieCount: movies,
+            SeriesCount: series,
+            EpisodeCount: episodes,
+            BoxSetCount: sets,
+            ArtistCount: 0,
+            ProgramCount: 0,
+            TrailerCount: 0,
+            SongCount: 0,
+            AlbumCount: 0,
+            MusicVideoCount: 0,
+            BookCount: 0,
+            ItemCount: movies + series + episodes + sets
+        });
+    });
+
+    server.get('/items/:mediaid/ancestors', async (req: EmbyRequest, res: Response) => {
+        res.send(await ancestorsOf(String(req.params.mediaid), embyEmulation));
+    });
+
+    // Rows of titles like the ones this user watched last
+    server.get('/movies/recommendations', async (req: EmbyRequest, res: Response) => {
+        const userId = requestUserId(req);
+        const categories = Math.min(Math.max(Number(getRequestValue(req, 'CategoryLimit')) || 5, 1), 10);
+        const perCategory = Math.min(Math.max(Number(getRequestValue(req, 'ItemLimit')) || 8, 1), 12);
+
+        if (!userId) return res.send([]);
+
+        const recent = await TrackMovie.findAll({
+            where: { userId, progress: { [Op.gte]: WATCHED_PROGRESS } },
+            include: [{ model: Movie, required: true }],
+            order: [['updatedAt', 'DESC']],
+            limit: categories
+        });
+        const rows = [];
+
+        for (const track of recent as any[]) {
+            const items = await similarItems(formatId(track.Movie.id, 'movie'), perCategory, userId, embyEmulation);
+
+            if (items.length === 0) continue;
+            rows.push({
+                Items: items,
+                RecommendationType: 'SimilarToRecentlyPlayed',
+                BaselineItemName: track.Movie.movieName,
+                CategoryId: formatId(track.Movie.id, 'movie')
+            });
+        }
+
+        res.send(rows);
+    });
+
+    // The artwork an item has, for clients' image editors and pickers
+    server.get('/items/:mediaid/images', async (req: EmbyRequest, res: Response) => {
+        const { item, type } = await resolveItemById(String(req.params.mediaid));
+
+        if (!item) return res.status(404).send('Item not found');
+
+        const kinds = type === 'episode' ? ['Primary'] : type === 'person' ? ['Primary'] : ['Primary', 'Backdrop'];
+        const images = [];
+
+        for (const kind of kinds) {
+            if (type === 'person') {
+                if (item.profilePath) images.push({ ImageType: kind, ImageTag: 'primary' });
+                continue;
+            }
+
+            const source = type === 'boxset' ? await boxSetArtworkMovie(item) : item;
+            const candidates = source ? resolveImageCandidates(source, type === 'boxset' ? 'movie' : String(type), kind, {}) : [];
+
+            for (const candidate of candidates) {
+                if (candidate && await fileExists(candidate)) {
+                    images.push({
+ ImageType: kind, ImageIndex: kind === 'Backdrop' ? 0 : undefined, ImageTag: kind.toLowerCase() 
+});
+                    break;
+                }
+            }
+        }
+
+        res.send(images);
+    });
+
     server.get('/userviews', (req, res) => {
         res.send(libraryViews(embyEmulation.serverId));
     });
 
     // Additional Items Routes
-    server.get('/items/filters', (req, res) => { res.send({}); });
-    server.get('/items/filters2', (req, res) => { res.send({}); });
-    server.get('/items/:itemid/images', (req, res) => { res.send([]); });
     server.get('/items/:mediaid/images/:imagetype', (req: Request, res: Response) => handleItemImageRequest(req, res));
     server.get('/items/:mediaid/images/:imagetype/:imageindex', (req: Request, res: Response) => handleItemImageRequest(req, res));
     server.get('/items/:itemid/images/:imagetype/:imageindex/index', (req, res) => { res.status(404).send('Not Found'); });
@@ -453,7 +609,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
     server.get('/items/:itemid/contenttype', (req, res) => { res.send({}); }); // Guessing response
     server.get('/items/:itemid/metadataeditor', (req, res) => { res.send({}); });
-    server.get('/items/:itemid/ancestors', (req, res) => { res.send([]); });
     server.get('/items/:itemid/criticreviews', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
@@ -471,7 +626,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
     });
-    server.get('/items/counts', (req, res) => { res.send({}); });
     server.get('/items/:itemid/remoteimages', (req, res) => {
         res.send({
             Images: [], TotalRecordCount: 0, Providers: []
@@ -499,20 +653,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    // Movies
-    server.get('/movies/:itemid/similar', (req, res) => {
-        res.send({
-            Items: [], TotalRecordCount: 0, StartIndex: 0
-        });
-    });
-    server.get('/movies/recommendations', (req, res) => { res.send([]); });
-
-    // Shows
-    server.get('/shows/:itemid/similar', (req, res) => {
-        res.send({
-            Items: [], TotalRecordCount: 0, StartIndex: 0
-        });
-    });
     server.get('/shows/upcoming', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
@@ -521,11 +661,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
     // Trailers
     server.get('/trailers', (req, res) => {
-        res.send({
-            Items: [], TotalRecordCount: 0, StartIndex: 0
-        });
-    });
-    server.get('/trailers/:itemid/similar', (req, res) => {
         res.send({
             Items: [], TotalRecordCount: 0, StartIndex: 0
         });
@@ -609,6 +744,11 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const mediaId = String(req.params.mediaid);
 
         if (isLibraryView(mediaId)) return res.send(libraryView(mediaId, embyEmulation.serverId));
+
+        const libraryItem = await resolveLibraryItem(mediaId, userId, embyEmulation);
+
+        if (libraryItem) return res.send(libraryItem);
+        if (isLibraryItemId(mediaId)) return res.status(404).send('Item not found');
 
         const { item, type } = await resolveItemById(mediaId, userId);
 
