@@ -1,144 +1,69 @@
 # Jellyfin Emulation Coverage Plan
 
 Scope
-- This document compares the current Jellyfin/Emby emulation layer to the Jellyfin API specification and records what is implemented, partially implemented, and missing.
-- Source of truth for spec comparison: `jellyfin-openapi-stable.json`, fetched by `scripts/fetch-jellyfin-openapi.sh`, which mirrors the official Jellyfin OpenAPI stable spec. See the official spec location for reference. (https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json)
+- This document compares the Jellyfin/Emby emulation layer with the Jellyfin API specification and records what is implemented, partially implemented, and missing.
+- Source of truth for the comparison: `jellyfin-openapi-stable.json`, fetched by `scripts/fetch-jellyfin-openapi.sh` from https://api.jellyfin.org/openapi/jellyfin-openapi-stable.json. Last compared against spec version 12.1.0 on 2026-09-27.
 
 How to read
-- Implemented: Endpoints return real data or perform real actions in Oblecto (DB reads/writes, streaming, image serving).
-- Partially implemented: Endpoints exist but return static placeholders, empty lists, hardcoded data, or ignore important params.
-- Missing: Endpoints present in the Jellyfin spec but not implemented in the emulation routes (after path param normalization).
+- Implemented: endpoints return real data or perform real actions in Oblecto (database reads and writes, streaming, image serving, configuration).
+- Partially implemented: endpoints exist but return static placeholders, empty lists or hardcoded data, or ignore important parameters.
+- Missing: endpoints in the Jellyfin spec with no route in the emulation, after path parameter normalisation.
 
-Summary (normalized path params)
-- Spec endpoints: 388
-- Emulation endpoints: 333
-- Missing endpoints (spec - emulation): 110
-- Extra endpoints (emulation - spec): 55
+Summary (normalised path parameters; HEAD counts as covered where GET is, as Express answers it)
+- Spec endpoints: 364
+- Covered by a route: 281
+- Missing (spec - emulation): 83
+- Extra (emulation - spec): 78
 
 Implemented
-- Items
-  - GET /items
-  - GET /items/{param}
-  - GET /items/{param}/images/primary
-  - GET /items/{param}/images/backdrop/{param}
-  - GET /items/{param}/images/{param}
-  - GET /items/{param}/images/{param}/{param}
-  - POST /items/{param}/playbackinfo
-- Search
+- Items and browsing (one engine, `ServerAPI/itemQuery.ts`)
+  - GET /items, GET /users/{id}/items: IncludeItemTypes, ExcludeItemTypes, ParentId (library views, series, season, collection), Recursive, Ids, SearchTerm/NameStartsWith, SortBy/SortOrder (SortName, DateCreated, DateLastContentAdded, PremiereDate, ProductionYear, CommunityRating, Runtime, DatePlayed, ParentIndexNumber, IndexNumber, Random), Filters (IsPlayed, IsUnplayed, IsResumable, IsFavorite), IsPlayed, IsFavorite, Genres, GenreIds, PersonIds, Years, SeriesId, StartIndex/Limit
+  - GET /items/{id}, GET /users/{id}/items/{id}: movies, series, seasons, episodes, collections, people and genres; People on detail pages
+  - GET /items/{id}/images, /items/{id}/images/{type}[/{index}]: posters, fanart, episode stills, person profiles, collection artwork
+  - GET /items/{id}/similar, /movies/{id}/similar, /shows/{id}/similar, /trailers/{id}/similar, GET /movies/recommendations
+  - GET /items/{id}/ancestors, /items/{id}/collections, /items/counts, /items/filters, /items/filters2
+  - GET /users/{id}/items/latest, /items/latest, /users/{id}/items/resume, /useritems/resume (MediaTypes and IncludeItemTypes honoured)
   - GET /search/hints
+  - POST /items/{id}/refresh (queues a metadata update; libraries permission)
+- Collections, people and genres
+  - BoxSets are movie sets the user may see (public, or shared through MovieSetUsers)
+  - GET /persons, /persons/{name}, /persons/{name}/images/{type}[/{index}]
+  - GET /genres, /genres/{name}
 - Shows
-  - GET /shows/nextup
-  - GET /shows/{param}/seasons
-  - GET /shows/{param}/episodes
-- Users
-  - GET /users
-  - POST /users/authenticatebyname
-  - GET /users/{param}/items
-  - GET /users/{param}/items/{param}
-- Sessions
-  - POST /sessions/playing/progress (writes playback progress to TrackEpisode/TrackMovie)
-- Video/Audio streaming
-  - GET /hls/{param}/segment/{param}
-  - GET /videos/{param}/stream
-  - GET /videos/{param}/stream.{param}
-  - HEAD /videos/{param}/stream
-  - HEAD /videos/{param}/stream.{param}
-  - GET /audio/{param}/stream
-  - GET /audio/{param}/stream.{param}
-  - HEAD /audio/{param}/stream
-  - HEAD /audio/{param}/stream.{param}
-  - GET /videos/{param}/main.m3u8
-  - GET /videos/{param}/master.m3u8
-  - GET /videos/{param}/live.m3u8
-  - GET /videos/{param}/hls/{param}/stream.m3u8
-  - GET /videos/{param}/hls/{param}/{param}.{param}
-  - GET /videos/{param}/hls1/{param}/{param}.{param}
-  - GET /videos/{param}/stream/{param}
-  - GET /audio/{param}/main.m3u8
-  - GET /audio/{param}/master.m3u8
-  - GET /audio/{param}/hls1/{param}/{param}.{param}
-- System/utility
-  - GET /system/ping
-  - POST /system/ping
-  - GET /getutctime
+  - GET /shows/nextup, /shows/{id}/seasons, /shows/{id}/episodes
+- Users and user data
+  - GET /users, /users/public, /users/{id} (always the signed-in user), /users/{id}/policy, /users/{id}/views, /userviews, /users/{id}/images/primary
+  - POST /users/authenticatebyname, /users/password, /users/{id}/password, /sessions/logout
+  - POST /users/configuration, /users/{id}/configuration (audio and subtitle languages, subtitle mode, next-episode autoplay, saved as Oblecto preferences)
+  - POST/DELETE /userplayeditems/{id}, /users/{id}/playeditems/{id} (movies, episodes, whole series or seasons)
+  - POST/DELETE /userfavoriteitems/{id}, /users/{id}/favoriteitems/{id} (movies, series, seasons, episodes, people, collections)
+  - GET /useritems/{id}/userdata
+  - GET/POST /displaypreferences/{id} (per user and client)
+- Sessions and playback
+  - POST /sessions/playing, /sessions/playing/progress, /sessions/playing/stopped, /sessions/playing/ping, /sessions/capabilities/{type}
+  - GET/POST /items/{id}/playbackinfo, and the video, audio and HLS stream routes
+- WebSocket (/socket, ?api_key= or ?ApiKey=)
+  - ForceKeepAlive on connect, KeepAlive answered, UserDataChanged pushed for watch state, progress and favourite changes made anywhere
+- System, configuration and branding
+  - GET /system/info, /system/info/public, /system/ping, /getutctime
+  - GET/POST /system/configuration (ServerName from jellyfin.serverName; resume thresholds match Oblecto's)
+  - GET/POST /system/configuration/encoding (hardware encoder from transcoding.*)
+  - GET/POST /system/configuration/branding, GET /branding/configuration, /branding/css, /branding/css.css (jellyfin.loginDisclaimer, jellyfin.customCss)
+  - Saving needs the settings.manage permission and uses the web UI's validation and config writer
+  - POST /library/refresh (library scan; libraries permission)
 
 Partially implemented
-- System
-  - GET /system/info, /system/info/public, /system/info/storage (static/hardcoded)
-  - GET /system/endpoint (static)
-  - GET /system/configuration, /system/configuration/metadata, /system/configuration/xbmcmetadata, /system/configuration/encoding (static)
-  - GET /System/ActivityLog/Entries (static)
-  - GET /scheduledtasks (empty object)
-- Users
-  - GET /users/public (empty)
-  - GET /users/{param} (returns user id 1 regardless of param)
-  - GET /users/{param}/views (static)
-  - GET /users/{param}/items/latest (returns series/movies with mostly static fields)
-  - GET /users/{param}/items/{param}/intros (empty)
-  - GET /users/{param}/items/resume, /useritems/resume (empty)
-  - POST /userplayeditems/{param}, DELETE /userplayeditems/{param} (no-op 200)
-  - POST /userfavoriteitems/{param}, DELETE /userfavoriteitems/{param} (no-op 200)
-  - GET /useritems/{param}/userdata, POST /useritems/{param}/rating (empty)
-- Items
-  - GET /items/{param}/similar, /items/{param}/thememedia (empty)
-  - GET /userviews (static)
-  - GET /items/filters, /items/filters2 (empty)
-  - GET /items/{param}/images (empty list)
-  - GET /items/{param}/externalidinfos (empty)
-  - POST /items/remotesearch/* (empty arrays)
-  - POST /items/{param}/refresh (204)
-  - GET /items/{param}/contenttype (empty)
-  - GET /items/{param}/metadataeditor (empty)
-  - GET /items/{param}/ancestors (empty)
-  - GET /items/{param}/criticreviews (empty)
-  - GET /items/{param}/download, /items/{param}/file (404)
-  - GET /items/{param}/themesongs, /items/{param}/themevideos (empty)
-  - GET /items/counts (empty)
-  - GET /items/{param}/remoteimages, /items/{param}/remoteimages/providers (empty)
-  - GET /items/{param}/remotesearch/subtitles/{param} (empty) and /items/{param}/remotesearch/subtitles/{param} (404)
-  - GET /items/suggestions, /items/{param}/intros, /items/{param}/localtrailers, /items/{param}/specialfeatures, /items/root (empty)
-  - GET /movies/{param}/similar, /movies/recommendations, /shows/{param}/similar, /shows/upcoming, /trailers, /trailers/{param}/similar (empty)
-- Sessions
-  - POST /sessions/capabilities/{param}, /sessions/playing, /sessions/playing/ping, /sessions/playing/stopped (no-op or minimal)
-  - GET /sessions, /sessions/viewing (empty)
-  - POST /sessions/:id/command*, /sessions/logout, /sessions/:id/viewing (no-op)
-  - SyncPlay endpoints are stubs (mostly 204 or empty; /syncplay/{id} returns 404)
-  - GET /playback/bitratetest (static "0")
-  - DELETE /playingitems/{param}, POST /playingitems/{param}/progress (204)
-- Videos (metadata helpers)
-  - GET /videos/activeencodings (empty)
-  - GET /videos/mergeversions (204)
-  - GET /videos/{param}/additionalparts, /videos/{param}/alternatesources (empty)
-  - GET /videos/{param}/subtitles (empty)
-  - GET /videos/{param}/subtitles/{param}, /videos/{param}/trickplay/*, /videos/{param}/{param}/subtitles/*, /videos/{param}/{param}/attachments/{param} (404)
-  - GET /mediasegments/{param} (empty)
-- Devices
-  - GET /devices, /devices/info, /devices/options (empty)
-- DisplayPreferences
-  - GET /displaypreferences/usersettings (static)
-  - GET /LiveTv/Programs/Recommended (empty)
-  - POST /displaypreferences/{param} (204)
-- Branding/Web
-  - GET /branding/configuration (static)
-  - GET /branding/css, /branding/css.css, /branding/splashscreen (empty)
-  - GET /web/configurationpages, /config.json (static)
-  - GET /web/configurationpage (404)
-- Localization
-  - GET /localization/options, /localization/cultures, /localization/countries (static)
-  - GET /localization/parentalratings (empty)
-- Library/Collections/Genres/Years/Playlists
-  - Most endpoints return empty lists or 404; virtual folder updates return 204
-- Channels/LiveTV
-  - All endpoints stubbed (empty/404/204)
-- Music/Artists/Persons/Studios
-  - All endpoints stubbed (empty/404)
-- Plugins/Packages/Repositories
-  - List endpoints return empty; enable/disable/install return 204; others 404
-- Other/Environment/Startup
-  - Environment endpoints return empty or 204
-  - Startup endpoints return empty or 204
-  - FallbackFont endpoints return empty or 404
-  - GET /tmdb/clientconfiguration returns empty
+- System: /system/info/storage, /system/endpoint, /system/configuration/metadata and /xbmcmetadata, /system/activitylog/entries, /scheduledtasks (static or empty); other /system/configuration/{key} answer 404
+- Localization: /localization/options, /cultures, /countries (English/US only); /localization/parentalratings (empty)
+- Items: /items/{id}/thememedia, /themesongs, /themevideos, /intros, /localtrailers, /specialfeatures, /criticreviews, /externalidinfos, /remoteimages*, /remotesearch/*, /contenttype, /metadataeditor, /items/suggestions, /items/root (empty); /items/{id}/download and /file (404)
+- Shows: /shows/upcoming, /trailers (empty)
+- Sessions: /sessions, /sessions/viewing (empty); remote-control commands (204, not delivered); SyncPlay (204 or 404)
+- Videos: /videos/{id}/subtitles*, trickplay, attachments, additional parts, alternate sources, active encodings, merge versions (empty, 404 or 204); /mediasegments/{id} (empty)
+- Devices, plugins, packages, repositories, environment, startup, fallback fonts, QuickConnect: empty lists, 204 or 404
+- Library management: virtual folders and paths (empty or 204); /collections and /playlists (empty)
+- Live TV, channels, music, artists, studios, years: empty or 404
+- Ratings: POST/DELETE /useritems/{id}/rating answer 501 (Oblecto has no ratings)
+- Users: creating, deleting and resetting users answer 501 (managed in the web app)
 
 Missing endpoints (spec - emulation)
 
@@ -165,36 +90,13 @@ DELETE /plugins/{param}/{param}
 DELETE /scheduledtasks/running/{param}
 DELETE /sessions/{param}/user/{param}
 DELETE /userimage
-DELETE /useritems/{param}/rating
 DELETE /users/{param}
-DELETE /videos/activeencodings
 DELETE /videos/{param}/alternatesources
 DELETE /videos/{param}/subtitles/{param}
-GET /displaypreferences/{param}
 GET /items/{param}/images/{param}/{param}/{param}/{param}/{param}/{param}/{param}/{param}
-GET /items/{param}/playbackinfo
 GET /providers/lyrics/{param}
 GET /providers/subtitles/subtitles/{param}
-HEAD /artists/{param}/images/{param}/{param}
-HEAD /audio/{param}/master.m3u8
-HEAD /audio/{param}/stream
-HEAD /audio/{param}/stream.{param}
-HEAD /audio/{param}/universal
-HEAD /genres/{param}/images/{param}
-HEAD /genres/{param}/images/{param}/{param}
-HEAD /items/{param}/images/{param}
-HEAD /items/{param}/images/{param}/{param}
 HEAD /items/{param}/images/{param}/{param}/{param}/{param}/{param}/{param}/{param}/{param}
-HEAD /musicgenres/{param}/images/{param}
-HEAD /musicgenres/{param}/images/{param}/{param}
-HEAD /persons/{param}/images/{param}
-HEAD /persons/{param}/images/{param}/{param}
-HEAD /studios/{param}/images/{param}
-HEAD /studios/{param}/images/{param}/{param}
-HEAD /userimage
-HEAD /videos/{param}/master.m3u8
-HEAD /videos/{param}/stream
-HEAD /videos/{param}/stream.{param}
 POST /audio/{param}/lyrics
 POST /audio/{param}/remotesearch/lyrics/{param}
 POST /branding/splashscreen
@@ -226,7 +128,6 @@ POST /livetv/timers
 POST /livetv/timers/{param}
 POST /livetv/tunerhosts
 POST /packages/installed/{param}
-POST /playingitems/{param}
 POST /playlists
 POST /playlists/{param}
 POST /playlists/{param}/items
@@ -242,28 +143,35 @@ POST /startup/complete
 POST /startup/configuration
 POST /startup/remoteaccess
 POST /startup/user
-POST /system/configuration
-POST /system/configuration/branding
 POST /system/configuration/{param}
 POST /userimage
 POST /useritems/{param}/userdata
 POST /users
-POST /users/configuration
 POST /users/{param}/policy
 POST /videos/mergeversions
 POST /videos/{param}/subtitles
 
 Extra endpoints (emulation - spec)
 
+DELETE /playingitems/{param}
 DELETE /sessions/{param}/playing
+DELETE /users/{param}/favoriteitems/{param}
+DELETE /users/{param}/items/{param}/rating
+DELETE /users/{param}/playeditems/{param}
 GET /
+GET /artists/instantmix
+GET /audio/{param}/hls/{param}/stream.aac
+GET /audio/{param}/hls/{param}/stream.mp3
+GET /audio/{param}/hls1/{param}/{param}.{param}
+GET /audio/{param}/main.m3u8
+GET /audio/{param}/master.m3u8
 GET /audio/{param}/remotesearch/lyrics/{param}
 GET /collections
 GET /collections/{param}/items
 GET /config.json
-GET /displaypreferences/usersettings
-GET /hls/{param}/segment/{param}
+GET /environment/networkshares
 GET /items/{param}/contenttype
+GET /items/{param}/criticreviews
 GET /items/{param}/images/backdrop/{param}
 GET /items/{param}/images/primary
 GET /items/{param}/images/{param}/{param}/index
@@ -278,8 +186,13 @@ GET /library/virtualfolders/name
 GET /library/virtualfolders/paths
 GET /livetv/channelmappings
 GET /livetv/listingproviders
+GET /livetv/recordings/groups
+GET /livetv/recordings/groups/{param}
+GET /livetv/recordings/series
 GET /livetv/tunerhosts
+GET /musicgenres
 GET /packages/installed/{param}
+GET /playback/media/{param}/{param}/{param}
 GET /playlists
 GET /plugins/{param}/manifest
 GET /plugins/{param}/{param}
@@ -293,7 +206,8 @@ GET /system/configuration/branding
 GET /system/configuration/encoding
 GET /system/configuration/metadata
 GET /system/configuration/xbmcmetadata
-GET /users/configuration
+GET /tmdb/clientconfiguration
+GET /users/{param}/images/primary
 GET /users/{param}/items
 GET /users/{param}/items/latest
 GET /users/{param}/items/resume
@@ -308,13 +222,20 @@ GET /videos/{param}/stream/{param}
 GET /videos/{param}/subtitles
 GET /videos/{param}/subtitles/{param}
 POST /packages/installing/{param}
+POST /playingitems/{param}/progress
 POST /quickconnect/enabled
 POST /sessions/capabilities/{param}
-
+POST /system/configuration/encoding
+POST /users/{param}/configuration
+POST /users/{param}/favoriteitems/{param}
+POST /users/{param}/items/{param}/rating
+POST /users/{param}/password
+POST /users/{param}/playeditems/{param}
 
 Notes
-- Path comparison normalizes parameter names, so /items/{itemId} and /items/:mediaid are considered the same shape.
-- Extra endpoints include Emby-specific shapes and method mismatches compared to Jellyfin spec.
+- Path comparison normalises parameter names, so /items/{itemId} and /items/:mediaid are the same shape.
+- Extra endpoints include Emby-era shapes and methods the current spec no longer lists; clients still call some of them.
+- The emulation reports Jellyfin API version 10.11.5 (`JELLYFIN_API_VERSION`); the bundled jellyfin-web 12.1 needs 10.10 or later.
 - When extending or modifying endpoints, update this file and the change log below.
 
 Change log
@@ -323,3 +244,4 @@ Change log
 
 - 2026-09-17: Replaced playback negotiation/delivery with the shared viewer-owned playback engine. GET/POST PlaybackInfo returns probed track metadata, external text-subtitle URLs, and negotiated direct or HLS URLs; bitrate/profile changes preserve position and expired leases are replaced; progress/stop/ping share lifecycle and persistence. Removed item-global HLS reuse and obsolete stream implementation. Media URLs use scoped tokens; query values retain case; X-Emby-Authorization token parsing accepts MediaBrowser headers. Removed hard-coded websocket playback injection, validated websocket sessions, and added awaited shutdown. Federation playback uses protocol v1 on the owning server. Browser automation covers Chromium/Firefox/WebKit; actual Safari/iOS and Jellyfin Media Player device acceptance remains a release check.
 - 2026-09-17: Fixed Jellyfin frontend delivery from bundled server and CLI entrypoints; the build now compiles and copies jellyfin-web into the packaged dist tree.
+- 2026-09-27: Browsing, metadata and user data. One item query engine (ServerAPI/itemQuery.ts) behind /Items, /Users/{id}/Items and the /Shows lists: correct paging, the caller's watch state, sort orders, Filters/IsPlayed/IsFavorite/Ids/Genres/GenreIds/PersonIds/Years, library-view, series, season and collection parents. Item DTOs carry real genres, provider ids, tagline, studios, ratings and dates, folder counts and unplayed counts, and People on detail pages; the made-up ratings and blurhashes are gone. New: BoxSets from movie sets, /Persons, /Genres, Similar, Recommendations, Ancestors, Counts, Filters, Items/{id}/Collections and Items/{id}/Images. Favourites (UserFavourites, migration 0008), user configuration saved as Oblecto preferences, display preferences kept per user and app. System configuration, encoding and branding read from and saved to Oblecto's config (jellyfin.serverName, loginDisclaimer, customCss), admins only. Sockets accept ?ApiKey= (the Jellyfin SDK's), answer KeepAlive, send ForceKeepAlive and push UserDataChanged; /Sessions/Playing no longer echoes Play. Checked against jellyfin-web 12.1 in Chromium.
