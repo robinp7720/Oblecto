@@ -8,7 +8,7 @@ Oblecto answers the Jellyfin API on port 8096 (`jellyfin.port`), so Jellyfin app
 - A session only ever sees its own user: user ids in paths, `UserId` parameters and bodies are replaced with the signed-in user's.
 - Access tokens survive restarts and stop working when the user's password changes or the account is deleted. Signing out revokes the token until the next restart; changing the password revokes all of them.
 - Failed sign-ins are throttled, as on the web app.
-- Oblecto reports Jellyfin API version 10.11.5 and a server id derived from its signing secret.
+- Oblecto reports Jellyfin API version 12.1.0 and a server id derived from its signing secret.
 
 **Status Legend:**
 - ✅ **Implemented**: Contains logic (database access, processing) and likely works.

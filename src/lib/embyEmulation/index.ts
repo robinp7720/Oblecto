@@ -43,7 +43,7 @@ export type ClientInfo = {
 type WebsocketSessions = Record<string, unknown>;
 
 // The Jellyfin API version clients are told they are talking to. They gate features on it.
-export const JELLYFIN_API_VERSION = '10.11.5';
+export const JELLYFIN_API_VERSION = '12.1.0';
 
 // How often, in seconds, clients are asked to show their socket is alive.
 const KEEPALIVE_SECONDS = 60;
