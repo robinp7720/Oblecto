@@ -21,7 +21,7 @@ import { loginThrottle } from '../../../../auth/loginThrottle.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
-import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
+import { SubtitleMode, resolvePreferences, validatePreferences } from '../../../../users/preferences.js';
 import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
 import { isFavouriteType, setFavourite } from '../../../../users/favourites.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
@@ -42,9 +42,55 @@ const JELLYFIN_SUBTITLE_MODES: Record<SubtitleMode, string> = {
     forced: 'OnlyForced'
 };
 
-const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password), IsAdministrator = false): Record<string, unknown> => {
+/** The UserConfiguration a Jellyfin app shows in its playback and subtitle settings. */
+const userConfiguration = (user: User): Record<string, unknown> => {
     const preferences = resolvePreferences(user.preferences);
 
+    return {
+        PlayDefaultAudioTrack: preferences.audioLanguage === null,
+        AudioLanguagePreference: preferences.audioLanguage ?? '',
+        SubtitleLanguagePreference: preferences.subtitleLanguage ?? '',
+        DisplayMissingEpisodes: false,
+        GroupedFolders: [],
+        SubtitleMode: JELLYFIN_SUBTITLE_MODES[preferences.subtitleMode],
+        DisplayCollectionsView: false,
+        EnableLocalPassword: false,
+        OrderedViews: [],
+        LatestItemsExcludes: [],
+        MyMediaExcludes: [],
+        HidePlayedInLatest: true,
+        RememberAudioSelections: true,
+        RememberSubtitleSelections: true,
+        EnableNextEpisodeAutoPlay: preferences.autoplayNext
+    };
+};
+
+// Jellyfin's subtitle modes Oblecto has no mode of its own for show subtitles when the file says so
+const OBLECTO_SUBTITLE_MODES: Record<string, SubtitleMode> = {
+    none: 'off',
+    default: 'auto',
+    smart: 'auto',
+    always: 'auto',
+    onlyforced: 'forced'
+};
+
+/**
+ * The Oblecto preferences a UserConfiguration from a Jellyfin app changes. Only what the app sent
+ * and Oblecto keeps; the rest of the configuration is Jellyfin's own and is not stored.
+ */
+export const preferencesFromConfiguration = (configuration: Record<string, unknown>): Record<string, unknown> => {
+    const update: Record<string, unknown> = {};
+    const language = (value: unknown): unknown => (value === '' || value === null ? null : value);
+
+    if ('AudioLanguagePreference' in configuration) update.audioLanguage = language(configuration.AudioLanguagePreference);
+    if ('SubtitleLanguagePreference' in configuration) update.subtitleLanguage = language(configuration.SubtitleLanguagePreference);
+    if (typeof configuration.SubtitleMode === 'string') update.subtitleMode = OBLECTO_SUBTITLE_MODES[configuration.SubtitleMode.toLowerCase()] ?? configuration.SubtitleMode;
+    if ('EnableNextEpisodeAutoPlay' in configuration) update.autoplayNext = configuration.EnableNextEpisodeAutoPlay;
+
+    return update;
+};
+
+const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password), IsAdministrator = false): Record<string, unknown> => {
     return {
         Name: user.name,
         ServerId: embyEmulation.serverId,
@@ -56,23 +102,7 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
         EnableAutoLogin: false,
         LastLoginDate: lastChanged(user),
         LastActivityDate: lastChanged(user),
-        Configuration: {
-            PlayDefaultAudioTrack: preferences.audioLanguage === null,
-            AudioLanguagePreference: preferences.audioLanguage ?? '',
-            SubtitleLanguagePreference: preferences.subtitleLanguage ?? '',
-            DisplayMissingEpisodes: false,
-            GroupedFolders: [],
-            SubtitleMode: JELLYFIN_SUBTITLE_MODES[preferences.subtitleMode],
-            DisplayCollectionsView: false,
-            EnableLocalPassword: false,
-            OrderedViews: [],
-            LatestItemsExcludes: [],
-            MyMediaExcludes: [],
-            HidePlayedInLatest: true,
-            RememberAudioSelections: true,
-            RememberSubtitleSelections: true,
-            EnableNextEpisodeAutoPlay: preferences.autoplayNext
-        },
+        Configuration: userConfiguration(user),
         Policy: {
             IsAdministrator,
             IsHidden: false,
@@ -536,7 +566,36 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(buildUserDto(user, embyEmulation, Boolean(user.password), await isAdministrator(user)).Policy);
     });
     server.post('/users/authenticatewithquickconnect', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/configuration', (req, res) => { res.send([]); });
+    // The playback and subtitle settings in a Jellyfin app, saved as the user's Oblecto preferences
+    const saveConfiguration = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const user = await User.findByPk(req.embyUserId);
+        const body = req.body as unknown;
+
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+            res.status(400).send('Expected a user configuration');
+            return;
+        }
+
+        const update = preferencesFromConfiguration(body as Record<string, unknown>);
+        const problems = validatePreferences(update);
+
+        if (Object.keys(problems).length > 0) {
+            res.status(400).send(Object.entries(problems).map(([key, message]) => `${key}: ${message}`).join(' '));
+            return;
+        }
+
+        user.preferences = { ...(user.preferences ?? {}), ...update };
+        await user.save();
+        res.status(204).send();
+    };
+
+    server.post('/users/configuration', saveConfiguration);
+    server.post('/users/:userid/configuration', saveConfiguration);
     server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
