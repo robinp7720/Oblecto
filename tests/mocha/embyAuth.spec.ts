@@ -256,6 +256,56 @@ describe('Jellyfin emulation sign-in and sessions', function () {
             assert.equal((await fetch(`${base}/UserItems/${id}/Rating`, { method: 'POST', headers: AUTH(token) })).status, 501);
         });
 
+        it('keeps an app\'s socket alive and tells it when user data changes', async () => {
+            const id = formatId(movie.id, 'movie');
+            const socket = new WebSocket(`${base.replace('http', 'ws')}/socket?api_key=${token}&deviceId=spec`);
+            const received: any[] = [];
+            const next = (type: string, wait = 1500): Promise<any> => new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error(`No ${type} message`)), wait);
+                const check = (): void => {
+                    const index = received.findIndex(message => message?.MessageType === type);
+
+                    if (index === -1) return;
+                    clearTimeout(timer);
+                    socket.removeEventListener('message', check);
+                    resolve(received.splice(index, 1)[0]);
+                };
+
+                socket.addEventListener('message', check);
+                check();
+            });
+
+            socket.addEventListener('message', event => {
+                try { received.push(JSON.parse(String(event.data))); } catch { /* Primus heartbeats */ }
+            });
+
+            try {
+                assert.equal((await next('ForceKeepAlive')).Data, 60);
+
+                socket.send(JSON.stringify({ MessageType: 'KeepAlive' }));
+                await next('KeepAlive');
+
+                await fetch(`${base}/UserPlayedItems/${id}`, { method: 'POST', headers: AUTH(token) });
+                const played = await next('UserDataChanged');
+
+                assert.equal(played.Data.UserId, formatUuid(alice.id));
+                assert.equal(played.Data.UserDataList[0].ItemId, id);
+                assert.equal(played.Data.UserDataList[0].Played, true);
+
+                // Progress saved elsewhere, as the web UI does, reaches the app too
+                await saveProgress(alice.id, 'movie', movie.id, 30, 1200);
+                const resumed = await next('UserDataChanged');
+
+                assert.equal(resumed.Data.UserDataList[0].PlaybackPositionTicks, 30 * 10000000);
+
+                // Someone else's changes stay theirs
+                await saveProgress(bob.id, 'movie', movie.id, 90, 1200);
+                await assert.rejects(next('UserDataChanged', 300));
+            } finally {
+                socket.close();
+            }
+        });
+
         it('changes the password, checking the current one', async () => {
             const change = (CurrentPw: string, NewPw: string) => fetch(`${base}/Users/${formatUuid(alice.id)}/Password`, {
                 method: 'POST',

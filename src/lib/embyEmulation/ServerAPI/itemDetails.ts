@@ -6,7 +6,8 @@ import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { Person } from '../../../models/person.js';
 import { creditsFor } from '../../../submodules/REST/routes/helpers/credits.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
-import { favouritesAmong } from '../../users/favourites.js';
+import { favouritesAmong, isFavouriteType } from '../../users/favourites.js';
+import { TrackMovie } from '../../../models/trackMovie.js';
 import { formatId, parseId } from '../helpers.js';
 
 type Dto = Record<string, unknown>;
@@ -167,4 +168,30 @@ export async function describeItem(dto: Dto, userId: number | null): Promise<Dto
     if (Number.isFinite(id)) dto.People = await peopleFor(type, id);
 
     return dto;
+}
+
+/**
+ * The UserItemDataDto for one item: the user's progress on a movie or episode, and whether it is
+ * one of their favourites. Null for an id that names no item Oblecto keeps user data for.
+ */
+export async function userItemData(userId: number | null | undefined, itemId: string): Promise<Dto | null> {
+    const { id, type } = parseId(itemId);
+
+    if (!userId || !Number.isFinite(id) || !isFavouriteType(type)) return null;
+
+    const favourite = (await favouritesAmong(userId, [{ type, id }])).size > 0;
+    const track = type === 'movie'
+        ? await TrackMovie.findOne({ where: { userId, movieId: id } })
+        : type === 'episode' ? await TrackEpisode.findOne({ where: { userId, episodeId: id } }) : null;
+    const played = (track?.progress ?? 0) >= WATCHED_PROGRESS;
+
+    return {
+        PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
+        PlayCount: played ? 1 : 0,
+        IsFavorite: favourite,
+        Played: played,
+        LastPlayedDate: track?.updatedAt?.toISOString(),
+        Key: itemId,
+        ItemId: itemId
+    };
 }

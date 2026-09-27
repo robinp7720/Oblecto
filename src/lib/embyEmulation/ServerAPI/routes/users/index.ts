@@ -23,9 +23,9 @@ import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
 import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
-import { favouritesAmong, isFavouriteType, setFavourite } from '../../../../users/favourites.js';
+import { isFavouriteType, setFavourite } from '../../../../users/favourites.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
-import { decorateItems, describeItem } from '../../itemDetails.js';
+import { decorateItems, describeItem, userItemData } from '../../itemDetails.js';
 import { isLibraryItemId, resolveLibraryItem } from '../../library.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 import { containsText } from '../../../../common/textSearch.js';
@@ -266,34 +266,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(await queryItems(req, embyEmulation));
     });
 
-    const trackFor = (userId: number, type: string, id: number) => (type === 'movie'
-        ? TrackMovie.findOne({ where: { userId, movieId: id } })
-        : TrackEpisode.findOne({ where: { userId, episodeId: id } }));
-
-    /**
-     * The UserItemDataDto for one item: the user's progress on a movie or episode, and whether it is
-     * one of their favourites. Null for an id that names no item Oblecto has user data for.
-     */
-    const userDataFor = async (userId: number | undefined, itemId: string): Promise<Record<string, unknown> | null> => {
-        const { id, type } = parseId(itemId);
-
-        if (!userId || !Number.isFinite(id) || !isFavouriteType(type)) return null;
-
-        const favourite = (await favouritesAmong(userId, [{ type, id }])).size > 0;
-        const track = type === 'movie' || type === 'episode' ? await trackFor(userId, type, id) : null;
-        const played = (track?.progress ?? 0) >= WATCHED_PROGRESS;
-
-        return {
-            PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
-            PlayCount: played ? 1 : 0,
-            IsFavorite: favourite,
-            Played: played,
-            LastPlayedDate: track?.updatedAt?.toISOString(),
-            Key: itemId,
-            ItemId: itemId
-        };
-    };
-
     /** Mark a movie, an episode, or every episode of a series or season, as watched or unwatched. */
     const markPlayed = (played: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
         const itemId = String(req.params.itemid);
@@ -311,7 +283,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
             for (const episode of episodes) await setPlayed(userId, 'episode', episode.id, played);
             res.send({
-                ...await userDataFor(userId, itemId),
+                ...await userItemData(userId, itemId),
                 Played: played,
                 PlayCount: played ? 1 : 0
             });
@@ -324,7 +296,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         await setPlayed(userId, type, id, played);
-        res.send(await userDataFor(userId, itemId));
+        res.send(await userItemData(userId, itemId));
     };
 
     /** Mark an item as one of the user's favourites, or not. */
@@ -339,7 +311,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         await setFavourite(userId, type, id, favourite);
-        res.send(await userDataFor(userId, itemId));
+        res.send(await userItemData(userId, itemId));
     };
 
     /** Started but unfinished movies and episodes, most recently watched first. */
@@ -599,7 +571,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
     // UserItems
     server.get('/useritems/:itemid/userdata', async (req: EmbyRequest, res: Response) => {
-        const data = await userDataFor(req.embyUserId, String(req.params.itemid));
+        const data = await userItemData(req.embyUserId, String(req.params.itemid));
 
         if (!data) return res.status(404).send('Item not found');
         res.send(data);
