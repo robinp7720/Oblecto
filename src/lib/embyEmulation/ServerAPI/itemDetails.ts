@@ -6,6 +6,7 @@ import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { Person } from '../../../models/person.js';
 import { creditsFor } from '../../../submodules/REST/routes/helpers/credits.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
+import { favouritesAmong } from '../../users/favourites.js';
 import { formatId, parseId } from '../helpers.js';
 
 type Dto = Record<string, unknown>;
@@ -58,13 +59,20 @@ const applyCounts = (dto: Dto, children: number, total: number, watched: number)
 };
 
 /**
- * Fill in the folder counts and watch state of the series and seasons in a page, with one query for
- * the whole page.
+ * Fill in which items in a page are this user's favourites, and the folder counts and watch state
+ * of its series and seasons, with a query or two for the whole page.
  */
 export async function decorateItems(items: Dto[], userId: number | null): Promise<Dto[]> {
-    const folders = items
-        .map(dto => ({ dto, ...parseId(dto.Id) }))
-        .filter(entry => (entry.type === 'series' || entry.type === 'season') && Number.isFinite(entry.id));
+    const parsed = items.map(dto => ({ dto, ...parseId(dto.Id) }));
+    const favourites = await favouritesAmong(userId, parsed);
+
+    for (const entry of parsed) {
+        const userData = entry.dto.UserData as Record<string, unknown> | undefined;
+
+        if (userData) userData.IsFavorite = favourites.has(`${entry.type}:${entry.id}`);
+    }
+
+    const folders = parsed.filter(entry => (entry.type === 'series' || entry.type === 'season') && Number.isFinite(entry.id));
 
     if (folders.length === 0) return items;
 

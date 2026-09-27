@@ -23,6 +23,7 @@ import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
 import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
+import { favouritesAmong, isFavouriteType, setFavourite } from '../../../../users/favourites.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
 import { decorateItems, describeItem } from '../../itemDetails.js';
 import { isLibraryItemId, resolveLibraryItem } from '../../library.js';
@@ -269,19 +270,23 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         ? TrackMovie.findOne({ where: { userId, movieId: id } })
         : TrackEpisode.findOne({ where: { userId, episodeId: id } }));
 
-    /** The UserItemDataDto for one movie or episode, from the user's own progress. */
+    /**
+     * The UserItemDataDto for one item: the user's progress on a movie or episode, and whether it is
+     * one of their favourites. Null for an id that names no item Oblecto has user data for.
+     */
     const userDataFor = async (userId: number | undefined, itemId: string): Promise<Record<string, unknown> | null> => {
         const { id, type } = parseId(itemId);
 
-        if (!userId || !Number.isFinite(id) || !['movie', 'episode'].includes(type)) return null;
+        if (!userId || !Number.isFinite(id) || !isFavouriteType(type)) return null;
 
-        const track = await trackFor(userId, type, id);
+        const favourite = (await favouritesAmong(userId, [{ type, id }])).size > 0;
+        const track = type === 'movie' || type === 'episode' ? await trackFor(userId, type, id) : null;
         const played = (track?.progress ?? 0) >= WATCHED_PROGRESS;
 
         return {
             PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
             PlayCount: played ? 1 : 0,
-            IsFavorite: false,
+            IsFavorite: favourite,
             Played: played,
             LastPlayedDate: track?.updatedAt?.toISOString(),
             Key: itemId,
@@ -289,7 +294,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         };
     };
 
-    /** Mark a movie, an episode, or every episode of a series, as watched or unwatched. */
+    /** Mark a movie, an episode, or every episode of a series or season, as watched or unwatched. */
     const markPlayed = (played: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
         const itemId = String(req.params.itemid);
         const { id, type } = parseId(itemId);
@@ -300,17 +305,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             return;
         }
 
-        if (type === 'series') {
-            const episodes = await Episode.findAll({ where: { SeriesId: id }, attributes: ['id'] });
+        if (type === 'series' || type === 'season') {
+            const where = type === 'series' ? { SeriesId: id } : { SeriesId: Math.floor(id / 1000), airedSeason: String(id % 1000) };
+            const episodes = await Episode.findAll({ where, attributes: ['id'] });
 
             for (const episode of episodes) await setPlayed(userId, 'episode', episode.id, played);
             res.send({
+                ...await userDataFor(userId, itemId),
                 Played: played,
-                PlayCount: played ? 1 : 0,
-                PlaybackPositionTicks: 0,
-                IsFavorite: false,
-                Key: itemId,
-                ItemId: itemId
+                PlayCount: played ? 1 : 0
             });
             return;
         }
@@ -321,6 +324,21 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         await setPlayed(userId, type, id, played);
+        res.send(await userDataFor(userId, itemId));
+    };
+
+    /** Mark an item as one of the user's favourites, or not. */
+    const markFavourite = (favourite: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
+        const itemId = String(req.params.itemid);
+        const { id, type } = parseId(itemId);
+        const userId = req.embyUserId;
+
+        if (!userId || !Number.isFinite(id) || !isFavouriteType(type)) {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        await setFavourite(userId, type, id, favourite);
         res.send(await userDataFor(userId, itemId));
     };
 
@@ -364,7 +382,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         ].sort((a, b) => b.at - a.at).slice(0, limit).map(entry => entry.item);
 
         res.send({
-            Items: items,
+            Items: await decorateItems(items, userId ?? null),
             TotalRecordCount: items.length,
             StartIndex: 0
         });
@@ -587,7 +605,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(data);
     });
 
-    // Oblecto has no favourites or ratings yet; say so rather than pretend the change was kept.
+    // Oblecto has no ratings yet; say so rather than pretend the change was kept.
     const unsupported = (feature: string) => (_req: Request, res: Response) => { res.status(501).send(`${feature} are not supported by Oblecto yet`); };
 
     server.post('/useritems/:itemid/rating', unsupported('Ratings'));
@@ -601,9 +619,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         server.delete(path, markPlayed(false));
     }
 
+    // Favourites, at the current path and the one older apps use
     for (const path of ['/userfavoriteitems/:itemid', '/users/:userid/favoriteitems/:itemid']) {
-        server.post(path, unsupported('Favourites'));
-        server.delete(path, unsupported('Favourites'));
+        server.post(path, markFavourite(true));
+        server.delete(path, markFavourite(false));
     }
 
     // UserViews

@@ -20,6 +20,7 @@ import { formatMediaItem, parseId, parseUuid, type MediaItem } from '../helpers.
 import { isLibraryView, type LibraryViewId } from '../views.js';
 import { getRequestList, getRequestValue } from './requestUtils.js';
 import { decorateItems } from './itemDetails.js';
+import { favouriteIdsSql, favouritesAmong } from '../../users/favourites.js';
 import { genreNames, listBoxSets, visibleSet } from './library.js';
 
 import type EmbyEmulation from '../index.js';
@@ -54,6 +55,7 @@ export type ItemQuery = {
     descending: boolean;
     filters: Set<string>;
     isPlayed: boolean | null;
+    isFavorite: boolean | null;
     ids: Map<ItemKind, number[]> | null;
     years: number[];
     genres: string[];
@@ -183,6 +185,7 @@ export function readItemQuery(req: EmbyRequest): ItemQuery | null {
         descending: sortOrder.startsWith('desc'),
         filters,
         isPlayed: readBoolean(getRequestValue(req, 'IsPlayed')),
+        isFavorite: readBoolean(getRequestValue(req, 'IsFavorite')) ?? (filters.has('isfavorite') ? true : null),
         ids,
         years: getRequestList(req, 'Years').map(year => parseInt(year, 10)).filter(Number.isFinite),
         genres: getRequestList(req, 'Genres', '|'),
@@ -349,6 +352,14 @@ function whereFor(sequelize: Sequelize, kind: RowKind, query: ItemQuery): WhereO
         conditions.push(literal(`(${query.genres.map(genre => genreCondition(sequelize, `${q(spec.alias)}.${q(spec.genres!)}`, genre)).join(' OR ')})`));
     }
 
+    if (query.isFavorite !== null) {
+        if (!query.userId) {
+            if (query.isFavorite) return null;
+        } else {
+            conditions.push(literal(`${query.isFavorite ? '' : 'NOT '}${q(spec.alias)}.${q('id')} IN ${favouriteIdsSql(query.userId, kind)}`));
+        }
+    }
+
     const played = query.isPlayed ?? (query.filters.has('isplayed') ? true : query.filters.has('isunplayed') ? false : null);
 
     if (played !== null || query.filters.has('isresumable')) {
@@ -480,6 +491,11 @@ async function fetchSeasons(query: ItemQuery, embyEmulation: EmbyEmulation, limi
     const ids = query.ids?.get('season');
 
     if (ids) seasons = seasons.filter(season => ids.includes(series.id * 1000 + season));
+    if (query.isFavorite !== null) {
+        const favourites = await favouritesAmong(query.userId, seasons.map(season => ({ type: 'season', id: series.id * 1000 + season })));
+
+        seasons = seasons.filter(season => favourites.has(`season:${series.id * 1000 + season}`) === query.isFavorite);
+    }
     if (query.descending) seasons.reverse();
 
     return {
@@ -503,6 +519,7 @@ async function fetchBoxSets(query: ItemQuery, embyEmulation: EmbyEmulation, limi
         userId: query.userId,
         searchTerm: query.searchTerm,
         ids: query.ids?.get('boxset') ?? null,
+        favourite: query.isFavorite,
         descending: query.descending,
         byDate: query.sortBy[0] === 'datecreated',
         limit,

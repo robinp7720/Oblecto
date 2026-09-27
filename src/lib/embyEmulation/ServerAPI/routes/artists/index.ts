@@ -2,7 +2,10 @@
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import type { EmbyRequest } from '../../index.js';
+import { Op, literal, type WhereOptions } from 'sequelize';
 import { Person } from '../../../../../models/person.js';
+import { favouriteIdsSql } from '../../../../users/favourites.js';
+import { decorateItems } from '../../itemDetails.js';
 import { containsText } from '../../../../common/textSearch.js';
 import { personProfileFile } from '../../../../people/index.js';
 import { formatId } from '../../../helpers.js';
@@ -49,7 +52,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const startIndex = Math.max(0, Number(getRequestValue(req, 'StartIndex')) || 0);
         const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 100, 1), 1000);
         const searchTerm = getRequestValue(req, 'SearchTerm') ?? getRequestValue(req, 'NameStartsWith') ?? '';
-        const where = searchTerm ? containsText('name', searchTerm) : {};
+        const userId = requestUserId(req);
+        const favourite = getRequestValue(req, 'IsFavorite');
+        const conditions: WhereOptions[] = searchTerm ? [containsText('name', searchTerm)] : [];
+
+        if (favourite !== undefined && userId) {
+            conditions.push({ id: { [favourite.toLowerCase() === 'true' ? Op.in : Op.notIn]: literal(favouriteIdsSql(userId, 'person')) } });
+        }
+
+        const where = { [Op.and]: conditions };
         const [total, people] = await Promise.all([
             Person.count({ where }),
             Person.findAll({
@@ -58,7 +69,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         ]);
 
         res.send({
-            Items: people.map(person => formatPerson(person, embyEmulation)),
+            Items: await decorateItems(people.map(person => formatPerson(person, embyEmulation)), userId),
             TotalRecordCount: total,
             StartIndex: startIndex
         });

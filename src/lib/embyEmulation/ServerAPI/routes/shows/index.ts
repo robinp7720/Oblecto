@@ -7,6 +7,7 @@ import { Stream } from '../../../../../models/stream';
 import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers';
 import { Op } from 'sequelize';
 import { queryItems } from '../../itemQuery.js';
+import { decorateItems } from '../../itemDetails.js';
 import { getRequestValue } from '../../requestUtils.js';
 import type { EmbyRequest } from '../../index.js';
 
@@ -84,7 +85,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
         }
 
-        const items = nextEpisodes.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
+        const items = await decorateItems(nextEpisodes.map(ep => formatMediaItem(ep, 'episode', embyEmulation)), userId);
 
         res.send({
             'Items': items,

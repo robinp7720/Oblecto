@@ -34,10 +34,10 @@ async function addColumnIfMissing(queryInterface: QueryInterface, table: string,
     await queryInterface.addColumn(table, column, definition);
 }
 
-async function addIndexIfMissing(queryInterface: QueryInterface, table: string, fields: string[], name: string): Promise<void> {
+async function addIndexIfMissing(queryInterface: QueryInterface, table: string, fields: string[], name: string, unique = false): Promise<void> {
     const indexes = await queryInterface.showIndex(table) as Array<{ name: string }>;
     if (indexes.some(index => sameName(index.name, name))) return;
-    await queryInterface.addIndex(table, fields, { name });
+    await queryInterface.addIndex(table, fields, { name, unique });
 }
 
 type ColumnDefinition = ModelAttributeColumnOptions;
@@ -192,6 +192,47 @@ export const MIGRATIONS: Migration[] = [
             for (const table of ['Movies', 'Series', 'Episodes']) {
                 await addColumnIfMissing(queryInterface, table, 'siteRatingSource', optional(DataTypes.STRING));
             }
+        }
+    },
+    {
+        // Favourites and the display preferences Jellyfin apps save, per user
+        name: '0008-jellyfin-user-data',
+        up: async ({ queryInterface }) => {
+            const owner: ColumnDefinition = {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                references: { model: 'Users', key: 'id' },
+                onDelete: 'CASCADE'
+            };
+            const common = {
+                id: {
+                    type: DataTypes.INTEGER,
+                    primaryKey: true,
+                    autoIncrement: true
+                },
+                userId: owner,
+                createdAt: { type: DataTypes.DATE, allowNull: false },
+                updatedAt: { type: DataTypes.DATE, allowNull: false }
+            };
+
+            if (!await hasTable(queryInterface, 'UserFavourites')) {
+                await queryInterface.createTable('UserFavourites', {
+                    ...common,
+                    itemType: { type: DataTypes.STRING(16), allowNull: false },
+                    itemId: { type: DataTypes.INTEGER, allowNull: false }
+                });
+            }
+            await addIndexIfMissing(queryInterface, 'UserFavourites', ['userId', 'itemType', 'itemId'], 'UserFavourites_user_item', true);
+
+            if (!await hasTable(queryInterface, 'JellyfinDisplayPreferences')) {
+                await queryInterface.createTable('JellyfinDisplayPreferences', {
+                    ...common,
+                    preferencesId: { type: DataTypes.STRING(128), allowNull: false },
+                    client: { type: DataTypes.STRING(64), allowNull: false },
+                    data: { type: DataTypes.TEXT, allowNull: false }
+                });
+            }
+            await addIndexIfMissing(queryInterface, 'JellyfinDisplayPreferences', ['userId', 'preferencesId', 'client'], 'JellyfinDisplayPreferences_user_id_client', true);
         }
     }
 ];

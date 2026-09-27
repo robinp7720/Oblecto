@@ -10,6 +10,7 @@ import { TrackMovie } from '../../../models/trackMovie.js';
 import { genresFrom } from '../../common/genres.js';
 import { containsText } from '../../common/textSearch.js';
 import { enrichPerson } from '../../people/index.js';
+import { favouriteIdsSql } from '../../users/favourites.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
 import { relatedTitles } from '../../../submodules/REST/routes/helpers/related.js';
 import { formatId, formatMediaItem, genreId, parseId, type MediaItem } from '../helpers.js';
@@ -137,19 +138,37 @@ export function formatBoxSet(set: MovieSet, embyEmulation: EmbyEmulation, counts
     };
 }
 
-/** A page of the movie sets this user may see. */
-export async function listBoxSets(
-    options: { userId: number | null; searchTerm: string; ids: number[] | null; descending: boolean; byDate: boolean; limit: number; offset: number },
-    embyEmulation: EmbyEmulation
-): Promise<{ total: number; items: Dto[]; rows: MovieSet[] }> {
-    if (!MovieSet.sequelize) return {
- total: 0, items: [], rows: [] 
+export type BoxSetQuery = {
+    userId: number | null;
+    searchTerm: string;
+    ids: number[] | null;
+    favourite: boolean | null;
+    descending: boolean;
+    byDate: boolean;
+    limit: number;
+    offset: number;
 };
+
+type BoxSetPage = { total: number; items: Dto[]; rows: MovieSet[] };
+
+const NO_SETS: BoxSetPage = {
+    total: 0,
+    items: [],
+    rows: []
+};
+
+/** A page of the movie sets this user may see. */
+export async function listBoxSets(options: BoxSetQuery, embyEmulation: EmbyEmulation): Promise<BoxSetPage> {
+    if (!MovieSet.sequelize) return NO_SETS;
 
     const conditions: WhereOptions[] = [visibleSets(options.userId)];
 
     if (options.ids) conditions.push({ id: { [Op.in]: options.ids } });
     if (options.searchTerm) conditions.push(containsText('setName', options.searchTerm));
+    if (options.favourite !== null) {
+        if (!options.userId) return options.favourite ? NO_SETS : listBoxSets({ ...options, favourite: null }, embyEmulation);
+        conditions.push({ id: { [options.favourite ? Op.in : Op.notIn]: literal(favouriteIdsSql(options.userId, 'boxset')) } });
+    }
 
     const where = { [Op.and]: conditions };
     const total = await MovieSet.count({ where });
@@ -162,10 +181,13 @@ export async function listBoxSets(
         })
         : [];
     const counts = await setCounts(rows.map(row => row.id), options.userId);
+    const items = await decorateItems(rows.map(row => formatBoxSet(row, embyEmulation, counts.get(row.id))), options.userId);
 
     return {
- total, rows, items: rows.map(row => formatBoxSet(row, embyEmulation, counts.get(row.id))) 
-};
+        total,
+        rows,
+        items
+    };
 }
 
 /** The movie a set's artwork comes from: its first one. */
@@ -283,7 +305,9 @@ export async function resolveLibraryItem(rawId: string, userId: number | null, e
 
         if (!set) return null;
 
-        return formatBoxSet(set, embyEmulation, (await setCounts([set.id], userId)).get(set.id));
+        const [item] = await decorateItems([formatBoxSet(set, embyEmulation, (await setCounts([set.id], userId)).get(set.id))], userId);
+
+        return item;
     }
 
     if (type === 'person' && Number.isFinite(id) && Person.sequelize) {
@@ -292,7 +316,9 @@ export async function resolveLibraryItem(rawId: string, userId: number | null, e
         if (!person) return null;
         if ((embyEmulation.oblecto as { tmdb?: unknown } | undefined)?.tmdb) await enrichPerson(embyEmulation.oblecto, person);
 
-        return formatPerson(person, embyEmulation);
+        const [item] = await decorateItems([formatPerson(person, embyEmulation)], userId);
+
+        return item;
     }
 
     if (type === 'genre') {

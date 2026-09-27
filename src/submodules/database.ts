@@ -20,6 +20,8 @@ import { Person, personColumns } from '../models/person.js';
 import { MovieCredit, movieCreditColumns } from '../models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../models/episodeCredit.js';
+import { UserFavourite, userFavouriteColumns } from '../models/userFavourite.js';
+import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '../models/jellyfinDisplayPreferences.js';
 
 const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
 
@@ -53,6 +55,9 @@ function initModels(sequelize: Sequelize): void {
 
     User.init(userColumns, modelOptions('User'));
     Group.init(groupColumns, modelOptions('Group'));
+
+    UserFavourite.init(userFavouriteColumns, modelOptions('UserFavourite'));
+    JellyfinDisplayPreferences.init(jellyfinDisplayPreferencesColumns, modelOptions('JellyfinDisplayPreferences'));
 }
 
 /**
@@ -84,6 +89,11 @@ function initAssociations(): void {
     // adding a second, capitalised key that databases treat as the same column.
     TrackEpisode.belongsTo(User, { foreignKey: 'userId' });
     TrackEpisode.belongsTo(Episode, { foreignKey: 'episodeId' });
+
+    UserFavourite.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(UserFavourite, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    JellyfinDisplayPreferences.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(JellyfinDisplayPreferences, { foreignKey: 'userId', onDelete: 'CASCADE' });
 
     TrackMovie.belongsTo(User, { foreignKey: 'userId' });
     TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });

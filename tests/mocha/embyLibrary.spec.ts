@@ -21,6 +21,7 @@ import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit
 import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
 import { MovieSet, movieSetColumns } from '../../src/models/movieSet.js';
 import { SeriesSet, seriesSetColumns } from '../../src/models/seriesSet.js';
+import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
 import artistsRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/artists/index.js';
 import libraryRoutes from '../../src/lib/embyEmulation/ServerAPI/routes/library/index.js';
 import { formatId, genreId } from '../../src/lib/embyEmulation/helpers.js';
@@ -81,6 +82,7 @@ describe('Jellyfin library browsing', () => {
         EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
         MovieSet.init(movieSetColumns, { sequelize, modelName: 'MovieSet' });
         SeriesSet.init(seriesSetColumns, { sequelize, modelName: 'SeriesSet' });
+        UserFavourite.init(userFavouriteColumns, { sequelize, modelName: 'UserFavourite' });
 
         Episode.belongsTo(Series);
         Series.hasMany(Episode);
@@ -434,6 +436,47 @@ describe('Jellyfin library browsing', () => {
             assert.equal(res.body.length, 1);
             assert.equal(res.body[0].RecommendationType, 'SimilarToRecentlyPlayed');
             assert.equal(res.body[0].Items.length, 3);
+        });
+    });
+
+    describe('favourites', () => {
+        const heart = async (id: string, favourite = true) => (await call(`${favourite ? 'POST' : 'DELETE'} /userfavoriteitems/:itemid`, {}, { itemid: id })).body;
+
+        it('marks any kind of item as a favourite and lists them together', async () => {
+            const person = (await call('GET /persons', { SearchTerm: 'Keanu' })).body.Items[0];
+            const set = (await call('GET /items', { ParentId: 'collections', SearchTerm: 'Trilogy' })).body.Items[0];
+            const series = formatId(show.id, 'series');
+
+            assert.equal((await heart(formatId(movies[9].id, 'movie'))).IsFavorite, true);
+            await heart(series);
+            await heart(person.Id);
+            await heart(set.Id);
+
+            const favourites = await call('GET /items', { IncludeItemTypes: 'Movie,Series,BoxSet', Recursive: 'true', Filters: 'IsFavorite' });
+            const people = await call('GET /persons', { IsFavorite: 'true' });
+            const detail = await call('GET /items/:mediaid', {}, { mediaid: series });
+
+            assert.deepEqual(names(favourites), ['Movie 10', 'Show A', 'Trilogy']);
+            assert.ok(favourites.body.Items.every((item: any) => item.UserData.IsFavorite));
+            assert.deepEqual(names(people), ['Keanu Reeves']);
+            assert.equal(detail.body.UserData.IsFavorite, true);
+        });
+
+        it('takes a favourite back, and ignores marking one twice', async () => {
+            const id = formatId(movies[10].id, 'movie');
+
+            await heart(id);
+            await heart(id);
+            assert.equal(await UserFavourite.count({ where: { itemType: 'movie', itemId: movies[10].id } }), 1);
+
+            assert.equal((await heart(id, false)).IsFavorite, false);
+            assert.equal((await call('GET /items', { IncludeItemTypes: 'Movie', IsFavorite: 'true' })).body.TotalRecordCount, 1);
+        });
+
+        it('refuses an id that names nothing a user can favourite', async () => {
+            const res = await call('POST /userfavoriteitems/:itemid', {}, { itemid: 'movies' });
+
+            assert.equal(res.statusCode, 404);
         });
     });
 });

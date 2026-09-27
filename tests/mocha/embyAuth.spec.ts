@@ -19,6 +19,7 @@ import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { Episode, episodeColumns } from '../../src/models/episode.js';
 import { saveProgress } from '../../src/lib/playback/progress.js';
+import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
 import { formatId } from '../../src/lib/embyEmulation/helpers.js';
 
 const AUTH = (token?: string) => ({
@@ -69,6 +70,7 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
         TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
         Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+        UserFavourite.init(userFavouriteColumns, { sequelize, modelName: 'UserFavourite' });
         if (!Episode.associations.Series) Episode.belongsTo(Series);
         if (!Episode.associations.TrackEpisodes) Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
         if (!Episode.associations.Files) Episode.belongsToMany(File, { through: 'EpisodeFiles' });
@@ -238,10 +240,19 @@ describe('Jellyfin emulation sign-in and sessions', function () {
             assert.equal(resume.Items[0].UserData.PlaybackPositionTicks, 600 * 10000000);
         });
 
-        it('says favourites and ratings are unsupported instead of pretending to keep them', async () => {
+        it('keeps favourites per user, and says ratings are unsupported instead of pretending to keep them', async () => {
             const id = formatId(movie.id, 'movie');
+            const favourite = async (): Promise<boolean> => ((await (await fetch(`${base}/UserItems/${id}/UserData`, { headers: AUTH(token) })).json()) as { IsFavorite: boolean }).IsFavorite;
+            const marked = await fetch(`${base}/UserFavoriteItems/${id}`, { method: 'POST', headers: AUTH(token) });
 
-            assert.equal((await fetch(`${base}/UserFavoriteItems/${id}`, { method: 'POST', headers: AUTH(token) })).status, 501);
+            assert.equal(marked.status, 200);
+            assert.equal(((await marked.json()) as { IsFavorite: boolean }).IsFavorite, true);
+            assert.equal(await favourite(), true);
+            assert.equal(await UserFavourite.count({ where: { userId: bob.id } }), 0);
+
+            await fetch(`${base}/Users/${formatUuid(alice.id)}/FavoriteItems/${id}`, { method: 'DELETE', headers: AUTH(token) });
+            assert.equal(await favourite(), false);
+
             assert.equal((await fetch(`${base}/UserItems/${id}/Rating`, { method: 'POST', headers: AUTH(token) })).status, 501);
         });
 
