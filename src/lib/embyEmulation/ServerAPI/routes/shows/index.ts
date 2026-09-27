@@ -97,10 +97,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/shows/:seriesid/seasons', async (req: EmbyRequest, res: Response) => {
         const series = parseId(req.params.seriesid);
 
-        req.query = {
- ...req.query, ParentId: formatId(series.id, 'series'), IncludeItemTypes: 'Season' 
-};
-        res.send(await queryItems(req, embyEmulation));
+        res.send(await queryItems(req, embyEmulation, { ParentId: formatId(series.id, 'series'), IncludeItemTypes: 'Season' }));
     });
 
     // Episodes of a series, optionally of one season (by number or by season id)
@@ -113,9 +110,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         if (seasonId && parseId(seasonId).type === 'season') parent = seasonId;
         else if (seasonNumber !== undefined && Number.isFinite(parseInt(seasonNumber, 10))) parent = formatId(series.id * 1000 + parseInt(seasonNumber, 10), 'season');
 
-        req.query = {
-            ...req.query, ParentId: parent, IncludeItemTypes: 'Episode', SeriesId: undefined, Season: undefined, SeasonId: undefined
-        };
-        res.send(await queryItems(req, embyEmulation));
+        res.send(await queryItems(req, embyEmulation, {
+            ParentId: parent,
+            IncludeItemTypes: 'Episode',
+            SeriesId: undefined,
+            Season: undefined,
+            SeasonId: undefined
+        }));
     });
 };

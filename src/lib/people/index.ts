@@ -16,6 +16,9 @@ export const PROFILE_SIZES = {
 
 export type ProfileSize = keyof typeof PROFILE_SIZES;
 
+// TMDb sends empty strings for what it does not know
+const text = (value: string | null | undefined): string | null => (value === undefined || value === null || value === '' ? null : value);
+
 /** Fetch a person's biography and dates from TMDb, unless they were fetched recently. Never throws. */
 export async function enrichPerson(oblecto: Oblecto, person: Person): Promise<void> {
     if (person.metadataUpdatedAt && Date.now() - person.metadataUpdatedAt.getTime() < DETAIL_TTL) return;
@@ -23,13 +26,13 @@ export async function enrichPerson(oblecto: Oblecto, person: Person): Promise<vo
     try {
         const data = await oblecto.tmdb.personInfo({ id: person.tmdbid });
         await person.update({
-            name: data.name || person.name,
-            biography: data.biography || null,
-            birthday: data.birthday || null,
-            deathday: data.deathday || null,
-            placeOfBirth: data.place_of_birth || null,
-            knownForDepartment: data.known_for_department || person.knownForDepartment,
-            profilePath: data.profile_path || person.profilePath,
+            name: text(data.name) ?? person.name,
+            biography: text(data.biography),
+            birthday: text(data.birthday),
+            deathday: text(data.deathday),
+            placeOfBirth: text(data.place_of_birth),
+            knownForDepartment: text(data.known_for_department) ?? person.knownForDepartment,
+            profilePath: text(data.profile_path) ?? person.profilePath,
             metadataUpdatedAt: new Date()
         });
     } catch (error) {
@@ -42,7 +45,7 @@ export async function enrichPerson(oblecto: Oblecto, person: Person): Promise<vo
  * Null when the person has no profile image.
  */
 export async function personProfileFile(oblecto: Oblecto, person: Person, size: ProfileSize = 'medium'): Promise<string | null> {
-    if (!person.profilePath) return null;
+    if (text(person.profilePath) === null) return null;
 
     const path = oblecto.artworkUtils.personProfilePath(person, size);
 

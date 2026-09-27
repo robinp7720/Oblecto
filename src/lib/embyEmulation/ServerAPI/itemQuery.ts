@@ -2,7 +2,7 @@
 // One engine behind GET /Items and GET /Users/{id}/Items: which items a query means, in which order,
 // and which page of them. Every listing a Jellyfin app shows (library grids, seasons, episodes,
 // filters, sort menus) comes through here.
-import { Op, fn, col, literal, type Includeable, type Order, type Sequelize, type WhereOptions } from 'sequelize';
+import { Op, fn, literal, type Includeable, type Order, type Sequelize, type WhereOptions } from 'sequelize';
 import { Movie } from '../../../models/movie.js';
 import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
@@ -91,6 +91,51 @@ const PARENT_KINDS: Record<LibraryViewId, { fallback: ItemKind[]; allowed: ItemK
     shows: { fallback: ['series'], allowed: ['series', 'season', 'episode'] },
     collections: { fallback: ['boxset'], allowed: ['boxset'] }
 };
+
+/** A query for every item of some kinds, to narrow down field by field. */
+export function itemQueryFor(userId: number | null, kinds: ItemKind[]): ItemQuery {
+    return {
+        userId,
+        kinds,
+        startIndex: 0,
+        limit: MAX_LIMIT,
+        searchTerm: '',
+        sortBy: [],
+        descending: false,
+        filters: new Set(),
+        isPlayed: null,
+        isFavorite: null,
+        ids: null,
+        years: [],
+        genres: [],
+        genreIds: [],
+        personIds: [],
+        boxSetId: null,
+        seriesId: null,
+        season: null
+    };
+}
+
+/** How many movies, series and episodes a narrowed query matches, as Jellyfin's item counts. */
+export async function countItems(query: Partial<ItemQuery> & { userId: number | null }, embyEmulation: EmbyEmulation): Promise<Record<string, number>> {
+    const count = async (kind: ItemKind): Promise<number> => {
+        const narrowed: ItemQuery = {
+            ...itemQueryFor(query.userId, [kind]),
+            ...query,
+            kinds: [kind],
+            limit: 0
+        };
+
+        return (await runItemQuery(narrowed, embyEmulation)).TotalRecordCount;
+    };
+    const [movies, series, episodes] = await Promise.all([count('movie'), count('series'), count('episode')]);
+
+    return {
+        MovieCount: movies,
+        SeriesCount: series,
+        EpisodeCount: episodes
+    };
+}
 
 /**
  * Read a Jellyfin items request into what to fetch. Null when the request can only match nothing,
@@ -651,9 +696,23 @@ export async function runItemQuery(query: ItemQuery, embyEmulation: EmbyEmulatio
     };
 }
 
-/** GET /Items and GET /Users/{id}/Items. */
-export async function queryItems(req: EmbyRequest, embyEmulation: EmbyEmulation): Promise<ItemsResult> {
-    const query = readItemQuery(req);
+/**
+ * GET /Items and GET /Users/{id}/Items, and the routes that are one of those with some parameters
+ * fixed, which pass them as overrides; an undefined override removes the parameter.
+ */
+export async function queryItems(req: EmbyRequest, embyEmulation: EmbyEmulation, overrides: Record<string, unknown> = {}): Promise<ItemsResult> {
+    const fixed = Object.keys(overrides).map(key => key.toLowerCase());
+    const request = fixed.length === 0 ? req : {
+        // Express's query is read-only, so the overridden one is a new request object
+        query: Object.fromEntries([
+            ...Object.entries((req.query as Record<string, unknown> | undefined) ?? {}).filter(([key]) => !fixed.includes(key.toLowerCase())),
+            ...Object.entries(overrides).filter(([, value]) => value !== undefined)
+        ]),
+        body: req.body as unknown,
+        params: req.params,
+        embyUserId: req.embyUserId
+    } as unknown as EmbyRequest;
+    const query = readItemQuery(request);
 
     if (!query) return empty();
 

@@ -11,7 +11,7 @@ import { personProfileFile } from '../../../../people/index.js';
 import { formatId } from '../../../helpers.js';
 import { formatPerson, resolveLibraryItem } from '../../library.js';
 import { requestUserId } from '../../itemQuery.js';
-import { getRequestValue } from '../../requestUtils.js';
+import { getRequestList, getRequestValue } from '../../requestUtils.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     // Artists
@@ -53,7 +53,8 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 100, 1), 1000);
         const searchTerm = getRequestValue(req, 'SearchTerm') ?? getRequestValue(req, 'NameStartsWith') ?? '';
         const userId = requestUserId(req);
-        const favourite = getRequestValue(req, 'IsFavorite');
+        const filters = getRequestList(req, 'Filters').map(filter => filter.toLowerCase());
+        const favourite = getRequestValue(req, 'IsFavorite') ?? (filters.includes('isfavorite') ? 'true' : undefined);
         const conditions: WhereOptions[] = searchTerm ? [containsText('name', searchTerm)] : [];
 
         if (favourite !== undefined && userId) {

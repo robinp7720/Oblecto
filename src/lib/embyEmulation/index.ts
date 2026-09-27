@@ -87,7 +87,14 @@ export default class EmbyEmulation {
         this.sweeper = setInterval(() => this.sweep(), 60 * 60 * 1000);
         this.sweeper.unref();
 
-        const apiKeyOf = (req: unknown): string | undefined => (req as { query?: Record<string, string> }).query?.api_key;
+        // Older apps send ?api_key=, the Jellyfin SDK (and so jellyfin-web) ?ApiKey=
+        const apiKeyOf = (req: unknown): string | undefined => {
+            const query = (req as { query?: Record<string, unknown> }).query ?? {};
+            const key = Object.keys(query).find(name => ['api_key', 'apikey'].includes(name.toLowerCase()));
+            const value = key === undefined ? undefined : query[key];
+
+            return typeof value === 'string' && value !== '' ? value : undefined;
+        };
 
         this.primus = new Primus(this.serverAPI.server, {
             pathname: '/socket',

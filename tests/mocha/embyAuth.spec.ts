@@ -238,6 +238,13 @@ describe('Jellyfin emulation sign-in and sessions', function () {
 
             assert.deepEqual(resume.Items.map(item => item.Name), ['Half watched']);
             assert.equal(resume.Items[0].UserData.PlaybackPositionTicks, 600 * 10000000);
+
+            // "Continue Listening" and "Continue Reading" ask for audio and books, which Oblecto has none of
+            for (const type of ['Audio', 'Book']) {
+                const other = await (await fetch(`${base}/UserItems/Resume?MediaTypes=${type}`, { headers: AUTH(token) })).json() as { Items: unknown[] };
+
+                assert.deepEqual(other.Items, [], type);
+            }
         });
 
         it('keeps favourites per user, and says ratings are unsupported instead of pretending to keep them', async () => {
@@ -258,7 +265,8 @@ describe('Jellyfin emulation sign-in and sessions', function () {
 
         it('keeps an app\'s socket alive and tells it when user data changes', async () => {
             const id = formatId(movie.id, 'movie');
-            const socket = new WebSocket(`${base.replace('http', 'ws')}/socket?api_key=${token}&deviceId=spec`);
+            // As the Jellyfin SDK, and so jellyfin-web, connects
+            const socket = new WebSocket(`${base.replace('http', 'ws')}/socket?ApiKey=${token}`);
             const received: any[] = [];
             const next = (type: string, wait = 1500): Promise<any> => new Promise((resolve, reject) => {
                 const timer = setTimeout(() => reject(new Error(`No ${type} message`)), wait);

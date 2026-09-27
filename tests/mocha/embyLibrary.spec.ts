@@ -58,7 +58,11 @@ describe('Jellyfin library browsing', () => {
     const call = async (route: string, query: Record<string, unknown> = {}, params: Record<string, unknown> = {}) => {
         const res = makeRes();
 
-        await server.handlers.get(route)({ query, params, body: {}, embyUserId: user.id }, res);
+        const req = { params, body: {}, embyUserId: user.id };
+
+        // Read-only, as Express 5 has it
+        Object.defineProperty(req, 'query', { get: () => query, enumerable: true });
+        await server.handlers.get(route)(req, res);
         return res;
     };
     const names = (res: any): string[] => res.body.Items.map((item: any) => item.Name);
@@ -341,6 +345,12 @@ describe('Jellyfin library browsing', () => {
             assert.equal(hiddenSet.statusCode, 404);
         });
 
+        it('lists the sets a movie is in', async () => {
+            const res = await call('GET /items/:mediaid/collections', {}, { mediaid: formatId(movies[0].id, 'movie') });
+
+            assert.deepEqual(names(res), ['Trilogy']);
+        });
+
         it('describes one set', async () => {
             const sets = await call('GET /items', { ParentId: 'collections', SearchTerm: 'Trilogy' });
             const res = await call('GET /users/:userid/items/:mediaid', {}, { userid: 'me', mediaid: sets.body.Items[0].Id });
@@ -368,6 +378,9 @@ describe('Jellyfin library browsing', () => {
 
             assert.equal(res.body.Name, 'Keanu Reeves');
             assert.match(res.body.PremiereDate, /^1964-09-02/);
+            // Apps only show the rows of a person's work that these say exist
+            assert.equal(res.body.MovieCount, 1);
+            assert.equal(res.body.SeriesCount, 0);
         });
 
         it('lists what a person is credited in', async () => {
@@ -395,6 +408,8 @@ describe('Jellyfin library browsing', () => {
             assert.deepEqual(names(res), ['Show A']);
             assert.equal(genre.body.Type, 'Genre');
             assert.equal(genre.body.Name, 'Drama');
+            assert.equal(genre.body.MovieCount, 25);
+            assert.equal(genre.body.SeriesCount, 0);
         });
 
         it('offers the genres and years a view can be filtered by', async () => {
@@ -453,7 +468,7 @@ describe('Jellyfin library browsing', () => {
             await heart(set.Id);
 
             const favourites = await call('GET /items', { IncludeItemTypes: 'Movie,Series,BoxSet', Recursive: 'true', Filters: 'IsFavorite' });
-            const people = await call('GET /persons', { IsFavorite: 'true' });
+            const people = await call('GET /persons', { Filters: 'IsFavorite' });
             const detail = await call('GET /items/:mediaid', {}, { mediaid: series });
 
             assert.deepEqual(names(favourites), ['Movie 10', 'Show A', 'Trilogy']);

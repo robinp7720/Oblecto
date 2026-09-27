@@ -14,7 +14,7 @@ import { Op, type Includeable } from 'sequelize';
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
-import { getRequestValue } from '../../requestUtils.js';
+import { getRequestList, getRequestValue } from '../../requestUtils.js';
 import { libraryViews } from '../../../views.js';
 import { clientAddress, isLocalRequest } from '../../../../network/localNetwork.js';
 import { loginThrottle } from '../../../../auth/loginThrottle.js';
@@ -357,7 +357,14 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             order: [['updatedAt', 'DESC']] as [string, string][],
             limit
         };
-        const [movieTracks, episodeTracks] = await Promise.all([TrackMovie.findAll(recent), TrackEpisode.findAll(recent)]);
+        // Apps ask separately for video, audio ("Continue Listening") and books; Oblecto only has video
+        const mediaTypes = getRequestList(req, 'MediaTypes').map(type => type.toLowerCase());
+        const types = getRequestList(req, 'IncludeItemTypes').map(type => type.toLowerCase());
+        const wants = (type: string): boolean => (mediaTypes.length === 0 || mediaTypes.includes('video')) && (types.length === 0 || types.includes(type));
+        const [movieTracks, episodeTracks] = await Promise.all([
+            wants('movie') ? TrackMovie.findAll(recent) : [],
+            wants('episode') ? TrackEpisode.findAll(recent) : []
+        ]);
         const files: Includeable = { model: File, include: [{ model: Stream }] };
         const ownProgress = (model: typeof TrackMovie | typeof TrackEpisode): Includeable => ({
             model,

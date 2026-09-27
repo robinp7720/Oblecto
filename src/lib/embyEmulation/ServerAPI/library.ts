@@ -16,7 +16,7 @@ import { relatedTitles } from '../../../submodules/REST/routes/helpers/related.j
 import { formatId, formatMediaItem, genreId, parseId, type MediaItem } from '../helpers.js';
 import { libraryView } from '../views.js';
 import { decorateItems } from './itemDetails.js';
-import { itemIncludes, seasonItem } from './itemQuery.js';
+import { countItems, itemIncludes, seasonItem } from './itemQuery.js';
 
 import type EmbyEmulation from '../index.js';
 
@@ -190,6 +190,20 @@ export async function listBoxSets(options: BoxSetQuery, embyEmulation: EmbyEmula
     };
 }
 
+/** The collections this user may see that hold a movie. */
+export async function boxSetsHolding(rawId: string, userId: number | null, embyEmulation: EmbyEmulation): Promise<Dto[]> {
+    const { id, type } = parseId(rawId);
+
+    if (type !== 'movie' || !Number.isFinite(id) || !MovieSet.sequelize) return [];
+
+    const q = quoter(MovieSet.sequelize);
+    const holding = literal(`(SELECT ${q('MovieSetId')} FROM ${q('MovieSetAllocations')} WHERE ${q('MovieId')} = ${Number(id)})`);
+    const rows = await MovieSet.findAll({ where: { [Op.and]: [visibleSets(userId), { id: { [Op.in]: holding } }] }, order: [['setName', 'ASC']] });
+    const counts = await setCounts(rows.map(row => row.id), userId);
+
+    return decorateItems(rows.map(row => formatBoxSet(row, embyEmulation, counts.get(row.id))), userId);
+}
+
 /** The movie a set's artwork comes from: its first one. */
 export async function boxSetArtworkMovie(set: MovieSet): Promise<Movie | null> {
     const counts = await setCounts([set.id], null);
@@ -318,13 +332,14 @@ export async function resolveLibraryItem(rawId: string, userId: number | null, e
 
         const [item] = await decorateItems([formatPerson(person, embyEmulation)], userId);
 
-        return item;
+        // Apps show a row per kind of item the person is in, and only when its count says there are some
+        return { ...item, ...await countItems({ userId, personIds: [person.id] }, embyEmulation) };
     }
 
     if (type === 'genre') {
         const [name] = await genreNames([rawId]);
 
-        return name ? formatGenre(name, embyEmulation) : null;
+        return name ? { ...formatGenre(name, embyEmulation), ...await countItems({ userId, genres: [name] }, embyEmulation) } : null;
     }
 
     return null;

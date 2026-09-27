@@ -15,7 +15,7 @@ import logger from '../../../../../submodules/logger/index.js';
 import { getEmbyToken, getRequestList, getRequestValue } from '../../requestUtils.js';
 import { queryItems, requestUserId } from '../../itemQuery.js';
 import { describeItem } from '../../itemDetails.js';
-import { allGenres, ancestorsOf, boxSetArtworkMovie, isLibraryItemId, resolveLibraryItem, similarItems, visibleSets } from '../../library.js';
+import { allGenres, ancestorsOf, boxSetArtworkMovie, boxSetsHolding, isLibraryItemId, resolveLibraryItem, similarItems, visibleSets } from '../../library.js';
 import { personProfileFile } from '../../../../people/index.js';
 import { WATCHED_PROGRESS } from '../../../../playback/progress.js';
 import { Person } from '../../../../../models/person.js';
@@ -500,6 +500,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             MusicVideoCount: 0,
             BookCount: 0,
             ItemCount: movies + series + episodes + sets
+        });
+    });
+
+    // The collections a movie is in, for its detail page
+    server.get('/items/:mediaid/collections', async (req: EmbyRequest, res: Response) => {
+        const items = await boxSetsHolding(String(req.params.mediaid), requestUserId(req), embyEmulation);
+
+        res.send({
+            Items: items, TotalRecordCount: items.length, StartIndex: 0
         });
     });
 
