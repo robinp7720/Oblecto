@@ -551,7 +551,12 @@ export class PlaybackService {
             .map((s) => ({
                 sessionId: s.sessionId,
                 state: s.state,
-                file: { id: s.file.id },
+                // Named, so the status page can say what is playing.
+                file: {
+                    id: s.file.id,
+                    name: s.file.name,
+                    extension: s.file.extension
+                },
                 method: s.plan.method,
                 reason: s.plan.reason,
                 position: s.position,

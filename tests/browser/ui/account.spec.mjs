@@ -179,6 +179,9 @@ test.describe('@desktop account and permissions', () => {
     const admins = page.locator('.settings-card', { hasText: 'Administrators' })
     await expect(admins.getByLabel('Manage users and groups')).toBeDisabled()
     await admins.getByLabel('Change server settings').uncheck()
+    // The signed-in user is in Administrators, so taking a permission from it
+    // asks first.
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove it' }).click()
     await expect(page.getByText('Could not update Administrators: This change would leave nobody able to manage users')).toBeVisible()
     await expect(admins.getByLabel('Change server settings')).toBeChecked()
   })

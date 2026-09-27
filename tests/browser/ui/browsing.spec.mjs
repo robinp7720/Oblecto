@@ -29,17 +29,17 @@ test.describe('@desktop browsing', () => {
     await boot(page, '/', async (route, url) => {
       if (url.pathname === '/movies/watching') { movieRequests++; await reply(route, [movie]); return true }
       if (url.pathname === '/episodes/watching') { await reply(route, [{ id: 2, episodeName: 'An episode', TrackEpisodes: [{ time: 60, progress: 0.1 }] }]); return true }
-      if (url.pathname === '/movies/list/popularity') { await reply(route, fails ? {} : [movie], fails ? 500 : 200); return true }
+      if (url.pathname === '/movies/list/createdAt') { await reply(route, fails ? {} : [movie], fails ? 500 : 200); return true }
       return false
     })
     await expect(page.getByRole('heading', { name: 'Continue Watching Movies' })).toBeVisible()
-    await expect(page.getByText('Could not load popular movies.')).toBeVisible()
+    await expect(page.getByText('Could not load recently added movies.')).toBeVisible()
     await expect(page.getByRole('button', { name: /Resume · 80 min left/ }).first()).toBeVisible()
     const headings = await page.locator('.shelf h2').allTextContents()
     expect(headings.slice(0, 2)).toEqual(['Continue Watching Movies', 'Continue Watching Episodes'])
     fails = false
     await page.getByRole('button', { name: 'Try again' }).click()
-    await expect(page.getByRole('heading', { name: 'Popular Movies' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Recently Added Movies' })).toBeVisible()
     expect(movieRequests).toBe(1)
   })
 
@@ -111,7 +111,7 @@ test.describe('@phone browsing', () => {
     await boot(page, '/library/movies')
     const toggle = page.getByRole('button', { name: 'Filters (0)', exact: true })
     await expect(toggle).toBeVisible()
-    await expect(page.getByRole('combobox', { name: 'Watch state' })).toBeHidden()
+    await expect(page.getByRole('combobox', { name: 'Watch state' })).toBeVisible()
     await toggle.click()
     await page.getByRole('combobox', { name: 'Watch state' }).selectOption('unwatched')
     await expect(page).toHaveURL(/watched=unwatched/)
