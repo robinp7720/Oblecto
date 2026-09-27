@@ -110,9 +110,9 @@ test('@desktop @phone movie explains recommendations and summarizes playable med
   await page.getByRole('button', { name: 'Mark unwatched', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Mark watched', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Person 11/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Show all 11', exact: true }).click()
-  await expect(page.getByRole('link', { name: /Person 11/ })).toBeVisible()
+  // The whole cast is in the scrolling row, with no "Show all" to press.
+  await expect(page.getByRole('link', { name: /Person 11/ })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: /^Show all/ })).toHaveCount(0)
   expect(watchedBody).toEqual({ watched: false })
 })
 
