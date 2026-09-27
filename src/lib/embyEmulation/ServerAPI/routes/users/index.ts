@@ -23,7 +23,8 @@ import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
 import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
-import { queryItems } from '../../itemQuery.js';
+import { queryItems, requestUserId } from '../../itemQuery.js';
+import { decorateItems, describeItem } from '../../itemDetails.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 import { containsText } from '../../../../common/textSearch.js';
 
@@ -402,7 +403,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             items.push(...series.map(show => formatMediaItem(show as unknown as MediaItem, 'series', embyEmulation)));
         }
 
-        res.send(items.slice(0, limit));
+        res.send(await decorateItems(items.slice(0, limit), userId ?? null));
     };
 
     server.get('/users/:userid/items/latest', getLatestItems);
@@ -414,7 +415,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
-        const userId = parseUuid(String(req.params.userid));
+        const userId = requestUserId(req);
         let resolvedType = parsed.type;
         let item = null;
 
@@ -487,21 +488,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (item) {
-            // Special handling for Movie to include detailed media sources if needed,
-            // but formatMediaItem handles basic properties.
-            // The previous implementation for Movie manually constructed MediaSources.
-            // formatMediaItem is simpler.
-            // Let's rely on formatMediaItem to be consistent with /items/:mediaid
-            // However, the previous implementation injected a LOT of extra fields for Movie.
-            // If I replace it entirely with formatMediaItem, I might lose those fields (ExternalUrls, etc).
-            // But consistency is better. The previous implementation had hardcoded "MediaSources" loop.
-            // I should stick to formatMediaItem but maybe enhance it if needed.
-
-            // Actually, for Movie, the previous code returned a very rich object.
-            // For now, I will use formatMediaItem for ALL types to solve the "loading" issue for Series.
-            // If Movie details regress, I can revisit.
-
-            res.send(formatMediaItem(item, resolvedType, embyEmulation));
+            res.send(await describeItem(formatMediaItem(item, resolvedType, embyEmulation), userId));
         } else {
             res.status(404).send('Item not found');
         }

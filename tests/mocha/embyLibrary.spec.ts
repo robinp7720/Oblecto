@@ -15,6 +15,10 @@ import { EpisodeFiles, episodeFilesColumns } from '../../src/models/episodeFiles
 import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { User, userColumns } from '../../src/models/user.js';
+import { Person, personColumns } from '../../src/models/person.js';
+import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
+import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
+import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
 import { formatId } from '../../src/lib/embyEmulation/helpers.js';
 
 // A route table the handlers register into, and a response that records what they send.
@@ -67,6 +71,10 @@ describe('Jellyfin library browsing', () => {
         TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
         TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
         User.init(userColumns, { sequelize, modelName: 'User' });
+        Person.init(personColumns, { sequelize, modelName: 'Person' });
+        MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
+        SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
+        EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
 
         Episode.belongsTo(Series);
         Series.hasMany(Episode);
@@ -80,6 +88,9 @@ describe('Jellyfin library browsing', () => {
         Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
         TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
         Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
+        MovieCredit.belongsTo(Person, { foreignKey: 'personId' });
+        SeriesCredit.belongsTo(Person, { foreignKey: 'personId' });
+        EpisodeCredit.belongsTo(Person, { foreignKey: 'personId' });
 
         await sequelize.sync({ force: true });
 
@@ -100,6 +111,17 @@ describe('Jellyfin library browsing', () => {
             await Episode.create({ episodeName: `S${season}E${episode}`, airedSeason: String(season), airedEpisodeNumber: String(episode), SeriesId: show.id });
         }
 
+        await movies[0].update({ tmdbid: 603, imdbid: 'tt0133093', tagline: 'Welcome to the Real World', originalName: 'The Matrix' });
+        const actor = await Person.create({ tmdbid: 6384, name: 'Keanu Reeves', profilePath: '/keanu.jpg' });
+        const director = await Person.create({ tmdbid: 9340, name: 'Lana Wachowski' });
+
+        await MovieCredit.create({ movieId: movies[0].id, personId: actor.id, creditType: 'cast', character: 'Neo', sortOrder: 0 });
+        await MovieCredit.create({ movieId: movies[0].id, personId: director.id, creditType: 'crew', job: 'Director', department: 'Directing', sortOrder: 0 });
+        await MovieCredit.create({ movieId: movies[0].id, personId: director.id, creditType: 'crew', job: 'Screenplay', department: 'Writing', sortOrder: 1 });
+
+        const [firstEpisode] = await Episode.findAll({ where: { airedSeason: '1', airedEpisodeNumber: '1' } });
+
+        await TrackEpisode.create({ userId: user.id, episodeId: firstEpisode.id, time: 0, progress: 1 });
         await TrackMovie.create({ userId: user.id, movieId: movies[0].id, time: 0, progress: 1 });
         await TrackMovie.create({ userId: user.id, movieId: movies[1].id, time: 600, progress: 0.5 });
         await TrackMovie.create({ userId: user.id, movieId: movies[2].id, time: 5700, progress: 0.95 });
@@ -220,6 +242,52 @@ describe('Jellyfin library browsing', () => {
             assert.deepEqual(names(seasons), ['Season 1', 'Season 2', 'Season 10']);
             assert.deepEqual(names(episodes), ['S1E1', 'S1E2', 'S1E10']);
             assert.deepEqual(names(all), ['S1E1', 'S1E2', 'S1E10', 'S2E1', 'S10E1']);
+        });
+    });
+
+    describe('item details', () => {
+        it('describes a movie with what Oblecto knows, and nothing made up', async () => {
+            const res = await call('GET /items/:mediaid', {}, { mediaid: formatId(movies[0].id, 'movie') });
+            const item = res.body;
+
+            assert.deepEqual(item.Genres, ['Drama']);
+            assert.equal(item.GenreItems[0].Name, 'Drama');
+            assert.deepEqual(item.ProviderIds, { Tmdb: '603', Imdb: 'tt0133093' });
+            assert.deepEqual(item.Taglines, ['Welcome to the Real World']);
+            assert.equal(item.OriginalTitle, 'The Matrix');
+            assert.equal(item.ProductionYear, 2001);
+            assert.equal(item.CommunityRating, 0.2);
+            assert.equal(item.OfficialRating, undefined);
+            assert.equal(item.CriticRating, undefined);
+            assert.equal(item.ImageBlurHashes, undefined);
+        });
+
+        it('lists the cast and key crew on the detail page', async () => {
+            const res = await call('GET /users/:userid/items/:mediaid', {}, { userid: 'me', mediaid: formatId(movies[0].id, 'movie') });
+            const people = res.body.People.map((person: any) => [person.Name, person.Type, person.Role ?? null, Boolean(person.PrimaryImageTag)]);
+
+            assert.deepEqual(people, [
+                ['Keanu Reeves', 'Actor', 'Neo', true],
+                ['Lana Wachowski', 'Director', 'Director / Screenplay', false],
+                ['Lana Wachowski', 'Writer', 'Director / Screenplay', false]
+            ]);
+            assert.match(res.body.People[0].Id, /^5/);
+        });
+
+        it('counts a series\' seasons, episodes and what this user has left to watch', async () => {
+            const listed = await call('GET /items', { IncludeItemTypes: 'Series' });
+            const series = listed.body.Items[0];
+            const seasons = await call('GET /items', { ParentId: series.Id });
+            const firstSeason = seasons.body.Items[0];
+
+            assert.equal(series.ChildCount, 3);
+            assert.equal(series.RecursiveItemCount, 5);
+            assert.equal(series.UserData.UnplayedItemCount, 4);
+            assert.equal(series.UserData.Played, false);
+            assert.deepEqual(series.Genres, ['Comedy']);
+            assert.equal(firstSeason.ChildCount, 3);
+            assert.equal(firstSeason.UserData.UnplayedItemCount, 2);
+            assert.equal(firstSeason.ParentBackdropItemId, series.Id);
         });
     });
 });

@@ -16,6 +16,7 @@ import { WATCHED_PROGRESS } from '../../playback/progress.js';
 import { formatMediaItem, parseId, parseUuid, type MediaItem } from '../helpers.js';
 import { isLibraryView, type LibraryViewId } from '../views.js';
 import { getRequestList, getRequestValue } from './requestUtils.js';
+import { decorateItems } from './itemDetails.js';
 
 import type EmbyEmulation from '../index.js';
 import type { EmbyRequest } from './index.js';
@@ -542,7 +543,7 @@ export async function runItemQuery(query: ItemQuery, embyEmulation: EmbyEmulatio
         const { total, rows } = await fetchKind(query.kinds[0], query, embyEmulation, query.limit, query.startIndex);
 
         return {
-            Items: rows.map(row => row.item),
+            Items: await decorateItems(rows.map(row => row.item), query.userId),
             TotalRecordCount: total,
             StartIndex: query.startIndex
         };
@@ -552,7 +553,7 @@ export async function runItemQuery(query: ItemQuery, embyEmulation: EmbyEmulatio
     const merged = mergeOrder(results.flatMap(result => result.rows), query);
 
     return {
-        Items: merged.slice(query.startIndex, query.startIndex + query.limit).map(row => row.item),
+        Items: await decorateItems(merged.slice(query.startIndex, query.startIndex + query.limit).map(row => row.item), query.userId),
         TotalRecordCount: results.reduce((sum, result) => sum + result.total, 0),
         StartIndex: query.startIndex
     };

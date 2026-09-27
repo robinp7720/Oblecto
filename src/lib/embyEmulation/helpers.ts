@@ -1,5 +1,7 @@
 import path from 'path';
+import { createHash } from 'node:crypto';
 import { WATCHED_PROGRESS } from '../playback/progress.js';
+import { genresFrom } from '../common/genres.js';
 
 type MediaStream = {
     profile?: string;
@@ -280,6 +282,9 @@ export const formatId = (id: number | string, type: string): string => {
     else if (type === 'series') prefix = '2';
     else if (type === 'episode') prefix = '3';
     else if (type === 'season') prefix = '4';
+    else if (type === 'person') prefix = '5';
+    else if (type === 'boxset') prefix = '6';
+    else if (type === 'seriesset') prefix = '8';
     else if (type === 'user') prefix = 'f';
 
     return prefix + Number(id).toString(16).padStart(31, '0');
@@ -293,10 +298,6 @@ export const parseId = (value: unknown): { id: number; type: string } => {
     let raw = '';
     if (typeof value === 'string') raw = value.trim();
     else if (typeof value === 'number' || typeof value === 'boolean') raw = String(value);
-
-    if (!raw) {
-        return { id: NaN, type: 'unknown' };
-    }
 
     if (!raw) {
         return { id: NaN, type: 'unknown' };
@@ -332,12 +333,18 @@ export const parseId = (value: unknown): { id: number; type: string } => {
     const prefix = lower[0];
     const rest = normalized.slice(1);
 
-    const type = prefix === '1' ? 'movie'
-        : prefix === '2' ? 'series'
-            : prefix === '3' ? 'episode'
-                : prefix === '4' ? 'season'
-                    : prefix === 'f' ? 'user'
-                        : 'unknown';
+    const ID_TYPES: Record<string, string> = {
+        '1': 'movie',
+        '2': 'series',
+        '3': 'episode',
+        '4': 'season',
+        '5': 'person',
+        '6': 'boxset',
+        '7': 'genre',
+        '8': 'seriesset',
+        'f': 'user'
+    };
+    const type = ID_TYPES[prefix] ?? 'unknown';
 
     return {
         id: parseInt(rest, 16),
@@ -348,67 +355,146 @@ export const parseId = (value: unknown): { id: number; type: string } => {
 export type MediaItem = {
     id: number | string;
     movieName?: string | null;
+    originalName?: string | null;
+    tagline?: string | null;
+    genres?: string | null;
+    genre?: string | null;
     seasonName?: string | null;
     episodeName?: string | null;
     seriesName?: string | null;
     releaseDate?: string | null;
     firstAired?: string | null;
     rating?: string | null;
-    popularity?: number | null;
+    siteRating?: number | null;
     runtime?: number | null;
     overview?: string | null;
+    status?: string | null;
+    network?: string | null;
+    airsDayOfWeek?: string | null;
+    airsTime?: string | null;
+    tmdbid?: number | null;
+    imdbid?: string | null;
+    tvdbid?: number | null;
     airedSeason?: string | number | null;
     airedEpisodeNumber?: string | number | null;
     Series?: { id: number; seriesName?: string | null };
     SeriesId?: number;
     indexNumber?: string | number;
     Files?: MediaFile[];
-    TrackMovies?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
-    TrackEpisodes?: Array<{ time?: number; progress?: number; updatedAt?: Date }>;
+    TrackMovies?: Array<{ time?: number | null; progress?: number | null; updatedAt?: Date }>;
+    TrackEpisodes?: Array<{ time?: number | null; progress?: number | null; updatedAt?: Date }>;
     name?: string | null;
+    createdAt?: Date | string | null;
 };
 
 type EmbyEmulationLike = {
     serverId: string;
 };
 
+const JELLYFIN_TYPE: Record<string, string> = {
+    movie: 'Movie',
+    series: 'Series',
+    season: 'Season',
+    episode: 'Episode'
+};
+
+const isoDate = (value: Date | string | null | undefined): string | undefined => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const date = value instanceof Date ? value : new Date(value);
+
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+};
+
+const yearOf = (value: string): number | undefined => {
+    const year = parseInt(value.substring(0, 4), 10);
+
+    return Number.isFinite(year) ? year : undefined;
+};
+
+/** A stable id for a genre, which Jellyfin treats as an item of its own. */
+export const genreId = (name: string): string => '7' + createHash('sha256').update(name.toLowerCase()).digest('hex').slice(0, 31);
+
+/** The ids other services know an item by, and links to it there. */
+const providerIds = (item: MediaItem, type: string): { ProviderIds: Record<string, string>; ExternalUrls: Array<{ Name: string; Url: string }> } => {
+    const ids: Record<string, string> = {};
+    const urls: Array<{ Name: string; Url: string }> = [];
+
+    if (item.tmdbid) {
+        ids.Tmdb = String(item.tmdbid);
+        if (type === 'movie' || type === 'series') urls.push({ Name: 'TheMovieDb', Url: `https://www.themoviedb.org/${type === 'movie' ? 'movie' : 'tv'}/${item.tmdbid}` });
+    }
+    if (item.imdbid) {
+        ids.Imdb = item.imdbid;
+        urls.push({ Name: 'IMDb', Url: `https://www.imdb.com/title/${item.imdbid}` });
+    }
+    if (item.tvdbid) ids.Tvdb = String(item.tvdbid);
+
+    return { ProviderIds: ids, ExternalUrls: urls };
+};
+
+/**
+ * Describe a movie, series, season or episode as a Jellyfin BaseItemDto. Only what Oblecto knows:
+ * a rating, genre or tagline it does not have is left out rather than made up.
+ */
 export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: EmbyEmulationLike): Record<string, unknown> => {
     const id = formatId(item.id, type);
+    const name = firstNonEmpty(item.movieName, item.seasonName, item.episodeName, item.seriesName);
+    const premiere = firstNonEmpty(item.releaseDate, item.firstAired);
+    const genres = genresFrom(item.genres ?? item.genre);
+    const playable = type === 'movie' || type === 'episode';
 
     const res: Record<string, unknown> = {
-        'Name': firstNonEmpty(item.movieName, item.seasonName, item.episodeName, item.seriesName),
+        'Name': name,
+        'SortName': name.toLowerCase(),
         'ServerId': embyEmulation.serverId,
         'Id': id,
-        'HasSubtitles': true,
-        'Container': 'mkv',
-        'PremiereDate': firstNonEmpty(item.releaseDate, item.firstAired) || undefined,
-        'CriticRating': 82,
-        'OfficialRating': item.rating || 'PG-13',
-        'CommunityRating': item.popularity ?? 2.6,
-        'RunTimeTicks': (item.runtime || 0) * 60 * 10000000,
-        'ProductionYear': firstNonEmpty(item.releaseDate, item.firstAired).substring(0, 4),
-        'IsFolder': type === 'series' || type === 'season',
-        'Type': type.charAt(0).toUpperCase() + type.slice(1),
+        'Etag': id,
+        'DateCreated': isoDate(item.createdAt),
+        'PremiereDate': isoDate(premiere),
+        'OfficialRating': item.rating || undefined,
+        'CommunityRating': typeof item.siteRating === 'number' && item.siteRating > 0 ? Math.round(item.siteRating * 10) / 10 : undefined,
+        'RunTimeTicks': item.runtime ? item.runtime * 60 * 10000000 : undefined,
+        'ProductionYear': yearOf(premiere),
+        'IsFolder': !playable,
+        'Type': JELLYFIN_TYPE[type] ?? type.charAt(0).toUpperCase() + type.slice(1),
         'PrimaryImageAspectRatio': 0.6666666666666666,
-        'VideoType': 'VideoFile',
         'LocationType': 'FileSystem',
-        'MediaType': 'Video',
-        'Overview': item.overview,
+        'MediaType': playable ? 'Video' : 'Unknown',
+        'Overview': item.overview ?? undefined,
+        'Genres': genres,
+        'GenreItems': genres.map(genre => ({ Name: genre, Id: genreId(genre) })),
+        'Taglines': item.tagline ? [item.tagline] : [],
+        'Tags': [],
+        'People': [],
+        'Studios': item.network ? [{ Name: item.network, Id: genreId(`studio:${item.network}`) }] : [],
+        'LockedFields': [],
+        'LockData': false,
+        'CanDelete': false,
+        'CanDownload': false,
+        'PlayAccess': 'Full',
+        ...providerIds(item, type),
         'UserData': {
             'PlaybackPositionTicks': 0,
             'PlayCount': 0,
             'IsFavorite': false,
             'Played': false,
-            'Key': item.id.toString(),
+            'Key': id,
             'ItemId': id
         },
         'ImageTags': { 'Primary': 'primary' },
-        'BackdropImageTags': ['backdrop'],
-        'ImageBlurHashes': {
-            'Primary': { 'primary': 'WZE2te~q.8?b-;-;-p%2t8tQt6W.s.sSayNaR%NGxtt7t7t7X8oz' },
-            'Backdrop': { 'backdrop': 'WeEx-RE0IUxuR*%1~WE1M{t7S1t7-;IoRjt7bbae-pRjRQt7ofRj' }
-        }
+        'BackdropImageTags': ['backdrop']
     };
+
+    if (playable) res.VideoType = 'VideoFile';
+
+    if (type === 'movie' && item.originalName && item.originalName !== item.movieName) res.OriginalTitle = item.originalName;
+
+    if (type === 'series') {
+        res.Status = item.status || undefined;
+        res.AirDays = item.airsDayOfWeek ? [item.airsDayOfWeek] : [];
+        res.AirTime = item.airsTime || undefined;
+        res.DisplayOrder = 'Aired';
+    }
 
     if (type === 'episode') {
         const seriesId = item.Series ? item.Series.id : item.SeriesId;
@@ -418,9 +504,17 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
         res.ParentIndexNumber = seasonNumber;
         res.SeriesName = item.Series?.seriesName ?? '';
         res.SeriesId = seriesId ? formatId(seriesId, 'series') : '';
-        res.SeasonName = 'Season ' + item.airedSeason;
+        res.SeasonName = seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`;
         res.PrimaryImageAspectRatio = 1.7777777777777777;
-        res.ImageTags = { ...(res.ImageTags as Record<string, string>), Thumb: 'thumb' };
+        res.ImageTags = { Primary: 'primary', Thumb: 'thumb' };
+        // Episodes have no backdrop of their own; clients show the series'
+        res.BackdropImageTags = [];
+
+        if (seriesId) {
+            res.SeriesPrimaryImageTag = 'primary';
+            res.ParentBackdropItemId = res.SeriesId;
+            res.ParentBackdropImageTags = ['backdrop'];
+        }
 
         if (seriesId && Number.isFinite(seasonNumber)) {
             const seasonId = (seriesId * 1000) + seasonNumber;
@@ -436,14 +530,24 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
         res.IndexNumber = parseInt(String(item.indexNumber ?? '0'), 10);
         res.ParentId = res.SeriesId;
         res.SeriesName = item.seriesName;
+        res.BackdropImageTags = [];
+
+        if (item.SeriesId) {
+            res.SeriesPrimaryImageTag = 'primary';
+            res.ParentBackdropItemId = res.SeriesId;
+            res.ParentBackdropImageTags = ['backdrop'];
+        }
     }
 
     if (item.Files && item.Files.length > 0) {
-        res.Path = item.Files[0].path;
-        res.Container = item.Files[0].container || res.Container;
-        if (Number.isFinite(item.Files[0].duration)) {
-            res.RunTimeTicks = (item.Files[0].duration as number) * 10000000;
+        const file = item.Files[0];
+
+        res.Path = file.path;
+        res.Container = file.container || file.extension?.replace(/^\./, '') || undefined;
+        if (Number.isFinite(file.duration)) {
+            res.RunTimeTicks = Math.round((file.duration as number) * 10000000);
         }
+        res.HasSubtitles = (file.Streams ?? []).some(stream => stream.codec_type === 'subtitle');
         res.MediaSources = createMediaSources(item.Files);
     }
 
@@ -454,6 +558,9 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
         userData.Played = (track.progress ?? 0) >= WATCHED_PROGRESS;
         userData.PlaybackPositionTicks = userData.Played ? 0 : Math.round((track.time ?? 0) * 10000000);
         userData.PlayCount = userData.Played ? 1 : 0;
+        if (typeof res.RunTimeTicks === 'number' && res.RunTimeTicks > 0 && !userData.Played && (track.time ?? 0) > 0) {
+            userData.PlayedPercentage = Math.min(100, (userData.PlaybackPositionTicks as number) / res.RunTimeTicks * 100);
+        }
         if (track.updatedAt) {
             userData.LastPlayedDate = track.updatedAt.toISOString();
         }

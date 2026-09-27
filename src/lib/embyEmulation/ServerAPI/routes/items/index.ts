@@ -13,7 +13,8 @@ import { TrackMovie } from '../../../../../models/trackMovie';
 import { fileExists } from '../../../../../submodules/utils';
 import logger from '../../../../../submodules/logger/index.js';
 import { getEmbyToken, getRequestList, getRequestValue } from '../../requestUtils.js';
-import { queryItems } from '../../itemQuery.js';
+import { queryItems, requestUserId } from '../../itemQuery.js';
+import { describeItem } from '../../itemDetails.js';
 import { isLibraryView, libraryView, libraryViews } from '../../../views.js';
 import { embyUserCan } from '../../permission.js';
 import { getLastMediaSource, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
@@ -139,11 +140,11 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             }
 
             if (normalized === 'backdrop' || normalized === 'fanart' || normalized === 'art') {
-                const sizeKey = chooseSizeKey(config.poster, query);
+                const sizeKey = chooseSizeKey(config.fanart, query);
 
                 return [
-                    artwork.seriesPosterPath(item, (sizeKey ?? undefined)) ?? undefined,
-                    artwork.seriesPosterPath(item, undefined) ?? undefined,
+                    artwork.seriesFanartPath(item, (sizeKey ?? undefined)),
+                    artwork.seriesFanartPath(item, undefined),
                 ];
             }
         }
@@ -205,7 +206,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return res.status(404).send();
     };
 
-    const buildMovieInclude = (userId: string | null): any[] => {
+    const buildMovieInclude = (userId: number | null): any[] => {
         const include: any[] = [
             {
                 model: File,
@@ -224,7 +225,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return include;
     };
 
-    const buildEpisodeInclude = (userId: string | null): any[] => {
+    const buildEpisodeInclude = (userId: number | null): any[] => {
         const include: any[] = [Series, { model: File, include: [{ model: Stream }] }];
 
         if (userId) {
@@ -238,7 +239,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         return include;
     };
 
-    const resolveItemById = async (mediaId: string, userId: string | null = null): Promise<{ item: any; type: string | null }> => {
+    const resolveItemById = async (mediaId: string, userId: number | null = null): Promise<{ item: any; type: string | null }> => {
         const parsed = parseId(mediaId);
         const numericId = parsed.id;
         let resolvedType = parsed.type;
@@ -604,16 +605,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/items/:mediaid', async (req: EmbyRequest, res: Response) => {
-        const userId = getRequestValue(req as any, 'UserId') || '';
-        const parsedUserId = userId ? parseUuid(userId) : null;
+        const userId = requestUserId(req);
         const mediaId = String(req.params.mediaid);
 
         if (isLibraryView(mediaId)) return res.send(libraryView(mediaId, embyEmulation.serverId));
 
-        const { item, type } = await resolveItemById(mediaId, parsedUserId as string | null);
+        const { item, type } = await resolveItemById(mediaId, userId);
 
         if (item) {
-            res.send(formatMediaItem(item, String(type || ''), embyEmulation));
+            res.send(await describeItem(formatMediaItem(item, String(type || ''), embyEmulation), userId));
         } else {
             res.status(404).send('Item not found');
         }
