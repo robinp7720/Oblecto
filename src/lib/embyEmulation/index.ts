@@ -58,7 +58,6 @@ export default class EmbyEmulation {
     public websocketSessions: WebsocketSessions;
     public serverId: string;
     public version: string;
-    public serverName: string;
     public serverAPI: EmbyServerAPI;
     public primus: Primus;
     private sweeper: NodeJS.Timeout;
@@ -82,8 +81,6 @@ export default class EmbyEmulation {
         // keep them apart. Derived from the signing secret, which already has to stay put.
         this.serverId = createHash('sha256').update(`jellyfin-server-id:${oblecto.config.authentication.secret}`).digest('hex').slice(0, 32);
         this.version = JELLYFIN_API_VERSION;
-
-        this.serverName = 'Oblecto';
 
         this.serverAPI = new EmbyServerAPI(this);
 
@@ -172,6 +169,11 @@ export default class EmbyEmulation {
         } catch (error) {
             logger.warn('Could not tell Jellyfin apps about changed user data', error);
         }
+    }
+
+    /** What Jellyfin apps call this server. Read each time, so a change applies without a restart. */
+    get serverName(): string {
+        return this.oblecto.config.jellyfin.serverName?.trim() || 'Oblecto';
     }
 
     close(): Promise<void> {

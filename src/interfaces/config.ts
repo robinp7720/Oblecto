@@ -50,7 +50,13 @@ export interface IConfig {
     'jellyfin': {
         'enabled': boolean,
         'port': number,
-        'host': string
+        'host': string,
+        // What Jellyfin apps call this server
+        'serverName'?: string,
+        // Shown under the sign-in form of Jellyfin apps
+        'loginDisclaimer'?: string,
+        // Extra CSS for the Jellyfin web client
+        'customCss'?: string
     },
     'tvshows': {
         'seriesIdentifiers': [
