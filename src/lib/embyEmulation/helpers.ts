@@ -1,4 +1,5 @@
 import path from 'path';
+import { WATCHED_PROGRESS } from '../playback/progress.js';
 
 type MediaStream = {
     profile?: string;
@@ -450,8 +451,8 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
 
     if (track) {
         const userData = res.UserData as Record<string, unknown>;
-        userData.PlaybackPositionTicks = (track.time ?? 0) * 10000000;
-        userData.Played = (track.progress ?? 0) >= 1;
+        userData.Played = (track.progress ?? 0) >= WATCHED_PROGRESS;
+        userData.PlaybackPositionTicks = userData.Played ? 0 : Math.round((track.time ?? 0) * 10000000);
         userData.PlayCount = userData.Played ? 1 : 0;
         if (track.updatedAt) {
             userData.LastPlayedDate = track.updatedAt.toISOString();

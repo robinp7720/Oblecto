@@ -8,6 +8,8 @@ export type ProgressChange = {
     id: number;
     track: { time: number; progress: number; updatedAt: string };
 };
+/** Progress from which an item counts as watched, and below which a started one can be resumed. */
+export const WATCHED_PROGRESS = 0.9;
 /** Emitted only after a successful database write; the realtime controller scopes delivery by user. */
 export const progressEvents = new EventEmitter();
 /** Serialize writes for each viewer/item so slower database writes cannot restore stale positions. */

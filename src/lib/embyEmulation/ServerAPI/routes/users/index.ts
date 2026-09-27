@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars */
 import { Movie } from '../../../../../models/movie';
 import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
@@ -22,7 +22,8 @@ import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
 import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
-import { setPlayed } from '../../../../playback/progress.js';
+import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
+import { queryItems } from '../../itemQuery.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 import { containsText } from '../../../../common/textSearch.js';
 
@@ -259,220 +260,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/users/:userid/items', async (req: EmbyRequest, res: Response) => {
-        let items = [];
-        const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
-            const values: any[] = [];
-
-            for (const key of keys) {
-                if (query[key] === undefined) continue;
-                const raw = query[key];
-
-                if (Array.isArray(raw)) {
-                    for (const entry of raw) {
-                        values.push(entry);
-                    }
-                } else {
-                    values.push(raw);
-                }
-            }
-            return values
-                .flatMap(value => String(value).split(','))
-                .map(value => value.trim())
-                .filter(value => value.length > 0);
-        };
-        const includeItemTypes = normalizeQueryList(req.query as Record<string, any>, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
-            .map(value => value.toLowerCase());
-        const searchTerm = getRequestValue(req, 'SearchTerm') || '';
-        const startIndex = parseInt(getRequestValue(req, 'StartIndex') || '0', 10) || 0;
-        const limit = parseInt(getRequestValue(req, 'Limit') || '100', 10) || 100;
-        const parentId = getRequestValue(req, 'ParentId') || '';
-
-        let parsedParentId = null;
-
-        if (parentId) {
-            parsedParentId = parseId(parentId);
-        }
-
-        if (includeItemTypes.includes('movie')) {
-            const count = await Movie.count();
-
-            let where: any = {};
-
-            if (searchTerm) {
-                where = containsText('movieName', searchTerm);
-            }
-
-            const results = await Movie.findAll({
-                where,
-                include: [{ model: File, include: [{ model: Stream }] }],
-                limit: limit,
-                offset: startIndex
-            });
-
-            items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('series')) {
-            const count = await Series.count();
-
-            let where: any = {};
-
-            if (searchTerm) {
-                where = containsText('seriesName', searchTerm);
-            }
-
-            const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby')
-                .map(value => value.toLowerCase())
-                .join(',');
-            const sortOrder = normalizeQueryList(req.query as Record<string, any>, 'SortOrder', 'sortOrder', 'sortorder')
-                .map(value => value.toLowerCase())
-                .join(',') || 'ascending';
-            const order: any[] = [];
-
-            if (sortBy) {
-                const parts = sortBy.split(',');
-
-                for (const part of parts) {
-                    const direction = sortOrder.startsWith('desc') ? 'DESC' : 'ASC';
-
-                    if (part === 'sortname') {
-                        order.push(['seriesName', direction]);
-                    } else if (part === 'premieredate' || part === 'productionyear') {
-                        order.push(['firstAired', direction]);
-                    } else if (part === 'datecreated') {
-                        order.push(['createdAt', direction]);
-                    }
-                }
-            }
-
-            if (order.length === 0) {
-                order.push(['seriesName', 'ASC']);
-            }
-
-            const results = await Series.findAll({
-                where,
-                limit: limit,
-                offset: startIndex,
-                order: order
-            });
-
-            items = results.map(series => formatMediaItem(series, 'series', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
-            const userId = String(req.params.userid ?? ''); // Route parameter
-            const parsedUserId = userId ? parseUuid(userId) : null;
-            const where: any = {};
-
-            if (parsedParentId) {
-                if (parsedParentId.type === 'series') {
-                    where.SeriesId = parsedParentId.id;
-                } else if (parsedParentId.type === 'season') {
-                    where.SeriesId = Math.floor(parsedParentId.id / 1000);
-                    where.airedSeason = parsedParentId.id % 1000;
-                }
-            }
-
-            if (searchTerm) {
-                where[Op.and] = [containsText('episodeName', searchTerm)];
-            }
-
-            const count = await Episode.count({ where });
-
-            const include = [Series, { model: File, include: [{ model: Stream }] }];
-
-            if (parsedUserId) {
-                include.push({
-                    model: TrackEpisode,
-                    required: false,
-                    where: { userId: parsedUserId }
-                } as any);
-            }
-
-            const results = await Episode.findAll({
-                where,
-                include,
-                limit: limit,
-                offset: startIndex,
-                order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
-            });
-
-            items = results.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('season') || (parsedParentId?.type === 'series')) {
-            let seriesId = null;
-
-            if (parsedParentId?.type === 'series') {
-                seriesId = parsedParentId.id;
-            }
-
-            if (!seriesId) {
-                return res.send({
-                    Items: [], TotalRecordCount: 0, StartIndex: 0
-                });
-            }
-
-            const series = await Series.findByPk(seriesId);
-
-            if (!series) {
-                return res.send({
-                    Items: [], TotalRecordCount: 0, StartIndex: 0
-                });
-            }
-
-            const episodes = await Episode.findAll({
-                where: { SeriesId: seriesId },
-                attributes: ['airedSeason'],
-                order: [['airedSeason', 'ASC']]
-            });
-
-            const distinctSeasons = new Set();
-
-            episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
-
-            items = [];
-            const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => Number(a) - Number(b));
-
-            const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
-
-            for (const seasonNum of pagedSeasons as any[]) {
-                const pseudoId = seriesId * 1000 + parseInt(String(seasonNum), 10);
-                const seasonObj: MediaItem = {
-                    id: pseudoId,
-                    seasonName: 'Season ' + seasonNum,
-                    seriesName: series.seriesName,
-                    SeriesId: seriesId,
-                    indexNumber: Number(seasonNum)
-                };
-
-                items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
-            }
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': sortedSeasons.length,
-                'StartIndex': startIndex
-            });
-        } else {
-            res.send({
-                Items: [],
-                TotalRecordCount: 0,
-                StartIndex: 0
-            });
-        }
+        res.send(await queryItems(req, embyEmulation));
     });
 
     const trackFor = (userId: number, type: string, id: number) => (type === 'movie'
@@ -486,7 +274,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         if (!userId || !Number.isFinite(id) || !['movie', 'episode'].includes(type)) return null;
 
         const track = await trackFor(userId, type, id);
-        const played = (track?.progress ?? 0) >= 1;
+        const played = (track?.progress ?? 0) >= WATCHED_PROGRESS;
 
         return {
             PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
@@ -540,7 +328,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 12, 1), 100);
         const inProgress = {
             userId,
-            progress: { [Op.gt]: 0, [Op.lt]: 0.9 }
+            progress: { [Op.gt]: 0, [Op.lt]: WATCHED_PROGRESS }
         };
         const recent = {
             where: inProgress,

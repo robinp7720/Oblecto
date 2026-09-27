@@ -11,6 +11,8 @@ import { File, fileColumns } from '../../src/models/file.js';
 import { Stream, streamColumns } from '../../src/models/stream.js';
 import { MovieFiles, movieFileColumns } from '../../src/models/movieFiles.js';
 import { EpisodeFiles, episodeFilesColumns } from '../../src/models/episodeFiles.js';
+import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
+import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { formatUuid } from '../../src/lib/embyEmulation/helpers.js';
 
 const makeServer = () => {
@@ -59,6 +61,8 @@ describe('Emby items search routes', () => {
         Stream.init(streamColumns, { sequelize, modelName: 'Stream' });
         MovieFiles.init(movieFileColumns, { sequelize, modelName: 'MovieFiles' });
         EpisodeFiles.init(episodeFilesColumns, { sequelize, modelName: 'EpisodeFiles' });
+        TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
+        TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
 
         Episode.belongsTo(Series);
         Series.hasMany(Episode);
@@ -69,6 +73,9 @@ describe('Emby items search routes', () => {
         File.belongsToMany(Movie, { through: MovieFiles });
         Stream.belongsTo(File);
         File.hasMany(Stream);
+        // Listings carry the signed-in user's watch state
+        Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
+        Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
 
         await sequelize.sync({ force: true });
 

@@ -3,9 +3,12 @@ import { Series } from '../../../../../models/series';
 import { TrackEpisode } from '../../../../../models/trackEpisode';
 import { File } from '../../../../../models/file';
 import { Stream } from '../../../../../models/stream';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-base-to-string, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-base-to-string, @typescript-eslint/prefer-nullish-coalescing */
 import { parseUuid, formatMediaItem, parseId, formatId } from '../../../helpers';
 import { Op } from 'sequelize';
+import { queryItems } from '../../itemQuery.js';
+import { getRequestValue } from '../../requestUtils.js';
+import type { EmbyRequest } from '../../index.js';
 
 /**
  * @param server
@@ -90,93 +93,28 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         });
     });
 
-    server.get('/shows/:seriesid/seasons', async (req, res) => {
-        const { id: seriesId } = parseId(req.params.seriesid);
+    server.get('/shows/:seriesid/seasons', async (req: EmbyRequest, res: Response) => {
+        const series = parseId(req.params.seriesid);
 
-        const series = await Series.findByPk(seriesId);
-
-        if (!series) {
-            return res.send({
-                'Items': [],
-                'TotalRecordCount': 0,
-                'StartIndex': 0
-            });
-        }
-
-        const episodes = await Episode.findAll({
-            where: { SeriesId: seriesId },
-            attributes: ['airedSeason'],
-            order: [['airedSeason', 'ASC']]
-        });
-
-        const distinctSeasons = new Set<string>();
-
-        episodes.forEach(ep => distinctSeasons.add(String(ep.airedSeason)));
-
-        const items: any[] = [];
-        const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => a - b);
-
-        for (const seasonNum of sortedSeasons) {
-            const pseudoId = seriesId * 1000 + parseInt(seasonNum);
-            const seasonObj = {
-                id: pseudoId,
-                seasonName: 'Season ' + seasonNum,
-                seriesName: series.seriesName,
-                SeriesId: seriesId,
-                indexNumber: seasonNum
-            };
-
-            items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
-        }
-
-        res.send({
-            'Items': items,
-            'TotalRecordCount': items.length,
-            'StartIndex': 0
-        });
+        req.query = {
+ ...req.query, ParentId: formatId(series.id, 'series'), IncludeItemTypes: 'Season' 
+};
+        res.send(await queryItems(req, embyEmulation));
     });
 
-    server.get('/shows/:seriesid/episodes', async (req, res) => {
-        const { id } = parseId(req.params.seriesid);
-        const where: any = { SeriesId: id };
+    // Episodes of a series, optionally of one season (by number or by season id)
+    server.get('/shows/:seriesid/episodes', async (req: EmbyRequest, res: Response) => {
+        const series = parseId(req.params.seriesid);
+        const seasonNumber = getRequestValue(req, 'Season');
+        const seasonId = getRequestValue(req, 'SeasonId');
+        let parent = formatId(series.id, 'series');
 
-        if (req.query.season) {
-            where.airedSeason = parseInt(String(req.query.season), 10);
-        } else if (req.query.SeasonId || req.query.seasonid) {
-            const parsed = parseId(String(req.query.SeasonId || req.query.seasonid));
+        if (seasonId && parseId(seasonId).type === 'season') parent = seasonId;
+        else if (seasonNumber !== undefined && Number.isFinite(parseInt(seasonNumber, 10))) parent = formatId(series.id * 1000 + parseInt(seasonNumber, 10), 'season');
 
-            if (parsed.type === 'season') {
-                const seasonNum = parsed.id % 1000;
-
-                where.airedSeason = seasonNum;
-            }
-        }
-
-        const userIdParam = String(req.query.userid || req.query.UserId || req.query.userId || '');
-        const parsedUserId = userIdParam ? parseUuid(userIdParam) : null;
-
-        const include: any[] = [Series, { model: File, include: [{ model: Stream }] }];
-
-        if (parsedUserId) {
-            include.push({
-                model: TrackEpisode,
-                required: false,
-                where: { userId: parsedUserId }
-            });
-        }
-
-        const episodes = await Episode.findAll({
-            where,
-            include,
-            order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
-        });
-
-        const items = episodes.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
-
-        res.send({
-            'Items': items,
-            'TotalRecordCount': items.length,
-            'StartIndex': 0
-        });
+        req.query = {
+            ...req.query, ParentId: parent, IncludeItemTypes: 'Episode', SeriesId: undefined, Season: undefined, SeasonId: undefined
+        };
+        res.send(await queryItems(req, embyEmulation));
     });
 };

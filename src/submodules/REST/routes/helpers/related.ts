@@ -1,13 +1,5 @@
 import { QueryTypes, type Sequelize } from 'sequelize';
-
-function genresFrom(raw: unknown): string[] {
-    if (typeof raw !== 'string' || !raw.trim()) return [];
-    try {
-        const parsed: unknown = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
-    } catch { /* Older libraries store comma-separated genres. */ }
-    return raw.split(',').map(value => value.trim()).filter(Boolean);
-}
+import { genreCondition, genresFrom } from '../../../../lib/common/genres.js';
 
 /** Rank in the database; only the twelve selected cards cross the API boundary. */
 export async function relatedTitles(sequelize: Sequelize, type: 'movie' | 'series', id: number, genres: unknown): Promise<Record<string, unknown>[]> {
@@ -23,11 +15,8 @@ export async function relatedTitles(sequelize: Sequelize, type: 'movie' | 'serie
     const allocationSet = q(movie ? 'MovieSetId' : 'SeriesSetId');
     const title = q(movie ? 'movieName' : 'seriesName');
     const genreColumn = `m.${q(movie ? 'genres' : 'genre')}`;
-    const like = (value: string): string => sequelize.escape(`%${value.replace(/[!%_]/g, '!$&')}%`);
-    const csvGenres = `REPLACE(REPLACE(${genreColumn}, ', ', ','), ' ,', ',')`;
-    const delimitedGenres = sequelize.getDialect() === 'sqlite' ? `(',' || ${csvGenres} || ',')` : `CONCAT(',', ${csvGenres}, ',')`;
     const genreScore = [...new Set(genresFrom(genres))].map(genre =>
-        `(CASE WHEN ${genreColumn} LIKE ${like(JSON.stringify(genre))} ESCAPE '!' OR ${delimitedGenres} LIKE ${like(',' + genre + ',')} ESCAPE '!' THEN 1 ELSE 0 END)`
+        `(CASE WHEN ${genreCondition(sequelize, genreColumn, genre)} THEN 1 ELSE 0 END)`
     ).join(' + ') || '0';
     const collectionScore = `(SELECT COUNT(DISTINCT a.${allocationSet}) FROM ${allocations} a
         JOIN ${allocations} b ON a.${allocationSet} = b.${allocationSet}
