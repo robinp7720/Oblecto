@@ -6,6 +6,10 @@ What lives here
 - `RealtimeController.ts`: Owns the Socket.IO server, the handshake authentication middleware, the registry, and `dispatchCommand` — the single authorization chokepoint for remote play.
 - `RealtimeClient.ts`: One authenticated socket. Handles `playback:state` and `remote:command`, and delivers commands to its own device.
 
+Other events
+- `RealtimeController.broadcast` sends library (`indexer`) and seedbox (`seedbox`) events to every socket.
+- `publishProgress` sends `media:progress` to the affected user's sockets only, whenever `progressEvents` reports saved progress.
+
 Notes
 - This module implements the Realtime API documented in `docs/REALTIME_API.md`.
 - **CRITICAL:** If you modify the events, payloads, or authentication flow in this directory, you **MUST** update `docs/REALTIME_API.md` to reflect these changes.

@@ -4,6 +4,9 @@ Scope
 - Backend Node/ESM server lives in `src/`.
 - Default Vue 3 + Vite frontend lives in `Oblecto-Web/` and builds to `Oblecto-Web/dist/`.
 - Backend tests are in `tests/`; helper scripts in `scripts/`.
+- The Jellyfin web client is the `jellyfin-web/` submodule, copied into `dist/` by the build.
+- User and API documentation is in `README.md` and `docs/`; the roadmap is `PLAN.md`, release notes `CHANGELOG.md`.
+  Change them with the behaviour they describe.
 
 Quick commands (from repo root)
 - `npm run dev` (backend dev server via tsx)
