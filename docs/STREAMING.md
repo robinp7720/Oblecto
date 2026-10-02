@@ -26,7 +26,7 @@ The queue schedules waiting sessions fairly. This is on-demand encoding, so slow
 
 ## Federation
 
-Upgrade both media peers together. The existing TLS media port and configured trust/key material are retained. Media protocol v1 uses a random RSA challenge inside the verified TLS connection. Each frame has a four-byte big-endian body length, a four-byte JSON-header length, a JSON header, and optional raw media bytes. Frames are limited to 1 MiB; headers to 64 KiB; media chunks to 32 KiB.
+Federation setup, mutual pairing and metadata protocol v2 are documented in [Federation](FEDERATION.md). Upgrade both metadata peers together. The existing TLS media port and configured trust/key material are retained. Media protocol v1 uses a random RSA challenge inside the verified TLS connection. Each frame has a four-byte big-endian body length, a four-byte JSON-header length, a JSON header, and optional raw media bytes. Frames are limited to 1 MiB; headers to 64 KiB; media chunks to 32 KiB.
 
 Operations are `hello`/`authenticate`, `create`, `update`, `heartbeat`, `serve`, `stop`, and `cancel`. Request IDs associate results and streaming frames. The owning server validates that requested files are local and generates output. The receiving server proxies bytes and rewrites playlist tokens to its own scoped lease; it never transcodes the resulting stream again. Backpressure, request cancellation, idle request deadlines, and disconnect cleanup are propagated. Peer authentication has a ten-second deadline. Media requests have a sixty-second inactivity deadline.
 

@@ -1,3 +1,5 @@
+import { Op } from 'sequelize';
+import { federatedMediaIds } from '../federation/catalog.js';
 import { Episode } from '../../models/episode.js';
 import { File } from '../../models/file.js';
 import { Series } from '../../models/series.js';
@@ -31,7 +33,9 @@ export default class SeriesCleaner {
         logger.info( 'Removing all episodes without linked files');
         const results = await Episode.findAll({ include: [File] }) as EpisodeWithFiles[];
 
+        const retained = await federatedMediaIds('episode');
         for (const item of results) {
+            if (retained.has(item.id)) continue;
             if (item.Files && item.Files.length > 0)
                 continue;
 
@@ -46,7 +50,8 @@ export default class SeriesCleaner {
      */
     async removePathLessShows(): Promise<void> {
         logger.info( 'Removing series without at attached path');
-        await Series.destroy({ where: { directory: '' } });
+        const retained = await federatedMediaIds('series');
+        await Series.destroy({ where: { directory: '', ...(retained.size ? { id: { [Op.notIn]: [...retained] } } : {}) } });
     }
 
     /**
@@ -56,7 +61,9 @@ export default class SeriesCleaner {
         logger.info( 'Removing series without attached episodes');
         const results = await Series.findAll({ include: [Episode] }) as SeriesWithEpisodes[];
 
+        const retained = await federatedMediaIds('series');
         for (const item of results) {
+            if (retained.has(item.id)) continue;
             if (item.Episodes && item.Episodes.length > 0)
                 continue;
 

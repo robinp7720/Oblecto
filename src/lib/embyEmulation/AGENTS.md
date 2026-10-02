@@ -1,74 +1,51 @@
 # Jellyfin/Emby Emulation Layer (embyEmulation)
 
-This layer allows Oblecto to act as a Jellyfin/Emby server, enabling compatibility with existing clients like Jellyfin Media Player, the Jellyfin web client, and third-party apps.
+This layer lets Oblecto act as a Jellyfin server, so existing clients (Jellyfin Media Player, the Jellyfin web client, mobile and TV apps) can sign in, browse and play.
 
 ## Architecture
 
-The emulation layer is organized into several key components:
+### 1. Orchestrator (`src/lib/embyEmulation/index.ts`)
+The `EmbyEmulation` class owns sessions (`this.sessions`, keyed by access token), the Primus WebSocket at `/socket`, and the server API. The socket accepts the token as `?api_key=` (older apps) or `?ApiKey=` (the Jellyfin SDK, so jellyfin-web). It sends `ForceKeepAlive`, answers `KeepAlive`, and pushes `UserDataChanged` when `progressEvents` or `favouriteEvents` fire. `serverName` is read from `jellyfin.serverName` each time.
 
-### 1. Orchestrator (`src/lib/embyEmulation/index.js`)
-The `EmbyEmulation` class manages sessions, WebSockets (via Primus), and the server API lifecycle. It handles user authentication and maintains a mapping of active sessions (`this.sessions`).
+### 2. Server API (`src/lib/embyEmulation/ServerAPI/index.ts`)
+An Express 5 server on `jellyfin.port` (8096). Middleware, in order:
+- **Path lowercasing**: the path is lowercased so routes match; query keys and values keep their case.
+- **Emby header parsing**: `X-Emby-Authorization`/`Authorization: MediaBrowser …` into `req.headers.emby`.
+- **Session guard** (`sessionGuard.ts`): everything but discovery, sign-in, branding, localisation, images and the web client needs a session. It sets `req.embyUserId` and pins every user id in the path, query and body to the signed-in user.
 
-### 2. Server API (`src/lib/embyEmulation/ServerAPI/index.js`)
-An Express-based server listening on port `8096`. It includes critical middleware:
-- **URL Lowercasing**: All incoming URLs are lowercased to simplify route matching.
-- **Parameter Mapping**: Merges `req.query`, `req.body`, and `req.params` into `req.params` for legacy compatibility.
-- **Emby Header Parsing**: Parses the `X-Emby-Authorization` header (or equivalent) into `req.headers.emby`.
+### 3. Shared building blocks (`ServerAPI/`)
+- `itemQuery.ts`: the one engine behind `GET /Items`, `/Users/{id}/Items` and the `/Shows` lists. `readItemQuery` turns a request into an `ItemQuery` (kinds, parent, filters, sort, page), and `runItemQuery` runs it. Add new filters here, not in routes. Routes that fix some parameters pass them as `queryItems(req, emby, overrides)`: `req.query` is read-only in Express 5.
+- `itemDetails.ts`: `decorateItems` fills in favourites, folder counts and unplayed counts for a page in batched queries. `describeItem` adds People for detail pages. `userItemData` builds one item's UserData.
+- `library.ts`: collections (BoxSets from movie sets the user may see), people, genres, similar titles, ancestors, and `resolveLibraryItem` for those ids.
+- `serverConfiguration.ts`: system, encoding and branding configuration, read from and saved to Oblecto's config through `validateSettings`/`mergeSettings`/`ConfigManager.updateConfig`.
+- `requestUtils.ts`: `getRequestValue` and `getRequestList` read query and body parameters case-insensitively. Use them rather than `req.query.X`.
 
-### 3. Route Handlers (`src/lib/embyEmulation/ServerAPI/routes/`)
-Routes are modularized by functional area:
-- `users/`: Authentication, views (`/UserViews`), and user-specific item lists (`/Users/:userid/Items`).
-- `shows/`: NextUp (`/Shows/NextUp`), seasons, and episodes.
-- `items/`: General item lookup (`/Items/:mediaid`), playback info, and image endpoints.
-- `system/`: Ping and server info (`/System/Info`).
-- `displaypreferences/`: UI state management for clients.
+### 4. Routes (`ServerAPI/routes/`)
+By area: `users/` (sign-in, user data, favourites, configuration), `items/` (item lookup, images, playback info, similar, filters), `shows/`, `library/` (genres, collections, library scans), `artists/` (persons), `system/`, `branding/`, `displaypreferences/`, `sessions/`, `videos/` and the stubs.
 
-### 4. Helpers (`src/lib/embyEmulation/helpers.js`)
-Crucial for data transformation between Oblecto's internal models and the Jellyfin API spec:
-- **ID System**: IDs are prefixed to indicate type (e.g., `1` for Movies, `2` for Series).
-- **`formatMediaItem`**: Standardizes the response format for media items, including `Overview`, `UserData`, and `ImageTags`.
-- **UUID Handling**: Methods for formatting and parsing the 32-character hex UUIDs used by Emby clients.
+### 5. Helpers (`helpers.ts`)
+`formatMediaItem` turns a movie, series, season or episode into a BaseItemDto. It includes only what Oblecto knows; never invent ratings, genres or artwork. `formatId`/`parseId` handle ids, and `genreId` gives a genre its stable id.
 
-## Key Concepts
+## Key concepts
 
-### ID Prefixing
-To avoid ID collisions across different media types, IDs are encoded as a single-character hex prefix followed by the 31-char hex representation of the numeric ID:
-- `1...`: Movie
-- `2...`: Series
-- `3...`: Episode
-- `4...`: Season
-- `f...`: User
+### Item ids
+32 hex characters: a type prefix and the numeric id in the remaining 31.
+- `1…` movie, `2…` series, `3…` episode, `4…` season (series id × 1000 + season number)
+- `5…` person, `6…` collection (movie set), `8…` reserved for series sets, `f…` user
+- `7…` genre: a hash of the name, resolved by looking the name up (`genreNames`)
+- Library views use the ids `movies`, `shows` and `collections` (`views.ts`).
 
-### Case-Insensitivity and Query Parameters
-Because the middleware lowercases the request URL, query parameter keys are often expected to be lowercase. When accessing query parameters, always handle both CamelCase and lowercase variations (e.g., `req.query.SortBy || req.query.sortby`).
+### Watch state and favourites
+Watched means progress of `WATCHED_PROGRESS` (0.9) or more, as everywhere in Oblecto. Favourites are in `UserFavourites` (`src/lib/users/favourites.ts`). Display preferences are in `JellyfinDisplayPreferences`.
 
-### Robust Logic Fallbacks
-The API often receives requests where `IncludeItemTypes` is empty (e.g., when a client navigates into a series). The implementation must use `ParentId` to intelligently list the intended child types:
-- If `ParentId` represents a Series -> Return its Seasons.
-- If `ParentId` represents a Season -> Return its Episodes.
-
-## Implementation Status
-
-### Supported Features
-- **Authentication**: Authentication by name and session persistence.
-- **Libraries**: Mapping of Movies and TV Shows into "User Views".
-- **TV Support**: Robust "Next Up" logic and full series/season/episode navigation.
-- **Metadata**: Support for item descriptions (`Overview`), ratings, and production years.
-- **Playback**: Playback info negotiation and Direct Stream support.
-- **Images**: Dynamic serving of primary posters and backdrops.
-
-### Known Nuances
-- **Unmatched Routes**: If a route remains unmatched, ensure it's registered in `users/index.js` or `items/index.js` and that the URL pattern matches the lowercased version of the request.
-- **Next Up**: This logic uses `TrackEpisode` data to determine the current progress and subsequent episode in a series.
+### Parents and fallbacks
+Clients often leave `IncludeItemTypes` empty and rely on `ParentId`. The engine then lists what the parent holds: a view its kind, a series its seasons, a season its episodes, a collection its movies.
 
 ## Extending the API
-
-1.  **Add a Route**: Register the endpoint in the appropriate file in `src/lib/embyEmulation/ServerAPI/routes/`.
-2.  **Access Parameters**: Use `req.query` for query parameters, ensuring you check for lowercased keys.
-3.  **Return Data**: Always use `formatMediaItem(item, type, embyEmulation)` to transform database models into API-compliant objects.
 
 When extending the Jellyfin/Emby emulation layer:
 - Always reference the Jellyfin OpenAPI spec (`jellyfin-openapi-stable.json`); fetch or refresh it with `scripts/fetch-jellyfin-openapi.sh`.
 - Use `PLAN.md` as the source of truth for current coverage and gaps.
-- Document every change you make in `PLAN.md` under the Change log section (date + short summary).
-- Keep route implementations aligned with the spec path shapes, HTTP methods, and required parameters.
+- Document every change you make in `PLAN.md` under the Change log section (date + short summary), and keep `docs/JELLYFIN.md` in step.
+- Keep route implementations aligned with the spec path shapes, HTTP methods, and required parameters. Register specific paths before `/:param` ones that would swallow them.
+- Route tests call handlers with plain request objects. Give them a read-only `query`, as Express 5 has it (see `tests/mocha/embyLibrary.spec.ts`), and check new behaviour against the bundled jellyfin-web too.

@@ -12,6 +12,8 @@ import { Person, personColumns } from '../../src/models/person.js';
 import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
+import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
+import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '../../src/models/jellyfinDisplayPreferences.js';
 
 // A throwaway database with the models the migrations touch registered on it.
 async function database(): Promise<Sequelize> {
@@ -27,6 +29,8 @@ async function database(): Promise<Sequelize> {
     MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
     SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
     EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
+    UserFavourite.init(userFavouriteColumns, { sequelize, modelName: 'UserFavourite' });
+    JellyfinDisplayPreferences.init(jellyfinDisplayPreferencesColumns, { sequelize, modelName: 'JellyfinDisplayPreferences' });
 
     return sequelize;
 }
@@ -60,6 +64,34 @@ describe('Database migrations', () => {
             assert.equal(movie.siteRatingCount, 42);
             assert.equal(movie.siteRatingSource, null);
             for (const table of ['Movies', 'Series', 'Episodes']) assert.ok((await columns(sequelize, table)).includes('siteRatingSource'));
+        } finally { await sequelize.close(); }
+    });
+
+    it('adds favourites and display preferences to a database from before them, one row per user and item', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const query = sequelize.getQueryInterface();
+            await query.dropTable('UserFavourites');
+            await query.dropTable('JellyfinDisplayPreferences');
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0008-jellyfin-user-data'");
+            assert.deepEqual(await migrate(sequelize), ['0008-jellyfin-user-data']);
+
+            const user = await User.create({ username: 'fan' });
+            await UserFavourite.create({ userId: user.id, itemType: 'movie', itemId: 1 });
+            await assert.rejects(UserFavourite.create({ userId: user.id, itemType: 'movie', itemId: 1 }));
+            await JellyfinDisplayPreferences.create({ userId: user.id, preferencesId: 'usersettings', client: 'emby', data: '{}' });
+            await assert.rejects(JellyfinDisplayPreferences.create({ userId: user.id, preferencesId: 'usersettings', client: 'emby', data: '{}' }));
+        } finally { await sequelize.close(); }
+    });
+
+    it('gives a new database unique favourites too', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const user = await User.create({ username: 'fan' });
+            await UserFavourite.create({ userId: user.id, itemType: 'series', itemId: 2 });
+            await assert.rejects(UserFavourite.create({ userId: user.id, itemType: 'series', itemId: 2 }));
         } finally { await sequelize.close(); }
     });
 

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars */
 import { Movie } from '../../../../../models/movie';
 import { TrackMovie } from '../../../../../models/trackMovie';
 import { File } from '../../../../../models/file';
@@ -14,15 +14,19 @@ import { Op, type Includeable } from 'sequelize';
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
 import { EmbyRequest } from '../../index.js';
-import { getRequestValue } from '../../requestUtils.js';
+import { getRequestList, getRequestValue } from '../../requestUtils.js';
 import { libraryViews } from '../../../views.js';
 import { clientAddress, isLocalRequest } from '../../../../network/localNetwork.js';
 import { loginThrottle } from '../../../../auth/loginThrottle.js';
 import { canSignInWithoutPassword } from '../../../../auth/loginPolicy.js';
 import { avatarPath } from '../../../../users/avatars.js';
 import { permissionsOf } from '../../../../auth/permissions.js';
-import { SubtitleMode, resolvePreferences } from '../../../../users/preferences.js';
-import { setPlayed } from '../../../../playback/progress.js';
+import { SubtitleMode, resolvePreferences, validatePreferences } from '../../../../users/preferences.js';
+import { setPlayed, WATCHED_PROGRESS } from '../../../../playback/progress.js';
+import { isFavouriteType, setFavourite } from '../../../../users/favourites.js';
+import { queryItems, requestUserId } from '../../itemQuery.js';
+import { decorateItems, describeItem, userItemData } from '../../itemDetails.js';
+import { isLibraryItemId, resolveLibraryItem } from '../../library.js';
 import { changeOwnPassword, PasswordChangeError } from '../../../../users/password.js';
 import { containsText } from '../../../../common/textSearch.js';
 
@@ -38,9 +42,55 @@ const JELLYFIN_SUBTITLE_MODES: Record<SubtitleMode, string> = {
     forced: 'OnlyForced'
 };
 
-const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password), IsAdministrator = false): Record<string, unknown> => {
+/** The UserConfiguration a Jellyfin app shows in its playback and subtitle settings. */
+const userConfiguration = (user: User): Record<string, unknown> => {
     const preferences = resolvePreferences(user.preferences);
 
+    return {
+        PlayDefaultAudioTrack: preferences.audioLanguage === null,
+        AudioLanguagePreference: preferences.audioLanguage ?? '',
+        SubtitleLanguagePreference: preferences.subtitleLanguage ?? '',
+        DisplayMissingEpisodes: false,
+        GroupedFolders: [],
+        SubtitleMode: JELLYFIN_SUBTITLE_MODES[preferences.subtitleMode],
+        DisplayCollectionsView: false,
+        EnableLocalPassword: false,
+        OrderedViews: [],
+        LatestItemsExcludes: [],
+        MyMediaExcludes: [],
+        HidePlayedInLatest: true,
+        RememberAudioSelections: true,
+        RememberSubtitleSelections: true,
+        EnableNextEpisodeAutoPlay: preferences.autoplayNext
+    };
+};
+
+// Jellyfin's subtitle modes Oblecto has no mode of its own for show subtitles when the file says so
+const OBLECTO_SUBTITLE_MODES: Record<string, SubtitleMode> = {
+    none: 'off',
+    default: 'auto',
+    smart: 'auto',
+    always: 'auto',
+    onlyforced: 'forced'
+};
+
+/**
+ * The Oblecto preferences a UserConfiguration from a Jellyfin app changes. Only what the app sent
+ * and Oblecto keeps; the rest of the configuration is Jellyfin's own and is not stored.
+ */
+export const preferencesFromConfiguration = (configuration: Record<string, unknown>): Record<string, unknown> => {
+    const update: Record<string, unknown> = {};
+    const language = (value: unknown): unknown => (value === '' || value === null ? null : value);
+
+    if ('AudioLanguagePreference' in configuration) update.audioLanguage = language(configuration.AudioLanguagePreference);
+    if ('SubtitleLanguagePreference' in configuration) update.subtitleLanguage = language(configuration.SubtitleLanguagePreference);
+    if (typeof configuration.SubtitleMode === 'string') update.subtitleMode = OBLECTO_SUBTITLE_MODES[configuration.SubtitleMode.toLowerCase()] ?? configuration.SubtitleMode;
+    if ('EnableNextEpisodeAutoPlay' in configuration) update.autoplayNext = configuration.EnableNextEpisodeAutoPlay;
+
+    return update;
+};
+
+const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Boolean(user.password), IsAdministrator = false): Record<string, unknown> => {
     return {
         Name: user.name,
         ServerId: embyEmulation.serverId,
@@ -52,23 +102,7 @@ const buildUserDto = (user: User, embyEmulation: EmbyEmulation, HasPassword = Bo
         EnableAutoLogin: false,
         LastLoginDate: lastChanged(user),
         LastActivityDate: lastChanged(user),
-        Configuration: {
-            PlayDefaultAudioTrack: preferences.audioLanguage === null,
-            AudioLanguagePreference: preferences.audioLanguage ?? '',
-            SubtitleLanguagePreference: preferences.subtitleLanguage ?? '',
-            DisplayMissingEpisodes: false,
-            GroupedFolders: [],
-            SubtitleMode: JELLYFIN_SUBTITLE_MODES[preferences.subtitleMode],
-            DisplayCollectionsView: false,
-            EnableLocalPassword: false,
-            OrderedViews: [],
-            LatestItemsExcludes: [],
-            MyMediaExcludes: [],
-            HidePlayedInLatest: true,
-            RememberAudioSelections: true,
-            RememberSubtitleSelections: true,
-            EnableNextEpisodeAutoPlay: preferences.autoplayNext
-        },
+        Configuration: userConfiguration(user),
         Policy: {
             IsAdministrator,
             IsHidden: false,
@@ -259,247 +293,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/users/:userid/items', async (req: EmbyRequest, res: Response) => {
-        let items = [];
-        const normalizeQueryList = (query: Record<string, any>, ...keys: string[]): string[] => {
-            const values: any[] = [];
-
-            for (const key of keys) {
-                if (query[key] === undefined) continue;
-                const raw = query[key];
-
-                if (Array.isArray(raw)) {
-                    for (const entry of raw) {
-                        values.push(entry);
-                    }
-                } else {
-                    values.push(raw);
-                }
-            }
-            return values
-                .flatMap(value => String(value).split(','))
-                .map(value => value.trim())
-                .filter(value => value.length > 0);
-        };
-        const includeItemTypes = normalizeQueryList(req.query as Record<string, any>, 'IncludeItemTypes', 'includeItemTypes', 'includeitemtypes')
-            .map(value => value.toLowerCase());
-        const searchTerm = getRequestValue(req, 'SearchTerm') || '';
-        const startIndex = parseInt(getRequestValue(req, 'StartIndex') || '0', 10) || 0;
-        const limit = parseInt(getRequestValue(req, 'Limit') || '100', 10) || 100;
-        const parentId = getRequestValue(req, 'ParentId') || '';
-
-        let parsedParentId = null;
-
-        if (parentId) {
-            parsedParentId = parseId(parentId);
-        }
-
-        if (includeItemTypes.includes('movie')) {
-            const count = await Movie.count();
-
-            let where: any = {};
-
-            if (searchTerm) {
-                where = containsText('movieName', searchTerm);
-            }
-
-            const results = await Movie.findAll({
-                where,
-                include: [{ model: File, include: [{ model: Stream }] }],
-                limit: limit,
-                offset: startIndex
-            });
-
-            items = results.map(movie => formatMediaItem(movie, 'movie', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('series')) {
-            const count = await Series.count();
-
-            let where: any = {};
-
-            if (searchTerm) {
-                where = containsText('seriesName', searchTerm);
-            }
-
-            const sortBy = normalizeQueryList(req.query as Record<string, any>, 'SortBy', 'sortBy', 'sortby')
-                .map(value => value.toLowerCase())
-                .join(',');
-            const sortOrder = normalizeQueryList(req.query as Record<string, any>, 'SortOrder', 'sortOrder', 'sortorder')
-                .map(value => value.toLowerCase())
-                .join(',') || 'ascending';
-            const order: any[] = [];
-
-            if (sortBy) {
-                const parts = sortBy.split(',');
-
-                for (const part of parts) {
-                    const direction = sortOrder.startsWith('desc') ? 'DESC' : 'ASC';
-
-                    if (part === 'sortname') {
-                        order.push(['seriesName', direction]);
-                    } else if (part === 'premieredate' || part === 'productionyear') {
-                        order.push(['firstAired', direction]);
-                    } else if (part === 'datecreated') {
-                        order.push(['createdAt', direction]);
-                    }
-                }
-            }
-
-            if (order.length === 0) {
-                order.push(['seriesName', 'ASC']);
-            }
-
-            const results = await Series.findAll({
-                where,
-                limit: limit,
-                offset: startIndex,
-                order: order
-            });
-
-            items = results.map(series => formatMediaItem(series, 'series', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('episode') || (parsedParentId?.type === 'season')) {
-            const userId = String(req.params.userid ?? ''); // Route parameter
-            const parsedUserId = userId ? parseUuid(userId) : null;
-            const where: any = {};
-
-            if (parsedParentId) {
-                if (parsedParentId.type === 'series') {
-                    where.SeriesId = parsedParentId.id;
-                } else if (parsedParentId.type === 'season') {
-                    where.SeriesId = Math.floor(parsedParentId.id / 1000);
-                    where.airedSeason = parsedParentId.id % 1000;
-                }
-            }
-
-            if (searchTerm) {
-                where[Op.and] = [containsText('episodeName', searchTerm)];
-            }
-
-            const count = await Episode.count({ where });
-
-            const include = [Series, { model: File, include: [{ model: Stream }] }];
-
-            if (parsedUserId) {
-                include.push({
-                    model: TrackEpisode,
-                    required: false,
-                    where: { userId: parsedUserId }
-                } as any);
-            }
-
-            const results = await Episode.findAll({
-                where,
-                include,
-                limit: limit,
-                offset: startIndex,
-                order: [['airedSeason', 'ASC'], ['airedEpisodeNumber', 'ASC']]
-            });
-
-            items = results.map(ep => formatMediaItem(ep, 'episode', embyEmulation));
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': count,
-                'StartIndex': startIndex
-            });
-        } else if (includeItemTypes.includes('season') || (parsedParentId?.type === 'series')) {
-            let seriesId = null;
-
-            if (parsedParentId?.type === 'series') {
-                seriesId = parsedParentId.id;
-            }
-
-            if (!seriesId) {
-                return res.send({
-                    Items: [], TotalRecordCount: 0, StartIndex: 0
-                });
-            }
-
-            const series = await Series.findByPk(seriesId);
-
-            if (!series) {
-                return res.send({
-                    Items: [], TotalRecordCount: 0, StartIndex: 0
-                });
-            }
-
-            const episodes = await Episode.findAll({
-                where: { SeriesId: seriesId },
-                attributes: ['airedSeason'],
-                order: [['airedSeason', 'ASC']]
-            });
-
-            const distinctSeasons = new Set();
-
-            episodes.forEach(ep => distinctSeasons.add(ep.airedSeason));
-
-            items = [];
-            const sortedSeasons = Array.from(distinctSeasons).sort((a: any, b: any) => Number(a) - Number(b));
-
-            const pagedSeasons = sortedSeasons.slice(startIndex, startIndex + limit);
-
-            for (const seasonNum of pagedSeasons as any[]) {
-                const pseudoId = seriesId * 1000 + parseInt(String(seasonNum), 10);
-                const seasonObj: MediaItem = {
-                    id: pseudoId,
-                    seasonName: 'Season ' + seasonNum,
-                    seriesName: series.seriesName,
-                    SeriesId: seriesId,
-                    indexNumber: Number(seasonNum)
-                };
-
-                items.push(formatMediaItem(seasonObj, 'season', embyEmulation));
-            }
-
-            res.send({
-                'Items': items,
-                'TotalRecordCount': sortedSeasons.length,
-                'StartIndex': startIndex
-            });
-        } else {
-            res.send({
-                Items: [],
-                TotalRecordCount: 0,
-                StartIndex: 0
-            });
-        }
+        res.send(await queryItems(req, embyEmulation));
     });
 
-    const trackFor = (userId: number, type: string, id: number) => (type === 'movie'
-        ? TrackMovie.findOne({ where: { userId, movieId: id } })
-        : TrackEpisode.findOne({ where: { userId, episodeId: id } }));
-
-    /** The UserItemDataDto for one movie or episode, from the user's own progress. */
-    const userDataFor = async (userId: number | undefined, itemId: string): Promise<Record<string, unknown> | null> => {
-        const { id, type } = parseId(itemId);
-
-        if (!userId || !Number.isFinite(id) || !['movie', 'episode'].includes(type)) return null;
-
-        const track = await trackFor(userId, type, id);
-        const played = (track?.progress ?? 0) >= 1;
-
-        return {
-            PlaybackPositionTicks: played ? 0 : Math.round((track?.time ?? 0) * 10000000),
-            PlayCount: played ? 1 : 0,
-            IsFavorite: false,
-            Played: played,
-            LastPlayedDate: track?.updatedAt?.toISOString(),
-            Key: itemId,
-            ItemId: itemId
-        };
-    };
-
-    /** Mark a movie, an episode, or every episode of a series, as watched or unwatched. */
+    /** Mark a movie, an episode, or every episode of a series or season, as watched or unwatched. */
     const markPlayed = (played: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
         const itemId = String(req.params.itemid);
         const { id, type } = parseId(itemId);
@@ -510,17 +307,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             return;
         }
 
-        if (type === 'series') {
-            const episodes = await Episode.findAll({ where: { SeriesId: id }, attributes: ['id'] });
+        if (type === 'series' || type === 'season') {
+            const where = type === 'series' ? { SeriesId: id } : { SeriesId: Math.floor(id / 1000), airedSeason: String(id % 1000) };
+            const episodes = await Episode.findAll({ where, attributes: ['id'] });
 
             for (const episode of episodes) await setPlayed(userId, 'episode', episode.id, played);
             res.send({
+                ...await userItemData(userId, itemId),
                 Played: played,
-                PlayCount: played ? 1 : 0,
-                PlaybackPositionTicks: 0,
-                IsFavorite: false,
-                Key: itemId,
-                ItemId: itemId
+                PlayCount: played ? 1 : 0
             });
             return;
         }
@@ -531,7 +326,22 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         await setPlayed(userId, type, id, played);
-        res.send(await userDataFor(userId, itemId));
+        res.send(await userItemData(userId, itemId));
+    };
+
+    /** Mark an item as one of the user's favourites, or not. */
+    const markFavourite = (favourite: boolean) => async (req: EmbyRequest, res: Response): Promise<void> => {
+        const itemId = String(req.params.itemid);
+        const { id, type } = parseId(itemId);
+        const userId = req.embyUserId;
+
+        if (!userId || !Number.isFinite(id) || !isFavouriteType(type)) {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        await setFavourite(userId, type, id, favourite);
+        res.send(await userItemData(userId, itemId));
     };
 
     /** Started but unfinished movies and episodes, most recently watched first. */
@@ -540,14 +350,21 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const limit = Math.min(Math.max(Number(getRequestValue(req, 'Limit')) || 12, 1), 100);
         const inProgress = {
             userId,
-            progress: { [Op.gt]: 0, [Op.lt]: 0.9 }
+            progress: { [Op.gt]: 0, [Op.lt]: WATCHED_PROGRESS }
         };
         const recent = {
             where: inProgress,
             order: [['updatedAt', 'DESC']] as [string, string][],
             limit
         };
-        const [movieTracks, episodeTracks] = await Promise.all([TrackMovie.findAll(recent), TrackEpisode.findAll(recent)]);
+        // Apps ask separately for video, audio ("Continue Listening") and books; Oblecto only has video
+        const mediaTypes = getRequestList(req, 'MediaTypes').map(type => type.toLowerCase());
+        const types = getRequestList(req, 'IncludeItemTypes').map(type => type.toLowerCase());
+        const wants = (type: string): boolean => (mediaTypes.length === 0 || mediaTypes.includes('video')) && (types.length === 0 || types.includes(type));
+        const [movieTracks, episodeTracks] = await Promise.all([
+            wants('movie') ? TrackMovie.findAll(recent) : [],
+            wants('episode') ? TrackEpisode.findAll(recent) : []
+        ]);
         const files: Includeable = { model: File, include: [{ model: Stream }] };
         const ownProgress = (model: typeof TrackMovie | typeof TrackEpisode): Includeable => ({
             model,
@@ -574,7 +391,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         ].sort((a, b) => b.at - a.at).slice(0, limit).map(entry => entry.item);
 
         res.send({
-            Items: items,
+            Items: await decorateItems(items, userId ?? null),
             TotalRecordCount: items.length,
             StartIndex: 0
         });
@@ -614,7 +431,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             items.push(...series.map(show => formatMediaItem(show as unknown as MediaItem, 'series', embyEmulation)));
         }
 
-        res.send(items.slice(0, limit));
+        res.send(await decorateItems(items.slice(0, limit), userId ?? null));
     };
 
     server.get('/users/:userid/items/latest', getLatestItems);
@@ -626,9 +443,15 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     server.get('/users/:userid/items/:mediaid', async (req: EmbyRequest, res: Response) => {
         const parsed = parseId(req.params.mediaid);
         const numericId = parsed.id;
-        const userId = parseUuid(String(req.params.userid));
+        const userId = requestUserId(req);
         let resolvedType = parsed.type;
         let item = null;
+        const libraryItem = await resolveLibraryItem(String(req.params.mediaid), userId, embyEmulation);
+
+        if (libraryItem || isLibraryItemId(String(req.params.mediaid))) {
+            res.status(libraryItem ? 200 : 404).send(libraryItem ?? 'Item not found');
+            return;
+        }
 
         const resolveMovie = async (movieId: number | string): Promise<Movie | null> => Movie.findByPk(movieId, {
             include: [
@@ -699,21 +522,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         }
 
         if (item) {
-            // Special handling for Movie to include detailed media sources if needed,
-            // but formatMediaItem handles basic properties.
-            // The previous implementation for Movie manually constructed MediaSources.
-            // formatMediaItem is simpler.
-            // Let's rely on formatMediaItem to be consistent with /items/:mediaid
-            // However, the previous implementation injected a LOT of extra fields for Movie.
-            // If I replace it entirely with formatMediaItem, I might lose those fields (ExternalUrls, etc).
-            // But consistency is better. The previous implementation had hardcoded "MediaSources" loop.
-            // I should stick to formatMediaItem but maybe enhance it if needed.
-
-            // Actually, for Movie, the previous code returned a very rich object.
-            // For now, I will use formatMediaItem for ALL types to solve the "loading" issue for Series.
-            // If Movie details regress, I can revisit.
-
-            res.send(formatMediaItem(item, resolvedType, embyEmulation));
+            res.send(await describeItem(formatMediaItem(item, resolvedType, embyEmulation), userId));
         } else {
             res.status(404).send('Item not found');
         }
@@ -764,7 +573,36 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send(buildUserDto(user, embyEmulation, Boolean(user.password), await isAdministrator(user)).Policy);
     });
     server.post('/users/authenticatewithquickconnect', (req, res) => { res.status(501).send('Not Implemented'); });
-    server.get('/users/configuration', (req, res) => { res.send([]); });
+    // The playback and subtitle settings in a Jellyfin app, saved as the user's Oblecto preferences
+    const saveConfiguration = async (req: EmbyRequest, res: Response): Promise<void> => {
+        const user = await User.findByPk(req.embyUserId);
+        const body = req.body as unknown;
+
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+            res.status(400).send('Expected a user configuration');
+            return;
+        }
+
+        const update = preferencesFromConfiguration(body as Record<string, unknown>);
+        const problems = validatePreferences(update);
+
+        if (Object.keys(problems).length > 0) {
+            res.status(400).send(Object.entries(problems).map(([key, message]) => `${key}: ${message}`).join(' '));
+            return;
+        }
+
+        user.preferences = { ...(user.preferences ?? {}), ...update };
+        await user.save();
+        res.status(204).send();
+    };
+
+    server.post('/users/configuration', saveConfiguration);
+    server.post('/users/:userid/configuration', saveConfiguration);
     server.post('/users/forgotpassword', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/forgotpassword/pin', (req, res) => { res.status(501).send('Not Implemented'); });
     server.post('/users/new', (req, res) => { res.status(501).send('Not Implemented'); });
@@ -799,13 +637,13 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
     // UserItems
     server.get('/useritems/:itemid/userdata', async (req: EmbyRequest, res: Response) => {
-        const data = await userDataFor(req.embyUserId, String(req.params.itemid));
+        const data = await userItemData(req.embyUserId, String(req.params.itemid));
 
         if (!data) return res.status(404).send('Item not found');
         res.send(data);
     });
 
-    // Oblecto has no favourites or ratings yet; say so rather than pretend the change was kept.
+    // Oblecto has no ratings yet; say so rather than pretend the change was kept.
     const unsupported = (feature: string) => (_req: Request, res: Response) => { res.status(501).send(`${feature} are not supported by Oblecto yet`); };
 
     server.post('/useritems/:itemid/rating', unsupported('Ratings'));
@@ -819,9 +657,10 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         server.delete(path, markPlayed(false));
     }
 
+    // Favourites, at the current path and the one older apps use
     for (const path of ['/userfavoriteitems/:itemid', '/users/:userid/favoriteitems/:itemid']) {
-        server.post(path, unsupported('Favourites'));
-        server.delete(path, unsupported('Favourites'));
+        server.post(path, markFavourite(true));
+        server.delete(path, markFavourite(false));
     }
 
     // UserViews

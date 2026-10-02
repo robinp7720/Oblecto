@@ -349,7 +349,7 @@ Errors use `{ "code": "INVALID_SELECTION", "message": "..." }`: invalid options 
 
 The old `/session/create/:id`, `/session/stream/:id`, and `/HLS/:id/segment/:segment` contracts are removed. Replace codec CSV lists and `noremux` with capabilities and quality preferences. Replace `seeking`, `inputCodec`, and `outputCodec` response handling with the new descriptor. Replace `-1` track sentinels with `null`. Update backend and bundled web/client-library submodules together; restart discards active sessions but retains library and watch-progress data.
 
-Federation media peers must both support protocol version 1; older peers are rejected. Federation metadata synchronization remains unchanged. See [streaming operations and testing](STREAMING.md).
+Federation media peers must both support protocol version 1; older peers are rejected. Metadata synchronization requires protocol version 2 on both peers; see [federation setup and operations](FEDERATION.md). See [streaming operations and testing](STREAMING.md).
 
 ## Users
 
@@ -660,3 +660,28 @@ it is public for image clients. Unknown titles or unavailable image files return
 Originals and resized variants use `assets.showFanartLocation` (default
 `/etc/oblecto/assets/showFanart/`) and existing `artwork.fanart` sizes. Missing
 artwork is collected on new-series indexing and normal artwork maintenance.
+
+
+## Federation administration
+
+All `/api/v1/federation` endpoints require `settings.manage`. Requests without credentials return 401; users without permission receive 403. Federation settings also remain available through the existing settings GET/PATCH routes, with nested peer validation and live application. Private key paths retain the existing `***` unchanged sentinel.
+
+| Method | Path suffix | Request | Response |
+| --- | --- | --- | --- |
+| GET | `/status` | — | `{ enabled, running, error?, peers, pairings }` |
+| GET | `/identity` | — | `{ uuid, address, dataPort, mediaPort, certificate, publicKey }` |
+| POST | `/identity` | `{ address }` | Prepare missing identity material and return public identity; preserves existing files |
+| POST | `/invitations` | — | 201 `{ id, expires, invitation }`; expiration is epoch milliseconds |
+| DELETE | `/invitations/:id` | — | 204; revoke invitation and cancel its pending pairing |
+| POST | `/pairings` | `{ invitation }` | 202 `{ operationId }`; starts mutual pairing |
+| GET | `/pairings/:id` | — | `{ id, state, uuid, expires, error? }` |
+| DELETE | `/pairings/:id` | — | 204; cancel pending pairing; active trust must be removed as a peer |
+| PUT | `/peers/:id` | `{ address, ca, dataPort, mediaPort, uuid?, fingerprint?, name?, enabled? }` | Updated status; replaces the outbound peer configuration at the immutable alias |
+| DELETE | `/peers/:id` | Optional `?purge=true` | 204; removes outbound configuration and paired incoming authorization; optionally removes imported file records |
+| POST | `/peers/:id/test` | — | `{ ok: true }` after verified metadata connection and authentication |
+| POST | `/peers/:id/sync` | — | 202 `{ operationId }`; concurrent requests share the active operation |
+| POST | `/peers/:id/reconnect` | — | Updated status after reconnect is scheduled |
+
+A peer status contains `id`, `name`, `address`, `enabled`, `state`, and optional `lastSuccess`, `count`, `error`, `retryAt`, `operationId`. Timestamps are ISO strings. States are `disabled`, `disconnected`, `connecting`, `syncing`, `connected`, or `error`; `connected` indicates the most recent synchronization succeeded, not a permanent socket. Pairing states are `pending`, `prepared`, `active`, or `cancelled`. Poll `/status` to follow asynchronous operations.
+
+Invalid peer settings return 400 `{ error: "Check the highlighted settings.", fields: { "federation.servers.<id>.<field>": "..." } }`. Other invalid operations return 400 with the usual API `{ code, message }` error envelope. Saved settings can fail activation (for example, a port is occupied); `/status.error` explains this independently of persisted settings. See [Federation](FEDERATION.md) for trust, ports, snapshot semantics, certificate replacement, and coordinated upgrades.

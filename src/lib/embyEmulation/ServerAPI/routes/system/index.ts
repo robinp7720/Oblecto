@@ -3,6 +3,9 @@ import info from './info';
 
 import type { Application, Request, Response } from 'express';
 import type EmbyEmulation from '../../../index.js';
+import type { EmbyRequest } from '../../index.js';
+import { embyUserCan } from '../../permission.js';
+import { brandingConfiguration, ConfigurationError, encodingConfiguration, fromBrandingConfiguration, fromEncodingConfiguration, fromSystemConfiguration, saveConfiguration, systemConfiguration } from '../../serverConfiguration.js';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     ping(server, embyEmulation);
@@ -25,55 +28,35 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/system/configuration', (_req: Request, res: Response) => {
-        res.send({
-            ServerName: embyEmulation.serverName,
-            CachePath: '/config/cache',
-            MetadataPath: '/config/data/metadata',
-            MetadataCountryCode: 'US',
-            PreferredMetadataLanguage: 'en',
-            UICulture: 'en-US',
-            QuickConnectAvailable: false,
-            IsStartupWizardCompleted: true,
-            EnableFolderView: false,
-            EnableGroupingMoviesIntoCollections: true,
-            EnableGroupingShowsIntoCollections: true,
-            DisplaySpecialsWithinSeasons: true,
-            EnableLegacyAuthorization: false,
-            EnableCaseSensitiveItemIds: false,
-            EnableNormalizedItemByNameIds: true,
-            ImageSavingConvention: 'Compatible',
-            ImageExtractionTimeoutMs: 15000,
-            LibraryMonitorDelay: 60,
-            LibraryUpdateDuration: 300,
-            LibraryMetadataRefreshConcurrency: 1,
-            LibraryScanFanoutConcurrency: 1,
-            LogFileRetentionDays: 7,
-            ActivityLogRetentionDays: 7,
-            MinResumePct: 5,
-            MaxResumePct: 90,
-            MinResumeDurationSeconds: 300,
-            MinAudiobookResume: 5,
-            MaxAudiobookResume: 5,
-            InactiveSessionThreshold: 0,
-            DummyChapterDuration: 0,
-            RemoteClientBitrateLimit: 0,
-            SaveMetadataHidden: false,
-            EnableExternalContentInSuggestions: false,
-            EnableSlowResponseWarning: false,
-            SlowResponseThresholdMs: 5000,
-            IsPortAuthorized: true,
-            CastReceiverApplications: [],
-            PathSubstitutions: [],
-            MetadataOptions: [],
-            PluginRepositories: [],
-            CodecsUsed: [],
-            ContentTypes: [],
-            CorsHosts: [],
-            SortRemoveCharacters: [],
-            SortRemoveWords: [],
-            SortReplaceCharacters: []
-        });
+        res.send(systemConfiguration(embyEmulation));
     });
+
+    // An administrator saving the dashboard's settings: what Oblecto keeps is saved, the rest ignored
+    const save = (read: (body: Record<string, unknown>) => Record<string, Record<string, unknown>>) => async (req: EmbyRequest, res: Response): Promise<void> => {
+        if (!await embyUserCan(req, 'settings.manage')) {
+            res.status(403).send('Forbidden');
+            return;
+        }
+
+        const body = req.body as unknown;
+
+        if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+            res.status(400).send('Expected settings');
+            return;
+        }
+
+        try {
+            await saveConfiguration(embyEmulation, read(body as Record<string, unknown>));
+            res.status(204).send();
+        } catch (error) {
+            if (!(error instanceof ConfigurationError)) throw error;
+            res.status(error.statusCode).send(error.message);
+        }
+    };
+
+    server.post('/system/configuration', save(fromSystemConfiguration));
+    server.post('/system/configuration/encoding', save(fromEncodingConfiguration));
+    server.post('/system/configuration/branding', save(fromBrandingConfiguration));
 
     server.get('/system/configuration/metadata', (_req: Request, res: Response) => {
         res.send({
@@ -97,26 +80,11 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
     });
 
     server.get('/system/configuration/encoding', (_req: Request, res: Response) => {
-        res.send({
-            EncodingThreadCount: 0,
-            EnableFallbackFont: true,
-            FallbackFontPath: '',
-            FontWhitelist: [],
-            EnableHardwareEncoding: false,
-            HardwareAccelerationType: 'none',
-            H264Crf: 23,
-            H265Crf: 28,
-            EncoderPreset: 'veryfast',
-            AllowStreamCopy: true,
-            EnableEnhancedNvdecDecoder: false,
-            EnableTonemapping: false
-        });
+        res.send(encodingConfiguration(embyEmulation));
     });
 
-    // TODO: Implement missing System routes
     server.get('/system/configuration/branding', (_req: Request, res: Response) => {
-        // TODO: Implement
-        res.status(501).send('Not Implemented');
+        res.send(brandingConfiguration(embyEmulation));
     });
 
     server.get('/system/configuration/metadataoptions/default', (_req: Request, res: Response) => {
@@ -144,10 +112,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.status(501).send('Not Implemented');
     });
 
-    // Note: /system/configuration/:key must be last to avoid capturing specific paths
+    // Registered after the named sections above, which answer themselves; Oblecto has no others
     server.get('/system/configuration/:key', (_req: Request, res: Response) => {
-        // TODO: Implement
-        res.status(501).send('Not Implemented');
+        res.status(404).send('Not Found');
     });
 
     // TODO: Implement Backup routes

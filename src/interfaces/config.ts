@@ -50,7 +50,13 @@ export interface IConfig {
     'jellyfin': {
         'enabled': boolean,
         'port': number,
-        'host': string
+        'host': string,
+        // What Jellyfin apps call this server
+        'serverName'?: string,
+        // Shown under the sign-in form of Jellyfin apps
+        'loginDisclaimer'?: string,
+        // Extra CSS for the Jellyfin web client
+        'customCss'?: string
     },
     'tvshows': {
         'seriesIdentifiers': [
@@ -143,6 +149,8 @@ string
         vaapiDevice?: string
     },
     'federation': {
+        'address'?: string,
+        'syncIntervalMs'?: number,
         'key': string,
         // TLS certificate presented to federation peers
         'cert'?: string,
@@ -151,11 +159,16 @@ string
         'enable': boolean,
         'servers': Record<string, {
             'address': string,
+            'uuid'?: string,
+            'fingerprint'?: string,
+            'name'?: string,
+            'enabled'?: boolean,
             'ca': string,
             'dataPort': number,
             'mediaPort': number
         }>,
         'clients': Record<string, {
+            'enabled'?: boolean,
             'key': string
         }>,
         'uuid': string

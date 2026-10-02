@@ -1,5 +1,6 @@
 import { Sequelize, Dialect, Options } from 'sequelize';
 import config from '../config.js';
+import { FederationRecord, federationRecordColumns } from '../models/federationRecord.js';
 import logger from './logger/index.js';
 import { chooseSqliteDriver } from './sqliteDriver.js';
 
@@ -20,6 +21,8 @@ import { Person, personColumns } from '../models/person.js';
 import { MovieCredit, movieCreditColumns } from '../models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../models/episodeCredit.js';
+import { UserFavourite, userFavouriteColumns } from '../models/userFavourite.js';
+import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '../models/jellyfinDisplayPreferences.js';
 
 const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
 
@@ -31,6 +34,7 @@ let sequelizeInstance: Sequelize | null = null;
 function initModels(sequelize: Sequelize): void {
     const modelOptions = (modelName: string): { sequelize: Sequelize; modelName: string } => ({ sequelize, modelName });
 
+    FederationRecord.init(federationRecordColumns, { ...modelOptions('FederationRecord'), timestamps: false });
     Episode.init(episodeColumns, modelOptions('Episode'));
     Movie.init(movieColumns, modelOptions('Movie'));
     Series.init(seriesColumns, modelOptions('Series'));
@@ -53,6 +57,9 @@ function initModels(sequelize: Sequelize): void {
 
     User.init(userColumns, modelOptions('User'));
     Group.init(groupColumns, modelOptions('Group'));
+
+    UserFavourite.init(userFavouriteColumns, modelOptions('UserFavourite'));
+    JellyfinDisplayPreferences.init(jellyfinDisplayPreferencesColumns, modelOptions('JellyfinDisplayPreferences'));
 }
 
 /**
@@ -84,6 +91,11 @@ function initAssociations(): void {
     // adding a second, capitalised key that databases treat as the same column.
     TrackEpisode.belongsTo(User, { foreignKey: 'userId' });
     TrackEpisode.belongsTo(Episode, { foreignKey: 'episodeId' });
+
+    UserFavourite.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(UserFavourite, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    JellyfinDisplayPreferences.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(JellyfinDisplayPreferences, { foreignKey: 'userId', onDelete: 'CASCADE' });
 
     TrackMovie.belongsTo(User, { foreignKey: 'userId' });
     TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });

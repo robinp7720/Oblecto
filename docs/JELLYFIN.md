@@ -8,7 +8,7 @@ Oblecto answers the Jellyfin API on port 8096 (`jellyfin.port`), so Jellyfin app
 - A session only ever sees its own user: user ids in paths, `UserId` parameters and bodies are replaced with the signed-in user's.
 - Access tokens survive restarts and stop working when the user's password changes or the account is deleted. Signing out revokes the token until the next restart; changing the password revokes all of them.
 - Failed sign-ins are throttled, as on the web app.
-- Oblecto reports Jellyfin API version 10.11.5 and a server id derived from its signing secret.
+- Oblecto reports Jellyfin API version 12.1.0 and a server id derived from its signing secret.
 
 **Status Legend:**
 - ✅ **Implemented**: Contains logic (database access, processing) and likely works.
@@ -32,11 +32,11 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 | `GET /system/info` | ✅ Implemented | As above, with operating system and architecture |
 | `GET /system/info/storage` | ⚠️ Mocked | Returns static storage paths |
 | `GET /system/endpoint` | ⚠️ Mocked | Returns generic endpoint info |
-| `GET /system/configuration` | ⚠️ Mocked | Returns default config |
+| `GET`/`POST /system/configuration` | ✅ Implemented | Server name from `jellyfin.serverName`; resume thresholds match Oblecto's. Saving needs the settings permission; only the server name is kept |
+| `GET`/`POST /system/configuration/encoding` | ✅ Implemented | Hardware encoder from `transcoding.*` (NVENC or VAAPI). Saving needs the settings permission |
+| `GET`/`POST /system/configuration/branding`, `GET /branding/configuration`, `/branding/css` | ✅ Implemented | Sign-in disclaimer and custom CSS from `jellyfin.loginDisclaimer` and `jellyfin.customCss` |
 | `GET /system/configuration/metadata` | ⚠️ Mocked | |
 | `GET /system/configuration/xbmcmetadata` | ⚠️ Mocked | |
-| `GET /system/configuration/encoding` | ⚠️ Mocked | |
-| `GET /branding/configuration` | ⚠️ Mocked | Returns "Oblecto Media server" |
 | `GET /localization/options` | ⚠️ Mocked | English only |
 | `GET /localization/cultures` | ⚠️ Mocked | en-US only |
 | `GET /localization/countries` | ⚠️ Mocked | US only |
@@ -52,6 +52,8 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 | `GET /users/:userid/views` | ✅ Implemented | Same views as `/userviews` |
 | `GET /users/:userid/policy` | ✅ Implemented | Administrator when the user's group may change settings |
 | `POST /users/:userid/password` | ✅ Implemented | Changing your own password; resetting one is 501 |
+| `POST /users/configuration`, `/users/:userid/configuration` | ✅ Implemented | Audio and subtitle languages, subtitle mode and next-episode autoplay, saved as the user's Oblecto preferences |
+| `GET`/`POST /displaypreferences/:id` | ✅ Implemented | Home sections, sort orders, views and skip lengths, kept per user and app |
 | `POST /sessions/logout` | ✅ Implemented | Revokes the token |
 | `POST /users/new`, `DELETE /users/:id` | ❌ Not Implemented | Manage users in the web app |
 | `GET /auth/providers` | 🚧 Stubbed | Returns empty list |
@@ -63,22 +65,28 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 ### Items & Library (Browsing)
 | Endpoint | Status | Notes |
 |----------|--------|-------|
-| `GET /items` | ✅ Implemented | Supports searching, sorting, filtering by type (Movie, Series, Episode) |
-| `GET /items/:mediaid` | ✅ Implemented | Resolves Movie, Series, Episode, Season |
-| `GET /users/:userid/items` | ✅ Implemented | Main browsing endpoint |
+| `GET /items`, `/users/:userid/items` | ✅ Implemented | The browsing endpoint: types, parents (library views, series, seasons, collections), search, sort orders, watched, resumable and favourite filters, genres, people, years, ids, paging. Items carry the user's watch state and favourites |
+| `GET /items/:mediaid`, `/users/:userid/items/:mediaid` | ✅ Implemented | Movies, series, seasons, episodes, collections, people and genres, with genres, provider ids, tagline, rating, cast and crew, and season and episode counts |
+| `GET /items/:mediaid/similar`, `/movies/:id/similar`, `/shows/:id/similar` | ✅ Implemented | Ranked by shared collections, people and genres |
+| `GET /movies/recommendations` | ✅ Implemented | Titles like the ones the user watched last |
+| `GET /items/:mediaid/ancestors`, `/items/:mediaid/collections` | ✅ Implemented | |
+| `GET /items/counts`, `/items/filters`, `/items/filters2` | ✅ Implemented | |
+| `GET /persons`, `/persons/:name` | ✅ Implemented | Everyone credited in the library, with biography, dates and photo |
+| `GET /genres`, `/genres/:name` | ✅ Implemented | The genres Oblecto stores for movies and series |
 | `GET /users/:userid/items/latest` | ✅ Implemented | Recently added, for any library view |
 | `GET /users/:userid/items/resume` | ✅ Implemented | Started, unfinished movies and episodes |
-| `POST`/`DELETE /userplayeditems/:itemid` | ✅ Implemented | Marks a movie, episode or whole series watched or unwatched |
-| `GET /useritems/:itemid/userdata` | ✅ Implemented | The user's progress |
-| `POST /userfavoriteitems/:itemid`, `/useritems/:itemid/rating` | ❌ Not Implemented | 501: Oblecto has no favourites or ratings yet |
+| `POST`/`DELETE /userplayeditems/:itemid` | ✅ Implemented | Marks a movie, episode, season or whole series watched or unwatched |
+| `POST`/`DELETE /userfavoriteitems/:itemid` | ✅ Implemented | Favourite movies, series, seasons, episodes, people and collections, per user |
+| `GET /useritems/:itemid/userdata` | ✅ Implemented | The user's progress and whether it is a favourite |
+| `POST /useritems/:itemid/rating` | ❌ Not Implemented | 501: Oblecto has no ratings |
 | `POST /items/:itemid/refresh` | ✅ Implemented | Queues a metadata update; needs the libraries permission |
 | `POST /library/refresh` | ✅ Implemented | Starts a library scan; needs the libraries permission |
 | `GET /shows/nextup` | ✅ Implemented | Logic for tracking progress |
 | `GET /shows/:seriesid/seasons` | ✅ Implemented | |
 | `GET /shows/:seriesid/episodes` | ✅ Implemented | |
-| `GET /items/:mediaid/images/:type` | ✅ Implemented | Serves real artwork |
+| `GET /items/:mediaid/images`, `/items/:mediaid/images/:type` | ✅ Implemented | Posters, fanart, episode stills, person photos and collection artwork |
 | `GET /search/hints` | ✅ Implemented | Search logic implemented |
-| `GET /userviews` | ✅ Implemented | Movies, Shows and Collections |
+| `GET /userviews` | ✅ Implemented | Movies, Shows and Collections (the movie sets the user may see) |
 
 ### Media Playback & Streaming
 | Endpoint | Status | Notes |
@@ -91,6 +99,7 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 | `POST /sessions/playing/progress` | ✅ Implemented | Updates watch history/progress |
 | `POST /sessions/playing/stopped` | ✅ Implemented | Cleans up session |
 | `POST /sessions/capabilities/full` | 🚧 Stubbed | 204 |
+| `/socket` | ✅ Implemented | Keep-alive, and watch state, progress and favourite changes pushed to the user's apps (`UserDataChanged`) |
 
 ### Live TV & Channels
 | Endpoint | Status | Notes |
@@ -115,7 +124,6 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 | `GET /repositories` | 🚧 Stubbed | Empty list |
 
 ### Other Stubbed Areas
-- **DisplayPreferences**: `/displaypreferences/usersettings` (defaults only)
 - **Activity log**: empty; Oblecto keeps none
 - **Music**: not supported; audio streams answer 404
 - **Devices**: `/devices` (Empty)
@@ -123,13 +131,12 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 - **Environment**: Directory browsers return empty.
 - **SyncPlay**: All endpoints stubbed with 204/404.
 - **Trailers**: Empty lists.
-- **Collections**: Empty lists.
 - **Playlists**: Empty lists.
 
 ## Missing Critical Features
 - **User Management**: Creating and deleting users (501); use the web app or the command line.
-- **Favourites and ratings**: 501 until Oblecto supports them.
+- **Ratings**: 501 until Oblecto supports them.
 - **Library Management**: Adding/Removing paths (partially stubbed, no logic).
-- **Transcoding Options**: Hardcoded profiles.
+- **Transcoding Options**: Only the hardware encoder is configurable from a Jellyfin dashboard.
 - **Remote Access**: Not implemented.
-- **Dashboard**: No implementation for admin dashboard data.
+- **Dashboard**: The server name, hardware encoder and branding pages work; most other pages show defaults.

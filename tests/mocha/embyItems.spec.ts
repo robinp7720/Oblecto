@@ -241,7 +241,6 @@ describe('Emby items routes', () => {
             const routes = [
                 'GET /items/filters',
                 'GET /items/filters2',
-                'GET /items/:itemid/images',
                 'GET /items/:itemid/instantmix',
                 'GET /items/:itemid/externalidinfos',
                 'GET /items/:itemid/criticreviews',
@@ -255,12 +254,12 @@ describe('Emby items routes', () => {
                 'GET /items/:itemid/localtrailers',
                 'GET /items/:itemid/specialfeatures',
                 'GET /items/root',
-                'GET /movies/:itemid/similar',
+                'GET /movies/:mediaid/similar',
                 'GET /movies/recommendations',
-                'GET /shows/:itemid/similar',
+                'GET /shows/:mediaid/similar',
                 'GET /shows/upcoming',
                 'GET /trailers',
-                'GET /trailers/:itemid/similar'
+                'GET /trailers/:mediaid/similar'
             ];
 
             for (const route of routes) {

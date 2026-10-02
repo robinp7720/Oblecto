@@ -7,6 +7,10 @@ import { checkLogin } from '../auth/loginPolicy.js';
 import { issueJellyfinToken, verifyJellyfinToken } from '../auth/tokens.js';
 import Primus, { Spark } from 'primus';
 import logger from '../../submodules/logger/index.js';
+import { progressEvents, type ProgressChange } from '../playback/progress.js';
+import { favouriteEvents, type FavouriteChange } from '../users/favourites.js';
+import { userItemData } from './ServerAPI/itemDetails.js';
+import { formatId, formatUuid } from './helpers.js';
 
 import type Oblecto from '../oblecto/index.js'
 
@@ -39,8 +43,10 @@ export type ClientInfo = {
 type WebsocketSessions = Record<string, unknown>;
 
 // The Jellyfin API version clients are told they are talking to. They gate features on it.
-export const JELLYFIN_API_VERSION = '10.11.5';
+export const JELLYFIN_API_VERSION = '12.1.0';
 
+// How often, in seconds, clients are asked to show their socket is alive.
+const KEEPALIVE_SECONDS = 60;
 // Tokens are re-verified this often, so a password change, deletion or demotion reaches cached sessions.
 const RECHECK_MS = 60 * 1000;
 // Sessions idle this long are dropped from memory; the token still works and rebuilds the session.
@@ -52,10 +58,10 @@ export default class EmbyEmulation {
     public websocketSessions: WebsocketSessions;
     public serverId: string;
     public version: string;
-    public serverName: string;
     public serverAPI: EmbyServerAPI;
     public primus: Primus;
     private sweeper: NodeJS.Timeout;
+    private unsubscribe: () => void;
     // Tokens signed out since start. Tokens are stateless, so this only holds until a restart;
     // changing the password is what revokes every token for good.
     private revoked = new Set<string>();
@@ -76,14 +82,19 @@ export default class EmbyEmulation {
         this.serverId = createHash('sha256').update(`jellyfin-server-id:${oblecto.config.authentication.secret}`).digest('hex').slice(0, 32);
         this.version = JELLYFIN_API_VERSION;
 
-        this.serverName = 'Oblecto';
-
         this.serverAPI = new EmbyServerAPI(this);
 
         this.sweeper = setInterval(() => this.sweep(), 60 * 60 * 1000);
         this.sweeper.unref();
 
-        const apiKeyOf = (req: unknown): string | undefined => (req as { query?: Record<string, string> }).query?.api_key;
+        // Older apps send ?api_key=, the Jellyfin SDK (and so jellyfin-web) ?ApiKey=
+        const apiKeyOf = (req: unknown): string | undefined => {
+            const query = (req as { query?: Record<string, unknown> }).query ?? {};
+            const key = Object.keys(query).find(name => ['api_key', 'apikey'].includes(name.toLowerCase()));
+            const value = key === undefined ? undefined : query[key];
+
+            return typeof value === 'string' && value !== '' ? value : undefined;
+        };
 
         this.primus = new Primus(this.serverAPI.server, {
             pathname: '/socket',
@@ -107,14 +118,74 @@ export default class EmbyEmulation {
                 if (this.websocketSessions[token] === spark) delete this.websocketSessions[token];
             });
 
-            spark.on('data', function message(data: unknown) {
-                logger.debug('jellyfin ws received:', data);
-            });
+            spark.on('data', (data: unknown) => this.receive(spark, data));
+
+            // Clients send KeepAlive at half this many seconds, and treat a quiet socket as dead
+            spark.write({ MessageType: 'ForceKeepAlive', Data: KEEPALIVE_SECONDS });
         });
+
+        // Watch state and favourites changed anywhere (another app, the web UI) reach the user's apps
+        const progressSaved = (userId: number, change: ProgressChange): void => { void this.publishUserData(userId, formatId(change.id, change.type)); };
+        const favouriteChanged = (userId: number, change: FavouriteChange): void => { void this.publishUserData(userId, formatId(change.id, change.type)); };
+
+        progressEvents.on('saved', progressSaved);
+        favouriteEvents.on('changed', favouriteChanged);
+        this.unsubscribe = () => {
+            progressEvents.off('saved', progressSaved);
+            favouriteEvents.off('changed', favouriteChanged);
+        };
+    }
+
+    /** What a Jellyfin app sends over its socket. Only KeepAlive needs an answer. */
+    private receive(spark: Spark, data: unknown): void {
+        let message = data;
+
+        if (typeof message === 'string') {
+            try {
+                message = JSON.parse(message);
+            } catch {
+                return;
+            }
+        }
+
+        const type = (message as { MessageType?: unknown } | null)?.MessageType;
+
+        if (type === 'KeepAlive') spark.write({ MessageType: 'KeepAlive' });
+        else logger.debug('Jellyfin socket message:', type);
+    }
+
+    /** Tell every socket a user has open that an item's user data changed. */
+    async publishUserData(userId: number, itemId: string): Promise<void> {
+        const sparks = Object.entries(this.websocketSessions)
+            .filter(([token]) => this.sessions[token]?.Id === userId)
+            .map(([, spark]) => spark as Spark);
+
+        if (sparks.length === 0) return;
+
+        try {
+            const data = await userItemData(userId, itemId);
+
+            if (!data) return;
+
+            for (const spark of sparks) {
+                spark.write({
+                    MessageType: 'UserDataChanged',
+                    Data: { UserId: formatUuid(userId), UserDataList: [data] }
+                });
+            }
+        } catch (error) {
+            logger.warn('Could not tell Jellyfin apps about changed user data', error);
+        }
+    }
+
+    /** What Jellyfin apps call this server. Read each time, so a change applies without a restart. */
+    get serverName(): string {
+        return this.oblecto.config.jellyfin.serverName?.trim() || 'Oblecto';
     }
 
     close(): Promise<void> {
         clearInterval(this.sweeper);
+        this.unsubscribe();
 
         return new Promise(resolve => this.primus.destroy({
             close: true, reconnect: false, timeout: 1000

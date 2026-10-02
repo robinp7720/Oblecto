@@ -19,6 +19,7 @@ import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { Episode, episodeColumns } from '../../src/models/episode.js';
 import { saveProgress } from '../../src/lib/playback/progress.js';
+import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
 import { formatId } from '../../src/lib/embyEmulation/helpers.js';
 
 const AUTH = (token?: string) => ({
@@ -69,6 +70,7 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
         TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
         Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+        UserFavourite.init(userFavouriteColumns, { sequelize, modelName: 'UserFavourite' });
         if (!Episode.associations.Series) Episode.belongsTo(Series);
         if (!Episode.associations.TrackEpisodes) Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
         if (!Episode.associations.Files) Episode.belongsToMany(File, { through: 'EpisodeFiles' });
@@ -236,13 +238,80 @@ describe('Jellyfin emulation sign-in and sessions', function () {
 
             assert.deepEqual(resume.Items.map(item => item.Name), ['Half watched']);
             assert.equal(resume.Items[0].UserData.PlaybackPositionTicks, 600 * 10000000);
+
+            // "Continue Listening" and "Continue Reading" ask for audio and books, which Oblecto has none of
+            for (const type of ['Audio', 'Book']) {
+                const other = await (await fetch(`${base}/UserItems/Resume?MediaTypes=${type}`, { headers: AUTH(token) })).json() as { Items: unknown[] };
+
+                assert.deepEqual(other.Items, [], type);
+            }
         });
 
-        it('says favourites and ratings are unsupported instead of pretending to keep them', async () => {
+        it('keeps favourites per user, and says ratings are unsupported instead of pretending to keep them', async () => {
             const id = formatId(movie.id, 'movie');
+            const favourite = async (): Promise<boolean> => ((await (await fetch(`${base}/UserItems/${id}/UserData`, { headers: AUTH(token) })).json()) as { IsFavorite: boolean }).IsFavorite;
+            const marked = await fetch(`${base}/UserFavoriteItems/${id}`, { method: 'POST', headers: AUTH(token) });
 
-            assert.equal((await fetch(`${base}/UserFavoriteItems/${id}`, { method: 'POST', headers: AUTH(token) })).status, 501);
+            assert.equal(marked.status, 200);
+            assert.equal(((await marked.json()) as { IsFavorite: boolean }).IsFavorite, true);
+            assert.equal(await favourite(), true);
+            assert.equal(await UserFavourite.count({ where: { userId: bob.id } }), 0);
+
+            await fetch(`${base}/Users/${formatUuid(alice.id)}/FavoriteItems/${id}`, { method: 'DELETE', headers: AUTH(token) });
+            assert.equal(await favourite(), false);
+
             assert.equal((await fetch(`${base}/UserItems/${id}/Rating`, { method: 'POST', headers: AUTH(token) })).status, 501);
+        });
+
+        it('keeps an app\'s socket alive and tells it when user data changes', async () => {
+            const id = formatId(movie.id, 'movie');
+            // As the Jellyfin SDK, and so jellyfin-web, connects
+            const socket = new WebSocket(`${base.replace('http', 'ws')}/socket?ApiKey=${token}`);
+            const received: any[] = [];
+            const next = (type: string, wait = 1500): Promise<any> => new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error(`No ${type} message`)), wait);
+                const check = (): void => {
+                    const index = received.findIndex(message => message?.MessageType === type);
+
+                    if (index === -1) return;
+                    clearTimeout(timer);
+                    socket.removeEventListener('message', check);
+                    resolve(received.splice(index, 1)[0]);
+                };
+
+                socket.addEventListener('message', check);
+                check();
+            });
+
+            socket.addEventListener('message', event => {
+                try { received.push(JSON.parse(String(event.data))); } catch { /* Primus heartbeats */ }
+            });
+
+            try {
+                assert.equal((await next('ForceKeepAlive')).Data, 60);
+
+                socket.send(JSON.stringify({ MessageType: 'KeepAlive' }));
+                await next('KeepAlive');
+
+                await fetch(`${base}/UserPlayedItems/${id}`, { method: 'POST', headers: AUTH(token) });
+                const played = await next('UserDataChanged');
+
+                assert.equal(played.Data.UserId, formatUuid(alice.id));
+                assert.equal(played.Data.UserDataList[0].ItemId, id);
+                assert.equal(played.Data.UserDataList[0].Played, true);
+
+                // Progress saved elsewhere, as the web UI does, reaches the app too
+                await saveProgress(alice.id, 'movie', movie.id, 30, 1200);
+                const resumed = await next('UserDataChanged');
+
+                assert.equal(resumed.Data.UserDataList[0].PlaybackPositionTicks, 30 * 10000000);
+
+                // Someone else's changes stay theirs
+                await saveProgress(bob.id, 'movie', movie.id, 90, 1200);
+                await assert.rejects(next('UserDataChanged', 300));
+            } finally {
+                socket.close();
+            }
         });
 
         it('changes the password, checking the current one', async () => {

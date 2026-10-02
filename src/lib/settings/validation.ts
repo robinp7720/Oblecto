@@ -1,3 +1,4 @@
+import { validateFederation } from '../federation/validation.js';
 import { parseSubnet } from '../network/localNetwork.js';
 import defaults from '../../../res/config.json';
 
@@ -35,6 +36,10 @@ export function validateSettings(updates: unknown, current?: Record<string, unkn
         if (section === 'seedboxes' && Array.isArray(value)) continue;
         if (!isRecord(value)) { errors[section] = 'Expected a settings object.'; continue; }
         if (!Object.keys(value).length) { errors[section] = 'Provide settings to update.'; continue; }
+        if (section === 'federation') {
+            const merged = { ...(isRecord(current?.federation) ? current.federation : {}), ...value };
+            Object.assign(errors, validateFederation(merged));
+        }
         const template = TEMPLATE[section] ?? {};
         const existing = isRecord(current?.[section]) ? current[section] : {};
 
@@ -62,6 +67,9 @@ export function validateSettings(updates: unknown, current?: Record<string, unkn
             if (((section === 'server' || section === 'jellyfin') && field === 'port') && (!Number.isInteger(entry) || Number(entry) < 0 || Number(entry) > 65535)) errors[key] = 'Enter a port from 0 to 65535.';
             if (section === 'server' && field === 'corsOrigins' && (!Array.isArray(entry) || entry.some(item => typeof item !== 'string' || !(item === '*' || /^https?:\/\/[^/]+$/.test(item))))) errors[key] = 'Enter origins like http://localhost:5173, or *.';
             if (section === 'jellyfin' && field === 'host' && (typeof entry !== 'string' || !entry.trim())) errors[key] = 'Enter an address to listen on, such as 0.0.0.0.';
+            if (section === 'jellyfin' && field === 'serverName' && (typeof entry !== 'string' || !entry.trim() || entry.length > 100)) errors[key] = 'Enter a name of up to 100 characters.';
+            if (section === 'jellyfin' && field === 'loginDisclaimer' && (typeof entry !== 'string' || entry.length > 1000)) errors[key] = 'Enter up to 1000 characters.';
+            if (section === 'jellyfin' && field === 'customCss' && (typeof entry !== 'string' || Buffer.byteLength(entry) > 20 * 1024)) errors[key] = 'Keep the CSS under 20 KB.';
             if (section === 'logging' && field === 'level' && !['error', 'warn', 'info', 'debug'].includes(entry as string)) errors[key] = 'Choose error, warn, info or debug.';
             if (section === 'logging' && ['maxSizeMB', 'maxFiles'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1)) errors[key] = 'Enter a whole number of at least 1.';
             if (section === 'logging' && field === 'file' && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';

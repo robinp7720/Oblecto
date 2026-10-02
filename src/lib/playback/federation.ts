@@ -25,103 +25,9 @@ type Payload = {
     method?: string;
     range?: string;
 };
-type Message = {
-    id?: string;
-    op: string;
-    payload?: unknown;
-    code?: string;
-    message?: string;
-    status?: number;
-    headers?: Record<string, string | number>;
-};
-/** Each frame contains a bounded JSON header and optional raw bytes; source bytes never enter the JSON parser. */
-export class FramedPeer {
-    private buffer = Buffer.alloc(0);
-    private processing = false;
-    constructor(
-        readonly socket: tls.TLSSocket,
-        readonly receive: (
-            message: Message,
-            bytes: Buffer
-        ) => Promise<void> | void
-    ) {
-        socket.on('data', (data) => {
-            this.buffer = Buffer.concat([
-                new Uint8Array(this.buffer),
-                new Uint8Array(data)
-            ]);
-            void this.drain();
-        });
-    }
-    private async drain(): Promise<void> {
-        if (this.processing) return;
-        this.processing = true;
-        this.socket.pause();
-        try {
-            while (this.buffer.length >= 8) {
-                const length = this.buffer.readUInt32BE(0);
-                const headerLength = this.buffer.readUInt32BE(4);
-                if (
-                    length > 1024 * 1024 ||
-                    headerLength > 65536 ||
-                    headerLength > length - 4 ||
-                    headerLength < 2
-                )
-                    throw new Error('Invalid federation frame');
-                if (this.buffer.length < length + 4) break;
-                const message = JSON.parse(
-                    this.buffer.subarray(8, 8 + headerLength).toString()
-                ) as Message;
-                const bytes = this.buffer.subarray(
-                    8 + headerLength,
-                    4 + length
-                );
-                this.buffer = this.buffer.subarray(4 + length);
-                await this.receive(message, bytes);
-            }
-        } catch {
-            this.socket.destroy();
-        } finally {
-            this.processing = false;
-            this.socket.resume();
-        }
-    }
-    send(message: Message, bytes: Buffer = Buffer.alloc(0)): Promise<void> {
-        const header = Buffer.from(JSON.stringify(message));
-        const prefix = Buffer.alloc(8);
-        prefix.writeUInt32BE(4 + header.length + bytes.length, 0);
-        prefix.writeUInt32BE(header.length, 4);
-        if (
-            header.length > 65536 ||
-            bytes.length + header.length + 4 > 1024 * 1024
-        )
-            return Promise.reject(
-                new PlaybackError(
-                    'REMOTE_PROTOCOL',
-                    'Federation frame exceeds limit',
-                    502
-                )
-            );
-        return new Promise((resolve, reject) => {
-            if (this.socket.destroyed)
-                return reject(
-                    new PlaybackError(
-                        'REMOTE_UNAVAILABLE',
-                        'Federation connection closed',
-                        502
-                    )
-                );
-            this.socket.write(
-                new Uint8Array(
-                    Buffer.concat(
-                        [prefix, header, bytes].map((b) => new Uint8Array(b))
-                    )
-                ),
-                (error) => (error ? reject(error) : resolve())
-            );
-        });
-    }
-}
+export { FramedPeer } from '../federation/frames.js';
+import { FramedPeer } from '../federation/frames.js';
+import type { Message } from '../federation/frames.js';
 class RemoteResponse extends Writable {
     headers: Record<string, string | number> = {};
     headersSent = false;
@@ -179,12 +85,16 @@ class RemoteResponse extends Writable {
 }
 export function acceptPlaybackPeer(
     oblecto: Oblecto,
-    socket: tls.TLSSocket
+    socket: tls.TLSSocket,
+    onAuthenticated?: (clientId: string) => void,
+    trackWork?: (task: Promise<void>) => void
 ): void {
     const owner = `peer:${randomUUID()}`;
     let challenge = '';
     let authenticated = false;
     let authenticating = false;
+    let authenticatedClientId = '';
+    let authenticatedKeyPath = '';
     const active = new Map<string, RemoteResponse>();
     const timer = setTimeout(() => socket.destroy(), 10000);
     const respondError = (message: Message, error: unknown) =>
@@ -221,11 +131,13 @@ export function acceptPlaybackPeer(
                 }
                 const client =
                     oblecto.config.federation.clients[payload.clientId ?? ''];
-                if (!client) {
+                if (!client || client.enabled === false || oblecto.config.federation.enable === false) {
                     socket.destroy();
                     return;
                 }
                 authenticating = true;
+                authenticatedClientId = payload.clientId ?? '';
+                authenticatedKeyPath = client.key;
                 challenge = randomBytes(32).toString('hex');
                 const key = await fs.readFile(client.key);
                 await peer.send({
@@ -240,7 +152,10 @@ export function acceptPlaybackPeer(
                 challenge &&
                 message.payload === challenge
             ) {
+                const currentClient = oblecto.config.federation.clients[authenticatedClientId];
+                if (!currentClient || currentClient.enabled === false || currentClient.key !== authenticatedKeyPath || oblecto.config.federation.enable === false) { socket.destroy(); return; }
                 authenticated = true;
+                onAuthenticated?.(authenticatedClientId);
                 clearTimeout(timer);
                 await peer.send({ op: 'authenticated' });
             } else socket.destroy();
@@ -251,7 +166,7 @@ export function acceptPlaybackPeer(
             return;
         }
         // Do not block the frame reader while streaming; it must continue accepting cancellation.
-        void (async () => {
+        const operation = (async () => {
             if (message.op === 'create') {
                 const file = await File.findByPk(payload.fileId);
                 if (!file || (file.host && file.host !== 'local'))
@@ -260,6 +175,7 @@ export function acceptPlaybackPeer(
                         'Remote source is not local to this peer',
                         404
                     );
+                if (socket.destroyed) throw new PlaybackError('REMOTE_UNAVAILABLE', 'Peer disconnected', 503);
                 const s = await oblecto.playback.create(
                     file,
                     owner,
@@ -322,13 +238,18 @@ export function acceptPlaybackPeer(
                 payload: serialize(session)
             });
         })().catch((error) => respondError(message, error));
+        trackWork?.(operation);
     });
     socket.on('error', () => {});
     socket.on('close', () => {
         clearTimeout(timer);
         for (const response of active.values()) response.destroy();
         for (const s of oblecto.playback.sessions.values())
-            if (s.owner === owner) void oblecto.playback.stop(s);
+            if (s.owner === owner) {
+                const task = oblecto.playback.stop(s);
+                if (trackWork) trackWork(task);
+                else void task.catch(() => {});
+            }
     });
 }
 const serialize = (s: PlaybackSession) => ({
@@ -343,7 +264,7 @@ export async function connectPlaybackPeer(
     host: string
 ): Promise<RemotePlayback> {
     const config = oblecto.config.federation.servers[host];
-    if (!config)
+    if (!config || config.enabled === false || oblecto.config.federation.enable === false)
         throw new PlaybackError(
             'REMOTE_UNAVAILABLE',
             'Federation peer is not configured',
@@ -352,7 +273,13 @@ export async function connectPlaybackPeer(
     const socket = tls.connect({
         host: config.address,
         port: config.mediaPort,
-        ca: [await fs.readFile(config.ca)]
+        ca: [await fs.readFile(config.ca)],
+        checkServerIdentity: (host, certificate) => {
+            const error = tls.checkServerIdentity(host, certificate);
+            if (error) return error;
+            if (config.fingerprint && certificate.fingerprint256 !== config.fingerprint) return new Error('Peer certificate changed; pair again');
+            return undefined;
+        }
     });
     type Pending = {
         resolve: (value: RemoteSessionData) => void;

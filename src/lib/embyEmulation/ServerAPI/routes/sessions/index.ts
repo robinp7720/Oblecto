@@ -37,13 +37,6 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             (embyEmulation.sessions[token] as any).playSession = params;
         }
 
-        if (token && embyEmulation.websocketSessions[token]) {
-            (embyEmulation.websocketSessions[token] as any).write({
-                MessageType: 'Play',
-                Data: params
-            });
-        }
-
         const playSessionId = getRequestValue(req, 'PlaySessionId');
         const mediaSourceId = getRequestValue(req, 'MediaSourceId');
 
