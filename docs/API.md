@@ -281,6 +281,8 @@ Get the next episodes to watch based on watch history.
 - **URL:** `/episodes/next`
 - **Method:** `GET`
 
+For every series with an episode you finished (over 90% watched) in the last seven days, returns the episode after the furthest one finished, in season and episode order. Series come most recently watched first; a series whose last episode you finished is left out. Each episode includes its `Series` and your `TrackEpisodes` progress.
+
 To play an episode, create a playback session for one of its files; see [Streaming](#streaming).
 
 ## Sets

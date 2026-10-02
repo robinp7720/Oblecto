@@ -24,6 +24,7 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 000
 - jellyfin-web and other apps built on the Jellyfin SDK could not open the socket, and opening a series in them failed.
 - A metadata refresh no longer blanks values the provider left out, and a failed cast or crew lookup no longer throws away the rest of the update.
 - Federation keeps the previous catalog when a synchronization is interrupted, and removes files the other server no longer shares.
+- Next Up (`GET /episodes/next`) works on SQLite; it answered 501 there. On MariaDB and MySQL it no longer skips past episode 99 of a season or season 99 of a series, and it lists the series you watched most recently first.
 
 ## 1.0.1
 

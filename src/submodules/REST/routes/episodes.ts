@@ -1,4 +1,4 @@
-import { Op, and, col, fn, where } from 'sequelize';
+import { Op } from 'sequelize';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
@@ -17,6 +17,7 @@ import upload from '../middleware/upload.js';
 import { containsText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
 import { buildEpisodeContext } from './helpers/episodeContext.js';
+import { pickNextEpisodes } from './helpers/nextEpisodes.js';
 import { setPlayed } from '../../../lib/playback/progress.js';
 
 export default (server: Express, oblecto: Oblecto) => {
@@ -216,62 +217,54 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        // Next episodes currently doesn't work on sqlite as the LPAD function doesn't exist
-        // Todo: Fix next episodes endpoint to support sqlite
-        if (oblecto.config.database.dialect === 'sqlite')
-            return res.status(501).send({ message: 'Next episode is not supported when using sqlite (yet)' });
+        const userId = req.authorization!.user.id;
 
-        // search for attributes
-        const latestWatched = await Episode.findAll({
-            attributes: {
-                include: [
-                    [fn('MAX', col('absoluteNumber')), 'absoluteNumber'],
-                    [fn('MAX', fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0'))), 'seasonepisode'],
-                    [fn('MAX', col('firstAired')), 'firstAired']
-                ]
+        // Episodes finished in the last week, most recent first
+        const finished = await TrackEpisode.findAll({
+            attributes: ['episodeId'],
+            where: {
+                userId,
+                progress: { [Op.gt]: 0.9 },
+                updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
             },
             include: [
                 {
-                    model: TrackEpisode,
+                    model: Episode,
                     required: true,
-                    where: {
-                        userId: req.authorization!.user.id,
-                        progress: { [Op.gt]: 0.9 },
-                        updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
-                    },
+                    attributes: ['id', 'SeriesId', 'airedSeason', 'airedEpisodeNumber']
                 }
             ],
-            group: ['SeriesId']
+            order: [['updatedAt', 'DESC']]
         });
 
-        const nextUp = [];
+        const watched = finished.map(track => (track as any).Episode as Episode);
+        const seriesIds = [...new Set(watched.map(episode => episode.SeriesId).filter(id => id !== null))];
 
-        for (const latest of latestWatched) {
-            const latestData: any = latest.toJSON();
-            const next = await Episode.findOne({
-                attributes: { include: [[fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0')), 'seasonepisode']] },
-                include: [
-                    Series,
-                    {
-                        model: TrackEpisode,
-                        where: { userId: req.authorization!.user.id },
-                        required: false
-                    }
-                ],
-                where: and(
-                    where(col('SeriesId'), '=', latestData.SeriesId),
-                    where(fn('concat', fn('LPAD', col('airedSeason'), 2, '0'), fn('LPAD', col('airedEpisodeNumber'), 2, '0')), '>', latestData.seasonepisode),
-                ),
-                order: [col('seasonepisode')]
-            });
+        if (!seriesIds.length) return res.send([]);
 
-            if (next) {
-                nextUp.push(next);
-            }
-        }
+        // Season and episode numbers are stored as text, so they are ordered here rather than in SQL
+        const episodes = await Episode.findAll({
+            attributes: ['id', 'SeriesId', 'airedSeason', 'airedEpisodeNumber'],
+            where: { SeriesId: { [Op.in]: seriesIds } }
+        });
 
-        res.send(nextUp);
+        const nextIds = pickNextEpisodes(watched, episodes);
 
+        if (!nextIds.length) return res.send([]);
+
+        const next = await Episode.findAll({
+            include: [
+                Series,
+                {
+                    model: TrackEpisode,
+                    where: { userId },
+                    required: false
+                }
+            ],
+            where: { id: { [Op.in]: nextIds } }
+        });
+
+        res.send(nextIds.map(id => next.find(episode => episode.id === id)).filter(Boolean));
     });
 
 };
