@@ -1,5 +1,6 @@
 import { Sequelize, Dialect, Options } from 'sequelize';
 import config from '../config.js';
+import { FederationRecord, federationRecordColumns } from '../models/federationRecord.js';
 import logger from './logger/index.js';
 import { chooseSqliteDriver } from './sqliteDriver.js';
 
@@ -33,6 +34,7 @@ let sequelizeInstance: Sequelize | null = null;
 function initModels(sequelize: Sequelize): void {
     const modelOptions = (modelName: string): { sequelize: Sequelize; modelName: string } => ({ sequelize, modelName });
 
+    FederationRecord.init(federationRecordColumns, { ...modelOptions('FederationRecord'), timestamps: false });
     Episode.init(episodeColumns, modelOptions('Episode'));
     Movie.init(movieColumns, modelOptions('Movie'));
     Series.init(seriesColumns, modelOptions('Series'));

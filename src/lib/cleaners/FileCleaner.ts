@@ -27,6 +27,7 @@ export default class FileCleaner {
         const offline = await this.offlineLibraries();
 
         for (const file of files) {
+            if (file.host && file.host !== 'local') continue;
             const path = file.path as string;
 
             // An unmounted share looks exactly like every file in it having been deleted.
@@ -75,6 +76,7 @@ export default class FileCleaner {
         const results = await File.findAll({ include: [Movie, Episode] }) as FileWithAssociations[];
 
         for (const item of results) {
+            if (item.host && item.host !== 'local') continue;
             if (item.problematic) continue;
 
             if (item.Movies.length === 0 && item.Episodes.length === 0) {

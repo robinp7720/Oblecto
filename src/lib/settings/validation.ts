@@ -1,3 +1,4 @@
+import { validateFederation } from '../federation/validation.js';
 import { parseSubnet } from '../network/localNetwork.js';
 import defaults from '../../../res/config.json';
 
@@ -35,6 +36,10 @@ export function validateSettings(updates: unknown, current?: Record<string, unkn
         if (section === 'seedboxes' && Array.isArray(value)) continue;
         if (!isRecord(value)) { errors[section] = 'Expected a settings object.'; continue; }
         if (!Object.keys(value).length) { errors[section] = 'Provide settings to update.'; continue; }
+        if (section === 'federation') {
+            const merged = { ...(isRecord(current?.federation) ? current.federation : {}), ...value };
+            Object.assign(errors, validateFederation(merged));
+        }
         const template = TEMPLATE[section] ?? {};
         const existing = isRecord(current?.[section]) ? current[section] : {};
 

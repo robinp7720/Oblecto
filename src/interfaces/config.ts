@@ -149,6 +149,8 @@ string
         vaapiDevice?: string
     },
     'federation': {
+        'address'?: string,
+        'syncIntervalMs'?: number,
         'key': string,
         // TLS certificate presented to federation peers
         'cert'?: string,
@@ -157,11 +159,16 @@ string
         'enable': boolean,
         'servers': Record<string, {
             'address': string,
+            'uuid'?: string,
+            'fingerprint'?: string,
+            'name'?: string,
+            'enabled'?: boolean,
             'ca': string,
             'dataPort': number,
             'mediaPort': number
         }>,
         'clients': Record<string, {
+            'enabled'?: boolean,
             'key': string
         }>,
         'uuid': string

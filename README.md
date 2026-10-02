@@ -18,7 +18,7 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 - A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in and play.
 - Accounts with groups and permissions, per-user preferences and avatars, and an optional profile picker on the local network.
 - A problem files page for anything that could not be identified or read, with retry.
-- Optional federation between Oblecto servers and seedbox import.
+- Optional [federation between Oblecto servers](docs/FEDERATION.md), with mutual pairing, library synchronization and remote playback, plus seedbox import.
 
 Planned for later releases: watchlists, favourites and ratings, editing metadata by hand, and music.
 

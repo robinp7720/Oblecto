@@ -1,3 +1,4 @@
+import federation from './v1/federation.js';
 import auth from './auth.js';
 import episodes from './episodes.js';
 import streaming from './streaming.js';
@@ -37,6 +38,7 @@ export default (server: Express, oblecto: Oblecto): void => {
 
     // Initialize V1 Routes
     v1Settings(server, oblecto);
+    federation(server, oblecto);
     v1Libraries(server, oblecto);
     v1System(server, oblecto);
     v1Status(server, oblecto);

@@ -1,3 +1,4 @@
+import { federationRecordColumns } from '../../models/federationRecord.js';
 import { DataTypes, type DataType, type ModelAttributeColumnOptions, type QueryInterface, type Sequelize } from 'sequelize';
 import { SequelizeStorage, Umzug } from 'umzug';
 import logger from '../logger/index.js';
@@ -233,6 +234,14 @@ export const MIGRATIONS: Migration[] = [
                 });
             }
             await addIndexIfMissing(queryInterface, 'JellyfinDisplayPreferences', ['userId', 'preferencesId', 'client'], 'JellyfinDisplayPreferences_user_id_client', true);
+        }
+    },
+    {
+        name: '0009-federation',
+        up: async ({ queryInterface }) => {
+            if (!await hasTable(queryInterface, 'FederationRecords')) {
+                await queryInterface.createTable('FederationRecords', federationRecordColumns);
+            }
         }
     }
 ];

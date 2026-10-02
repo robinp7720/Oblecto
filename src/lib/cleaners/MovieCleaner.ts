@@ -1,3 +1,4 @@
+import { federatedMediaIds } from '../federation/catalog.js';
 import { Movie } from '../../models/movie.js';
 import { File } from '../../models/file.js';
 import logger from '../../submodules/logger/index.js';
@@ -26,7 +27,9 @@ export default class MovieCleaner {
         logger.info( 'Removing movies without linked files');
         const results = await Movie.findAll({ include: [File] }) as MovieWithFiles[];
 
+        const retained = await federatedMediaIds('movie');
         for (const item of results) {
+            if (retained.has(item.id)) continue;
             if (item.Files && item.Files.length > 0)
                 continue;
 

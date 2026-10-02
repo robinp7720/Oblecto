@@ -1,3 +1,4 @@
+import federationRoutes from '../../src/submodules/REST/routes/v1/federation.js';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
@@ -23,6 +24,7 @@ describe('groups and permissions', () => {
     let users: Group;
     const oblecto: any = {
         config: { authentication: { secret: config.authentication.secret, saltRounds: 4 }, assets: {} },
+        federation: { status: () => ({ running: false }) },
         queue: { maintenance: { list: () => [] } }
     };
 
@@ -68,6 +70,7 @@ describe('groups and permissions', () => {
         userRoutes(app, oblecto);
         groupRoutes(app, oblecto);
         settingsRoutes(app, oblecto);
+        federationRoutes(app, oblecto);
         systemRoutes(app, oblecto);
         app.use((err: any, req: Request, res: Response, next: NextFunction) => {
             res.status((err.statusCode as number) || 500).json({ message: err.message });
@@ -104,6 +107,15 @@ describe('groups and permissions', () => {
     });
 
     describe('route gating', () => {
+        it('protects every federation administration action', async () => {
+            const member = await createUser('member', users);
+            const admin = await createUser('admin', admins);
+            for (const [method, path] of [['GET', '/status'], ['GET', '/identity'], ['POST', '/identity'], ['POST', '/invitations'], ['DELETE', '/invitations/id'], ['POST', '/pairings'], ['GET', '/pairings/id'], ['DELETE', '/pairings/id'], ['PUT', '/peers/id'], ['DELETE', '/peers/id'], ['POST', '/peers/id/test'], ['POST', '/peers/id/sync'], ['POST', '/peers/id/reconnect']]) {
+                assert.equal((await call(method, `/api/v1/federation${path}`, member)).status, 403);
+                assert.equal((await call(method, `/api/v1/federation${path}`)).status, 401);
+            }
+            assert.equal((await call('GET', '/api/v1/federation/status', admin)).status, 200);
+        });
         it('rejects requests without a token', async () => {
             assert.equal((await call('GET', '/api/v1/settings')).status, 401);
         });

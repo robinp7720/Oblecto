@@ -1,3 +1,4 @@
+import { FederationService } from '../federation/FederationService.js';
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
 import { unconfiguredClient } from '../common/unconfiguredClient.js';
@@ -32,12 +33,6 @@ import MovieUpdater from '../updaters/movies/MovieUpdater.js';
 import FileUpdateCollector from '../updaters/files/FileUpdateCollector.js';
 import SeriesUpdateCollector from '../updaters/series/SeriesUpdateCollector.js';
 import MovieUpdateCollector from '../updaters/movies/MovieUpdateCollector.js';
-
-import FederationController from '../federation/server/FederationController.js';
-import FederationClientController from '../federation/client/FederationClientController.js';
-
-import FederationEpisodeIndexer from '../federationindexer/FederationEpisodeIndexer.js';
-import FederationMovieIndexer from '../federationindexer/FederationMovieIndexer.js';
 
 import MovieCleaner from '../cleaners/MovieCleaner.js';
 import SeriesCleaner from '../cleaners/SeriesCleaner.js';
@@ -85,11 +80,9 @@ export default class Oblecto {
     public movieCleaner: MovieCleaner;
     public seriesCleaner: SeriesCleaner;
     public playback: PlaybackService;
+    public federation: FederationService;
+    private federationStart: Promise<void>;
     public seedboxController: SeedboxController;
-    public federationController?: FederationController;
-    public federationClientController?: FederationClientController;
-    public federationEpisodeIndexer?: FederationEpisodeIndexer;
-    public federationMovieIndexer?: FederationMovieIndexer;
     public oblectoAPI: OblectoAPI;
     public realTimeController: RealtimeController;
     public embyServer?: EmbyEmulation;
@@ -148,23 +141,8 @@ export default class Oblecto {
         this.seedboxController = new SeedboxController(this);
         void this.seedboxController.loadAllSeedboxes();
 
-        if (this.config.federation.enable) {
-            // Federation needs key and certificate files; without them the rest of Oblecto still runs.
-            try {
-                this.federationController = new FederationController(this);
-                this.federationClientController = new FederationClientController(this);
-
-                this.federationEpisodeIndexer = new FederationEpisodeIndexer(this);
-                this.federationMovieIndexer = new FederationMovieIndexer(this);
-
-                void this.federationClientController.addAllSyncMasters();
-            } catch (error) {
-                logger.error('Federation is enabled but could not start, so it is off until this is fixed', error);
-                this.federationController?.close();
-                this.federationController = undefined;
-                this.federationClientController = undefined;
-            }
-        }
+        this.federation = new FederationService(this);
+        this.federationStart = this.federation.start().catch(error => logger.error('Federation startup failed', error));
 
         this.oblectoAPI = new OblectoAPI(this);
         this.realTimeController = new RealtimeController(this);
@@ -194,6 +172,8 @@ export default class Oblecto {
     }
 
     async close(): Promise<void> {
+        await this.federationStart;
+        await this.federation.close();
         await this.playback.close();
 
         // Wrapped so a synchronous throw from one service can't keep the others or the database open
@@ -201,9 +181,7 @@ export default class Oblecto {
             () => this.oblectoAPI.close(),
             () => this.realTimeController.close(),
             () => this.embyServer?.close(),
-            () => this.seedboxController.close(),
-            () => this.federationController?.close(),
-            () => this.federationClientController?.close()
+            () => this.seedboxController.close()
         ];
 
         await Promise.allSettled(closers.map(close => Promise.resolve().then(close)));

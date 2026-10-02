@@ -39,7 +39,8 @@ export default (server: Express, oblecto: any) => {
     server.patch('/api/v1/settings', authMiddleWare.requiresPermission('settings.manage'), async (req: Request, res: Response) => {
         const fields = validateSettings(req.body, oblecto.config);
         if (Object.keys(fields).length) return res.status(400).send({ error: 'Check the highlighted settings.', fields });
-        await ConfigManager.updateConfig(draft => mergeSettings(draft, req.body), oblecto.config);
+        if (req.body.federation && oblecto.federation) await oblecto.federation.configure((draft: object) => mergeSettings(draft, req.body));
+        else await ConfigManager.updateConfig(draft => mergeSettings(draft, req.body), oblecto.config);
         res.send(scrubConfig(oblecto.config));
     });
 
@@ -70,7 +71,8 @@ export default (server: Express, oblecto: any) => {
         const updates = { [section]: req.body };
         const fields = validateSettings(updates, oblecto.config);
         if (Object.keys(fields).length) return res.status(400).send({ error: 'Check the highlighted settings.', fields });
-        await ConfigManager.updateConfig(draft => mergeSettings(draft, updates), oblecto.config);
+        if (section === 'federation' && oblecto.federation) await oblecto.federation.configure((draft: object) => mergeSettings(draft, updates));
+        else await ConfigManager.updateConfig(draft => mergeSettings(draft, updates), oblecto.config);
         res.send(scrubConfig(oblecto.config)[section]);
     });
 };
