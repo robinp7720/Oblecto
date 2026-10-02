@@ -12,15 +12,15 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 ## Features
 
 - Movie and TV libraries, identified and kept up to date in the background.
-- Metadata and artwork from TMDb, TVDB and fanart.tv. Oblecto ships with the project's API keys; you can use your own.
-- A web app with browsing, search, continue watching, a full player and remote control of other devices.
+- Metadata and artwork from TMDb, TVDB and fanart.tv, with cast and crew, person pages and related titles. Oblecto ships with the project's API keys; you can use your own.
+- A web app with browsing, search, continue watching, a full player and remote control of other devices. Progress and library changes show up as they happen.
 - Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
-- A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in and play.
+- A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in, browse, keep favourites and play.
 - Accounts with groups and permissions, per-user preferences and avatars, and an optional profile picker on the local network.
 - A problem files page for anything that could not be identified or read, with retry.
 - Optional [federation between Oblecto servers](docs/FEDERATION.md), with mutual pairing, library synchronization and remote playback, plus seedbox import.
 
-Planned for later releases: watchlists, favourites and ratings, editing metadata by hand, and music.
+Planned for later releases: favourites, a watchlist and ratings in the web app, editing metadata by hand, subtitle files beside the video, automatic library scans, and music. See [PLAN.md](PLAN.md).
 
 ## Install
 
@@ -85,6 +85,13 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `server.corsOrigins` | Other web origins allowed to call the APIs from a browser (none) |
 | `logging` | Log `directory` (beside the config file), `level`, `maxSizeMB`, `maxFiles` |
 | `indexer.runAtBoot`, `cleaner.runAtBoot` | Scan the libraries, or clean up missing files, at every start (off) |
+| `queue.concurrency` | How many background jobs (identifying, metadata, artwork) run at once (1) |
+| `files.doHash`, `fileExtensions.video` | Hash files to find duplicates (on), and which extensions count as video |
+| `ffmpeg.pathFFmpeg`, `ffmpeg.pathFFprobe` | FFmpeg and ffprobe to use, if not the ones on `PATH` |
+| `streaming`, `transcoding` | Playback cache, encoder limits and hardware encoding; see [docs/STREAMING.md](docs/STREAMING.md) |
+| `assets`, `artwork` | Where artwork and avatars are stored, and the sizes artwork is scaled to |
+| `federation`, `seedboxes` | Federation with other Oblecto servers ([docs/FEDERATION.md](docs/FEDERATION.md)) and seedbox imports |
+| `web.enabled` | Serve the web app (on) |
 
 Oblecto refuses to start without a config file or a signing secret, and says why.
 
@@ -103,6 +110,7 @@ Oblecto will not delete or demote the last administrator.
 ```
 oblecto start | start-tui            Run the server, or with a terminal dashboard
 oblecto init [--config-dir DIR]      Write a config, artwork folders and federation keys
+oblecto init database | assets       Create just the database, or just the artwork folders
 oblecto migrate [--status]           Update the database (also runs at start)
 oblecto adduser USERNAME - NAME EMAIL [GROUP]
 oblecto changepassword USERNAME

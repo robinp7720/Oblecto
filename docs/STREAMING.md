@@ -34,7 +34,7 @@ Oblecto control/session APIs are breaking changes; see [API.md](API.md). Emby/Je
 
 ## Verification
 
-- `npm run test:mocha` runs existing tests and playback planner, lifecycle, HTTP and real FFmpeg tests. Some existing indexer tests depend on external metadata services/configuration.
+- `npm run test:mocha` runs the unit tests, including the playback planner, lifecycle, HTTP and real FFmpeg tests. Tests that call the real metadata services are separate, in `npm run test:network`.
 - `npx mocha --extension ts --require tsx tests/mocha/playbackEngine.spec.ts tests/mocha/playbackFederation.spec.ts tests/mocha/streamingSessionCreate.spec.ts tests/mocha/embyItems.spec.ts tests/mocha/embySessionsPlayingProgress.spec.ts tests/mocha/realtimePlaybackLifecycle.spec.ts` runs the focused backend suite. Federation tests also require OpenSSL.
 - `npx playwright install --with-deps chromium firefox webkit`, then `npm run test:playback:browser`, runs real generated media through the production browser playback controller and server. Fixtures, keys and cache data use temporary directories; test servers do not use a live library/database.
 - `npm run test:startup` checks the built server’s SIGINT/SIGTERM shutdown and the TUI lifecycle using temporary configuration and databases.

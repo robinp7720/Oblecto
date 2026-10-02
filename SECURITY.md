@@ -9,14 +9,15 @@ Please report security problems privately, through GitHub's "Report a vulnerabil
 - Every API route that reads a user's data or changes anything needs a signed-in session, and settings, users, libraries and maintenance need the matching group permission.
 - Web sign-ins expire after `authentication.tokenLifetimeDays`. Changing a password, or deleting an account, ends every session for it, in the web app and in Jellyfin apps.
 - Failed sign-ins are throttled per address and account.
-- Jellyfin apps only ever see the signed-in user's data, whatever user id they send.
+- Jellyfin apps only ever see the signed-in user's data, whatever user id they send. Changing settings from a Jellyfin app's dashboard needs the same permission as in the web app.
 - Other websites cannot call the APIs from a browser unless their origin is listed in `server.corsOrigins`.
 - `config.json` and the federation private key are created readable by their owner only. The settings API never returns the signing secret, the federation key or seedbox passwords.
 - Uploads are accepted only after the permission check, up to 25 MB, and re-encoded before they are stored.
+- Federated servers authenticate each other with pinned TLS certificates and RSA keys. A pairing invitation is a one-time secret that expires after ten minutes; only its hash is stored. The federation API never returns private keys.
 
 ## Public on purpose
 
-- **Artwork** (posters, fanart, episode images) is served without signing in, because the web app and Jellyfin apps load it with plain image requests. It reveals which titles are in the library, nothing about users.
+- **Artwork** (posters, fanart, episode images, people's photos) is served without signing in, because the web app and Jellyfin apps load it with plain image requests. It reveals which titles are in the library, nothing about users.
 - **Avatars and public profiles** are shown on the sign-in page to devices on the local network when the profile picker is on (off by default). Profiles are only listed when a user opts in.
 - **Password-less sign-in** on the local network is off by default. When you turn it on, anyone who can reach Oblecto from an address counted as local can sign in as the users who allowed it. Set `authentication.localSubnets` and `trustProxy` to match your network.
 
@@ -24,4 +25,5 @@ Please report security problems privately, through GitHub's "Report a vulnerabil
 
 - Keep `/etc/oblecto` readable only by the user Oblecto runs as; it holds the signing secret and API keys.
 - Put Oblecto behind a reverse proxy with HTTPS before exposing it to the internet, and set `authentication.trustProxy` only then.
+- Send federation invitations only over a channel you trust: whoever uses one first pairs with your server and can browse and play your whole library.
 - The Jellyfin API listens on all interfaces by default. Set `jellyfin.host` to `127.0.0.1`, or `jellyfin.enabled` to `false`, if you do not use Jellyfin apps.
