@@ -17,6 +17,33 @@ To stop Oblecto from changing the schema by itself, set `database.migrateOnStart
 
 Databases that were upgraded by hand with the SQL this page used to list are fine: each migration checks for the columns it adds and records itself without changing anything.
 
+## After upgrading from 1.0 to the next release
+
+### New tables and columns
+
+Four migrations run at the first start:
+
+- `0006-rich-media-metadata` adds `People` and the `MovieCredits`, `SeriesCredits` and `EpisodeCredits` tables, plus scores and episode runtimes.
+- `0007-rating-source` records which service each score came from.
+- `0008-jellyfin-user-data` adds `UserFavourites` and `JellyfinDisplayPreferences`.
+- `0009-federation` adds `FederationRecords`, for pairing and synchronization state.
+
+### Fill in cast and crew
+
+Titles get cast, crew and a score source the next time their metadata updates. To do it for the whole library at once, run the movie, series and episode updates under Settings → Maintenance → Metadata updates. Until a score is refreshed, the web app labels it "Community rating".
+
+### Upgrade federated servers together
+
+Federation synchronization now uses metadata protocol 2, with no fallback, so upgrade both ends together. Existing `federation.servers` and `federation.clients` entries keep working; keep their aliases unchanged. See [FEDERATION.md](FEDERATION.md).
+
+### Check your configuration
+
+All new settings have defaults, so nothing needs changing:
+
+- `jellyfin.serverName` ("Oblecto"), `jellyfin.loginDisclaimer` and `jellyfin.customCss` (empty) set what Jellyfin apps show.
+- `federation.syncIntervalMs` (fifteen minutes) sets how often federated catalogs synchronize.
+- `assets.personProfileLocation` (`/etc/oblecto/assets/personProfiles/`) holds people's photos. Oblecto creates it when it saves the first one.
+
 ## After upgrading to 1.0
 
 ### Everyone signs in again
