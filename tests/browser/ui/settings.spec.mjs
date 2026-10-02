@@ -194,9 +194,13 @@ test.describe('@desktop settings', () => {
   })
 })
 
-test('@phone settings section picker and search fit the viewport', async ({ page }) => {
+test('@phone settings section menu and search fit the viewport', async ({ page }) => {
   await boot(page, '/settings')
-  await page.getByLabel('Settings section', { exact: true }).selectOption('ArtworkSettings')
+  await page.getByRole('button', { name: /^Settings sections:/ }).click()
+  const menu = page.getByRole('dialog', { name: 'Settings sections' })
+  await expect(menu.getByLabel('Find a setting')).not.toBeFocused()
+  await menu.getByRole('link', { name: 'Artwork', exact: true }).click()
+  await expect(menu).toBeHidden()
   await expect(page.getByRole('heading', { name: 'Artwork', exact: true })).toBeVisible()
   await expect(page.getByLabel('Small poster width')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
