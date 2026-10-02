@@ -5,6 +5,8 @@ This document details the REST API for Oblecto, designed for frontend developers
 ## Base URL
 All API endpoints are relative to the server root. Typically this is `http://<server-ip>:<port>`.
 
+When `web.enabled` is on, `/` redirects to `/web/`, which serves the web app, and `/web/logo.png` serves Oblecto's logo. Neither needs a session.
+
 ## Authentication
 
 ### Login
@@ -45,7 +47,7 @@ What the login screen should offer this client. No authentication required.
     ]
   }
   ```
-- **Notes:** `users` holds users with `publicProfile` and is only populated for clients on the local network when `authentication.profilePicker` is not `false`; it never includes emails. `passwordless` means `POST /auth/login` with just `userId` will succeed.
+- **Notes:** `users` holds users with `publicProfile` and is only populated for clients on the local network when `authentication.profilePicker` is on (off by default); it never includes emails. `passwordless` means `POST /auth/login` with just `userId` will succeed.
 
 ### Local network
 A client is local when its address is loopback, private (10/8, 172.16/12, 192.168/16, fc00::/7) or link-local, or falls in one of `authentication.localSubnets` (CIDRs). The TCP peer address is used; `X-Forwarded-For` is only honoured when `authentication.trustProxy` is on, so enable that only behind a reverse proxy that sets it.
@@ -80,12 +82,36 @@ Get a paginated list of movies.
 - **URL:** `/movies/list/:sorting`
 - **Method:** `GET`
 - **URL Params:**
-  - `sorting`: Field to sort by (e.g., `movieName`, `year`, `addedAt`).
+  - `sorting`: Field to sort by. In the plain form any movie column (e.g. `movieName`, `releaseDate`, `createdAt`); in the browse form one of `movieName`, `releaseDate`, `createdAt`, `updatedAt`, `popularity`, `runtime`.
 - **Query Params:**
-  - `order`: `asc` or `desc` (default: `asc`).
+  - `order`: `asc` or `desc`. Required in the plain form; the browse form defaults to `asc`.
   - `count`: Number of items per page (default: `20`).
   - `page`: Page number (0-indexed, default: `0`).
-- **Response:** Array of Movie objects.
+- **Response:** Array of Movie objects, each with the user's `TrackMovies` entry.
+
+#### Browse form
+Send `mode=browse` to filter and page with a cursor. The same parameters work for `GET /series/list/:sorting`, whose sort fields are `seriesName`, `firstAired`, `createdAt`, `updatedAt`, `siteRating`, `siteRatingCount` and `popularity`.
+
+- `count`: 1–100 (default `20`).
+- `cursor`: `pageInfo.nextCursor` from the previous page. A cursor only works with the sort, order and filters it came from; anything else returns 400.
+- `q`: title search. `genre`: one or more genres, repeated or comma-separated.
+- `yearFrom`, `yearTo`: release or first-aired year range.
+- `watched`: `all` (default), `watched` (90% or more), `inprogress` or `unwatched`.
+- `libraryPath`: only titles whose files are under this library folder.
+- `personId`, `creditRole`: see [Filter Libraries by Person](#filter-libraries-by-person).
+
+Invalid values return 400 with `{ "message": "..." }`. The response is:
+
+```json
+{
+  "items": [],
+  "pageInfo": { "hasNextPage": true, "nextCursor": "eyJzb3J0Ijo...", "count": 20 },
+  "appliedFilters": { "q": null, "genre": [], "yearFrom": null, "yearTo": null, "watched": "all", "libraryPath": null, "personId": null, "creditRole": "any" },
+  "facets": { "genres": ["Drama"], "years": [2024] }
+}
+```
+
+`facets` lists the genres and years among the titles that match the search, watch-state, library and person filters.
 
 ### Get Movie Info
 Retrieve detailed information about a specific movie.
@@ -133,7 +159,9 @@ Search for movies by name.
 - **List Sets:** `GET /movies/sets`
 - **Get Set Details:** `GET /movies/set/:id` (Supports pagination `count`, `page`, `order`).
 - **Get Sets for Movie:** `GET /movie/:id/sets`
-- **Add Movie to Set:** `PUT /movie/:id/sets` (Body: `{ "setId": 1 }`)
+- **Add Movie to Set:** `PUT /movie/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`)
+
+Creating and deleting sets is under [Sets](#sets). These routes list every set, private ones included.
 
 ### Watching (Resume)
 Get a list of movies currently being watched.
@@ -142,11 +170,7 @@ Get a list of movies currently being watched.
 - **Method:** `GET`
 - **Response:** Array of Movie objects.
 
-### Play Movie
-Redirects to the stream URL for the movie's file.
-
-- **URL:** `/movie/:id/play`
-- **Method:** `GET`
+To play a movie, create a playback session for one of its files; see [Streaming](#streaming).
 
 ## TV Shows (Series)
 
@@ -156,7 +180,7 @@ Get a paginated list of TV shows.
 - **URL:** `/series/list/:sorting`
 - **Method:** `GET`
 - **URL Params:** `sorting` (e.g., `seriesName`).
-- **Query Params:** `order`, `count`, `page`.
+- **Query Params:** `order`, `count`, `page`, or the [browse form](#browse-form) with `mode=browse`.
 - **Response:** Array of Series objects.
 
 ### Get Series Info
@@ -175,10 +199,11 @@ Get a paginated list of TV shows.
 - **Body:** `{ "watched": true }`
 - **Response:** `{ "watched": true, "episodes": [{ "id": 1, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }] }`. Only episodes with the exact aired-season value are changed.
 
-### Get Sets for Series
-- **URL:** `/series/:id/sets`
-- **Method:** `GET`
-- **Response:** Sets containing the series. Each set includes its member titles in `Series`.
+### Series Sets
+- **Get Sets for Series:** `GET /series/:id/sets`. Each set includes its member titles in `Series`.
+- **List Sets:** `GET /series/sets`
+- **Get Set Details:** `GET /series/set/:id` (supports `count` and `page`)
+- **Add Series to Set:** `PUT /series/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`)
 
 ### Series Poster
 - **URL:** `/series/:id/poster`
@@ -202,6 +227,11 @@ Get a paginated list of episodes from all series.
 - **URL:** `/episodes/list/:sorting`
 - **Method:** `GET`
 - **Query Params:** `order`, `count`, `page`.
+
+### Get Episode Files
+- **URL:** `/episode/:id/files`
+- **Method:** `GET`
+- **Response:** Array of the episode's File objects.
 
 ### Get Episode Info
 - **URL:** `/episode/:id/info`
@@ -251,11 +281,17 @@ Get the next episodes to watch based on watch history.
 - **URL:** `/episodes/next`
 - **Method:** `GET`
 
-### Play Episode
-Redirects to the stream URL for the episode's file.
+To play an episode, create a playback session for one of its files; see [Streaming](#streaming).
 
-- **URL:** `/episode/:id/play`
-- **Method:** `GET`
+## Sets
+
+Sets group movies or series into collections. Both kinds need `libraries.manage` to change.
+
+- **Create Movie Set:** `POST /set/movie` with `{ "name": "...", "overview": "...", "public": true }`. Returns the set; an existing set with the same name is returned unchanged. `public` must be a boolean.
+- **Create Series Set:** `POST /set/series`, with the same body.
+- **Delete Set:** `DELETE /set/movie/:id` or `DELETE /set/series/:id` → `{ "success": true }`; `404` for an unknown set.
+
+Private sets are hidden from other users only in the Jellyfin API, where a user sees public sets and the ones shared with them.
 
 ## People and Credits
 
@@ -436,7 +472,7 @@ Manage the core application configuration. Settings endpoints need `settings.man
 
 Configuration and library mutations are serialized and persisted by atomic file replacement before success is returned. A failed write leaves the active configuration unchanged and returns an error. Object sections use shallow field merging; send the complete nested width object when changing artwork sizes. Unchanged fields should be omitted. Masked `***` credential values in object sections are treated as unchanged.
 
-The `authentication` section also carries the login-screen switches: `profilePicker` (show the profile picker on the local network, default on), `localPasswordlessLogin` (allow opted-in users to sign in without a password on the local network), `localSubnets` (extra CIDRs counted as local) and `trustProxy` (believe `X-Forwarded-For`). `allowPasswordlessLogin` now only applies on the local network.
+The `authentication` section also carries the login-screen switches: `profilePicker` (show the profile picker on the local network, default off), `localPasswordlessLogin` (allow opted-in users to sign in without a password on the local network), `localSubnets` (extra CIDRs counted as local) and `trustProxy` (believe `X-Forwarded-For`). `allowPasswordlessLogin` now only applies on the local network.
 
 Invalid settings return HTTP 400 with `{ "error": "Check the highlighted settings.", "fields": { "artwork.poster.small": "Enter a positive whole number of pixels." } }`. No part of an invalid request is applied. Artwork widths must be positive integers; paths must be non-empty and contain no null characters (relative paths remain supported); federation ports must be integers from 1 through 65535. Provider keys must be strings.
 
@@ -487,7 +523,7 @@ Unsupported combinations return HTTP 400. Individual `clean/series` removes empt
 
 A job record contains `id`, `action`, `target`, `state` (`queued`, `running`, `completed`, `failed`), ISO `createdAt`, optional ISO `finishedAt`, `discovering`, `total`, `completed`, `failed`, and optional safe `error`. Counts track queued tasks, including descendants; a failed collection contributes a failed task. Totals can grow during discovery and descendant processing. Completion means collection and all associated tasks have settled, regardless of unrelated queue activity.
 
-History holds active jobs and the latest 100 finished jobs in memory. It survives page reloads and resets on server restart. There is no job cancellation or database migration. Clients may poll every two seconds while visible and should mark retained data as stale when requests fail.
+History holds active jobs and the latest 100 finished jobs in memory. It survives page reloads and resets on server restart. Jobs cannot be cancelled and are not stored in the database. Clients may poll every two seconds while visible and should mark retained data as stale when requests fail.
 
 ### Remote Imports
 Trigger imports from configured remote seedboxes.
@@ -503,7 +539,7 @@ Trigger imports from configured remote seedboxes.
 
 ### System Info
 - **Get Info:** `GET /api/v1/system/info`
-  - **Response:** `{ "version": "...", "uptime": 123, ... }`
+  - **Response:** `{ "version": "...", "platform": "linux", "arch": "x64", "uptime": 123, "nodeVersion": "v24...", "memory": { ... } }` (`uptime` in seconds, `memory` from Node's `process.memoryUsage()`)
 
 ### System Capabilities
 Get list of available identifiers and updaters.
@@ -533,7 +569,7 @@ Get list of available identifiers and updaters.
 `GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `file.name`, `file.extension` (the file name without its directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
 
 ### Connected Clients
-Get the authenticated user's connected realtime devices. Scoped to the caller — there is no role system to gate an all-users view on, and an unfiltered listing was an enumeration oracle for other people's devices. `user` carries the id and nothing else.
+Get the authenticated user's connected realtime devices. Scoped to the caller, even for administrators: an unfiltered listing would expose other people's devices. `user` carries the id and nothing else.
 
 - **URL:** `/api/v1/status/clients`
 - **Method:** `GET`
@@ -572,7 +608,7 @@ Get the status of the seedbox importer, including configured seedboxes and impor
 
 - **URL:** `/api/v1/status/seedbox`
 - **Method:** `GET`
-- **Permission:** Requires Authentication
+- **Permission:** `system.manage`
 - **Response:** Status object.
   ```json
   {
