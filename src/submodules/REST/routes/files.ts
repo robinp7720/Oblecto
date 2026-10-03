@@ -7,6 +7,7 @@ import { Episode } from '../../../models/episode.js';
 import { Movie } from '../../../models/movie.js';
 import { Series } from '../../../models/series.js';
 import { retryProblem } from '../../../lib/indexers/files/problems.js';
+import { validateSegments } from '../../../lib/analysis/segments.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
 
@@ -163,6 +164,70 @@ export default (server: Express, oblecto: Oblecto) => {
             await file.update({ problemIgnored });
 
             res.send({ id: file.id, problemIgnored: file.problemIgnored });
+        } catch (e) {
+            next(e);
+        }
+    });
+
+    // Chapters, skippable segments and seek thumbnails. Null means the file has not been analysed yet.
+    const markers = (file: File) => ({
+        id: file.id,
+        duration: file.duration,
+        chapters: file.chapters,
+        segments: file.segments,
+        trickplay: file.trickplay
+    });
+
+    server.get('/files/:id/markers', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+        try {
+            const file = await File.findByPk(req.params.id as string);
+
+            if (!file) {
+                res.status(404).send({ message: 'File not found' });
+                return;
+            }
+
+            res.send(markers(file));
+        } catch (e) {
+            next(e);
+        }
+    });
+
+    // Segments set here are kept: detection only looks at files that have none
+    server.put('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+        try {
+            const file = await File.findByPk(req.params.id as string);
+
+            if (!file) {
+                res.status(404).send({ message: 'File not found' });
+                return;
+            }
+
+            const result = validateSegments(req.body?.segments, file.duration);
+
+            if ('error' in result) {
+                res.status(400).send({ message: result.error });
+                return;
+            }
+
+            await file.update({ segments: result.segments });
+            res.send(markers(file));
+        } catch (e) {
+            next(e);
+        }
+    });
+
+    server.delete('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+        try {
+            const file = await File.findByPk(req.params.id as string);
+
+            if (!file) {
+                res.status(404).send({ message: 'File not found' });
+                return;
+            }
+
+            await oblecto.mediaAnalyser.resetSegments(file);
+            res.status(202).send(markers(file));
         } catch (e) {
             next(e);
         }

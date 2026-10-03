@@ -19,6 +19,7 @@ Implemented
 - Items and browsing (one engine, `ServerAPI/itemQuery.ts`)
   - GET /items, GET /users/{id}/items: IncludeItemTypes, ExcludeItemTypes, ParentId (library views, series, season, collection), Recursive, Ids, SearchTerm/NameStartsWith, SortBy/SortOrder (SortName, DateCreated, DateLastContentAdded, PremiereDate, ProductionYear, CommunityRating, Runtime, DatePlayed, ParentIndexNumber, IndexNumber, Random), Filters (IsPlayed, IsUnplayed, IsResumable, IsFavorite), IsPlayed, IsFavorite, Genres, GenreIds, PersonIds, Years, SeriesId, StartIndex/Limit
   - GET /items/{id}, GET /users/{id}/items/{id}: movies, series, seasons, episodes, collections, people and genres; People on detail pages
+  - Chapters and Trickplay in item details; HasSegments on media sources; GET /videos/{id}/trickplay/{width}/{index}.jpg and /tiles.m3u8; GET /mediasegments/{id} with type filters (item or media source IDs)
   - GET /items/{id}/images, /items/{id}/images/{type}[/{index}]: posters, fanart, episode stills, person profiles, collection artwork
   - GET /items/{id}/similar, /movies/{id}/similar, /shows/{id}/similar, /trailers/{id}/similar, GET /movies/recommendations
   - GET /items/{id}/ancestors, /items/{id}/collections, /items/counts, /items/filters, /items/filters2
@@ -58,7 +59,7 @@ Partially implemented
 - Items: /items/{id}/thememedia, /themesongs, /themevideos, /intros, /localtrailers, /specialfeatures, /criticreviews, /externalidinfos, /remoteimages*, /remotesearch/*, /contenttype, /metadataeditor, /items/suggestions, /items/root (empty); /items/{id}/download and /file (404)
 - Shows: /shows/upcoming, /trailers (empty)
 - Sessions: /sessions, /sessions/viewing (empty); remote-control commands (204, not delivered); SyncPlay (204 or 404)
-- Videos: /videos/{id}/subtitles*, trickplay, attachments, additional parts, alternate sources, active encodings, merge versions (empty, 404 or 204); /mediasegments/{id} (empty)
+- Videos: /videos/{id}/subtitles*, attachments, additional parts, alternate sources, active encodings, merge versions (empty, 404 or 204)
 - Devices, plugins, packages, repositories, environment, startup, fallback fonts, QuickConnect: empty lists, 204 or 404
 - Library management: virtual folders and paths (empty or 204); /collections and /playlists (empty)
 - Live TV, channels, music, artists, studios, years: empty or 404
@@ -246,3 +247,5 @@ Change log
 - 2026-09-17: Fixed Jellyfin frontend delivery from bundled server and CLI entrypoints; the build now compiles and copies jellyfin-web into the packaged dist tree.
 - 2026-09-27: Browsing, metadata and user data. One item query engine (ServerAPI/itemQuery.ts) behind /Items, /Users/{id}/Items and the /Shows lists: correct paging, the caller's watch state, sort orders, Filters/IsPlayed/IsFavorite/Ids/Genres/GenreIds/PersonIds/Years, library-view, series, season and collection parents. Item DTOs carry real genres, provider ids, tagline, studios, ratings and dates, folder counts and unplayed counts, and People on detail pages; the made-up ratings and blurhashes are gone. New: BoxSets from movie sets, /Persons, /Genres, Similar, Recommendations, Ancestors, Counts, Filters, Items/{id}/Collections and Items/{id}/Images. Favourites (UserFavourites, migration 0008), user configuration saved as Oblecto preferences, display preferences kept per user and app. System configuration, encoding and branding read from and saved to Oblecto's config (jellyfin.serverName, loginDisclaimer, customCss), admins only. Sockets accept ?ApiKey= (the Jellyfin SDK's), answer KeepAlive, send ForceKeepAlive and push UserDataChanged; /Sessions/Playing no longer echoes Play. Checked against jellyfin-web 12.1 in Chromium.
 - 2026-09-27: Report Jellyfin API version 12.1.0, matching the spec this plan is compared against and the bundled jellyfin-web.
+
+- 2026-10-02: Finished playback analysis integration: real chapters, trickplay manifests and authenticated thumbnail sheets/playlists, plus typed media segments for jellyfin-web skip controls.

@@ -38,6 +38,7 @@ import MovieCleaner from '../cleaners/MovieCleaner.js';
 import SeriesCleaner from '../cleaners/SeriesCleaner.js';
 import FileCleaner from '../cleaners/FileCleaner.js';
 import FileIndexer from '../indexers/files/FileIndexer.js';
+import MediaAnalyser from '../analysis/MediaAnalyser.js';
 
 import { initDatabase } from '../../submodules/database.js';
 import { countAdmins, seedGroups } from '../auth/permissions.js';
@@ -79,6 +80,7 @@ export default class Oblecto {
     public fileCleaner: FileCleaner;
     public movieCleaner: MovieCleaner;
     public seriesCleaner: SeriesCleaner;
+    public mediaAnalyser: MediaAnalyser;
     public playback: PlaybackService;
     public federation: FederationService;
     private federationStart: Promise<void>;
@@ -135,6 +137,8 @@ export default class Oblecto {
         this.movieCleaner = new MovieCleaner(this);
         this.seriesCleaner = new SeriesCleaner(this);
 
+        this.mediaAnalyser = new MediaAnalyser(this);
+
         this.playback = new PlaybackService(this);
         this.playback.remoteFactory = host => connectPlaybackPeer(this, host);
 
@@ -175,6 +179,7 @@ export default class Oblecto {
         await this.federationStart;
         await this.federation.close();
         await this.playback.close();
+        await this.mediaAnalyser.close();
 
         // Wrapped so a synchronous throw from one service can't keep the others or the database open
         const closers: (() => unknown)[] = [

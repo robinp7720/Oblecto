@@ -95,6 +95,10 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 | `GET /videos/:itemid/stream` | ✅ Implemented | Direct/Transcode stream logic |
 | `GET /videos/:itemid/master.m3u8` | ✅ Implemented | HLS logic |
 | `GET /hls/:sessionid/segment/:id` | ✅ Implemented | HLS segment serving |
+| `Chapters`, `Trickplay`, media source `HasSegments` | ✅ Implemented | Derived from local-file playback analysis |
+| `GET /videos/:itemid/trickplay/:width/:index.jpg` | ✅ Implemented | Authenticated JPEG sheet; honors `MediaSourceId` |
+| `GET /videos/:itemid/trickplay/:width/tiles.m3u8` | ✅ Implemented | HLS image playlist of thumbnail sheets |
+| `GET /mediasegments/:itemid` | ✅ Implemented | Intro/Outro/Recap/Preview ranges in ticks; accepts media source IDs and `includeSegmentTypes` |
 | `POST /sessions/playing` | ✅ Implemented | Updates session state |
 | `POST /sessions/playing/progress` | ✅ Implemented | Updates watch history/progress |
 | `POST /sessions/playing/stopped` | ✅ Implemented | Cleans up session |

@@ -28,7 +28,8 @@
     "moviePosterLocation": "/etc/oblecto/assets/moviePosters/",
     "movieFanartLocation": "/etc/oblecto/assets/movieFanart/",
     "userAvatarLocation": "/etc/oblecto/assets/userAvatars/",
-    "personProfileLocation": "/etc/oblecto/assets/personProfiles/"
+    "personProfileLocation": "/etc/oblecto/assets/personProfiles/",
+    "trickplayLocation": "/etc/oblecto/assets/trickplay/"
   },
   "database": {
     "dialect": "sqlite",
@@ -136,7 +137,10 @@
     "encodingConcurrency": 2,
     "maxQueue": 64,
     "cacheBytes": 10737418240,
-    "idleTimeoutMs": 1800000
+    "idleTimeoutMs": 1800000,
+    "trickplay": true,
+    "trickplayInterval": 10,
+    "detectSegments": true
   },
   "federation": {
     "key": "/etc/oblecto/id_rsa",

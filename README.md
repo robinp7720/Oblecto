@@ -88,8 +88,9 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `queue.concurrency` | How many background jobs (identifying, metadata, artwork) run at once (1) |
 | `files.doHash`, `fileExtensions.video` | Hash files to find duplicates (on), and which extensions count as video |
 | `ffmpeg.pathFFmpeg`, `ffmpeg.pathFFprobe` | FFmpeg and ffprobe to use, if not the ones on `PATH` |
+| `streaming.trickplay`, `streaming.trickplayInterval`, `streaming.detectSegments` | Generate seek thumbnails (on), every 10 seconds (1–60); detect intro/credit segments (on). Existing libraries: Settings → Maintenance → Analyse playback |
 | `streaming`, `transcoding` | Playback cache, encoder limits and hardware encoding; see [docs/STREAMING.md](docs/STREAMING.md) |
-| `assets`, `artwork` | Where artwork and avatars are stored, and the sizes artwork is scaled to |
+| `assets`, `artwork` | Where artwork, avatars and seek thumbnails (`assets.trickplayLocation`) are stored, and the sizes artwork is scaled to |
 | `federation`, `seedboxes` | Federation with other Oblecto servers ([docs/FEDERATION.md](docs/FEDERATION.md)) and seedbox imports |
 | `web.enabled` | Serve the web app (on) |
 

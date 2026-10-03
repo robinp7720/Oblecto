@@ -384,7 +384,8 @@ export class PlaybackService {
             subtitleUrl:
                 s.plan.subtitle && !s.plan.burnSubtitles
                     ? url('subtitle.vtt')
-                    : null
+                    : null,
+            ...this.markers(s, url)
         };
     }
     update(
@@ -588,6 +589,12 @@ export class PlaybackService {
         req: Request,
         res: Response
     ): Promise<void> {
+        // Seek thumbnails do not depend on the selected tracks, so any revision of the session serves them
+        const sheet = /^trickplay-(\d+)\.jpg$/.exec(asset);
+        if (sheet && !s.signal.signal.aborted) {
+            s.touch();
+            return this.serveTrickplay(s, Number(sheet[1]), req, res);
+        }
         if (revision !== s.revision || s.signal.signal.aborted)
             return Promise.reject(
                 new PlaybackError(
@@ -870,6 +877,42 @@ export class PlaybackService {
             output
         );
         await run(this.ffmpeg, command, s.signal.signal, 60000);
+    }
+    private async serveTrickplay(
+        s: PlaybackSession,
+        index: number,
+        req: Request,
+        res: Response
+    ): Promise<void> {
+        const sheet = s.remote ? null : this.oblecto.mediaAnalyser?.trickplaySheet(s.file, index);
+        if (!sheet)
+            throw new PlaybackError('MEDIA_NOT_FOUND', 'No such thumbnail sheet', 404);
+        res.setHeader('Cache-Control', 'private, max-age=86400');
+        res.setHeader('Referrer-Policy', 'no-referrer');
+        await sendFile(req, res, sheet, 'image/jpeg', s.signal.signal);
+    }
+    /** Chapters, skippable segments and seek thumbnails of the session's file. */
+    markers(s: PlaybackSession, url: (asset: string) => string) {
+        const trickplay = s.remote ? null : s.file.trickplay;
+        return {
+            chapters: s.remote ? [] : (s.file.chapters ?? []),
+            segments: s.remote ? [] : (s.file.segments ?? []).map(({ type, start, end }) => ({
+                type,
+                start,
+                end
+            })),
+            trickplay: trickplay
+                ? {
+                    width: trickplay.width,
+                    height: trickplay.height,
+                    tileWidth: trickplay.tileWidth,
+                    tileHeight: trickplay.tileHeight,
+                    interval: trickplay.interval,
+                    count: trickplay.count,
+                    sheets: Array.from({ length: trickplay.sheets }, (_, i) => url(`trickplay-${i}.jpg`))
+                }
+                : null
+        };
     }
     private async serveAsset(
         s: PlaybackSession,

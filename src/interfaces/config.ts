@@ -30,6 +30,7 @@ export interface IConfig {
         'movieFanartLocation': string,
         'userAvatarLocation'?: string
         'personProfileLocation': string
+        'trickplayLocation'?: string
     },
     'database': {
         'dialect': string,
@@ -146,7 +147,10 @@ string
         cacheBytes?: number;
         cacheDirectory?: string;
         idleTimeoutMs?: number;
-        vaapiDevice?: string
+        vaapiDevice?: string;
+        trickplay?: boolean;
+        trickplayInterval?: number;
+        detectSegments?: boolean
     },
     'federation': {
         'address'?: string,

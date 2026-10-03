@@ -16,6 +16,10 @@ export function maintenanceWork(oblecto: Oblecto, action: string, target: string
             movies: () => oblecto.movieUpdateCollector.collectAllMovies(),
             files: () => oblecto.fileUpdateCollector.collectAllFiles()
         },
+        analyse: {
+            series: () => oblecto.mediaAnalyser.collectAll('episodes'),
+            movies: () => oblecto.mediaAnalyser.collectAll('movies')
+        },
         clean: {
             files: async () => { await oblecto.fileCleaner.removeAssoclessFiles(); await oblecto.fileCleaner.removedDeletedFiled(); },
             episodes: () => oblecto.seriesCleaner.removeFileLessEpisodes(),

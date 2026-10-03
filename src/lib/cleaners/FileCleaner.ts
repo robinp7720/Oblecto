@@ -39,6 +39,7 @@ export default class FileCleaner {
                 logger.info( file.path, 'not found. Removing from database');
 
                 await file.destroy();
+                await this.oblecto.mediaAnalyser?.removeFile(file.id);
             }
         }
     }
@@ -81,6 +82,7 @@ export default class FileCleaner {
 
             if (item.Movies.length === 0 && item.Episodes.length === 0) {
                 await item.destroy();
+                await this.oblecto.mediaAnalyser?.removeFile(item.id);
             }
         }
     }

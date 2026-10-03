@@ -85,6 +85,30 @@ describe('Database migrations', () => {
         } finally { await sequelize.close(); }
     });
 
+    it('adds chapters, segments and thumbnails to files, unanalysed, and stores them as JSON', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const file = await File.create({ path: '/media/a.mkv' });
+            const query = sequelize.getQueryInterface();
+            for (const column of ['chapters', 'segments', 'trickplay']) await query.removeColumn('Files', column);
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0010-playback-markers'");
+            assert.deepEqual(await migrate(sequelize), ['0010-playback-markers']);
+
+            await file.reload();
+            assert.equal(file.path, '/media/a.mkv');
+            assert.equal(file.chapters, null);
+            assert.equal(file.segments, null);
+            assert.equal(file.trickplay, null);
+
+            await file.update({ chapters: [{ start: 0, end: 90, title: 'Intro' }], segments: [] });
+            await file.reload();
+            assert.deepEqual(file.chapters, [{ start: 0, end: 90, title: 'Intro' }]);
+            assert.deepEqual(file.segments, []);
+            assert.deepEqual(file.toJSON().chapters, [{ start: 0, end: 90, title: 'Intro' }]);
+        } finally { await sequelize.close(); }
+    });
+
     it('gives a new database unique favourites too', async () => {
         const sequelize = await database();
         try {

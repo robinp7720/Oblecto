@@ -236,6 +236,7 @@ export default class SeriesIndexer {
 
         await episode.addFile(file);
         await clearProblem(this.oblecto, file, 'identify');
+        this.oblecto.mediaAnalyser?.queueFile(file);
 
         if (episodeCreated) {
             this.oblecto.realTimeController.broadcast('indexer', {

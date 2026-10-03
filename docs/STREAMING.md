@@ -1,6 +1,6 @@
 # Streaming operation and migration
 
-The shared playback engine serves Oblecto Web, Emby/Jellyfin and federated media. Requires FFmpeg/ffprobe on the configured executable paths (or PATH). The software baseline uses libx264, AAC, libass, zscale and tonemap. Source probing and keyframe analysis are cached in memory; generated media is disposable and needs no database migration.
+The shared playback engine serves Oblecto Web, Emby/Jellyfin and federated media. Requires FFmpeg/ffprobe on the configured executable paths (or PATH). The software baseline uses libx264, AAC, libass, zscale and tonemap. Source probing and keyframe analysis are cached in memory; streaming caches are disposable. Migration `0010-playback-markers` adds per-file chapter, segment and thumbnail metadata.
 
 ## Configuration
 
@@ -41,3 +41,15 @@ Oblecto control/session APIs are breaking changes; see [API.md](API.md). Emby/Je
 - `npm --prefix Oblecto-Web run build` checks the web bundle. `npm run build` also installs frontend dependencies as defined by the repository's release command.
 
 Before release, manually check actual Safari/iOS and Jellyfin web/Media Player: original playback, resume, forward/backward seeks, bandwidth-constrained adaptive playback, audio and text/ASS/bitmap subtitle changes, pause across idle periods, concurrent viewers and stop cleanup. Test configured GPUs and representative HDR material on deployment hardware. WebKit automation is not a substitute for actual iOS device acceptance. Deployment is not performed by these tests.
+
+## Chapters, seek thumbnails and skip controls
+
+New local movie and episode files receive low-priority analysis after identification. For existing files, use Settings → Maintenance → Analyse playback, or `POST /api/v1/system/maintenance` with `{ "action": "analyse", "target": "all" }`. Analysis fills missing data and preserves manually set segments. Playback works while analysis is pending; reopening a session picks up completed analysis.
+
+FFprobe reads chapter times and titles. Recognised chapter titles identify intros, credits, recaps and previews. For episodes of at least five minutes, FFmpeg's chromaprint muxer compares audio with nearby episodes in the same season to find shared intros and credits. A lone episode waits for another episode; unavailable chromaprint falls back to chapter titles. Detection is approximate and depends on shared audio; use the file segment API to correct ranges. Movies use chapter titles, without fingerprint comparison.
+
+`streaming.trickplay` and `streaming.detectSegments` default to true. `streaming.trickplayInterval` defaults to 10 seconds and accepts integers from 1 to 60. Thumbnails are 320 pixels wide, preserve display aspect ratio, and are packed into 10×10 JPEG sheets under `assets.trickplayLocation` (default `/etc/oblecto/assets/trickplay/`). Generation uses keyframes and fills the tail with the last available frame; HDR is tone mapped when supported. Thumbnail sheets are removed when their file record is cleaned up. Analysis processes are cancelled and awaited during shutdown.
+
+Oblecto Web shows chapter boundaries and chapter names on the seek bar, chapter navigation in Playback settings, and thumbnail previews while hovering or dragging. Skip buttons seek to the end of intro, credit, recap or preview ranges. Episode autoplay uses terminal detected credits as its countdown start; a credits sequence followed by another scene can be skipped without jumping over that scene. With no credit markers it retains the 30-second countdown lead; with known credits followed by another scene, autoplay waits until playback ends. Missing thumbnails fall back to time-only previews. Federated playback currently supplies no markers or thumbnails.
+
+Jellyfin item details expose `Chapters`, `Trickplay`, and media source `HasSegments`. Authenticated image-sheet and image-playlist routes serve thumbnails; `/MediaSegments/{itemId}` returns segments with seconds converted to ticks, and accepts file media source IDs used by jellyfin-web. The client's own segment preferences determine prompting or automatic skipping.

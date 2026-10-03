@@ -40,7 +40,60 @@ type MediaFile = {
     host?: string | null;
     hash?: string | null;
     Streams?: MediaStream[];
+    chapters?: unknown;
+    segments?: unknown;
+    trickplay?: unknown;
 };
+
+type FileChapter = { start: number; end: number; title: string | null };
+type FileTrickplay = { width: number; height: number; tileWidth: number; tileHeight: number; interval: number; count: number; bandwidth: number };
+
+// The JSON columns arrive parsed from a model, but as text from a raw query
+const fromJson = <T>(value: unknown): T | null => {
+    if (typeof value !== 'string') return (value ?? null) as T | null;
+    try {
+        return JSON.parse(value) as T;
+    } catch {
+        return null;
+    }
+};
+
+const TICKS_PER_SECOND = 10000000;
+
+/** A file's chapters as Jellyfin ChapterInfo. Oblecto makes no chapter images. */
+export const createChapters = (file: MediaFile | undefined): Record<string, unknown>[] =>
+    (fromJson<FileChapter[]>(file?.chapters) ?? []).map(chapter => ({
+        'StartPositionTicks': Math.round(chapter.start * TICKS_PER_SECOND),
+        'Name': chapter.title ?? '',
+        'ImageDateModified': '0001-01-01T00:00:00.0000000Z'
+    }));
+
+/** Seek thumbnails per media source and width, as Jellyfin's BaseItemDto.Trickplay. */
+export const createTrickplay = (files: MediaFile[]): Record<string, Record<string, unknown>> | undefined => {
+    const result: Record<string, Record<string, unknown>> = {};
+
+    for (const file of files) {
+        const info = fromJson<FileTrickplay>(file.trickplay);
+
+        if (!info) continue;
+        result[formatFileId(file.id)] = {
+            [String(info.width)]: {
+                'Width': info.width,
+                'Height': info.height,
+                'TileWidth': info.tileWidth,
+                'TileHeight': info.tileHeight,
+                'ThumbnailCount': info.count,
+                'Interval': info.interval * 1000,
+                'Bandwidth': info.bandwidth
+            }
+        };
+    }
+
+    return Object.keys(result).length ? result : undefined;
+};
+
+/** Whether a file has intros, credits or other segments to skip. */
+export const fileHasSegments = (file: MediaFile | undefined): boolean => (fromJson<unknown[]>(file?.segments) ?? []).length > 0;
 
 const normalizeBoolean = (value: unknown): boolean => value === true || value === 1;
 
@@ -260,7 +313,7 @@ export const createMediaSources = (files: MediaFile[]): Record<string, unknown>[
             'TranscodingSubProtocol': 'http',
             'DefaultAudioStreamIndex': defaultAudioStreamIndex,
             'DefaultSubtitleStreamIndex': defaultSubtitleStreamIndex,
-            'HasSegments': false
+            'HasSegments': fileHasSegments(file)
         };
     });
 };
@@ -549,6 +602,8 @@ export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: Em
         }
         res.HasSubtitles = (file.Streams ?? []).some(stream => stream.codec_type === 'subtitle');
         res.MediaSources = createMediaSources(item.Files);
+        res.Chapters = createChapters(file);
+        res.Trickplay = createTrickplay(item.Files);
     }
 
     const track = item.TrackMovies?.[0] || item.TrackEpisodes?.[0];

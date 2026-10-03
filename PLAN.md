@@ -7,6 +7,7 @@ Status of the feature tracks this file used to plan in detail, as of 2 October 2
 | Track | Where it lives |
 |---|---|
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
+| Playback analysis: chapters, seek thumbnails, intro/credit detection and skip controls | `src/lib/analysis/`, `Oblecto-Web/src/components/player/` |
 | Player: volume, audio and subtitle tracks, speed, hotkeys, seek bar, up next | `Oblecto-Web/src/components/player/`, `Oblecto-Web/src/playback/` |
 | Continue watching | `/movies/watching`, `/episodes/watching`, Jellyfin `/Items/Resume` |
 | Accounts: profile, password, avatar, preferences; groups and permissions | `src/submodules/REST/routes/v1/account.ts`, `src/lib/auth/permissions.ts` |
@@ -26,7 +27,6 @@ Status of the feature tracks this file used to plan in detail, as of 2 October 2
 - **Subtitle files beside the video.** Indexing only picks up video extensions (`fileExtensions.video`), so `.srt`, `.ass` and `.vtt` sidecars are ignored and only embedded subtitles play. No subtitle search or download.
 - **Keeping libraries current on their own.** There is no file watcher or scheduled scan; scans run on demand or at boot (`indexer.runAtBoot`).
 - **Per-library access and parental controls.** Groups grant actions, not visibility of libraries or ratings.
-- **Chapters, trickplay thumbnails, intro and credit skipping.** Not implemented; the Jellyfin routes answer empty.
 - **Playlists and downloads.** Not implemented.
 - **Music.** Undecided. The Jellyfin audio routes answer 404 and the artist routes return empty lists.
 - **Tests.** `npm run typecheck` covers `src/` only: including `tests/` gives 173 type errors, almost all loose mock typings in `tests/mocha`. `/api/v1/libraries` and the set routes have no route-level specs; user, group and system routes are covered mainly for permission checks. `tests/network` had five TVDB assertions that no longer matched TVDB's answers at 1.0.

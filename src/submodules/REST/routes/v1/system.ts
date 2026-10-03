@@ -15,7 +15,7 @@ export default (server: Express, oblecto: any) => {
         if (typeof action !== 'string' || typeof target !== 'string') return res.status(400).send({ error: 'Action and target are required' });
         const work = maintenanceWork(oblecto as Oblecto, action, target);
         if (!work) return res.status(400).send({ error: 'Invalid maintenance action or target' });
-        const canonicalTarget = target === 'tvshows' && ['scan', 'update_artwork'].includes(action) ? 'series' : target;
+        const canonicalTarget = target === 'tvshows' && ['scan', 'update_artwork', 'analyse'].includes(action) ? 'series' : target;
         const job = oblecto.queue.maintenance.start(action, canonicalTarget, work);
         res.send({
             success: true,

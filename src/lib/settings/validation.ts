@@ -70,6 +70,8 @@ export function validateSettings(updates: unknown, current?: Record<string, unkn
             if (section === 'jellyfin' && field === 'serverName' && (typeof entry !== 'string' || !entry.trim() || entry.length > 100)) errors[key] = 'Enter a name of up to 100 characters.';
             if (section === 'jellyfin' && field === 'loginDisclaimer' && (typeof entry !== 'string' || entry.length > 1000)) errors[key] = 'Enter up to 1000 characters.';
             if (section === 'jellyfin' && field === 'customCss' && (typeof entry !== 'string' || Buffer.byteLength(entry) > 20 * 1024)) errors[key] = 'Keep the CSS under 20 KB.';
+            if (section === 'streaming' && ['trickplay', 'detectSegments'].includes(field) && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';
+            if (section === 'streaming' && field === 'trickplayInterval' && (!Number.isInteger(entry) || Number(entry) < 1 || Number(entry) > 60)) errors[key] = 'Enter a whole number of seconds from 1 to 60.';
             if (section === 'logging' && field === 'level' && !['error', 'warn', 'info', 'debug'].includes(entry as string)) errors[key] = 'Choose error, warn, info or debug.';
             if (section === 'logging' && ['maxSizeMB', 'maxFiles'].includes(field) && (!Number.isInteger(entry) || Number(entry) < 1)) errors[key] = 'Enter a whole number of at least 1.';
             if (section === 'logging' && field === 'file' && typeof entry !== 'boolean') errors[key] = 'Expected an on/off value.';

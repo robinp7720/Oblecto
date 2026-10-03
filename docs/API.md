@@ -365,13 +365,18 @@ Example descriptor:
   "selectedTracks": { "audioStreamIndex": 1, "subtitleStreamIndex": null, "subtitleMode": "off" },
   "tracks": [],
   "qualities": [{ "id": "720", "height": 720, "bitrate": 2800000 }],
-  "subtitleUrl": null
+  "subtitleUrl": null,
+  "chapters": [],
+  "segments": [],
+  "trickplay": null
 }
 ```
 
+`chapters` is an array of `{ "start": 0, "end": 90, "title": "Opening" }` (seconds; title may be null). `segments` contains `{ "type": "intro", "start": 0, "end": 90 }` with types `intro`, `credits`, `recap`, or `preview`. `trickplay` is null or `{ "width": 320, "height": 180, "tileWidth": 10, "tileHeight": 10, "interval": 10, "count": 720, "sheets": ["/playback/media/.../trickplay-0.jpg?token=..."] }`. Resolve sheet URLs against the API base, and use `floor(time / interval)` to choose a thumbnail, clamped to `count - 1`. Each sheet holds `tileWidth * tileHeight` thumbnails, row by row. Pending or remote analysis is represented by empty arrays and null trickplay in the session descriptor.
+
 `method` is `direct`, `remux`, or `transcode`. `tracks` contains probed audio/subtitle metadata, including indexes, codecs, language tags and dispositions. Quality bitrates describe video; transcoded audio adds 128 kbps. `subtitleUrl` points to WebVTT when a separate text track is selected. ASS/SSA and bitmap subtitles are rendered into video when required.
 
-PATCH accepts the creation options except `fileId`, plus the current integer `revision`. Successful reconfiguration increments the revision and returns replacement URLs. Reject obsolete responses in clients; old media URLs return 409. Create a new session to change files. Supplying `subtitleMode` without an explicit subtitle index reapplies language/default/forced selection. Explicitly pass `forceHls: false` to return to original playback after fallback.
+PATCH accepts the creation options except `fileId`, plus the current integer `revision`. Successful reconfiguration increments the revision and returns replacement URLs. Reject obsolete responses in clients; old stream URLs return 409. Thumbnail sheet URLs remain usable across revisions of the same active session. Create a new session to change files. Supplying `subtitleMode` without an explicit subtitle index reapplies language/default/forced selection. Explicitly pass `forceHls: false` to return to original playback after fallback.
 
 Progress body: `{ "revision": 1, "position": 123.5, "paused": false, "buffering": false }`. Send every ten seconds and on pause, seek completion, stop, and end. Send the final progress update before deleting the session. Progress is saved using existing movie/episode tracking records; stale revisions return 409. Positions beyond duration plus one second are rejected.
 
@@ -511,11 +516,12 @@ Manage media libraries and sources. Mutations follow the same persistence guaran
 
 - **Trigger task:** `POST /api/v1/system/maintenance`
 - **Body:** `{ "action": "scan", "target": "movies" }`.
-- **Response:** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans/artwork.
+- **Response:** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans, artwork and playback analysis.
 - **List jobs:** `GET /api/v1/system/maintenance/jobs` returns an array of job records, newest first.
 
 | Action | Supported targets |
 | --- | --- |
+| `analyse` | `all`, `movies`, `series` (`tvshows` alias) |
 | `scan` | `all`, `movies`, `series`, `tvshows` |
 | `update_artwork` | `all`, `movies`, `series`, `tvshows` |
 | `update_metadata` | `all`, `movies`, `series`, `episodes`, `files`, `tvshows` (series and episodes) |
@@ -723,3 +729,12 @@ All `/api/v1/federation` endpoints require `settings.manage`. Requests without c
 A peer status contains `id`, `name`, `address`, `enabled`, `state`, and optional `lastSuccess`, `count`, `error`, `retryAt`, `operationId`. Timestamps are ISO strings. States are `disabled`, `disconnected`, `connecting`, `syncing`, `connected`, or `error`; `connected` indicates the most recent synchronization succeeded, not a permanent socket. Pairing states are `pending`, `prepared`, `active`, or `cancelled`. Poll `/status` to follow asynchronous operations.
 
 Invalid peer settings return 400 `{ error: "Check the highlighted settings.", fields: { "federation.servers.<id>.<field>": "..." } }`. Other invalid operations return 400 with the usual API `{ code, message }` error envelope. Saved settings can fail activation (for example, a port is occupied); `/status.error` explains this independently of persisted settings. See [Federation](FEDERATION.md) for trust, ports, snapshot semantics, certificate replacement, and coordinated upgrades.
+
+## File playback markers
+
+- `GET /files/:id/markers` requires authentication and returns `{ "id", "duration", "chapters", "segments", "trickplay" }`. Times are seconds. Null fields mean analysis has not completed; empty arrays mean no chapters/segments were found. File `trickplay` contains sheet metadata (`width`, `height`, `tileWidth`, `tileHeight`, `interval`, `count`, numeric `sheets`, `bandwidth`), while session descriptors provide authorized sheet URLs.
+- `PUT /files/:id/segments` requires `libraries.manage`. Body: `{ "segments": [{ "type": "intro", "start": 10, "end": 70 }] }`. Allowed types are `intro`, `credits`, `recap`, `preview`; times must be finite nonnegative numbers with end greater than start and within the file duration (up to one second of rounding is clamped). At most 32 segments are accepted. Replaces segments with `source: "manual"` and returns the marker record. An empty array disables detected segments for this file; analysis preserves it.
+- `DELETE /files/:id/segments` requires `libraries.manage`. Clears all segments, including manual edits, and queues detection again. Returns 202 with the marker record.
+- These routes return 404 for unknown files; PUT returns 400 for invalid segment input.
+
+Playback analysis maintenance: `POST /api/v1/system/maintenance` with `{ "action": "analyse", "target": "all" }` (or target `movies`, `series`, legacy `tvshows`) requires `system.manage`. Returns 202 with the tracked job. Fills missing chapters, thumbnails and segments for local files; new files are queued automatically on identification.

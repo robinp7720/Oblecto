@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0009). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0010). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
+
+- Chapters in Playback settings and on the seek bar, thumbnail previews while scrubbing, and skip buttons for intros, credits, recaps and previews. Local files are analysed after indexing; existing libraries can use Settings → Maintenance → Analyse playback. Chapter titles provide segments, and FFmpeg with chromaprint also detects shared episode intros and credits. Jellyfin apps receive chapters, thumbnails and segment ranges too.
+- Per-file manual segment correction through the API. `streaming.trickplay`, `streaming.trickplayInterval`, `streaming.detectSegments` and `assets.trickplayLocation` configure analysis; migration 0010 stores its results.
 
 - Cast and crew for movies, series and episodes, from TMDb. People have their own page with biography and photo, and libraries can be filtered by person and role.
 - Movie and series pages suggest related titles from your library; episode pages show the previous and next episode and where they sit in the season. Series have fanart.

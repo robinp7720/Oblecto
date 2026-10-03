@@ -116,6 +116,7 @@ export default class MovieIndexer {
 
         await movie.addFile(file);
         await clearProblem(this.oblecto, file, 'identify');
+        this.oblecto.mediaAnalyser?.queueFile(file);
 
         if (!movieCreated && !doReindex) return;
 

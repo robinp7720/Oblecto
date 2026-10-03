@@ -63,7 +63,7 @@ function json (route, body, status = 200) {
 
 // `me` answers /api/v1/me; the body of every new playback session is pushed
 // onto `sessions`.
-async function stub (page, { me = account(), sessions = [] } = {}) {
+async function stub (page, { me = account(), sessions = [], markers = {}, thumbnailStatus = 200 } = {}) {
   // Everything is namespaced under a dedicated API origin so the stubs cannot
   // collide with the dev server's own module paths.
   await page.route('**oblecto.test/**', route => {
@@ -73,6 +73,10 @@ async function stub (page, { me = account(), sessions = [] } = {}) {
 
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS, body: '' })
 
+    if (path.includes('/trickplay-')) {
+      return route.fulfill({ status: thumbnailStatus, contentType: 'image/svg+xml', headers: CORS,
+        body: thumbnailStatus === 200 ? '<svg xmlns="http://www.w3.org/2000/svg" width="3200" height="1800"><rect width="3200" height="1800" fill="teal"/></svg>' : '' })
+    }
     if (path.startsWith('/playback/media')) {
       return route.fulfill({
         status: 200,
@@ -87,7 +91,7 @@ async function stub (page, { me = account(), sessions = [] } = {}) {
     if (path.startsWith('/playback/sessions')) {
       const method = request.method()
       if (method === 'POST' && path === '/playback/sessions') sessions.push(request.postDataJSON())
-      if (method === 'POST' || method === 'PATCH') return json(route, SESSION)
+      if (method === 'POST' || method === 'PATCH') return json(route, { ...SESSION, ...markers })
       return route.fulfill({ status: 204, headers: CORS, body: '' })
     }
 
@@ -341,4 +345,67 @@ test.describe('@phone player', () => {
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime), { timeout: 5000 })
       .toBeLessThan(25)
   })
+})
+
+const MARKERS = {
+  chapters: [{ start: 0, end: 10, title: 'Opening' }, { start: 10, end: 40, title: 'Story' }, { start: 40, end: 50, title: 'Credits' }, { start: 50, end: 60, title: 'After credits' }],
+  segments: [{ type: 'intro', start: 0, end: 10 }, { type: 'credits', start: 40, end: 50 }],
+  trickplay: { width: 320, height: 180, tileWidth: 10, tileHeight: 10, interval: 10, count: 6, sheets: ['/playback/media/sess-1/1/trickplay-0.jpg?token=t'] }
+}
+
+test.describe('@desktop @phone playback markers', () => {
+  test('chapters and skip buttons seek to their boundaries and preserve post-credit scenes', async ({ page }) => {
+    const errors = await boot(page, { markers: MARKERS, me: account({ preferences: { autoplayNext: true } }) })
+    await play(page)
+    await page.evaluate(() => document.querySelector('.player-root video').pause())
+    await page.getByRole('button', { name: 'Skip intro', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeGreaterThanOrEqual(10)
+    await expect(page.getByRole('button', { name: 'Skip intro', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Playback settings', exact: true }).click()
+    await page.getByRole('button', { name: 'Credits 0:40' }).click()
+    await expect(page.getByRole('button', { name: 'Skip credits', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Skip credits', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeGreaterThanOrEqual(50)
+    expect(await page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeLessThan(51)
+    await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+
+  test('scrubbing displays the correct thumbnail tile and chapter', async ({ page }) => {
+    await boot(page, { markers: MARKERS })
+    await play(page)
+    const rail = page.getByRole('slider', { name: 'Seek', exact: true })
+    const box = await rail.boundingBox()
+    await rail.dispatchEvent('pointerdown', { pointerId: 1, isPrimary: true, clientX: box.x + box.width * 0.4, clientY: box.y + box.height / 2 })
+    const thumbnail = page.locator('.seek .thumbnail img')
+    await expect(thumbnail).toBeVisible()
+    await expect.poll(() => thumbnail.evaluate(image => image.naturalWidth)).toBeGreaterThan(0)
+    await expect(thumbnail).toHaveCSS('left', '-320px')
+    await expect(page.locator('.seek .chapter-title')).toHaveText('Story')
+    await rail.dispatchEvent('pointercancel', { pointerId: 1, isPrimary: true })
+  })
+
+  test('a missing thumbnail keeps time scrubbing available', async ({ page }) => {
+    await boot(page, { markers: MARKERS, thumbnailStatus: 404 })
+    await play(page)
+    const rail = page.getByRole('slider', { name: 'Seek', exact: true })
+    const box = await rail.boundingBox()
+    await rail.dispatchEvent('pointerdown', { pointerId: 1, isPrimary: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 })
+    await expect(page.locator('.seek .thumbnail')).toHaveCount(0)
+    await expect(page.locator('.seek .tooltip')).toContainText('0:30')
+    await rail.dispatchEvent('pointerup', { pointerId: 1, isPrimary: true })
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeGreaterThanOrEqual(30)
+  })
+})
+
+test('@desktop @phone terminal credit markers start a cancellable next-episode countdown', async ({ page }) => {
+  await boot(page, { markers: { ...MARKERS, segments: [{ type: 'credits', start: 40, end: 60 }] } })
+  await play(page)
+  await page.evaluate(() => { const video = document.querySelector('.player-root video'); video.pause(); video.currentTime = 35 })
+  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+  await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 41 })
+  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Skip credits', exact: true })).toBeVisible()
 })

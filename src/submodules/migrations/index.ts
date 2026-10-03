@@ -243,6 +243,15 @@ export const MIGRATIONS: Migration[] = [
                 await queryInterface.createTable('FederationRecords', federationRecordColumns);
             }
         }
+    },
+    {
+        // Chapters, intro and credit segments, and thumbnail sheets for seeking, as JSON per file
+        name: '0010-playback-markers',
+        up: async ({ queryInterface }) => {
+            for (const column of ['chapters', 'segments', 'trickplay']) {
+                await addColumnIfMissing(queryInterface, 'Files', column, optional(DataTypes.TEXT));
+            }
+        }
     }
 ];
 
