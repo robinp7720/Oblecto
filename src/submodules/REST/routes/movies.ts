@@ -11,6 +11,7 @@ import { File } from '../../../models/file.js';
 import { Stream } from '../../../models/stream.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
+import { visibleMovieSets } from '../../../lib/sets/visibility.js';
 import { MovieCredit } from '../../../models/movieCredit.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
@@ -281,8 +282,8 @@ export default (server: Express, oblecto: Oblecto) => {
         });
     });
 
-    server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const results = await MovieSet.findAll({});
+    server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const results = await MovieSet.findAll({ where: visibleMovieSets(req.authorization!.user.id) });
 
         res.send(results);
     });
@@ -310,7 +311,7 @@ export default (server: Express, oblecto: Oblecto) => {
                     ]
                 },
             ],
-            where: { id: req.params.id },
+            where: { [Op.and]: [{ id: req.params.id }, visibleMovieSets(req.authorization!.user.id)] },
             limit,
             offset: limit * page
         });
@@ -415,6 +416,8 @@ export default (server: Express, oblecto: Oblecto) => {
             include: [
                 {
                     model: MovieSet,
+                    required: false,
+                    where: visibleMovieSets(req.authorization!.user.id),
                     include: [
                         {
                             model: Movie,

@@ -7,6 +7,7 @@ import { Group, groupColumns } from '../../src/models/group.js';
 import { File, fileColumns } from '../../src/models/file.js';
 import { Movie, movieColumns } from '../../src/models/movie.js';
 import { Series, seriesColumns } from '../../src/models/series.js';
+import { SeriesSet, seriesSetColumns } from '../../src/models/seriesSet.js';
 import { Episode, episodeColumns } from '../../src/models/episode.js';
 import { Person, personColumns } from '../../src/models/person.js';
 import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
@@ -24,6 +25,7 @@ async function database(): Promise<Sequelize> {
     File.init(fileColumns, { sequelize, modelName: 'File' });
     Movie.init(movieColumns, { sequelize, modelName: 'Movie' });
     Series.init(seriesColumns, { sequelize, modelName: 'Series' });
+    SeriesSet.init(seriesSetColumns, { sequelize, modelName: 'SeriesSet' });
     Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
     Person.init(personColumns, { sequelize, modelName: 'Person' });
     MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
@@ -163,6 +165,28 @@ describe('Database migrations', () => {
         assert.equal(robin?.name, 'Robin');
         assert.equal(robin?.publicProfile, false);
         await sequelize.close();
+    });
+
+    it('adds series-set sharing on upgrade and preserves existing sets and shares when rerun', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const query = sequelize.getQueryInterface();
+            const user = await User.create({ username: 'viewer' });
+            const set = await SeriesSet.create({ setName: 'Private shows', public: false });
+            await query.dropTable('SeriesSetUsers');
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0011-series-set-sharing'");
+            assert.deepEqual(await migrate(sequelize), ['0011-series-set-sharing']);
+            assert.equal((await set.reload()).setName, 'Private shows');
+            const share = { SeriesSetId: set.id, UserId: user.id, createdAt: new Date(), updatedAt: new Date() };
+            await query.bulkInsert('SeriesSetUsers', [share]);
+            await assert.rejects(query.bulkInsert('SeriesSetUsers', [share]), /UNIQUE/i);
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0011-series-set-sharing'");
+            assert.deepEqual(await migrate(sequelize), ['0011-series-set-sharing']);
+            const [rows] = await sequelize.query('SELECT SeriesSetId, UserId FROM SeriesSetUsers');
+            assert.deepEqual(rows, [{ SeriesSetId: set.id, UserId: user.id }]);
+            assert.deepEqual(await migrate(sequelize), []);
+        } finally { await sequelize.close(); }
     });
 
     it('lists what an out-of-date database still needs', async () => {

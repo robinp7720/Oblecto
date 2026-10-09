@@ -74,6 +74,7 @@ function initAssociations(): void {
     Movie.belongsToMany(MovieSet, { through: 'MovieSetAllocations' });
 
     SeriesSet.belongsToMany(Series, { through: 'SeriesSetAllocations' });
+    SeriesSet.belongsToMany(User, { through: 'SeriesSetUsers' });
     Series.belongsToMany(SeriesSet, { through: 'SeriesSetAllocations' });
 
     Episode.belongsToMany(File, { through: EpisodeFiles });

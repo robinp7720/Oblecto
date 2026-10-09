@@ -252,6 +252,32 @@ export const MIGRATIONS: Migration[] = [
                 await addColumnIfMissing(queryInterface, 'Files', column, optional(DataTypes.TEXT));
             }
         }
+    },
+    {
+        name: '0011-series-set-sharing',
+        up: async ({ queryInterface }) => {
+            if (await hasTable(queryInterface, 'SeriesSetUsers')) return;
+            await queryInterface.createTable('SeriesSetUsers', {
+                SeriesSetId: {
+                    type: DataTypes.INTEGER,
+                    allowNull: false,
+                    primaryKey: true,
+                    references: { model: 'SeriesSets', key: 'id' },
+                    onDelete: 'CASCADE',
+                    onUpdate: 'CASCADE'
+                },
+                UserId: {
+                    type: DataTypes.INTEGER,
+                    allowNull: false,
+                    primaryKey: true,
+                    references: { model: 'Users', key: 'id' },
+                    onDelete: 'CASCADE',
+                    onUpdate: 'CASCADE'
+                },
+                createdAt: { type: DataTypes.DATE, allowNull: false },
+                updatedAt: { type: DataTypes.DATE, allowNull: false }
+            });
+        }
     }
 ];
 

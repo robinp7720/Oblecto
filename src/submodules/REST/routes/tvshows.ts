@@ -10,6 +10,7 @@ import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { SeriesSet } from '../../../models/seriesSet.js';
+import { visibleSeriesSets } from '../../../lib/sets/visibility.js';
 import { SeriesCredit } from '../../../models/seriesCredit.js';
 import { File } from '../../../models/file.js';
 import Oblecto from '../../../lib/oblecto/index.js';
@@ -306,8 +307,8 @@ export default (server: Express, oblecto: Oblecto) => {
         });
     });
 
-    server.get('/series/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const results = await SeriesSet.findAll({});
+    server.get('/series/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const results = await SeriesSet.findAll({ where: visibleSeriesSets(req.authorization!.user.id) });
 
         res.send(results);
     });
@@ -319,7 +320,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const results = await SeriesSet.findAll({
             include: [{ model: Series }],
-            where: { id: req.params.id },
+            where: { [Op.and]: [{ id: req.params.id }, visibleSeriesSets(req.authorization!.user.id)] },
             limit,
             offset: limit * page
         });
@@ -327,10 +328,17 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(results);
     });
 
-    server.get('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const series: any = await Series.findByPk(req.params.id as string, {
             attributes: [],
-            include: [{ model: SeriesSet, include: [{ model: Series }] }]
+            include: [
+                {
+                    model: SeriesSet,
+                    required: false,
+                    where: visibleSeriesSets(req.authorization!.user.id),
+                    include: [{ model: Series }]
+                }
+            ]
         });
 
         res.send(series ? series.SeriesSets : []);

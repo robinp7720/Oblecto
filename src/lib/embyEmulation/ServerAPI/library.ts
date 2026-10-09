@@ -5,6 +5,7 @@ import { Movie } from '../../../models/movie.js';
 import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 import { MovieSet } from '../../../models/movieSet.js';
+import { visibleMovieSets } from '../../sets/visibility.js';
 import { Person } from '../../../models/person.js';
 import { TrackMovie } from '../../../models/trackMovie.js';
 import { genresFrom } from '../../common/genres.js';
@@ -44,13 +45,7 @@ const userData = (id: string): Dto => ({
  * the condition, so it can join any query on MovieSets.
  */
 export function visibleSets(userId: number | null): WhereOptions {
-    const sequelize = MovieSet.sequelize!;
-    const q = quoter(sequelize);
-    const shared = userId && sequelize.models.MovieSetUsers
-        ? [{ id: { [Op.in]: literal(`(SELECT ${q('MovieSetId')} FROM ${q('MovieSetUsers')} WHERE ${q('UserId')} = ${Number(userId)})`) } }]
-        : [];
-
-    return { [Op.or]: [{ public: true }, ...shared] };
+    return visibleMovieSets(userId);
 }
 
 /** One movie set, if this user may see it. */

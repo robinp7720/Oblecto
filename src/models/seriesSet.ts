@@ -1,4 +1,5 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, NonAttribute } from 'sequelize';
+import type { User } from './user.js';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, NonAttribute, type BelongsToManyAddAssociationMixin } from 'sequelize';
 import { Series } from './series';
 
 export class SeriesSet extends Model<InferAttributes<SeriesSet>, InferCreationAttributes<SeriesSet>> {
@@ -10,6 +11,8 @@ export class SeriesSet extends Model<InferAttributes<SeriesSet>, InferCreationAt
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
+
+    declare addUser: BelongsToManyAddAssociationMixin<User, number>;
 
     // Associations
     declare Series?: NonAttribute<Series[]>;
