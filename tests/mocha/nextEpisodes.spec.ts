@@ -89,7 +89,9 @@ describe('Next episodes', () => {
                 ids[key] = (await Episode.create({ episodeName: key, SeriesId, airedSeason, airedEpisodeNumber })).id;
             }
 
-            await TrackEpisode.create({ userId: 1, episodeId: ids.comedy1, progress: 1, updatedAt: new Date(Date.now() - 60_000) });
+            // Preserve the fixture timestamp: save() otherwise overwrites it with now,
+            // leaving the series ordering dependent on whether writes share a millisecond.
+            await TrackEpisode.create({ userId: 1, episodeId: ids.comedy1, progress: 1, updatedAt: new Date(Date.now() - 60_000) }, { silent: true });
             await TrackEpisode.create({ userId: 1, episodeId: ids.drama10, progress: 1 });
             await TrackEpisode.create({ userId: 1, episodeId: ids.drama9, progress: 1 });
             await TrackEpisode.create({ userId: 1, episodeId: ids.drama11, progress: 0.3 });
