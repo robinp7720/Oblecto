@@ -1,3 +1,4 @@
+import type { StatisticsReport } from '../statistics/accounting.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import mime from 'mime-types';
@@ -54,7 +55,8 @@ export class PlaybackSession {
         readonly file: File,
         public options: PlaybackOptions,
         public media: Media,
-        public plan: PlaybackPlan
+        public plan: PlaybackPlan,
+        readonly statisticsId: string = randomUUID()
     ) {
         this.position = options.position ?? 0;
     }
@@ -102,7 +104,7 @@ export class PlaybackService {
         this.timer = setInterval(() => {
             for (const s of this.sessions.values())
                 if (Date.now() - s.updatedAt > this.idleMs)
-                    void this.stop(s).catch(() => {});
+                    void this.stop(s, 'timeout').catch(() => {});
         }, 30000);
         this.timer.unref();
     }
@@ -250,14 +252,20 @@ export class PlaybackService {
         file: File,
         owner: string,
         userId: number | null,
-        options: PlaybackOptions = {}
+        options: PlaybackOptions = {},
+        statisticsId: string = randomUUID()
     ): Promise<PlaybackSession> {
-        const promise = this.createSession(
-            file,
-            owner,
-            userId,
-            validateOptions(options)
-        );
+        const valid = validateOptions(options);
+        const promise = (async () => {
+            await this.oblecto.statistics?.begin(statisticsId, userId, file, owner.startsWith('emby:') ? 'jellyfin' : 'web', valid.position);
+            try {
+                return await this.createSession(file, owner, userId, valid, statisticsId);
+            } catch (error) {
+                await this.oblecto.statistics?.failure(statisticsId, error instanceof PlaybackError ? error.code : 'PREPARATION_FAILED');
+                await this.oblecto.statistics?.end(statisticsId, 'failed');
+                throw error;
+            }
+        })();
         this.creation.add(promise);
         void promise
             .finally(() => this.creation.delete(promise))
@@ -268,7 +276,8 @@ export class PlaybackService {
         file: File,
         owner: string,
         userId: number | null,
-        options: PlaybackOptions
+        options: PlaybackOptions,
+        statisticsId: string
     ): Promise<PlaybackSession> {
         if (this.closing)
             throw new PlaybackError(
@@ -305,7 +314,8 @@ export class PlaybackService {
                     file,
                     options,
                     data.media,
-                    data.plan
+                    data.plan,
+                    statisticsId
                 );
                 session.remote = { client, id: data.sessionId };
             } catch (error) {
@@ -327,7 +337,8 @@ export class PlaybackService {
                 file,
                 options,
                 media,
-                plan
+                plan,
+                statisticsId
             );
         }
         if (session.position > session.media.duration)
@@ -431,6 +442,7 @@ export class PlaybackService {
                     next.position ?? s.position,
                     s.media.duration
                 );
+                await this.oblecto.statistics?.revise(s.statisticsId, s.position, s.revision, s.plan.method);
                 s.state = 'ready';
                 s.failure = null;
                 s.touch();
@@ -441,12 +453,7 @@ export class PlaybackService {
     }
     report(
         s: PlaybackSession,
-        data: {
-            revision: number;
-            position: number;
-            paused?: boolean;
-            buffering?: boolean;
-        }
+        data: StatisticsReport & { revision: number }
     ): Promise<void> {
         const promise = this.saveReport(s, data);
         s.operations.add(promise);
@@ -457,12 +464,7 @@ export class PlaybackService {
     }
     private async saveReport(
         s: PlaybackSession,
-        data: {
-            revision: number;
-            position: number;
-            paused?: boolean;
-            buffering?: boolean;
-        }
+        data: StatisticsReport & { revision: number }
     ): Promise<void> {
         if (data.revision !== s.revision)
             throw new PlaybackError(
@@ -487,6 +489,8 @@ export class PlaybackService {
         if (s.remote)
             await s.remote.client.request('heartbeat', {sessionId: s.remote.id});
         await this.persist(s, data.position, data.revision);
+        await this.oblecto.statistics?.report(s.statisticsId, data, s.media.duration, s.plan.method);
+        if (data.failed === true) await this.oblecto.statistics?.failure(s.statisticsId, 'CLIENT_FAILED');
     }
     private async persist(
         s: PlaybackSession,
@@ -514,7 +518,7 @@ export class PlaybackService {
                 s.media.duration
             );
     }
-    async stop(s: PlaybackSession): Promise<void> {
+    async stop(s: PlaybackSession, reason = 'stopped'): Promise<void> {
         if (!this.sessions.delete(s.sessionId)) return;
         s.state = 'ended';
         s.signal.abort();
@@ -525,6 +529,7 @@ export class PlaybackService {
                 .catch(() => {});
             s.remote.client.close();
         }
+        await this.oblecto.statistics?.end(s.statisticsId, reason);
         await this.cache.remove(`${s.sessionId}/`);
     }
     async close(): Promise<void> {
@@ -535,7 +540,7 @@ export class PlaybackService {
         for (const session of this.sessions.values()) session.signal.abort();
         await Promise.allSettled(this.creation);
         await Promise.allSettled(
-            [...this.sessions.values()].map((s) => this.stop(s))
+            [...this.sessions.values()].map((s) => this.stop(s, 'shutdown'))
         );
         await this.scheduler.settled();
         await this.cache.close();
@@ -610,6 +615,7 @@ export class PlaybackService {
                     error instanceof PlaybackError
                         ? error.code
                         : 'ENCODING_FAILED';
+                void this.oblecto.statistics?.failure(s.statisticsId, s.failure);
                 logger.warn(`Playback ${s.sessionId}: ${s.failure}`);
             }
             throw error;

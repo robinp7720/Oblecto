@@ -1,3 +1,4 @@
+import { initStatisticsModels } from '../models/statistics.js';
 import { Sequelize, Dialect, Options } from 'sequelize';
 import config from '../config.js';
 import { FederationRecord, federationRecordColumns } from '../models/federationRecord.js';
@@ -32,6 +33,7 @@ let sequelizeInstance: Sequelize | null = null;
  * @param sequelize - Sequelize instance
  */
 function initModels(sequelize: Sequelize): void {
+    initStatisticsModels(sequelize);
     const modelOptions = (modelName: string): { sequelize: Sequelize; modelName: string } => ({ sequelize, modelName });
 
     FederationRecord.init(federationRecordColumns, { ...modelOptions('FederationRecord'), timestamps: false });

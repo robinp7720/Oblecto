@@ -5,6 +5,7 @@ import { User } from '../../models/user.js';
 // The fixed set of permissions a group can grant. Browsing, playback and
 // managing your own account need none of them.
 export const PERMISSIONS = {
+    'statistics.view': 'View server-wide viewing history and playback health',
     'settings.manage': 'Change server settings (providers, sign-in, federation, seedboxes)',
     'users.manage': 'Create, edit and delete users and groups',
     'libraries.manage': 'Manage libraries, sets, artwork and problem files',

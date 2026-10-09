@@ -1,3 +1,4 @@
+import statistics from './v1/statistics.js';
 import federation from './v1/federation.js';
 import auth from './auth.js';
 import episodes from './episodes.js';
@@ -42,6 +43,7 @@ export default (server: Express, oblecto: Oblecto): void => {
     v1Libraries(server, oblecto);
     v1System(server, oblecto);
     v1Status(server, oblecto);
+    statistics(server, oblecto);
     v1Groups(server, oblecto);
     v1Account(server, oblecto);
 };

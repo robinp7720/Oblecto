@@ -1,3 +1,4 @@
+import { initStatisticsModels } from '../../src/models/statistics.js';
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import { DataTypes, Sequelize } from 'sequelize';
@@ -20,6 +21,7 @@ import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '.
 async function database(): Promise<Sequelize> {
     const sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
 
+    initStatisticsModels(sequelize);
     User.init(userColumns, { sequelize, modelName: 'User' });
     Group.init(groupColumns, { sequelize, modelName: 'Group' });
     File.init(fileColumns, { sequelize, modelName: 'File' });
@@ -40,6 +42,21 @@ async function database(): Promise<Sequelize> {
 const columns = async (sequelize: Sequelize, table: string): Promise<string[]> => Object.keys(await sequelize.getQueryInterface().describeTable(table));
 
 describe('Database migrations', () => {
+    it('adds statistics tables to older databases and preserves them on repeated migration', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const query = sequelize.getQueryInterface();
+            for (const table of ['ViewingDays', 'ViewingSessions', 'PlaybackHealth', 'StatisticsMeta']) await query.dropTable(table);
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0012-statistics'");
+            assert.deepEqual(await migrate(sequelize), ['0012-statistics']);
+            for (const table of ['ViewingDays', 'ViewingSessions', 'PlaybackHealth', 'StatisticsMeta']) assert.equal(await query.tableExists(table), true);
+            assert.ok((await columns(sequelize, 'ViewingDays')).includes('watchSeconds'));
+            assert.ok((await columns(sequelize, 'ViewingSessions')).includes('title'));
+            assert.deepEqual(await migrate(sequelize), []);
+        } finally { await sequelize.close(); }
+    });
+
     it('creates a new database and records every migration', async () => {
         const sequelize = await database();
 

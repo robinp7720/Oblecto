@@ -1,3 +1,4 @@
+import { viewingColumns, viewingDayColumns, healthColumns, statisticsMetaColumns } from '../../models/statistics.js';
 import { federationRecordColumns } from '../../models/federationRecord.js';
 import { DataTypes, type DataType, type ModelAttributeColumnOptions, type QueryInterface, type Sequelize } from 'sequelize';
 import { SequelizeStorage, Umzug } from 'umzug';
@@ -277,6 +278,26 @@ export const MIGRATIONS: Migration[] = [
                 createdAt: { type: DataTypes.DATE, allowNull: false },
                 updatedAt: { type: DataTypes.DATE, allowNull: false }
             });
+        }
+    },
+    {
+        name: '0012-statistics',
+        up: async ({ queryInterface }) => {
+            for (const [table, columns] of Object.entries({
+                ViewingSessions: viewingColumns,
+                ViewingDays: viewingDayColumns,
+                PlaybackHealth: healthColumns,
+                StatisticsMeta: statisticsMetaColumns
+            })) {
+                if (!await hasTable(queryInterface, table)) await queryInterface.createTable(table, columns);
+            }
+            await addIndexIfMissing(queryInterface, 'ViewingSessions', ['userId', 'startedAt', 'id'], 'viewing_user_time');
+            await addIndexIfMissing(queryInterface, 'ViewingSessions', ['startedAt', 'id'], 'viewing_time');
+            await addIndexIfMissing(queryInterface, 'ViewingSessions', ['endedAt', 'lastReportAt'], 'viewing_active');
+            await addIndexIfMissing(queryInterface, 'ViewingSessions', ['itemType', 'itemId', 'startedAt'], 'viewing_media_time');
+            await addIndexIfMissing(queryInterface, 'ViewingDays', ['sessionId', 'day'], 'viewing_session_day', true);
+            await addIndexIfMissing(queryInterface, 'ViewingDays', ['day'], 'viewing_day');
+            await addIndexIfMissing(queryInterface, 'PlaybackHealth', ['resolution', 'bucket'], 'health_resolution_time', true);
         }
     }
 ];

@@ -1,5 +1,5 @@
 // What /api/v1/me answers, for specs that stub the API.
-export const ALL_PERMISSIONS = ['settings.manage', 'users.manage', 'libraries.manage', 'system.manage']
+export const ALL_PERMISSIONS = ['settings.manage', 'users.manage', 'libraries.manage', 'system.manage', 'statistics.view']
 
 export const DEFAULT_PREFERENCES = {
   language: null, audioLanguage: null, subtitleLanguage: null, subtitleMode: 'auto', quality: 'original', autoplayNext: true

@@ -232,7 +232,7 @@ describe('groups and permissions', () => {
             const alice = await createUser('alice', admins);
             const { body } = await call('GET', '/api/v1/permissions', alice);
 
-            assert.deepEqual(body.map((permission: any) => permission.key).sort(), ['libraries.manage', 'settings.manage', 'system.manage', 'users.manage']);
+            assert.deepEqual(body.map((permission: any) => permission.key).sort(), ['libraries.manage', 'settings.manage', 'statistics.view', 'system.manage', 'users.manage']);
         });
 
         it('creates, edits and deletes groups', async () => {

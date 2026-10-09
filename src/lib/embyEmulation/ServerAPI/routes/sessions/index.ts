@@ -1,14 +1,12 @@
 import { saveProgress } from '../../../../playback/progress.js';
 import { embyIdentity } from '../../playback.js';
-import { TrackEpisode } from '../../../../../models/trackEpisode';
-import { TrackMovie } from '../../../../../models/trackMovie';
 import { Episode } from '../../../../../models/episode';
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
 import { parseId } from '../../../helpers';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
-import { deletePlaybackEntry, getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry } from '../../playbackState.js';
+import { getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry, statisticsPlaybackId, legacyStatisticsId } from '../../playbackState.js';
 
 /**
  * @param server
@@ -28,58 +26,58 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         res.send();
     });
 
-    server.post('/sessions/playing', (req: EmbyRequest, res: Response) => {
-        embyIdentity(embyEmulation, req);
-        const token = getEmbyToken(req);
-        const params = { ...req.query, ...req.body };
+    server.post('/sessions/playing', (req, res) => report(req, res, false, true));
 
-        if (token && embyEmulation.sessions[token]) {
-            (embyEmulation.sessions[token] as any).playSession = params;
-        }
-
-        const playSessionId = getRequestValue(req, 'PlaySessionId');
-        const mediaSourceId = getRequestValue(req, 'MediaSourceId');
-
-        if (playSessionId && token) {
-            upsertPlaybackEntry(embyEmulation as any, token, {
-                playSessionId,
-                itemId: params.ItemId,
-                mediaSourceId
-            });
-            if (params.ItemId && mediaSourceId !== undefined) {
-                setLastMediaSource(embyEmulation as any, token, String(params.ItemId), String(mediaSourceId));
-            }
-        }
-
-        res.send();
-    });
-
-    const report = async (req: EmbyRequest, res: Response, stop = false): Promise<void> => {
+    const report = async (req: EmbyRequest, res: Response, stop = false, start = false): Promise<void> => {
         const token = getEmbyToken(req);
         if (!token || !embyEmulation.sessions[token]) { res.status(401).send('Unauthorized'); return; }
         const itemId = getRequestValue(req, 'ItemId');
         if (!itemId) { res.status(400).send('Missing ItemId'); return; }
         const time = Number(getRequestValue(req, 'PositionTicks') ?? 0) / 10000000;
         if (!Number.isFinite(time) || time < 0) { res.status(400).send('Invalid PositionTicks'); return; }
-        const playId = getRequestValue(req, 'PlaySessionId');
-        if (playId) upsertPlaybackEntry(embyEmulation, token, { playSessionId: playId, itemId: String(itemId) });
-        const entry = getPlaybackEntry(embyEmulation, token, playId);
+        const suppliedPlayId = getRequestValue(req, 'PlaySessionId');
+        const playId = suppliedPlayId || `legacy:${String(itemId)}`;
+        let entry = getPlaybackEntry(embyEmulation, token, playId);
+        if (entry?.stopped && (!start || suppliedPlayId)) { res.status(204).send(); return; }
+        if (!stop || entry) entry = upsertPlaybackEntry(embyEmulation, token, {
+            playSessionId: playId,
+            itemId: String(itemId),
+            stopped: false,
+            statisticsId: start && !suppliedPlayId && entry?.stopped ? legacyStatisticsId() : entry?.statisticsId ?? (suppliedPlayId ? statisticsPlaybackId(token, playId) : legacyStatisticsId())
+        });
+        const mediaSourceId = getRequestValue(req, 'MediaSourceId');
+        if (mediaSourceId !== undefined) setLastMediaSource(embyEmulation, token, String(itemId), String(mediaSourceId));
+        if (start) (embyEmulation.sessions[token] as any).playSession = { ...req.query, ...req.body };
         const playback = entry?.streamSessionId ? embyEmulation.oblecto.playback?.sessions.get(String(entry.streamSessionId)) : undefined;
         if (playback && playback.owner === `emby:${token}`) {
             await embyEmulation.oblecto.playback.report(playback, {
  revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' 
 });
+            if (stop && String(getRequestValue(req, 'Failed')) === 'true') await embyEmulation.oblecto.statistics?.failure(playback.statisticsId, 'CLIENT_FAILED');
             if (stop) await embyEmulation.oblecto.playback.stop(playback);
         } else {
             const { id, type } = parseId(String(itemId));
             const item = type === 'episode' ? await Episode.findByPk(id, { include: [File] }) : type === 'movie' ? await Movie.findByPk(id, { include: [File] }) : null;
             if (item && (type === 'movie' || type === 'episode')) {
                 const files = item.get('Files') as File[] | undefined;
-                const duration = files?.[0]?.duration || Number(item.get('runtime')) * 60 || 0;
+                const file = files?.find(file => String(file.id) === String(mediaSourceId ?? entry?.mediaSourceId)) ?? files?.[0];
+                const duration = file?.duration || Number(item.get('runtime')) * 60 || 0;
+                if (entry?.statisticsId) {
+                    const statistics = embyEmulation.oblecto?.statistics;
+                    const statsId = entry.statisticsId;
+                    await statistics?.begin(statsId, Number(embyEmulation.sessions[token].Id), file ?? null, 'jellyfin', time, {
+                        itemType: type, itemId: id, title: item instanceof Movie ? item.movieName ?? 'Movie' : item.episodeName ?? 'Episode'
+                    });
+                    const playMethod = String(getRequestValue(req, 'PlayMethod')).toLowerCase();
+                    const method = playMethod === 'directplay' ? 'direct' : playMethod === 'directstream' ? 'remux' : playMethod === 'transcode' ? 'transcode' : 'unknown';
+                    await statistics?.report(statsId, { position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' }, duration, method);
+                    if (stop && String(getRequestValue(req, 'Failed')) === 'true') await statistics?.failure(statsId, 'CLIENT_FAILED');
+                    if (stop) await statistics?.end(statsId);
+                }
                 await saveProgress(Number(embyEmulation.sessions[token].Id), type, id, time, duration);
             }
         }
-        if (stop && playId) deletePlaybackEntry(embyEmulation, token, playId);
+        if (stop && entry) upsertPlaybackEntry(embyEmulation, token, { playSessionId: playId, stopped: true });
         res.status(204).send();
     };
     server.post('/sessions/playing/progress', (req, res) => report(req, res));

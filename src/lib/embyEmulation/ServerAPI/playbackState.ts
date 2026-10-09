@@ -1,9 +1,12 @@
+import { createHash, randomUUID } from 'node:crypto';
 type PlaybackEntry = {
     playSessionId: string;
     itemId?: string | number;
     mediaSourceId?: string | number;
     streamSessionId?: string | number;
     updatedAt: number;
+    statisticsId?: string;
+    stopped?: boolean;
 };
 
 export type PlaybackState = {
@@ -76,6 +79,8 @@ export const upsertPlaybackEntry = (embyEmulation: EmbyEmulationLike, token: str
         itemId: entry.itemId ?? existing.itemId,
         mediaSourceId: entry.mediaSourceId ?? existing.mediaSourceId,
         streamSessionId: entry.streamSessionId ?? existing.streamSessionId,
+        statisticsId: entry.statisticsId ?? existing.statisticsId,
+        stopped: entry.stopped ?? existing.stopped,
         updatedAt: now
     };
 
@@ -104,3 +109,9 @@ export const deletePlaybackEntry = (embyEmulation: EmbyEmulationLike, token: str
     if (playbackState === null || playSessionId === undefined || playSessionId === '') return false;
     return playbackState.playSessions.delete(playSessionId);
 };
+
+/** Protocol ids are scoped to an authenticated client; never persist the token itself. */
+export function statisticsPlaybackId(token: string, playSessionId: string): string {
+    return createHash('sha256').update(`${token}:${playSessionId}`).digest('hex');
+}
+export function legacyStatisticsId(): string { return randomUUID(); }

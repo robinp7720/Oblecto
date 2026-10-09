@@ -1,3 +1,4 @@
+import { StatisticsService } from '../statistics/StatisticsService.js';
 import { FederationService } from '../federation/FederationService.js';
 import pkg from '../../../package.json';
 import TVDB from 'node-tvdb';
@@ -82,6 +83,7 @@ export default class Oblecto {
     public seriesCleaner: SeriesCleaner;
     public mediaAnalyser: MediaAnalyser;
     public playback: PlaybackService;
+    public statistics: StatisticsService;
     public federation: FederationService;
     private federationStart: Promise<void>;
     public seedboxController: SeedboxController;
@@ -139,6 +141,7 @@ export default class Oblecto {
 
         this.mediaAnalyser = new MediaAnalyser(this);
 
+        this.statistics = new StatisticsService(this.database, this);
         this.playback = new PlaybackService(this);
         this.playback.remoteFactory = host => connectPlaybackPeer(this, host);
 
@@ -191,6 +194,7 @@ export default class Oblecto {
 
         await Promise.allSettled(closers.map(close => Promise.resolve().then(close)));
 
+        await this.statistics.close();
         await this.database.close();
     }
 }

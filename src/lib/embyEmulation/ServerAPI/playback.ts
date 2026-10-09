@@ -5,7 +5,7 @@ import type { File } from '../../../models/file.js';
 import type { PlaybackOptions } from '../../playback/types.js';
 import { PlaybackError } from '../../playback/types.js';
 import { getEmbyToken, getRequestValue } from './requestUtils.js';
-import { getPlaybackEntry, upsertPlaybackEntry } from './playbackState.js';
+import { getPlaybackEntry, upsertPlaybackEntry, statisticsPlaybackId, legacyStatisticsId } from './playbackState.js';
 
 export function embyIdentity(
     emby: EmbyEmulation,
@@ -167,13 +167,16 @@ async function createEmbyPlayback(
         file,
         identity.owner,
         identity.userId,
-        { ...requested, forceHls }
+        { ...requested, forceHls },
+        entry?.streamSessionId ? legacyStatisticsId() : entry?.statisticsId ?? statisticsPlaybackId(identity.token, playSessionId)
     );
     upsertPlaybackEntry(emby, identity.token, {
         playSessionId,
         itemId: String(req.params.mediaid ?? req.params.itemid),
         mediaSourceId: file.id,
-        streamSessionId: s.sessionId
+        streamSessionId: s.sessionId,
+        statisticsId: s.statisticsId,
+        stopped: false
     });
     return s;
 }
