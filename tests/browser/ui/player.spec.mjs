@@ -63,7 +63,7 @@ function json (route, body, status = 200) {
 
 // `me` answers /api/v1/me; the body of every new playback session is pushed
 // onto `sessions`.
-async function stub (page, { me = account(), sessions = [], markers = {}, thumbnailStatus = 200 } = {}) {
+async function stub (page, { me = account(), sessions = [], markers = {}, thumbnailStatus = 200, nextEpisode, artworkStatus = 404 } = {}) {
   // Everything is namespaced under a dedicated API origin so the stubs cannot
   // collide with the dev server's own module paths.
   await page.route('**oblecto.test/**', route => {
@@ -96,11 +96,11 @@ async function stub (page, { me = account(), sessions = [], markers = {}, thumbn
     }
 
     if (/\/(banner|poster|fanart|thumb)$/.test(path)) {
-      return route.fulfill({ status: 404, headers: CORS, body: '' })
+      return route.fulfill({ status: artworkStatus, contentType: 'image/svg+xml', headers: CORS, body: artworkStatus === 200 ? '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="teal"/></svg>' : '' })
     }
 
-    if (/^\/episode\/\d+\/next/.test(path)) return json(route, { id: 2, episodeName: 'Paradigm Shift' })
-    if (/^\/episode\/\d+$/.test(path)) return json(route, EPISODE)
+    if (/^\/episode\/\d+\/next/.test(path)) return json(route, nextEpisode === undefined ? { id: Number(path.split('/')[2]) + 1, episodeName: 'Paradigm Shift', airedSeason: '2', airedEpisodeNumber: '5', runtime: 42 } : nextEpisode)
+    if (/^\/episode\/\d+(?:\/info)?$/.test(path)) return json(route, { ...EPISODE, id: Number(path.split('/')[2]) })
 
     return json(route, [])
   })
@@ -274,6 +274,44 @@ test.describe('@desktop player', () => {
 })
 
 test.describe('@phone player', () => {
+  test('mobile transport is centered on the video in portrait and landscape', async ({ page }) => {
+    await boot(page)
+    await play(page)
+    await page.evaluate(() => document.querySelector('.player-root video').pause())
+    for (const viewport of [{ width: 393, height: 727 }, { width: 720, height: 393 }]) {
+      await page.setViewportSize(viewport)
+      const transport = page.locator('.player-root .centre-play')
+      await expect(transport).toBeVisible()
+      const videoBox = await page.locator('.player-root video').boundingBox()
+      const buttonBox = await transport.boundingBox()
+      expect(buttonBox.x + buttonBox.width / 2).toBeCloseTo(videoBox.x + videoBox.width / 2, 0)
+      expect(buttonBox.y + buttonBox.height / 2).toBeCloseTo(videoBox.y + videoBox.height / 2, 0)
+    }
+  })
+
+  test('next episode uses a vertical card within portrait and landscape bounds', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 41 })
+    for (const viewport of [{ width: 393, height: 727 }, { width: 720, height: 393 }]) {
+      await page.setViewportSize(viewport)
+      const card = page.locator('.up-next')
+      await expect(card).toBeVisible()
+      const box = await card.boundingBox()
+      const art = await card.locator('.episode-art').boundingBox()
+      const copy = await card.locator('.episode-copy').boundingBox()
+      expect(box.width).toBeLessThanOrEqual(viewport.width <= 760 ? 240 : 280)
+      expect(box.x).toBeGreaterThanOrEqual(0)
+      expect(box.y).toBeGreaterThanOrEqual(0)
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height)
+      expect(art.width / art.height).toBeCloseTo(16 / 9, 1)
+      expect(copy.y).toBeGreaterThanOrEqual(art.y + art.height)
+      const dismiss = card.getByRole('button', { name: 'Not now', exact: true })
+      await expect(dismiss).toBeInViewport()
+      const action = await dismiss.boundingBox()
+      expect(action.y + action.height).toBeLessThanOrEqual(box.y + box.height)
+    }
+  })
+
   test('controls come back after auto-hide', async ({ page }) => {
     await boot(page)
     await play(page)
@@ -367,7 +405,7 @@ test.describe('@desktop @phone playback markers', () => {
     await page.getByRole('button', { name: 'Skip credits', exact: true }).click()
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeGreaterThanOrEqual(50)
     expect(await page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeLessThan(51)
-    await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+    await expect(page.locator('.up-next .countdown-progress')).toHaveCount(0)
     expect(errors).toEqual([])
   })
 
@@ -402,10 +440,226 @@ test('@desktop @phone terminal credit markers start a cancellable next-episode c
   await boot(page, { markers: { ...MARKERS, segments: [{ type: 'credits', start: 40, end: 60 }] } })
   await play(page)
   await page.evaluate(() => { const video = document.querySelector('.player-root video'); video.pause(); video.currentTime = 35 })
-  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+  await expect(page.locator('.up-next .countdown-progress')).toHaveCount(0)
   await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 41 })
-  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toBeVisible()
+  await expect(page.locator('.up-next .countdown-progress')).toBeVisible()
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Play now', exact: true })).toHaveCount(0)
+  await expect(page.locator('.up-next .countdown-progress')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Skip credits', exact: true })).toBeVisible()
+})
+
+const IDLE_MS = 90 * 60 * 1000
+
+async function finishEpisode (page) {
+  await page.evaluate(() => {
+    const video = document.querySelector('.player-root video')
+    video.pause()
+    video.currentTime = video.duration
+    video.dispatchEvent(new Event('ended'))
+  })
+}
+
+async function waitingPlayer (page, preferences = {}, options = {}) {
+  const start = new Date('2026-01-01T00:00:00Z')
+  await page.clock.setFixedTime(start)
+  await boot(page, { ...options, me: account({ preferences }) })
+  const nextLoaded = page.waitForResponse(response => response.url().includes('/episode/1/next'))
+  await play(page)
+  await nextLoaded
+  return start.getTime()
+}
+
+test.describe('@desktop @phone next episode and watching confirmation', () => {
+  test('cards show numbering, runtime and missing-art fallback in credits and at the end', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 56 })
+    const card = page.locator('.up-next .episode-preview')
+    await expect(card.locator('.episode-number')).toHaveText('S2 E5')
+    await expect(card.locator('.runtime')).toHaveText('42m')
+    await expect(card).toContainText('Paradigm Shift')
+    await expect(card.locator('.art-fallback')).toBeVisible()
+    await finishEpisode(page)
+    await expect(page.locator('.end-screen .episode-preview')).toContainText('Paradigm Shift')
+  })
+
+  test('artwork loads when available and missing episode details are omitted', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false }, { artworkStatus: 200, nextEpisode: { id: 2 } })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 56 })
+    const card = page.locator('.up-next .episode-preview')
+    await expect(card).toContainText('Next episode')
+    await expect(card.locator('.episode-number, .runtime')).toHaveCount(0)
+    await expect.poll(() => card.locator('img').evaluate(img => img.naturalWidth)).toBeGreaterThan(0)
+  })
+
+  for (const autoplayNext of [false, true]) {
+    test(`terminal credits show the card before 90% with autoplay ${autoplayNext}`, async ({ page }) => {
+      await waitingPlayer(page, { autoplayNext }, { markers: { segments: [{ type: 'credits', start: 40, end: 60 }] } })
+      await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 39 })
+      await expect(page.locator('.up-next')).toHaveCount(0)
+      await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 41 })
+      await expect(page.locator('.up-next')).toBeVisible()
+      await expect(page.locator('.up-next .countdown-progress')).toHaveCount(autoplayNext ? 1 : 0)
+      await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 35 })
+      await expect(page.locator('.up-next')).toHaveCount(0)
+    })
+  }
+
+  test('90% alone does not show a card before late terminal credits', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false }, { markers: { segments: [{ type: 'credits', start: 58, end: 60 }] } })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 55 })
+    await expect(page.locator('.up-next')).toHaveCount(0)
+    await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 59 })
+    await expect(page.locator('.up-next')).toBeVisible()
+  })
+
+  test('nonterminal credits preserve the post-credit scene after 90%', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false }, { markers: MARKERS })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 56 })
+    await expect(page.locator('.up-next')).toHaveCount(0)
+    await finishEpisode(page)
+    await expect(page.locator('.end-screen .episode-preview')).toBeVisible()
+  })
+
+  test('without markers the final 30 seconds offer playable artwork', async ({ page }) => {
+    await waitingPlayer(page, { autoplayNext: false })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 29 })
+    await expect(page.locator('.up-next')).toHaveCount(0)
+    await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 31 })
+    const artwork = page.getByRole('button', { name: 'Play next: Paradigm Shift', exact: true })
+    await expect(artwork).toBeVisible()
+    await artwork.focus()
+    await expect(artwork.locator('.card-play')).toBeVisible()
+    await page.keyboard.press('Space')
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+  })
+
+  test('cancellation leaves a manual card and dismissal hides it for the episode', async ({ page }) => {
+    await waitingPlayer(page, {}, { markers: { segments: [{ type: 'credits', start: 40, end: 60 }] } })
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 41 })
+    await expect(page.locator('.up-next .countdown-progress')).toBeVisible()
+    await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 45 })
+    await expect(page.locator('.countdown-progress > span')).toHaveAttribute('style', 'width: 40%;')
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Play next: Paradigm Shift', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Not now', exact: true }).click()
+    await expect(page.locator('.up-next')).toHaveCount(0)
+    await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 35 })
+    await page.evaluate(() => { document.querySelector('.player-root video').currentTime = 41 })
+    await expect(page.locator('.up-next')).toHaveCount(0)
+    await finishEpisode(page)
+    const artwork = page.getByRole('button', { name: 'Play next: Paradigm Shift', exact: true })
+    await expect(artwork).toBeFocused()
+    await artwork.click()
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+  })
+
+  test('the final episode ends without asking for confirmation', async ({ page }) => {
+    const start = await waitingPlayer(page, {}, { nextEpisode: null })
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await finishEpisode(page)
+    await expect(page.locator('.end-screen')).toContainText('You are all caught up')
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+  })
+
+  test('movies continue uninterrupted after the inactivity limit', async ({ page }) => {
+    const start = new Date('2026-01-01T00:00:00Z')
+    await page.clock.setFixedTime(start)
+    await boot(page)
+    await page.evaluate(episode => window.__store.setPlaying({ title: 'Test movie', type: 'movie', entity: episode }), EPISODE)
+    await page.waitForFunction(() => document.querySelector('.player-root video')?.readyState >= 2)
+    await page.clock.setFixedTime(start.getTime() + IDLE_MS)
+    await page.evaluate(() => {
+      const video = document.querySelector('.player-root video')
+      video.currentTime = 10
+      return video.play()
+    })
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').paused)).toBe(false)
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+    await finishEpisode(page)
+    await expect(page.locator('.end-screen')).toContainText('Finished')
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+  })
+
+  test('expiry allows credits to finish, then blocks autoplay until explicitly confirmed', async ({ page }) => {
+    const start = await waitingPlayer(page)
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await page.evaluate(() => { const v = document.querySelector('.player-root video'); v.pause(); v.currentTime = 56 })
+    await expect(page.locator('.up-next .countdown-progress')).toHaveCount(0)
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+    await finishEpisode(page)
+    const prompt = page.getByRole('dialog', { name: 'Are you still watching?', exact: true })
+    await expect(prompt).toBeVisible()
+    await expect(prompt.locator('button.episode-art')).toHaveCount(0)
+    await page.clock.setFixedTime(start + IDLE_MS * 3)
+    await page.mouse.move(1, 1)
+    await page.keyboard.press('k')
+    await expect(prompt).toBeVisible()
+    expect(await page.evaluate(() => window.__store.playing.entity.id)).toBe(1)
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Stop watching', exact: true })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Continue watching', exact: true })).toBeFocused()
+    await page.getByRole('button', { name: 'Continue watching', exact: true }).click()
+    await expect(prompt).toHaveCount(0)
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+  })
+
+  test('mouse activity resets the timer and autoplay preserves it across titles', async ({ page }) => {
+    const start = await waitingPlayer(page)
+    await page.clock.setFixedTime(start + IDLE_MS - 1)
+    await page.mouse.move(10, 10)
+    await page.clock.setFixedTime(start + IDLE_MS)
+    const nextLoaded = page.waitForResponse(response => response.url().includes('/episode/2/next'))
+    await finishEpisode(page)
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+    await nextLoaded
+    await page.clock.setFixedTime(start + IDLE_MS * 2)
+    await finishEpisode(page)
+    await expect(page.locator('.still-watching')).toBeVisible()
+  })
+
+  test('stop watching closes a docked player without starting another episode', async ({ page }) => {
+    const start = await waitingPlayer(page)
+    await page.evaluate(() => window.__store.setPlaySizeFormat(2))
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await finishEpisode(page)
+    await expect(page.locator('.still-watching')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue watching', exact: true })).toBeFocused()
+    await page.getByRole('button', { name: 'Stop watching', exact: true }).click()
+    await expect(page.locator('.player-root')).toHaveCount(0)
+  })
+
+  test('disabled safeguard continues autoplay after inactivity', async ({ page }) => {
+    const start = await waitingPlayer(page, { stillWatchingPrompt: false })
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await finishEpisode(page)
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+  })
+
+  test('disabled autoplay shows the end card without an inactivity prompt', async ({ page }) => {
+    const start = await waitingPlayer(page, { autoplayNext: false })
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await finishEpisode(page)
+    await expect(page.locator('.end-screen')).toBeVisible()
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+  })
+
+  test('remote resume confirms while remote seek cannot bypass the prompt', async ({ page }) => {
+    const start = await waitingPlayer(page)
+    await page.clock.setFixedTime(start + IDLE_MS)
+    await finishEpisode(page)
+    await expect(page.locator('.still-watching')).toBeVisible()
+    await page.evaluate(async () => {
+      const { handleCommand } = await import('/src/remote/receiver.js')
+      await handleCommand({ command: { type: 'seek', position: 10 } })
+    })
+    await expect(page.locator('.still-watching')).toBeVisible()
+    await page.evaluate(async () => {
+      const { handleCommand } = await import('/src/remote/receiver.js')
+      await handleCommand({ command: { type: 'resume' } })
+    })
+    await expect.poll(() => page.evaluate(() => window.__store.playing.entity.id)).toBe(2)
+    await expect(page.locator('.still-watching')).toHaveCount(0)
+  })
 })

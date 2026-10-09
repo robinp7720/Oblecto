@@ -154,6 +154,18 @@ describe('account self-service', () => {
         assert.equal(body.preferences.subtitleMode, 'auto');
     });
 
+    it('saves the watching safeguard independently and rejects non-booleans', async () => {
+        const { body } = await request('PATCH', '/api/v1/me', { json: { preferences: { stillWatchingPrompt: false } } });
+        assert.equal(body.preferences.stillWatchingPrompt, false);
+        const other = await User.create({ username: 'alice', groupId: user.groupId });
+        assert.equal((await request('GET', '/api/v1/me', { as: other })).body.preferences.stillWatchingPrompt, true);
+        assert.equal((await request('GET', '/api/v1/me')).body.preferences.stillWatchingPrompt, false);
+        assert.equal((await User.findByPk(user.id))!.preferences!.stillWatchingPrompt, false);
+        const invalid = await request('PATCH', '/api/v1/me', { json: { preferences: { stillWatchingPrompt: 'false' } } });
+        assert.equal(invalid.status, 400);
+        assert.equal((await User.findByPk(user.id))!.preferences!.stillWatchingPrompt, false);
+    });
+
     it('rejects unknown or invalid preferences and stores none of them', async () => {
         const invalid = {
             theme: 'dark', quality: 4000, language: 'nl'

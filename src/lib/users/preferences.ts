@@ -14,6 +14,7 @@ export interface UserPreferences {
     quality: Quality;
     // Start the next episode when one ends
     autoplayNext: boolean;
+    stillWatchingPrompt: boolean;
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -23,6 +24,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     subtitleMode: 'auto',
     quality: 'original',
     autoplayNext: true,
+    stillWatchingPrompt: true,
 };
 
 const SUBTITLE_MODES: SubtitleMode[] = ['off', 'auto', 'forced'];
@@ -39,6 +41,7 @@ const validators: { [K in keyof UserPreferences]: (value: unknown) => boolean } 
     subtitleMode: value => SUBTITLE_MODES.includes(value as SubtitleMode),
     quality: value => QUALITIES.includes(value as Quality),
     autoplayNext: value => typeof value === 'boolean',
+    stillWatchingPrompt: value => typeof value === 'boolean',
 };
 
 const messages: { [K in keyof UserPreferences]: string } = {
@@ -48,6 +51,7 @@ const messages: { [K in keyof UserPreferences]: string } = {
     subtitleMode: `Choose one of ${SUBTITLE_MODES.join(', ')}.`,
     quality: `Choose one of ${QUALITIES.join(', ')}.`,
     autoplayNext: 'Must be true or false.',
+    stillWatchingPrompt: 'Must be true or false.',
 };
 
 /**

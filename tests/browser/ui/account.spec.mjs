@@ -149,13 +149,15 @@ test.describe('@desktop account and permissions', () => {
     await page.getByLabel('Audio language').selectOption('jpn')
     await page.getByLabel('Quality').selectOption('720')
     await page.getByLabel('Play the next episode automatically').uncheck()
+    await page.getByLabel('Ask if I’m still watching').uncheck()
 
-    await expect.poll(() => calls.length).toBe(4)
+    await expect.poll(() => calls.length).toBe(5)
     expect(calls.map(call => call.body)).toEqual([
       { preferences: { subtitleMode: 'off' } },
       { preferences: { audioLanguage: 'jpn' } },
       { preferences: { quality: 720 } },
-      { preferences: { autoplayNext: false } }
+      { preferences: { autoplayNext: false } },
+      { preferences: { stillWatchingPrompt: false } }
     ])
     await expect(page.getByLabel('Audio language')).toHaveValue('jpn')
   })
