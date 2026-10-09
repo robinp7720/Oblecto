@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0010). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0012). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
+
+- Next-episode offers use episode-card artwork and details with a borderless credits indicator, small text actions and a subtle countdown strip. Cards appear at terminal credits, or the final 30 seconds without markers, replacing the legacy 90% threshold. A default-on account preference asks “Are you still watching?” before autoplay continues after 90 minutes without interaction.
+- Personal viewing statistics and a permission-controlled server dashboard with full session history, active watch time, distinct-coverage completions, repeat plays, library totals and playback-health charts. Native and Jellyfin clients share collection; migration 0012 stores history and operational summaries. The statistics page groups key metrics and tables into responsive panels, with chart scales, playback-method bars and expandable measurement notes.
 
 - Chapters in Playback settings and on the seek bar, thumbnail previews while scrubbing, and skip buttons for intros, credits, recaps and previews. Local files are analysed after indexing; existing libraries can use Settings → Maintenance → Analyse playback. Chapter titles provide segments, and FFmpeg with chromaprint also detects shared episode intros and credits. Jellyfin apps receive chapters, thumbnails and segment ranges too.
 - Per-file manual segment correction through the API. `streaming.trickplay`, `streaming.trickplayInterval`, `streaming.detectSegments` and `assets.trickplayLocation` configure analysis; migration 0010 stores its results.
@@ -22,6 +25,17 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 - Federation pairs servers with a one-time invitation, synchronizes catalogs as consistent snapshots every fifteen minutes (`federation.syncIntervalMs`), and has an administration page and API. See [docs/FEDERATION.md](docs/FEDERATION.md).
 
 ### Fixed
+
+- The mobile account menu opens as a wide panel just below its avatar, with scrolling constrained to the available viewport.
+
+- Shelf navigation uses centered SVG arrows; shared play icons use explicit alignment without text-baseline spacing.
+
+- Search people results scroll horizontally with shelf navigation. Movie and episode cards share a subdued play control that appears on hover or keyboard focus, with a small corner control on touch screens.
+
+- Mobile playback controls are centered on the video in portrait and landscape, independently of the header and seek bar heights.
+
+- Native movie and series set lists, details and title memberships now hide private sets that are not shared with the signed-in user. Creation keeps new sets accessible to their creator, and no longer reveals an existing unshared private set with the same name. Migration 0011 adds series-set user sharing.
+- Invalid set creation requests return HTTP 400 instead of hanging; names and optional descriptions are validated too.
 
 - Every page of a Jellyfin listing after the first came back wrong.
 - jellyfin-web and other apps built on the Jellyfin SDK could not open the socket, and opening a series in them failed.

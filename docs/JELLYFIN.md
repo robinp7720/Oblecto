@@ -144,3 +144,15 @@ Peripheral features like LiveTV, Music, Channels, and Plugin management are most
 - **Transcoding Options**: Only the hardware encoder is configurable from a Jellyfin dashboard.
 - **Remote Access**: Not implemented.
 - **Dashboard**: The server name, hardware encoder and branding pages work; most other pages show defaults.
+
+Collection visibility uses the same public-or-shared rule as the native REST API. New movie sets created through the native API are shared with their creator, so private sets remain visible to that user in Jellyfin apps.
+
+## Viewing statistics
+
+Jellyfin start/progress/stop reports feed Oblecto's viewing history, including clients that report
+outside a managed stream. A client-scoped `PlaySessionId` associates both paths with one viewing;
+stream lease identifiers remain separate. Reports without it use an in-memory per-item fallback.
+Jellyfin viewing time and coverage are conservative estimates from position and pause state; unavailable
+buffering telemetry remains unknown. `Failed` on a stop report records a client failure. Statistics
+appear in the Oblecto web app, not in a new Jellyfin endpoint; Jellyfin's existing watched-state and
+`PlayCount` compatibility fields retain their existing meaning.

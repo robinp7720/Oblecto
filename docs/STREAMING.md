@@ -53,3 +53,20 @@ FFprobe reads chapter times and titles. Recognised chapter titles identify intro
 Oblecto Web shows chapter boundaries and chapter names on the seek bar, chapter navigation in Playback settings, and thumbnail previews while hovering or dragging. Skip buttons seek to the end of intro, credit, recap or preview ranges. Episode autoplay uses terminal detected credits as its countdown start; a credits sequence followed by another scene can be skipped without jumping over that scene. With no credit markers it retains the 30-second countdown lead; with known credits followed by another scene, autoplay waits until playback ends. Missing thumbnails fall back to time-only previews. Federated playback currently supplies no markers or thumbnails.
 
 Jellyfin item details expose `Chapters`, `Trickplay`, and media source `HasSegments`. Authenticated image-sheet and image-playlist routes serve thumbnails; `/MediaSegments/{itemId}` returns segments with seconds converted to ticks, and accepts file media source IDs used by jellyfin-web. The client's own segment preferences determine prompting or automatic skipping.
+
+## Viewing telemetry
+
+`POST /playback/sessions/:id/progress` continues to accept `revision`, `position`, `paused` and
+`buffering`. The native player also sends optional `sequence` (increasing nonnegative integer),
+`activeSeconds` (cumulative active wall-clock seconds), `playedRanges` (cumulative `[start,end]`
+media-second pairs, at most 1024), and `playbackRate`. These counters continue across revisions of
+one managed session. `failed: true` records a terminal client playback error as `CLIENT_FAILED`.
+Older clients can omit the additions; their viewing is estimated from successive progress reports.
+
+The native player samples monotonic elapsed time on player events, accumulates the browser's played
+ranges, and reports transitions plus the existing 10-second heartbeat. Server checks bound elapsed
+credit, sequence ordering, media ranges, and revision changes. Ranges merge for distinct coverage;
+a seek changes resume position without claiming the skipped part. Statistics remain client-reported
+estimates, not proof that a person watched. Stop/timeout/shutdown add no unreported time; sessions
+unfinished at startup are marked interrupted. Resume state and manual watched changes remain independent.
+See [API statistics](API.md#statistics) for metric definitions and retention.

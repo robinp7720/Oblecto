@@ -68,3 +68,20 @@ Put everyone else in **Users**, or in a group of your own, from the Users page u
 - It refuses to start without `authentication.secret`, or with the old placeholder `secret`. `oblecto init` writes a random one.
 - Settings missing from your file take their defaults from `res/config.json`. Two defaults changed: `authentication.allowPasswordlessLogin` and `authentication.profilePicker` are now off. Set them to `true` to keep the old behaviour.
 - The Jellyfin API has its own section, `jellyfin`, with `enabled`, `port` (8096) and `host` (0.0.0.0).
+
+## Private sets
+
+Migration `0011-series-set-sharing` adds the user-sharing relation for series sets. Native movie and series listings, set contents and title memberships now show only public sets or sets shared with the caller, including administrators. New sets are automatically shared with their creator. Existing movie shares are preserved; older private series sets have no stored owner, so remain hidden until explicitly shared. The upgrade neither guesses an owner nor makes private sets public.
+
+### Viewing statistics (migration 0012)
+
+Startup creates `ViewingSessions`, `ViewingDays`, `PlaybackHealth`, and `StatisticsMeta`, with indexes
+for viewing ranges, history and operational sampling. Existing progress records are unchanged and
+cannot be backfilled as viewing history. Collection begins after this upgrade. The Administrators
+group receives the new `statistics.view` permission; custom groups must be granted it explicitly.
+
+The account menu's **Statistics** page shows personal activity; **Settings → Statistics** shows all
+viewers, current library totals and playback health to authorized users. Individual viewing history
+is retained indefinitely and increases database size with usage. Minute health data is retained for
+30 days and hourly summaries indefinitely. No new configuration or external service is required.
+Deleted media keeps its historical title; deleting an account removes its identifiable history.

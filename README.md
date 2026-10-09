@@ -13,10 +13,11 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 
 - Movie and TV libraries, identified and kept up to date in the background.
 - Metadata and artwork from TMDb, TVDB and fanart.tv, with cast and crew, person pages and related titles. Oblecto ships with the project's API keys; you can use your own.
-- A web app with browsing, search, continue watching, a full player and remote control of other devices. Progress and library changes show up as they happen.
+- A web app with browsing, search, continue watching, a full player and remote control of other devices. Progress and library changes show up as they happen. Next-episode previews use the show-page card artwork and episode details, with a borderless credits indicator, a subtle countdown strip and small text actions. They appear at terminal credits or, when markers are unavailable, in the final 30 seconds; the end screen also offers the next episode. By default, after 90 minutes without interaction, the current episode finishes and “Are you still watching?” must be confirmed before autoplay continues. Mouse movement, touch, keyboard input and remote playback commands count as interaction; automatic episode changes do not. Disable this safeguard under Account → Preferences → “Ask if I’m still watching”.
 - Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
 - A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in, browse, keep favourites and play.
 - Accounts with groups and permissions, per-user preferences and avatars, and an optional profile picker on the local network.
+- Personal viewing statistics and full session history, plus administrator library and playback-health dashboards. Open Statistics from the account menu, or Settings → Statistics with `statistics.view`. Tracking begins after upgrade; see [metric definitions and retention](docs/API.md#statistics).
 - A problem files page for anything that could not be identified or read, with retry.
 - Optional [federation between Oblecto servers](docs/FEDERATION.md), with mutual pairing, library synchronization and remote playback, plus seedbox import.
 

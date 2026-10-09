@@ -249,3 +249,7 @@ Change log
 - 2026-09-27: Report Jellyfin API version 12.1.0, matching the spec this plan is compared against and the bundled jellyfin-web.
 
 - 2026-10-02: Finished playback analysis integration: real chapters, trickplay manifests and authenticated thumbnail sheets/playlists, plus typed media segments for jellyfin-web skip controls.
+
+- 2026-10-03: Share the movie-set visibility predicate with the native REST API; new sets created there are shared with their creator. Jellyfin collection endpoint shapes and visibility rules are unchanged.
+
+- 2026-10-06: Track Jellyfin viewing through the shared statistics collector, with managed/fallback deduplication and client failures.

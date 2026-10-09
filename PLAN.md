@@ -1,15 +1,17 @@
 # Oblecto roadmap
 
-Status of the feature tracks this file used to plan in detail, as of 2 October 2026 (after 1.0.1). Pick open work from "Next".
+Status of the feature tracks this file used to plan in detail, as of 3 October 2026 (after 1.0.1). Pick open work from "Next".
 
 ## Done
 
 | Track | Where it lives |
 |---|---|
+| Viewing history, personal/admin statistics, library totals and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
 | Playback analysis: chapters, seek thumbnails, intro/credit detection and skip controls | `src/lib/analysis/`, `Oblecto-Web/src/components/player/` |
-| Player: volume, audio and subtitle tracks, speed, hotkeys, seek bar, up next | `Oblecto-Web/src/components/player/`, `Oblecto-Web/src/playback/` |
+| Player: volume, audio and subtitle tracks, speed, hotkeys, seek bar, next-episode cards and inactivity confirmation | `Oblecto-Web/src/components/player/`, `Oblecto-Web/src/playback/` |
 | Continue watching | `/movies/watching`, `/episodes/watching`, Jellyfin `/Items/Resume` |
+| Sets: private visibility on every native read, validated creation, creator access | `src/lib/sets/visibility.ts`, `src/submodules/REST/routes/sets.ts`, `tests/mocha/sets.spec.ts` |
 | Accounts: profile, password, avatar, preferences; groups and permissions | `src/submodules/REST/routes/v1/account.ts`, `src/lib/auth/permissions.ts` |
 | Problem files: why a file failed, retry, ignore | `src/lib/indexers/files/problems.ts`, `/files/problematic` |
 | Cast, crew and person pages; related titles; episode context | `src/lib/updaters/common/CreditSync.ts`, `src/submodules/REST/routes/people.ts`, `routes/helpers/` |
@@ -29,7 +31,6 @@ Status of the feature tracks this file used to plan in detail, as of 2 October 2
 - **Per-library access and parental controls.** Groups grant actions, not visibility of libraries or ratings.
 - **Playlists and downloads.** Not implemented.
 - **Music.** Undecided. The Jellyfin audio routes answer 404 and the artist routes return empty lists.
-- **Tests.** `npm run typecheck` covers `src/` only: including `tests/` gives 173 type errors, almost all loose mock typings in `tests/mocha`. `/api/v1/libraries` and the set routes have no route-level specs; user, group and system routes are covered mainly for permission checks. `tests/network` had five TVDB assertions that no longer matched TVDB's answers at 1.0.
+- **Tests.** `npm run typecheck` covers `src/` only: including `tests/` gives 173 type errors, almost all loose mock typings in `tests/mocha`. `/api/v1/libraries` has no route-level specs; set privacy and validation have route-level coverage; user, group and system routes are covered mainly for permission checks. `tests/network` had five TVDB assertions that no longer matched TVDB's answers at 1.0.
 - **Web UI.** Only six of 74 components use i18n, and English is the only locale.
 - **Jellyfin.** QuickConnect, device and session lists, remote control of Jellyfin apps, creating and deleting users, library folder management, and creating collections and playlists. See `src/lib/embyEmulation/PLAN.md` for the full list.
-- **Small fixes found while documenting.** `POST /set/movie` and `POST /set/series` return the validation error instead of throwing it, so a request with a non-boolean `public` never gets an answer. `GET /movies/sets`, `/movies/set/:id`, `/series/sets` and `/series/set/:id` list every set, private ones included, while the Jellyfin API only shows public sets and the ones shared with the user.

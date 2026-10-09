@@ -61,6 +61,7 @@ Every user belongs to at most one group, and a group grants a fixed set of permi
 | `users.manage` | `/users`, creating, editing and deleting users, other users' avatars, and `/api/v1/groups` |
 | `libraries.manage` | Library path and indexer changes, creating and deleting sets, putting items in sets, uploading artwork, and `/files` (duplicates, problem files, retries) |
 | `system.manage` | Maintenance jobs, remote imports and seedbox status |
+| `statistics.view` | Server-wide viewing history, library inventory and playback-health statistics |
 
 Two built-in groups exist and are recreated if missing: **Administrators** (every permission) and **Users** (none). New users join **Users** unless told otherwise. Built-in groups cannot be renamed or deleted, and Administrators always keeps `users.manage`. Any change that would leave nobody holding `users.manage` (deleting or moving the last such user, or taking the permission away from their group) is refused with `409`.
 
@@ -289,11 +290,17 @@ To play an episode, create a playback session for one of its files; see [Streami
 
 Sets group movies or series into collections. Both kinds need `libraries.manage` to change.
 
-- **Create Movie Set:** `POST /set/movie` with `{ "name": "...", "overview": "...", "public": true }`. Returns the set; an existing set with the same name is returned unchanged. `public` must be a boolean.
+- **Create Movie Set:** `POST /set/movie` with `{ "name": "...", "overview": "...", "public": true }`. Returns the set; an existing visible set with the same name is returned unchanged. `public` must be a boolean, `name` must be non-empty text of at most 255 characters (surrounding whitespace is trimmed), and optional `overview` must be text or null. Invalid input returns HTTP 400. If a matching existing set is private and unshared with the caller, returns HTTP 404 without disclosing its metadata. New sets are shared with their creator in the same transaction as creation.
 - **Create Series Set:** `POST /set/series`, with the same body.
 - **Delete Set:** `DELETE /set/movie/:id` or `DELETE /set/series/:id` → `{ "success": true }`; `404` for an unknown set.
 
-Private sets are hidden from other users only in the Jellyfin API, where a user sees public sets and the ones shared with them.
+All native set reads require authentication and show only public sets and private sets shared with the signed-in user. This also applies to users with `libraries.manage`; request parameters cannot override the caller's identity. Movie visibility uses the same rule as Jellyfin collections.
+
+- **List sets:** `GET /movies/sets`, `GET /series/sets` → visible sets.
+- **Set contents:** `GET /movies/set/:id`, `GET /series/set/:id` → an array containing the visible set and its movies/series. Hidden and nonexistent set IDs both return `[]`; their contents are not disclosed.
+- **Sets containing a title:** `GET /movie/:id/sets`, `GET /series/:id/sets` → only visible memberships.
+
+Existing movie shares in `MovieSetUsers` are preserved. Migration `0011-series-set-sharing` adds `SeriesSetUsers`. Older private series sets have no recorded owner or shares and are therefore hidden until explicitly shared; the migration does not guess ownership or make them public.
 
 ## People and Credits
 
@@ -445,7 +452,8 @@ The account object is the user object plus:
     "subtitleLanguage": null,
     "subtitleMode": "auto",
     "quality": "original",
-    "autoplayNext": true
+    "autoplayNext": true,
+    "stillWatchingPrompt": true
   }
 }
 ```
@@ -456,6 +464,7 @@ The account object is the user object plus:
 - `subtitleMode`: `off`, `auto` or `forced`.
 - `quality`: `original`, `auto`, `360`, `480`, `720` or `1080`.
 - `autoplayNext`: start the next episode when one ends.
+- `stillWatchingPrompt`: boolean, default `true`. The default web player finishes the current episode and asks before automatic continuation after 90 minutes without interaction.
 
 The Jellyfin emulation reports these as the user's audio and subtitle language, subtitle mode and next-episode autoplay.
 
@@ -738,3 +747,83 @@ Invalid peer settings return 400 `{ error: "Check the highlighted settings.", fi
 - These routes return 404 for unknown files; PUT returns 400 for invalid segment input.
 
 Playback analysis maintenance: `POST /api/v1/system/maintenance` with `{ "action": "analyse", "target": "all" }` (or target `movies`, `series`, legacy `tvshows`) requires `system.manage`. Returns 202 with the tracked job. Fills missing chapters, thumbnails and segments for local files; new files are queued automatically on identification.
+
+## Statistics
+
+Personal viewing is available to every signed-in user. Server-wide viewing history, library inventory,
+and playback health require `statistics.view`; the built-in Administrators group receives it at startup.
+Collection begins after migration 0012. Existing progress is not imported as watch time or history.
+
+| Method and URL | Access | Response |
+|---|---|---|
+| `GET /api/v1/statistics/me/summary` | Signed-in user, own data only | Summary below |
+| `GET /api/v1/statistics/me/history` | Signed-in user, own data only | `{ items, nextCursor, collection }` |
+| `GET /api/v1/statistics/server/summary` | `statistics.view` | Summary, including viewer breakdown |
+| `GET /api/v1/statistics/server/history` | `statistics.view` | `{ items, nextCursor, collection }` |
+| `GET /api/v1/statistics/server/library` | `statistics.view` | `{ movies, series, episodes, files, localBytes, remoteFiles, missingSize, problematicFiles }` |
+| `GET /api/v1/statistics/server/health` | `statistics.view` | `{ resolution, buckets, failures }` |
+
+### Filters and paging
+
+Summary, history and health accept `from` and `to` as `YYYY-MM-DD` UTC dates. `from` is inclusive,
+`to` exclusive; defaults cover the last 30 UTC dates including today. A request may span at most 366 days;
+older history remains available by selecting an earlier period. Invalid dates or ranges return `400`.
+Server summary/history optionally accept a positive integer `userId`. Personal endpoints ignore this
+parameter and always use the authenticated identity. Health is always server-wide.
+
+History accepts `limit` (default 50, range 1–100) and an opaque `cursor`. Preserve the same date range
+and viewer filter when following `nextCursor`; a mismatched or malformed cursor returns `400`.
+Results are ordered by session start descending, with id as the tie-breaker. History selects sessions
+**started** in the interval and returns whole-session totals. Summary apportions watch time by UTC day,
+so a session crossing the selected boundary can contribute to summary without appearing in history.
+
+### Summary and history fields
+
+Summary returns `{ period, totals, daily, titles, kinds, users, trackingStartedAt, timezone, collection }`.
+`timezone` is `UTC`. `totals` contains `watchSeconds`, `estimatedSeconds`, `plays`, `completions`,
+`repeatPlays`, and `directSeconds`, `remuxSeconds`, `transcodeSeconds`, `unknownSeconds`.
+`daily` adds `day` to those counters. `titles` returns the top 20 by watch time, adding `itemType`,
+`itemId`, and a historical `title`. `kinds` groups by `itemType`. An unfiltered server summary includes
+`users`, with `userId` and `username`; personal and user-filtered summaries return an empty `users` array.
+Empty periods have zero totals and empty arrays. `trackingStartedAt` is null before collection initializes.
+
+History items contain `id`, `userId`, `itemType`, `itemId`, `fileId`, `title`, `client`, `duration`,
+`startedAt`, `lastReportAt`, `endedAt`, `endReason`, `watchSeconds`, `firstPlayedAt`, `completedAt`,
+`quality`, `failure`, and `bufferingReports`. Times are ISO timestamps, durations seconds. Unavailable
+references/timestamps and missing buffering telemetry are null. Quality is `reported`, `estimated`, or
+`mixed`; no tokens, filesystem paths or internal checkpoints are returned. `endReason` is `stopped`,
+`timeout`, `shutdown`, `interrupted`, or `failed`; null means the session has not been finalized.
+Prepared sessions with no viewing remain in history as operational attempts.
+
+`collection` is `{ degraded, lastFailureAt }`: degradation remains flagged for the server process after
+a collection failure, because some activity may have been lost. Statistics failures do not fail playback.
+
+### Definitions and retention
+
+Watch time measures active elapsed time: a 60-minute title at 2× contributes approximately 30 minutes.
+Paused, buffering and seeking time is excluded by the native player. Older/Jellyfin reports are estimated
+conservatively from progress; implausible jumps and gaps longer than 60 seconds receive no credit.
+A play is recorded on the first positive credited interval. A completion requires 90% distinct media
+coverage within one session, once; seeking to the credits or manually marking watched does not qualify.
+Repeated coverage adds watch time but not coverage. A repeat play is another qualifying session for the
+same user/title after an earlier play. Unknown duration cannot complete. Simultaneous viewing sessions
+contribute independently. First-play and completion counts belong to the UTC day they are recorded.
+
+Individual sessions and daily totals remain indefinitely. Deleting a media item preserves its snapshot;
+deleting a user cascades their session and daily history. Federated viewing belongs to the requesting
+server's user, while the serving peer contributes local operational load.
+
+Library totals are current, not historical. Files are counted once, independent of movie/episode joins;
+local byte totals exclude remote files and unknown sizes. `missingSize` counts files with null size.
+
+Health samples every 15 seconds. Each bucket has `{ at, samples, means, peaks }`; gauge fields are
+`viewers`, `sessions`, `direct`, `remux`, `transcode`, `encoders`, `queue`, and `cacheBytes`. Viewers are
+unique users reporting unpaused, non-buffering playback within the last 60 seconds. Sessions count
+allocated managed streams, including prepared/paused streams and serving peers. Encoder counts and
+cache bytes describe this server. Jellyfin fallback viewing can count as a viewer without an allocated
+managed stream. `failures` reports `attempts`, `failedSessions`, `failedAttempts`, `bufferingReports`,
+and `bufferingKnownSessions` for sessions started in the period; absent telemetry is null. Buffering
+counts transitions into a reported buffering state, not buffering duration.
+Minute buckets remain for 30 days; hourly summaries remain indefinitely. Requests spanning more than
+7 days or starting over 30 days ago use hourly buckets. Missing buckets indicate missing measurements,
+not zero load. CPU, process/host monitoring and bandwidth accounting are outside this API.
