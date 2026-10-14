@@ -2,7 +2,7 @@ import { relatedTitles } from './helpers/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 
 import authMiddleWare from '../middleware/auth.js';
 
@@ -22,6 +22,8 @@ import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
 import { setPlayed } from '../../../lib/playback/progress.js';
+import { favouritesAmong, favouriteIdsSql, setFavourite } from '../../../lib/users/favourites.js';
+import { isWatchlisted, setWatchlisted, watchlistIdsSql } from '../../../lib/users/watchlist.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
 const BROWSE_SORT_FIELDS = new Set([
@@ -105,6 +107,12 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const whereClauses: any[] = [];
         const includeClauses: any[] = [];
+
+        if (browseParams.list !== 'all') {
+            const userId = Number(req.authorization!.user.id);
+            const ids = browseParams.list === 'favourites' ? favouriteIdsSql(userId, 'movie') : watchlistIdsSql(userId);
+            whereClauses.push({ id: { [Op.in]: literal(ids) } });
+        }
 
         if (browseParams.q) {
             whereClauses.push({
@@ -271,6 +279,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 yearFrom: browseParams.yearFrom,
                 yearTo: browseParams.yearTo,
                 watched: browseParams.watched,
+                list: browseParams.list,
                 libraryPath: browseParams.libraryPath,
                 personId: browseParams.personId,
                 creditRole: browseParams.creditRole
@@ -396,7 +405,39 @@ export default (server: Express, oblecto: Oblecto) => {
         });
 
         if (!movie) return res.status(404).send({ message: 'Movie not found' });
-        res.send({ ...movie.toJSON(), credits: await creditsFor('movie', movie.id, Movie.sequelize) });
+        const userId = Number(req.authorization!.user.id);
+        const [credits, favourites, watchlist] = await Promise.all([
+            creditsFor('movie', movie.id, Movie.sequelize),
+            favouritesAmong(userId, [{ type: 'movie', id: movie.id }]),
+            isWatchlisted(userId, movie.id)
+        ]);
+        res.send({
+            ...movie.toJSON(),
+            credits,
+            userState: { favourite: favourites.has(`movie:${movie.id}`), watchlist }
+        });
+    });
+
+    server.get('/movie/:id/extras', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const movie = await Movie.findByPk(req.params.id as string);
+        if (!movie) return res.status(404).send({ message: 'Movie not found' });
+        res.send(await oblecto.movieExtras.get(movie));
+    });
+
+    server.put('/movie/:id/favourite', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.favourite !== 'boolean') return res.status(400).send({ message: 'favourite must be a boolean' });
+        const movie = await Movie.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!movie) return res.status(404).send({ message: 'Movie not found' });
+        await setFavourite(Number(req.authorization!.user.id), 'movie', movie.id, req.body.favourite);
+        res.send({ favourite: req.body.favourite });
+    });
+
+    server.put('/movie/:id/watchlist', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.watchlist !== 'boolean') return res.status(400).send({ message: 'watchlist must be a boolean' });
+        const movie = await Movie.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!movie) return res.status(404).send({ message: 'Movie not found' });
+        await setWatchlisted(Number(req.authorization!.user.id), movie.id, req.body.watchlist);
+        res.send({ watchlist: req.body.watchlist });
     });
 
     server.put('/movie/:id/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {

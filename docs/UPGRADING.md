@@ -21,12 +21,19 @@ Databases that were upgraded by hand with the SQL this page used to list are fin
 
 ### New tables and columns
 
-Four migrations run at the first start:
+Pending migrations run at the first start:
 
 - `0006-rich-media-metadata` adds `People` and the `MovieCredits`, `SeriesCredits` and `EpisodeCredits` tables, plus scores and episode runtimes.
 - `0007-rating-source` records which service each score came from.
 - `0008-jellyfin-user-data` adds `UserFavourites` and `JellyfinDisplayPreferences`.
 - `0009-federation` adds `FederationRecords`, for pairing and synchronization state.
+- `0010-playback-markers` adds cached chapter, segment and thumbnail metadata to files.
+- `0011-series-set-sharing` adds explicit user sharing for series sets.
+- `0012-statistics` adds viewing sessions, daily watch time and playback-health storage.
+- `0013-movie-details` adds `UserWatchlists` (one movie per user per list entry), plus cached movie trailers, regional certifications and their refresh timestamps. Existing movies and favourites are preserved. Watchlist entries are removed when their user or movie is deleted.
+- `0014-series-details` adds private `UserSeriesWatchlists` with unique user/show pairs and cascading deletion, plus series trailers, regional TV ratings and a complete episode-catalogue cache. Existing watch history and favourites are preserved. The spoiler preference is stored in the existing user preferences JSON and defaults to showing episode details.
+
+Trailers and certifications fill on demand when a movie page opens; no library-wide refresh is needed. They require the existing TMDB configuration and a TMDB ID for the movie. Successful results, including empty lists, are cached for seven days; failed requests retain old data and can be retried from the movie page. Movie favourites already saved through Jellyfin appear in the native app's Favourites filter.
 
 ### Fill in cast and crew
 

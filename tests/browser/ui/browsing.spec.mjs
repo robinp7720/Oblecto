@@ -273,7 +273,7 @@ for (const browserName of ['chromium', 'firefox', 'webkit']) {
             currentMovie = label === 'Play' ? { ...movie, TrackMovies: [] } : movie
             for (const path of ['/', '/movie/1']) {
               await page.goto(path)
-              await expect(page.locator('.playback-button .copy > span').first()).toHaveText(label)
+              await expect(page.locator('.playback-button .copy > span').first()).toHaveText(path === '/movie/1' && label.startsWith('Resume') ? 'Resume' : label)
               const layout = await page.locator('.playback-button').evaluate(node => {
                 const label = node.querySelector('.copy > span')
                 const range = document.createRange()

@@ -1,5 +1,8 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToManyAddAssociationMixin } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, BelongsToManyAddAssociationMixin, type ModelAttributeColumnOptions } from 'sequelize';
 import type { File } from './file.js';
+
+export type MovieTrailer = { name: string; site: 'YouTube' | 'Vimeo'; key: string; language: string | null; official: boolean };
+export type MovieCertification = { country: string; certification: string };
 
 export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes<Movie>> {
     declare id: CreationOptional<number>;
@@ -29,9 +32,27 @@ export class Movie extends Model<InferAttributes<Movie>, InferCreationAttributes
     declare releaseDate: string | null; // DATEONLY is string in JS
     declare overview: string | null;
 
+    declare trailers: CreationOptional<MovieTrailer[] | null>;
+    declare certifications: CreationOptional<MovieCertification[] | null>;
+    declare trailersUpdatedAt: CreationOptional<Date | null>;
+    declare certificationsUpdatedAt: CreationOptional<Date | null>;
+
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
 }
+
+const jsonColumn = (name: 'trailers' | 'certifications'): ModelAttributeColumnOptions<Movie> => ({
+    type: DataTypes.TEXT,
+    allowNull: true,
+    get(this: Movie): unknown {
+        const raw = this.getDataValue(name) as unknown;
+        if (typeof raw !== 'string') return raw ?? null;
+        try { return JSON.parse(raw) as unknown; } catch { return null; }
+    },
+    set(this: Movie, value: unknown): void {
+        this.setDataValue(name, (value === null || value === undefined ? null : JSON.stringify(value)) as never);
+    }
+});
 
 export const movieColumns = {
     id: {
@@ -63,6 +84,11 @@ export const movieColumns = {
 
     releaseDate: DataTypes.DATEONLY,
     overview: DataTypes.TEXT,
+
+    trailers: jsonColumn('trailers'),
+    certifications: jsonColumn('certifications'),
+    trailersUpdatedAt: DataTypes.DATE,
+    certificationsUpdatedAt: DataTypes.DATE,
 
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,

@@ -1,11 +1,78 @@
-# Oblecto Web API Documentation
+# Oblecto API reference
 
-This document details the REST API for Oblecto, designed for frontend developers to implement a user interface.
+The native Oblecto API supports desktop, mobile and web clients: authentication, browsing, personal lists, playback, progress, remote control and administration. This reference describes this checkout, including unreleased features. The package version alone does not guarantee that an older installation implements every route here.
+
+Start with the [desktop client implementation guide](DESKTOP_CLIENTS.md) for an end-to-end workflow. Use the [complete endpoint index](API_ENDPOINTS.md) for methods, permissions, inputs and success responses, and the [response models](API_MODELS.md) when implementing decoders. [Realtime events](REALTIME_API.md), [streaming operations](STREAMING.md), [federation](FEDERATION.md) and [Jellyfin compatibility](JELLYFIN.md) have separate references.
+
+## Contents
+
+- [Transport and conventions](#transport-and-conventions), [authentication](#authentication)
+- [Movies](#movies), [series](#tv-shows-series), [episodes](#episodes), [sets](#sets), [people](#people-and-credits)
+- [Streaming](#streaming), [users](#users), [account](#account-v1), [remote control](#clients-remote-control)
+- [Settings and system](#settings--system-v1), [status](#status-v1), [files](#files)
+- [Federation administration](#federation-administration), [playback markers](#file-playback-markers), [statistics](#statistics)
 
 ## Base URL
 All API endpoints are relative to the server root. Typically this is `http://<server-ip>:<port>`.
 
 When `web.enabled` is on, `/` redirects to `/web/`, which serves the web app, and `/web/logo.png` serves Oblecto's logo. Neither needs a session.
+
+## Transport and conventions
+
+- Native HTTP and Socket.IO use `server.port` (default **8080**). Paths such as `/movies/list/movieName` are at the root; do not prepend `/api/v1`. Only explicitly versioned routes have that prefix. `/web/` is the UI, not the API base.
+- The optional Jellyfin server uses `jellyfin.port` (default **8096**) and separate tokens, IDs and endpoints. Native clients should use the native API throughout.
+- Send `Accept: application/json`, `Content-Type: application/json` for JSON bodies, and `Authorization: Bearer <accessToken>` on protected calls. No cookie, API key registration, CSRF token or OAuth flow is required. `API-Token` is not an alternative authentication header, despite appearing in the CORS allowlist.
+- Send read filters in the query string and writes in the body. URL-encode path segments and query values, especially search strings and opaque cursors. JSON booleans and playback numbers must not be strings.
+- Success is **200** unless documented otherwise. **204** has no body. Collections generally return arrays; browse and statistics have their own envelopes. There is no common `{ data: ... }` wrapper or universal total count.
+- Media, person, file, set and user IDs are database integers in separate namespaces. Playback session IDs are opaque strings. Remote `media.id` is a string representation of a native movie/episode ID. Store IDs with the server address and media kind.
+- Metadata is often nullable and associations vary by endpoint. Ignore unknown fields and tolerate absent optional associations. Capitalization such as `Files`, `Streams`, `SeriesId` and `TrackEpisodes` is significant. See [models and units](API_MODELS.md).
+- Express also serves HEAD for GET routes. Playback media explicitly supports HEAD and byte ranges. Do not use HEAD as a session heartbeat.
+
+### Errors and retries
+
+The HTTP status is authoritative. Error bodies vary:
+
+```json
+{ "code": 401, "message": "Your session has expired. Please sign in again." }
+```
+
+```json
+{ "code": "STALE_REVISION", "message": "Playback session has changed" }
+```
+
+```json
+{ "error": "Check the highlighted preferences.", "fields": { "quality": "Choose one of original, auto, 360, 480, 720, 1080." } }
+```
+
+Some handlers return only `{ "message": "..." }` or `{ "error": "..." }`. Unknown routes, middleware errors and proxy failures can return non-JSON or empty bodies. Read defensively; display `message`, then `error`, then an HTTP-status fallback. Some legacy lookups return empty 200 bodies for absent records; see the endpoint index.
+
+| Status | Client action |
+| --- | --- |
+| 400 | Correct input; surface `fields` beside controls when supplied. |
+| 401 | For API/control requests, sign in again. For media, check the playback session; its token is separate. |
+| 403 | Disable the unauthorized operation; refresh `/api/v1/me` permissions. |
+| 404 | Handle an absent item/session. Recreate an expired session from the last local position. |
+| 409 | Resolve the conflict; for playback read the current descriptor and serialize changes. |
+| 410 | A retried problematic file was removed because it no longer exists. Refresh the list. |
+| 413 / 422 | Reduce an upload, correct the image, or choose supported playback options/source. |
+| 416 | Correct the byte range. |
+| 429 | Honor login `Retry-After` seconds; avoid password retry loops. |
+| 499 | Playback work was cancelled; discard work for an obsolete player generation. |
+| 500 / 502 / 503 / 504 | Show a recoverable server/peer error and bound retries. `SERVER_CAPACITY` includes `Retry-After: 2`. |
+
+GETs may be retried with backoff. There is no idempotency-key mechanism for POST. After an uncertain session creation, avoid a create loop: each success allocates a separate session. Stop sessions whose IDs are known. User-state PUTs are idempotent.
+
+### Desktop transport and CORS
+
+The HTTP listener is plain HTTP; HTTPS can be supplied by a reverse proxy. Preserve the configured base URL, including any deployment prefix, and map root-relative returned media paths through that prefix. Socket.IO needs the corresponding `/socket.io/` path exposed by the proxy.
+
+Browser/Electron renderer fetches need their exact origin in `server.corsOrigins` (default `[]`); native HTTP clients are not subject to browser CORS. REST allows `Authorization`, `Content-Type` and `Range`, and exposes range/length headers. It does **not** currently expose `Retry-After` to cross-origin browser JavaScript. Socket.IO has a separate permissive origin policy and still requires handshake authentication.
+
+### Image uploads
+
+Image PUTs use `multipart/form-data` with **one file**, at most **25 MiB**. The field name is arbitrary (`file` is convenient); let the HTTP library create the boundary. Missing file: 400; oversized file: 413; undecodable image: 422. Poster height/width must be 1–2; fanart and episode banner height/width must be 0.4–0.8 (422 otherwise). Library artwork is re-encoded as JPEG; resized variants are queued and may not be ready immediately. Library artwork PUTs return `["success"]`. Avatar PUTs crop to 256×256 WebP and return a user/account.
+
+Artwork GETs are public. Library artwork supports `size=small|medium|large|original`; posters and banners default to `medium`, fanart to `large`. Person profiles use `small|medium|large`, default `medium`; unknown profile sizes fall back to `medium`. Missing images need a placeholder. There is no native media-file upload or download-management endpoint.
 
 ## Authentication
 
@@ -31,6 +98,13 @@ Authenticate a user and retrieve an access token.
   - `userId` may be sent instead of `username` (used by the profile picker).
   - `password` may be omitted only on the local network, when either `authentication.localPasswordlessLogin` is on and the user has `passwordlessLocal`, or `authentication.allowPasswordlessLogin` is on and the account has no password. Remote clients always need a password.
   - Errors: `400` when the user or a required password is missing, `401` for an unknown user or wrong password.
+  - Repeated failed sign-ins return `429` with `Retry-After` seconds.
+
+### Token lifecycle
+
+Access tokens are signed JWTs with a default lifetime of 30 days (`authentication.tokenLifetimeDays`). Login returns only `accessToken`, without a refresh token. Tokens survive restarts while the signing secret and credentials remain unchanged. Expiry, user deletion, password change/removal or signing-secret change invalidate them. There is no native refresh, logout, token-revocation or self-registration endpoint.
+
+Use `GET /api/v1/me` after login and on app restoration for current identity, preferences and permissions. JWT name/email claims are issuance-time snapshots. A successful password change returns the account but **does not issue a replacement token**: sign in again. On local sign-out, stop playback sessions, disconnect realtime, and clear tokens and user-specific caches. Store desktop credentials in the operating system credential store.
 
 ### Login Options
 What the login screen should offer this client. No authentication required.
@@ -57,9 +131,9 @@ Every user belongs to at most one group, and a group grants a fixed set of permi
 
 | Permission | Grants |
 |---|---|
-| `settings.manage` | All of `/api/v1/settings` (reading included, since it exposes the configuration) |
+| `settings.manage` | All of `/api/v1/settings` and `/api/v1/federation` (reading included) |
 | `users.manage` | `/users`, creating, editing and deleting users, other users' avatars, and `/api/v1/groups` |
-| `libraries.manage` | Library path and indexer changes, creating and deleting sets, putting items in sets, uploading artwork, and `/files` (duplicates, problem files, retries) |
+| `libraries.manage` | Library path and indexer changes, creating/deleting sets, set membership, artwork uploads, file problem management and segment overrides. Reading `/files/:id/markers` only needs a session. |
 | `system.manage` | Maintenance jobs, remote imports and seedbox status |
 | `statistics.view` | Server-wide viewing history, library inventory and playback-health statistics |
 
@@ -73,7 +147,7 @@ The first administrator is chosen on the server: `oblecto usergroup USERNAME Adm
 - **Update group:** `PATCH /api/v1/groups/:id` with `name` and/or `permissions` (the full list).
 - **Delete group:** `DELETE /api/v1/groups/:id`. Members move to **Users**.
 
-All group endpoints require `users.manage`.
+All group endpoints and `GET /api/v1/permissions` require `users.manage`. Create/update return the group with member count (HTTP 200); delete returns `{ "id": 3 }`. Ordinary clients get effective permissions from `/api/v1/me`.
 
 ## Movies
 
@@ -98,28 +172,54 @@ Send `mode=browse` to filter and page with a cursor. The same parameters work fo
 - `q`: title search. `genre`: one or more genres, repeated or comma-separated.
 - `yearFrom`, `yearTo`: release or first-aired year range.
 - `watched`: `all` (default), `watched` (90% or more), `inprogress` or `unwatched`.
+- `list`: `all` (default), `favourites`, or `watchlist`. Saved lists are private to the authenticated user and apply to movies and series in browse mode. List selection participates in cursor validation and combines with the other filters.
 - `libraryPath`: only titles whose files are under this library folder.
 - `personId`, `creditRole`: see [Filter Libraries by Person](#filter-libraries-by-person).
 
-Invalid values return 400 with `{ "message": "..." }`. The response is:
+Invalid filters, sorts and cursors return 400 with `{ "message": "..." }`; `count` is clamped to 1–100. Browse uses `cursor`, not `page` (which is ignored). The response is:
 
 ```json
 {
-  "items": [],
-  "pageInfo": { "hasNextPage": true, "nextCursor": "eyJzb3J0Ijo...", "count": 20 },
-  "appliedFilters": { "q": null, "genre": [], "yearFrom": null, "yearTo": null, "watched": "all", "libraryPath": null, "personId": null, "creditRole": "any" },
+  "items": [{ "id": 42, "movieName": "Example Movie", "TrackMovies": [] }],
+  "pageInfo": { "hasNextPage": true, "nextCursor": "eyJzb3J0Ijo...", "count": 1 },
+  "appliedFilters": { "q": null, "genre": [], "yearFrom": null, "yearTo": null, "watched": "all", "list": "all", "libraryPath": null, "personId": null, "creditRole": "any" },
   "facets": { "genres": ["Drama"], "years": [2024] }
 }
 ```
 
-`facets` lists the genres and years among the titles that match the search, watch-state, library and person filters.
+The example shows a one-item page with abbreviated movie fields and an illustrative opaque cursor. `facets` lists genres and years matching all active filters, before cursor paging. Multiple genres are ORed; other filter categories combine with AND. `pageInfo.count` is the number returned, not a total; `nextCursor` is null at the end. Reset cursors after changing filters, sort, order, server or user. These are live queries, not snapshots; deduplicate by ID when refreshing during library changes.
+
+Movie watch filters use progress >= 0.9 for `watched`, 0 < progress < 0.9 for `inprogress`, and missing/zero progress for `unwatched`. For series, `watched` means **at least one** episode is watched, `inprogress` means at least one is partially watched, and `unwatched` means none has positive progress. A series can match both watched and in-progress queries. Series browse items have no aggregate tracking; fetch `/series/:id/episodes` to compute completion.
 
 ### Get Movie Info
 Retrieve detailed information about a specific movie.
 
 - **URL:** `/movie/:id/info`
 - **Method:** `GET`
-- **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
+- **Authentication:** Required.
+- **Response:** Movie details, files and streams, watch progress, audience score fields, and `credits.cast` / `credits.crew` arrays containing linked people and roles. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person. `userState: { favourite: boolean, watchlist: boolean }` belongs only to the caller. `trailers`, `certifications`, `trailersUpdatedAt` and `certificationsUpdatedAt` contain the last cached extras (nullable); this endpoint itself makes no provider requests.
+
+### Save a Movie
+
+These endpoints require authentication and always act on the signed-in user; a supplied user ID cannot change another user's list. Operations are idempotent. Unknown movies return 404, and a missing or non-boolean flag returns 400 with `{ "message": "..." }`.
+
+| Method and URL | JSON body | Response |
+|---|---|---|
+| `PUT /movie/:id/favourite` | `{ "favourite": true }` | `{ "favourite": true }` |
+| `PUT /movie/:id/watchlist` | `{ "watchlist": true }` | `{ "watchlist": true }` |
+
+Set the flag to `false` to remove the movie. Favourites share the existing Jellyfin favourite storage and notifications. Watchlists are independent of favourites and watched state; watching a movie does not remove it. Browse saved movies with `GET /movies/list/movieName?mode=browse&list=watchlist&order=asc` (or `list=favourites`).
+
+### Get Movie Trailers and Certifications
+
+- **URL:** `/movie/:id/extras`
+- **Method:** `GET`
+- **Authentication:** Required. Unknown movies return 404.
+- **Response:** `{ "trailers": [...], "certifications": [...], "unavailable": false }`.
+- Each trailer has `{ "name": "Official trailer", "site": "YouTube", "key": "...", "language": "en", "official": true }`. Only trailers with valid YouTube or Vimeo identifiers are returned; official trailers are ordered first. `language` may be null. No video content is proxied.
+- Each certification has `{ "country": "US", "certification": "PG-13" }`. There is at most one classification per country: theatrical, then limited theatrical, then other release types, using the earliest dated release within a priority. Blank classifications are omitted. Clients should show the country and allow region selection; missing data does not mean unrestricted viewing.
+
+Each list is refreshed from TMDB independently after seven days. Concurrent requests for one movie share the provider work. Empty successful lists are cached too. Provider failures or malformed responses preserve the previous cached field and its timestamp, and set `unavailable: true`; callers can retry this endpoint. Movies without a TMDB ID return empty lists without a provider request. Database errors still use the normal API error response. The web page loads these extras separately so playback and core details remain usable during provider failures.
 
 ### Set Movie Watched State
 - **URL:** `/movie/:id/watched`
@@ -162,7 +262,7 @@ Search for movies by name.
 - **Get Sets for Movie:** `GET /movie/:id/sets`
 - **Add Movie to Set:** `PUT /movie/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`)
 
-Creating and deleting sets is under [Sets](#sets). These routes list every set, private ones included.
+Creating and deleting sets is under [Sets](#sets). Reads show public sets and private sets shared with the caller.
 
 ### Watching (Resume)
 Get a list of movies currently being watched.
@@ -172,6 +272,8 @@ Get a list of movies currently being watched.
 - **Response:** Array of Movie objects.
 
 To play a movie, create a playback session for one of its files; see [Streaming](#streaming).
+
+The resume list includes tracking rows updated in the last seven days with progress below 0.9 (including zero), newest tracking update first. It is not the complete viewing history.
 
 ## TV Shows (Series)
 
@@ -187,18 +289,53 @@ Get a paginated list of TV shows.
 ### Get Series Info
 - **URL:** `/series/:id/info`
 - **Method:** `GET`
-- **Response:** Series details, audience score fields, and aggregate `credits.cast` / `credits.crew` arrays. Series credits may include `episodeCount`. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
+- **Response:** Series details, caller-specific `userState: { favourite, watchlist }`, cached trailers/certifications and their timestamps, audience score fields, and aggregate `credits.cast` / `credits.crew` arrays. Series credits may include `episodeCount`. Every credit includes `libraryConnections: { movies, series }`, counting other top-level titles featuring that person.
+
+### Series Extras
+- **URL:** `/series/:id/extras`
+- **Method:** `GET` (authenticated)
+- **Response:** `{ trailers: [...], certifications: [{ country: "DE", certification: "12" }], unavailable: boolean }`.
+- TMDB trailers and regional TV content ratings are cached for seven days. Concurrent viewers share a refresh; failures preserve cached values. Unidentified shows return empty extras. This endpoint does not fetch or return the episode catalogue.
+
+### Series Library Workspace
+- **URL:** `/series/:id/library`
+- **Method:** `GET`
+- **Authentication:** Requires `libraries.manage`; authenticated viewers without it receive 403.
+- **Response:** `{ series: { id, seriesName, tmdbid }, catalogAvailable: boolean, catalogUpdatedAt: string | null, unavailable: boolean, rows: [...] }`.
+- Rows contain `{ key, local, catalog, status, reason, special }`. `local` is null or `{ id, tmdbid, tvdbid, airedSeason, airedEpisodeNumber, episodeName, Files: [{ id }] }`; `catalog` is null or `{ tmdbid, season, number, name, airDate, runtime }`. No file paths or watch history are returned.
+- Unique TMDB episode IDs establish matches independently of season order. Local numbering is preserved. No season/number or title fallback is used. `matched` requires an exact ID and a playable file. Unknown, duplicate or unmatched local IDs, or a match without files, require `review`. Unresolved local identities prevent definitive absence claims for unmatched catalogue entries.
+- Other catalogue entries have `absent` (aired with no matching local ID), `upcoming` (future TMDB date), or `unscheduled` (no date) status. `special` identifies season-zero entries in either source; the management UI excludes them from regular counts. Dates can change; results describe this provider snapshot, not authoritative show completeness.
+- Only this management endpoint refreshes the complete episode catalogue (one-day cache). Concurrent requests share the refresh; season requests have bounded concurrency and a 20-second total deadline. Failure sets `unavailable` and preserves the last complete snapshot. Unidentified shows have `catalogAvailable: false`. Catalogue records never create playable episodes. Normal series/list/info responses omit the large `episodeCatalog` cache.
+
+### Series Favourites and Watchlist
+Both endpoints require authentication, validate a boolean body (`400` otherwise), and return `404` for an unknown show. They only change the caller's saved list.
+
+| Endpoint | Body | Response |
+| --- | --- | --- |
+| `PUT /series/:id/favourite` | `{ "favourite": true }` | `{ "favourite": true }` |
+| `PUT /series/:id/watchlist` | `{ "watchlist": true }` | `{ "watchlist": true }` |
+
+Use `false` to remove. Favourites share Jellyfin storage. Watchlists remain independent of watched state and favourites. Browse with `/series/list/seriesName?mode=browse&list=watchlist` or `list=favourites`; facets and cursors use the same user-scoped filters.
 
 ### List Episodes in Series
 - **URL:** `/series/:id/episodes`
 - **Method:** `GET`
-- **Response:** Array of Episode objects, ordered by season and episode number.
+- **Response:** Array of Episode objects with caller-scoped `TrackEpisodes`, a compact `Series: { id, seriesName }`, and `Files: [{ id, duration }]` for availability and runtime estimates. A metadata-only episode has an empty `Files` array. Aired season/episode values are stored as strings; clients should sort them numerically.
+
+There is no native season-list route: group this array by `airedSeason`, keeping `"0"` as specials. An unknown series returns an empty array.
 
 ### Set Season Watched State
 - **URL:** `/series/:id/seasons/:season/watched`
 - **Method:** `PUT`
 - **Body:** `{ "watched": true }`
 - **Response:** `{ "watched": true, "episodes": [{ "id": 1, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }] }`. Only episodes with the exact aired-season value are changed.
+
+### Mark Earlier Episodes Watched
+- **URL:** `/series/:id/episodes/:episodeId/earlier/watched`
+- **Method:** `PUT` (authenticated)
+- **Body:** `{ "watched": true }` (only `true` is accepted; otherwise `400`).
+- **Response:** The same `{ watched: true, episodes: [{ id, track }] }` envelope as season watch-state changes, including an empty list when there are no earlier episodes.
+- Updates only the caller's library episodes before the anchor in numeric aired season/episode order; the anchor is excluded. Regular episodes exclude specials. A special's predecessors are confined to its own season. The anchor must belong to the requested series (`404` otherwise). The native UI confirms the scope before changing multiple episodes.
 
 ### Series Sets
 - **Get Sets for Series:** `GET /series/:id/sets`. Each set includes its member titles in `Series`.
@@ -245,16 +382,26 @@ Get a paginated list of episodes from all series.
 - **Body:** `{ "watched": true }`
 - **Response:** `{ "watched": true, "track": { "time": 0, "progress": 1, "updatedAt": "..." } }`. Setting `watched` to false clears the resume position and writes progress `0`.
 
+### Episode Favourite
+- **URL:** `/episode/:id/favourite`
+- **Method:** `PUT` (authenticated)
+- **Body/response:** `{ "favourite": true }`; use `false` to remove. Non-boolean values return `400`; unknown episodes return `404`.
+- Favourites are independent of the series and use the existing user-scoped Jellyfin favourite storage. Episode info includes `userState: { favourite: boolean }`.
+
 ### Get Episode Context
 - **URL:** `/episode/:id/context`
 - **Method:** `GET`
 - **Response:** `{ previous, next, season }`, where adjacent episode summaries include current-user tracking and `season` contains `number`, `position`, `episodeCount`, `watchedCount`, `runtimeMinutes`, and `averageRating`. Regular episodes cross season boundaries in numeric order; specials remain in their own sequence.
+
+The response also includes `nearby` (up to five local episodes centred on the current season position) and `nextUnwatched` (the next playable local episode with progress below 0.9, or null). Navigation entries include user-scoped tracks and compact file IDs/durations. Counts describe imported library episodes, not the provider's full episode catalogue. Chapter timestamps are already exposed in `Files[].chapters` on episode info; play a chapter by creating a normal playback session with that file ID and chapter `start` position.
 
 ### Get Next Episode
 Get the next episode in the series relative to the given episode ID.
 
 - **URL:** `/episode/:id/next`
 - **Method:** `GET`
+
+Returns a bare episode, without files/tracks, or an empty 200 body at the end. This legacy query compares text season/episode fields; use `/episode/:id/context` for numeric ordering, specials handling and playable `nextUnwatched` navigation.
 
 ### Episode Banner
 - **URL:** `/episode/:id/banner`
@@ -275,6 +422,8 @@ Get episodes currently being watched.
 
 - **URL:** `/episodes/watching`
 - **Method:** `GET`
+
+Includes `Series` and tracks updated in the last seven days with progress below 0.9 (including zero). Order is episode metadata `updatedAt` descending, not track timestamp.
 
 ### On Deck (Up Next)
 Get the next episodes to watch based on watch history.
@@ -301,6 +450,8 @@ All native set reads require authentication and show only public sets and privat
 - **Sets containing a title:** `GET /movie/:id/sets`, `GET /series/:id/sets` → only visible memberships.
 
 Existing movie shares in `MovieSetUsers` are preserved. Migration `0011-series-set-sharing` adds `SeriesSetUsers`. Older private series sets have no recorded owner or shares and are therefore hidden until explicitly shared; the migration does not guess ownership or make them public.
+
+Set-content `count`/`page` paginate the outer set query, not its members; use page 0. Movie-set `order` is validated but does not sort members. Sort member arrays locally. Native routes do not edit a set, remove individual members or manage shares.
 
 ## People and Credits
 
@@ -387,13 +538,21 @@ PATCH accepts the creation options except `fileId`, plus the current integer `re
 
 Progress body: `{ "revision": 1, "position": 123.5, "paused": false, "buffering": false }`. Send every ten seconds and on pause, seek completion, stop, and end. Send the final progress update before deleting the session. Progress is saved using existing movie/episode tracking records; stale revisions return 409. Positions beyond duration plus one second are rejected.
 
+Optional telemetry: `sequence` (increasing nonnegative safe integer), `activeSeconds` (cumulative active wall-clock seconds), `playedRanges` (cumulative `[start,end]` media-second pairs, at most 1024), `playbackRate` (positive, up to 16 for estimated accounting), and `failed` (boolean). Send the first three together for reported watch time; keep counters across revisions, resetting on a new session. Exclude pause, seek and buffering time. Malformed/stale statistics telemetry is ignored independently of resume persistence: `sequence` does not protect resume position from out-of-order HTTP requests. Serialize progress sends. See [statistics](#statistics).
+
+Playback options are not populated automatically from account preferences. Apply saved quality/subtitle mode and map preferred languages to source stream indexes. Omitted indexes use the server's configured target language, then default/first-track selection. Numeric quality is a number (`720`), not a string. On every PATCH send current absolute `position` explicitly; omission may reuse an earlier creation/reconfiguration position. PATCH configures output; it does not start, pause or seek the local player.
+
 ### Media delivery
 
 `GET`/`HEAD /playback/media/:id/:revision/:asset` requires the session-scoped `token` query parameter. Use the returned URLs rather than constructing them. Tokens are revoked on deletion, server restart, or idle expiry (30 minutes by default). They grant access to that session's assets, not control operations or other sessions.
 
-Original delivery supports concurrent single byte ranges, suffix ranges, HEAD, 206 and 416 responses. Multiple ranges are rejected with 416. HLS provides full-duration VOD manifests with on-demand segments, enabling immediate arbitrary seeking and quality changes. All advertised segment URLs remain regenerable after cache eviction. No indexing-time preprocessing is required.
+Original delivery supports concurrent single byte ranges, suffix ranges, HEAD, 206 and 416 responses. HEAD returns full-resource headers with 200 and ignores Range. Multiple ranges are rejected with 416; unsatisfiable ranges include `Content-Range: bytes */<size>`. HLS provides full-duration VOD manifests with on-demand segments, enabling arbitrary seeking without creating another session. All advertised segment URLs remain regenerable after cache eviction. No indexing-time preprocessing is required.
+
+Progress, successful reconfiguration and media access refresh the idle lease. Paused clients should continue heartbeats if they want to retain a session. Session state and URLs are ephemeral; saved watch progress survives restart. `GET` descriptors do not refresh the lease.
 
 Errors use `{ "code": "INVALID_SELECTION", "message": "..." }`: invalid options (400), invalid media token (401), unavailable/foreign session or file (404), stale revision (409), unsupported media (422), unsatisfiable range (416), capacity/storage/encoder failures (503), preparation timeout (504). Capacity responses include `Retry-After: 2`. Once response headers are sent, transport failures close that response.
+
+Recognized playback codes include `INVALID_SELECTION`, `UNAUTHORIZED`, `SESSION_EXPIRED`, `MEDIA_NOT_FOUND`, `STALE_REVISION`, `UNSUPPORTED_MEDIA`, `INVALID_RANGE`, `SERVER_CAPACITY`, `REMOTE_UNAVAILABLE` (502/503), `REMOTE_TIMEOUT` (504), `ENCODER_UNAVAILABLE`, `ENCODING_FAILED`, `STORAGE_FULL`, `ENCODING_TIMEOUT`, and `CANCELLED` (499, or 503 during shutdown). Keep a fallback for unknown codes and for ordinary numeric-code authentication errors.
 
 ### Breaking migration
 
@@ -419,16 +578,18 @@ Everything here needs `users.manage`, except that users may read their own recor
 - **URL:** `/user`
 - **Method:** `POST`
 - **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": false, "passwordlessLocal": false, "groupId": 2 }` (`groupId` optional; defaults to the **Users** group)
+- `username`, `email` and `name` are required. Password is optional, but remote sign-in still requires one. Returns the public user with HTTP 200; an existing username returns its existing user unchanged.
 
 ### Update User
 - **URL:** `/user/:id`
 - **Method:** `PUT`
-- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": true, "passwordlessLocal": false, "groupId": 1 }` (all optional; the flags must be booleans; `groupId` may be `null`). `400` for an unknown group, `409` if it would demote the last user who can manage users.
+- **Body:** `{ "username": "...", "password": "...", "email": "...", "name": "...", "publicProfile": true, "passwordlessLocal": false, "groupId": 1 }` (all optional; send flags as booleans; `groupId` may be `null`). Non-boolean flags and empty text/password values are ignored by this legacy update route. `400` for an unknown user/group, `409` if it would demote the last user who can manage users. Returns the public user.
 
 ### Delete User
 - **URL:** `/user/:id`
 - **Method:** `DELETE`
 - `409` when deleting the last user who can manage users.
+- Returns the deleted public user record with HTTP 200; an unknown ID returns 404.
 
 ### User Avatar
 - **Get:** `GET /user/:id/avatar?v=<avatar>` — no authentication (the login screen shows it). 256×256 WebP; `404` when the user has none. Cached indefinitely when `v` matches the current `avatar`.
@@ -453,17 +614,19 @@ The account object is the user object plus:
     "subtitleMode": "auto",
     "quality": "original",
     "autoplayNext": true,
-    "stillWatchingPrompt": true
+    "stillWatchingPrompt": true,
+    "episodeSpoilers": "off"
   }
 }
 ```
 
 `preferences` always carries every key, with defaults filled in:
 - `language`: interface language as a BCP 47 tag (`"en"`, `"pt-BR"`); `null` follows the browser.
-- `audioLanguage`, `subtitleLanguage`: preferred track languages (ISO 639 code as found in the media, e.g. `"en"` or `"jpn"`); `null` keeps the file's default track.
+- `audioLanguage`, `subtitleLanguage`: preferred track languages (ISO 639 code as found in the media, e.g. `"en"` or `"jpn"`); `null` leaves selection to the playback defaults. Native clients map non-null preferences to stream indexes themselves.
 - `subtitleMode`: `off`, `auto` or `forced`.
 - `quality`: `original`, `auto`, `360`, `480`, `720` or `1080`.
 - `autoplayNext`: start the next episode when one ends.
+- `episodeSpoilers`: `off` (default), `hide` (hide unwatched episode artwork/synopsis), or `hide-titles` (also hide titles). This native-web presentation preference applies to pages, cards, catalogue titles, adjacent previews and chapter titles. Progress of at least 0.9 counts as watched. Individual reveals are temporary and reset on navigation/reload; this is not an API access restriction.
 - `stillWatchingPrompt`: boolean, default `true`. The default web player finishes the current episode and asks before automatic continuation after 90 minutes without interaction.
 
 The Jellyfin emulation reports these as the user's audio and subtitle language, subtitle mode and next-episode autoplay.
@@ -473,7 +636,7 @@ The Jellyfin emulation reports these as the user's audio and subtitle language, 
 - **Change password:** `PUT /api/v1/me/password` with `{ "currentPassword": "...", "newPassword": "..." }`. `currentPassword` may be omitted only when the account has no password. `403` when it is wrong, `400` when the new one is shorter than four characters.
 - **Avatar:** `PUT /api/v1/me/avatar` (multipart, one image) and `DELETE /api/v1/me/avatar`, with the same processing and errors as `PUT /user/:id/avatar`.
 
-Each returns the updated account object.
+Each returns the updated account object (GET returns the current account). Password change invalidates the caller's token without returning a replacement; sign in again.
 
 ## Clients (Remote Control)
 
@@ -487,6 +650,10 @@ Remote play has no REST surface. `GET /clients` and `POST /client/:clientId/play
 Manage the core application configuration. Settings endpoints need `settings.manage`; library mutations need `libraries.manage`; maintenance and imports need `system.manage` (see [Permissions and groups](#permissions-and-groups)). Reading library paths, system info and capabilities only needs a session.
 
 Configuration and library mutations are serialized and persisted by atomic file replacement before success is returned. A failed write leaves the active configuration unchanged and returns an error. Object sections use shallow field merging; send the complete nested width object when changing artwork sizes. Unchanged fields should be omitted. Masked `***` credential values in object sections are treated as unchanged.
+
+Allowed sections: `indexer`, `cleaner`, `queue`, `tvdb`, `themoviedb`, `fanart.tv`, `assets`, `server`, `jellyfin`, `files`, `artwork`, `fileExtensions`, `transcoding`, `web`, `streaming`, `authentication`, `federation`, `logging`, `seedboxes`, `movies`, `tvshows`. The value types/defaults are in [res/config.json](../res/config.json) and [IConfig](../src/interfaces/config.ts). `seedboxes` is an array replaced as a whole; object sections merge fields. Unknown sections/fields and empty updates return 400. Successful PATCH returns the updated configuration or section, not a restart/completion receipt. Port, provider-client and other startup-bound changes may need a server restart; there is no native restart endpoint.
+
+The full-config response masks the authentication secret, federation private-key path and seedbox passwords. Section reads mask authentication/federation secrets, but not all section credentials (notably seedboxes/provider keys). Treat every configuration response as sensitive and never use it for public discovery or logs. Do not assume `***` inside an array element is preserved by the object-section merge rule.
 
 The `authentication` section also carries the login-screen switches: `profilePicker` (show the profile picker on the local network, default off), `localPasswordlessLogin` (allow opted-in users to sign in without a password on the local network), `localSubnets` (extra CIDRs counted as local) and `trustProxy` (believe `X-Forwarded-For`). `allowPasswordlessLogin` now only applies on the local network.
 
@@ -513,19 +680,23 @@ Invalid settings return HTTP 400 with `{ "error": "Check the highlighted setting
 Manage media libraries and sources. Mutations follow the same persistence guarantees as configuration updates. Source paths must be non-empty strings without null characters.
 
 - **List Libraries:** `GET /api/v1/libraries`
+  - **Response:** `{ "movies": { ... }, "tvshows": { ... } }`, the complete library configuration sections.
 - **Get Library Paths:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
   - **Response:** Array of directory objects (e.g., `[{ "path": "/path/to/media" }]`).
 - **Update Library Config:** `PATCH /api/v1/libraries/:type`
+  - **Body:** Nonempty partial library configuration, such as `{ "directories": [{ "path": "/media/Movies" }] }`. Returns the updated library section.
 - **Add Source Path:** `POST /api/v1/libraries/:type/paths`
   - **Body:** `{ "path": "/path/to/media" }`
 - **Remove Source Path:** `DELETE /api/v1/libraries/:type/paths`
   - **Body:** `{ "path": "/path/to/media" }`
 
+Path add/remove return the updated directory array; duplicate addition returns 409 and unknown removal 404. These are server paths. Removing a source changes configuration; it is not a command to delete media bytes.
+
 ### System Maintenance
 
 - **Trigger task:** `POST /api/v1/system/maintenance`
 - **Body:** `{ "action": "scan", "target": "movies" }`.
-- **Response:** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans, artwork and playback analysis.
+- **Response (200):** `{ "success": true, "message": "Maintenance job accepted", "job": { ... } }`. Acceptance does not mean completion. Repeating an active action/target returns its existing job. `tvshows` aliases `series` for scans, artwork and playback analysis.
 - **List jobs:** `GET /api/v1/system/maintenance/jobs` returns an array of job records, newest first.
 
 | Action | Supported targets |
@@ -549,10 +720,12 @@ Trigger imports from configured remote seedboxes.
   - **Body:**
     ```json
     {
-      "source": "all" | "seedbox_name",
-      "type": "movies" | "tvshows"
+      "source": "all",
+      "type": "movies"
     }
     ```
+
+`source` defaults to `all` and may be a configured seedbox name. `type` is required (`movies` or `tvshows`). Returns 200 `{ "success": true, "message": "Import triggered for 'movies' from 'all'" }`; an unknown named seedbox returns 404. Follow import events/status for progress.
 
 ### System Info
 - **Get Info:** `GET /api/v1/system/info`
@@ -566,6 +739,7 @@ Get list of available identifiers and updaters.
 - **Response:**
   ```json
   {
+    "tools": { "guessit": true, "ffmpeg": true, "ffprobe": true },
     "movies": {
       "identifiers": ["tmdb"],
       "updaters": ["tmdb"]
@@ -583,7 +757,7 @@ Get list of available identifiers and updaters.
 
 ### Active Sessions
 
-`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file.id`, `file.name`, `file.extension` (the file name without its directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery.
+`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file: { id, name, extension }` (name without directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup is measured from creation to first original/segment delivery. Startup/speed/failure can be null. Queue, encoder and cache values are server-wide gauges repeated in each row; do not sum them across sessions. Diagnostic `bufferingReports` counts truthy reports; statistics health counts buffering transitions.
 
 ### Connected Clients
 Get the authenticated user's connected realtime devices. Scoped to the caller, even for administrators: an unfiltered listing would expose other people's devices. `user` carries the id and nothing else.
@@ -647,7 +821,7 @@ Get the status of the seedbox importer, including configured seedboxes and impor
 ### Find Duplicates
 - **URL:** `/files/duplicates`
 - **Method:** `GET`
-- **Response:** List of files with duplicate hashes.
+- **Response:** Array of file arrays, one inner array per duplicate hash. Each file includes linked `Movies` and `Episodes`. Requires `libraries.manage`.
 
 ### Problematic Files
 Files that failed indexing. `problemStage` says where they failed: `identify` (no movie or episode matched, so nothing is linked to the file) or `probe` (ffprobe could not read it). Rows flagged before stages were recorded have `problemStage: null`. The flag clears itself when the failed stage later succeeds.
@@ -746,7 +920,7 @@ Invalid peer settings return 400 `{ error: "Check the highlighted settings.", fi
 - `DELETE /files/:id/segments` requires `libraries.manage`. Clears all segments, including manual edits, and queues detection again. Returns 202 with the marker record.
 - These routes return 404 for unknown files; PUT returns 400 for invalid segment input.
 
-Playback analysis maintenance: `POST /api/v1/system/maintenance` with `{ "action": "analyse", "target": "all" }` (or target `movies`, `series`, legacy `tvshows`) requires `system.manage`. Returns 202 with the tracked job. Fills missing chapters, thumbnails and segments for local files; new files are queued automatically on identification.
+Playback analysis maintenance: `POST /api/v1/system/maintenance` with `{ "action": "analyse", "target": "all" }` (or target `movies`, `series`, legacy `tvshows`) requires `system.manage`. Returns 200 with the tracked job. Fills missing chapters, thumbnails and segments for local files; new files are queued automatically on identification.
 
 ## Statistics
 

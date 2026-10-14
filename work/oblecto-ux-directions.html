@@ -1,0 +1,192 @@
+<style>
+#oblecto-ux-directions .ob-window{--ob-bg:light-dark(#f8f8f7,#141414);--ob-panel:light-dark(#fff,#1c1c1c);--ob-raised:light-dark(#eceeec,#262827);--ob-fg:light-dark(#182422,#f0f2f1);--ob-muted:light-dark(#5b6562,#a7b2ad);--ob-line:light-dark(#d6ded9,#333d37);--ob-teal:light-dark(#006f69,#67ded5);--ob-action:light-dark(#db745e,#f29881);--ob-ink:#172421;--ob-warm:light-dark(#835c14,#e1bc75);font:14px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:var(--ob-fg);background:var(--ob-bg);min-height:900px;box-sizing:border-box}
+#oblecto-ux-directions .ob-window *{box-sizing:border-box}
+#oblecto-ux-directions .ob-window [hidden]{display:none!important}
+#oblecto-ux-directions .ob-top{padding:21px 112px 21px 28px;display:flex;align-items:center;gap:30px;border-bottom:1px solid var(--ob-line);background:var(--ob-panel);flex-wrap:wrap}
+#oblecto-ux-directions .ob-logo{font-size:22px;font-weight:700;letter-spacing:-1px;color:var(--ob-teal)}
+#oblecto-ux-directions .ob-nav{display:flex;align-items:center;gap:24px;flex-wrap:wrap;color:var(--ob-muted);font-size:13px}
+#oblecto-ux-directions .ob-nav .ob-current{color:var(--ob-fg);text-decoration:underline;text-decoration-color:var(--ob-teal);text-underline-offset:9px}
+#oblecto-ux-directions .ob-main{padding:30px;max-width:1080px;margin:auto}
+#oblecto-ux-directions h1,#oblecto-ux-directions h2,#oblecto-ux-directions h3,#oblecto-ux-directions p{margin:0}
+#oblecto-ux-directions h1{font-size:30px;line-height:1.18;letter-spacing:-.6px;font-weight:650}
+#oblecto-ux-directions h2{font-size:18px;line-height:1.35;font-weight:600}
+#oblecto-ux-directions h3{font-size:15px;font-weight:600}
+#oblecto-ux-directions small{font-size:12px;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-muted{color:var(--ob-muted)}
+#oblecto-ux-directions .ob-kicker{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--ob-muted);margin-bottom:8px}
+#oblecto-ux-directions .ob-heading{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+#oblecto-ux-directions button,#oblecto-ux-directions select,#oblecto-ux-directions input{font:inherit;color:var(--ob-fg)}
+#oblecto-ux-directions .ob-button{min-height:42px;padding:9px 16px;background:var(--ob-panel);border:1px solid var(--ob-line);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+#oblecto-ux-directions .ob-primary{background:var(--ob-action);color:var(--ob-ink);border-color:transparent;font-weight:600}
+#oblecto-ux-directions .ob-quiet{background:transparent;border-color:transparent;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-button[aria-pressed=true]{border-color:var(--ob-teal);color:var(--ob-teal);background:var(--ob-panel)}
+#oblecto-ux-directions .ob-button:disabled{opacity:.6}
+#oblecto-ux-directions .ob-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}
+#oblecto-ux-directions .ob-icon{display:inline-flex;align-items:center;gap:7px}
+#oblecto-ux-directions .ob-feature{display:grid;grid-template-columns:112px minmax(0,1fr);gap:24px;padding:24px;border-radius:8px;background:var(--ob-panel);border:1px solid var(--ob-line)}
+#oblecto-ux-directions .ob-art{position:relative;border-radius:5px;min-height:145px;background:linear-gradient(135deg,light-dark(#c8dace,#2c4940),light-dark(#e6d9c1,#494735));display:flex;align-items:flex-end;padding:14px;color:var(--ob-fg);overflow:hidden}
+#oblecto-ux-directions .ob-art:before{content:'';position:absolute;inset:18px 24px;border:1px solid light-dark(#9bb5a4,#647969);border-radius:70% 10% 70% 10%;transform:rotate(-20deg)}
+#oblecto-ux-directions .ob-art span{z-index:1;font-size:13px;letter-spacing:.09em;max-width:10ch;line-height:1.3;font-weight:600}
+#oblecto-ux-directions .ob-feature h1{margin-bottom:9px}
+#oblecto-ux-directions .ob-feature .ob-muted{font-size:13px}
+#oblecto-ux-directions .ob-meter{height:3px;background:var(--ob-raised);margin-top:14px;max-width:390px}
+#oblecto-ux-directions .ob-meter span{display:block;background:var(--ob-teal);height:100%;width:58%}
+#oblecto-ux-directions .ob-section{margin-top:32px}
+#oblecto-ux-directions .ob-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#oblecto-ux-directions .ob-resume{padding:16px;text-align:left;border:1px solid var(--ob-line);border-radius:6px;background:var(--ob-panel);display:grid;gap:6px;min-height:106px}
+#oblecto-ux-directions .ob-resume[aria-pressed=true]{border-color:var(--ob-teal)}
+#oblecto-ux-directions .ob-resume strong{font-size:14px;font-weight:600}
+#oblecto-ux-directions .ob-resume .ob-icon{font-size:12px;color:var(--ob-teal)}
+#oblecto-ux-directions .ob-watchlist{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+#oblecto-ux-directions .ob-watch-item{display:flex;align-items:center;gap:12px;min-width:0}
+#oblecto-ux-directions .ob-watch-item .ob-art{width:50px;min-width:50px;min-height:74px;padding:0}
+#oblecto-ux-directions .ob-watch-item .ob-art:before{inset:12px}
+#oblecto-ux-directions .ob-watch-item strong{font-size:13px;display:block;font-weight:600}
+#oblecto-ux-directions .ob-feedback{margin-top:16px;font-size:13px;color:var(--ob-teal);min-height:24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#oblecto-ux-directions .ob-feedback:empty{display:none}
+#oblecto-ux-directions .ob-series-head{padding-bottom:22px;border-bottom:1px solid var(--ob-line)}
+#oblecto-ux-directions .ob-series-head h1{margin:10px 0}
+#oblecto-ux-directions .ob-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:22px 0;font-size:13px;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-season-tools{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+#oblecto-ux-directions .ob-select{background:var(--ob-panel);border:1px solid var(--ob-line);border-radius:5px;min-height:42px;padding:8px 12px;max-width:100%}
+#oblecto-ux-directions .ob-check{display:flex;gap:8px;align-items:center;min-height:44px;font-size:13px;color:var(--ob-muted)}
+#oblecto-ux-directions input[type=checkbox]{accent-color:var(--ob-teal);width:16px;height:16px}
+#oblecto-ux-directions .ob-episode{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;align-items:center;padding:var(--ob-row-space,16px) 8px;border-bottom:1px solid var(--ob-line)}
+#oblecto-ux-directions .ob-episode.ob-selected{background:var(--ob-panel);border-left:2px solid var(--ob-teal);padding-left:6px}
+#oblecto-ux-directions .ob-number{color:var(--ob-muted);font-size:13px;font-variant-numeric:tabular-nums}
+#oblecto-ux-directions .ob-episode-title{background:none;border:none;padding:0;text-align:left;font-weight:600}
+#oblecto-ux-directions .ob-episode-meta{color:var(--ob-muted);font-size:12px;margin-top:4px}
+#oblecto-ux-directions .ob-row-actions{display:flex;align-items:center;gap:4px}
+#oblecto-ux-directions .ob-row-actions .ob-button{min-width:42px;padding:8px}
+#oblecto-ux-directions .ob-inline-detail{padding:18px;background:var(--ob-panel);border-bottom:1px solid var(--ob-line);font-size:13px;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-inline-detail .ob-actions{margin-top:12px}
+#oblecto-ux-directions .ob-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
+#oblecto-ux-directions .ob-tabs button{min-height:42px;background:transparent;border:none;border-bottom:2px solid transparent;padding:8px 12px;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-tabs button[aria-pressed=true]{border-color:var(--ob-teal);color:var(--ob-fg)}
+#oblecto-ux-directions .ob-status{border-left:3px solid var(--ob-warm);padding:12px 16px;background:var(--ob-panel);font-size:13px;margin-top:22px}
+#oblecto-ux-directions .ob-status small{display:block;margin-top:4px}
+#oblecto-ux-directions .ob-review-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:22px;align-items:start}
+#oblecto-ux-directions .ob-issue{display:block;width:100%;border:1px solid var(--ob-line);border-radius:6px;background:var(--ob-panel);padding:18px;text-align:left}
+#oblecto-ux-directions .ob-issue strong{font-weight:600;display:block;margin:8px 0 3px}
+#oblecto-ux-directions .ob-issue[aria-pressed=true]{border-color:var(--ob-teal)}
+#oblecto-ux-directions .ob-issue .ob-icon{color:var(--ob-warm);font-size:12px}
+#oblecto-ux-directions .ob-inspect{background:var(--ob-panel);padding:20px;border:1px solid var(--ob-line);border-radius:6px}
+#oblecto-ux-directions .ob-inspect p{font-size:13px;color:var(--ob-muted);margin-top:10px}
+#oblecto-ux-directions .ob-inspect dl{margin:18px 0 0;font-size:13px}
+#oblecto-ux-directions .ob-inspect dl div{display:flex;justify-content:space-between;gap:12px;margin-top:9px}
+#oblecto-ux-directions .ob-inspect dt{color:var(--ob-muted)}
+#oblecto-ux-directions .ob-inspect dd{margin:0;overflow-wrap:anywhere;text-align:right}
+#oblecto-ux-directions .ob-inspect details{margin-top:18px;font-size:13px}
+#oblecto-ux-directions .ob-inspect summary{min-height:36px;padding:8px 0}
+#oblecto-ux-directions .ob-inspect code{font-size:12px;overflow-wrap:anywhere;white-space:normal;color:var(--ob-fg);background:var(--ob-raised);padding:4px;display:block}
+#oblecto-ux-directions .ob-table{width:100%;border-collapse:collapse;font-size:13px}
+#oblecto-ux-directions .ob-table td,#oblecto-ux-directions .ob-table th{text-align:left;padding:14px 8px;border-bottom:1px solid var(--ob-line)}
+#oblecto-ux-directions .ob-table th{font-weight:500;color:var(--ob-muted);font-size:12px}
+#oblecto-ux-directions .ob-table td:last-child{color:var(--ob-teal)}
+#oblecto-ux-directions .ob-collapsed{border-top:1px solid var(--ob-line);margin-top:24px;font-size:13px;color:var(--ob-muted)}
+#oblecto-ux-directions .ob-collapsed summary{padding:16px 0;min-height:44px}
+#oblecto-ux-directions .ob-demo{font-size:11px;color:var(--ob-muted);padding-top:28px;letter-spacing:.02em}
+@media(max-width:700px){#oblecto-ux-directions .ob-window{min-height:1450px}#oblecto-ux-directions .ob-top{padding:20px;gap:14px}#oblecto-ux-directions .ob-logo{padding-right:105px}#oblecto-ux-directions .ob-nav{gap:20px;flex-basis:100%}#oblecto-ux-directions .ob-main{padding:24px 18px}#oblecto-ux-directions h1{font-size:25px}#oblecto-ux-directions .ob-feature{grid-template-columns:minmax(0,1fr);padding:20px;gap:16px}#oblecto-ux-directions .ob-feature>.ob-art{display:none}#oblecto-ux-directions .ob-cards{grid-template-columns:minmax(0,1fr);gap:8px}#oblecto-ux-directions .ob-resume{min-height:0;padding:12px 14px;gap:3px}#oblecto-ux-directions .ob-watchlist{grid-template-columns:minmax(0,1fr);gap:16px}#oblecto-ux-directions .ob-review-grid{grid-template-columns:minmax(0,1fr)}#oblecto-ux-directions .ob-episode{grid-template-columns:25px minmax(0,1fr);gap:8px 12px}#oblecto-ux-directions .ob-row-actions{grid-column:2;justify-content:flex-start}#oblecto-ux-directions .ob-table td,#oblecto-ux-directions .ob-table th{padding:12px 4px}#oblecto-ux-directions .ob-table td:first-child{max-width:125px;overflow-wrap:anywhere}#oblecto-ux-directions .ob-button,#oblecto-ux-directions .ob-select{min-height:44px}#oblecto-ux-directions .ob-select{font-size:16px}#oblecto-ux-directions .ob-tabs button{padding:8px 6px}}
+</style>
+<div id="oblecto-ux-directions">
+  <div class="viz-carousel" aria-label="Oblecto experience improvements">
+    <section data-variant="Continue & browse" aria-label="Home with compact continue watching">
+      <div class="ob-window" id="ob-home-concept" aria-label="Continue watching design">
+        <header class="ob-top"><span class="ob-logo">Oblecto</span><nav class="ob-nav" aria-label="Main navigation"><span class="ob-current">Home</span><span>TV Shows</span><span>Movies</span><span>Discover</span></nav></header>
+        <main class="ob-main">
+          <div class="ob-heading"><h2>Pick up where you left off</h2><small>Just for you</small></div>
+          <section class="ob-feature" aria-label="Selected title">
+            <div class="ob-art" aria-hidden="true"><span data-home-art>THE APOTHECARY DIARIES</span></div>
+            <div><div class="ob-kicker">Continue watching</div><h1 data-home-title>The Apothecary Diaries</h1><p class="ob-muted" data-home-meta>Season 2 · Episode 2 · 10 min left</p><div class="ob-meter" aria-hidden="true"><span data-home-progress></span></div><div class="ob-actions"><button class="ob-button ob-primary cursor-interaction" data-home-play><i data-lucide="play" aria-hidden="true"></i>Resume</button><button class="ob-button cursor-interaction" data-home-save><i data-lucide="bookmark" aria-hidden="true"></i><span data-home-save-text>Watchlist</span></button></div></div>
+          </section>
+          <div class="ob-feedback" role="status" data-home-feedback></div>
+          <section class="ob-section" aria-label="Continue watching choices"><div class="ob-heading"><h2>Also in progress</h2></div><div class="ob-cards">
+            <button class="ob-resume cursor-interaction" data-resume="0" aria-pressed="true"><strong>The Apothecary Diaries</strong><small>S2 E2 · 10 min left</small><span class="ob-icon"><i data-lucide="play" aria-hidden="true"></i>Continue episode</span></button>
+            <button class="ob-resume cursor-interaction" data-resume="1" aria-pressed="false"><strong>Arrival</strong><small>Movie · 42 min left</small><span class="ob-icon"><i data-lucide="play" aria-hidden="true"></i>Continue movie</span></button>
+            <button class="ob-resume cursor-interaction" data-resume="2" aria-pressed="false"><strong>The Observatory</strong><small>S1 E4 · 18 min left</small><span class="ob-icon"><i data-lucide="play" aria-hidden="true"></i>Continue episode</span></button>
+          </div></section>
+          <section class="ob-section" data-home-watchlist><div class="ob-heading"><h2>Your watchlist</h2><small>Ready when you are</small></div><div class="ob-watchlist">
+            <div class="ob-watch-item"><div class="ob-art" aria-hidden="true"></div><div><strong>Spirited Away</strong><small>Movie · Unwatched</small></div></div>
+            <div class="ob-watch-item"><div class="ob-art" aria-hidden="true"></div><div><strong>Frieren</strong><small>TV show · Unwatched</small></div></div>
+            <div class="ob-watch-item"><div class="ob-art" aria-hidden="true"></div><div><strong>Perfect Days</strong><small>Movie · Unwatched</small></div></div>
+          </div></section>
+          <p class="ob-demo">Design preview · Illustrative library and viewing history</p>
+        </main>
+      </div>
+    </section>
+    <section data-variant="Episode browser" aria-label="Series with compact episode navigation" hidden>
+      <div class="ob-window" id="ob-episode-concept" aria-label="Episode browser design">
+        <header class="ob-top"><span class="ob-logo">Oblecto</span><nav class="ob-nav" aria-label="Main navigation"><span>Home</span><span class="ob-current">TV Shows</span><span>Movies</span><span>Discover</span></nav></header>
+        <main class="ob-main">
+          <header class="ob-series-head"><p class="ob-kicker">TV Shows / Your library</p><h1>The Apothecary Diaries</h1><p class="ob-muted">Drama · Mystery · Anime</p><div class="ob-actions"><button class="ob-button ob-primary cursor-interaction" data-series-resume><i data-lucide="play" aria-hidden="true"></i>Resume S2 E2</button><button class="ob-button cursor-interaction" aria-label="Save series to watchlist" data-series-save aria-pressed="false"><i data-lucide="bookmark" aria-hidden="true"></i></button><button class="ob-button ob-quiet cursor-interaction" data-series-about>About this show</button></div><p class="ob-inline-detail" data-series-about-text hidden>A young apothecary solves mysteries at the imperial court.</p></header>
+          <div class="ob-summary"><span data-season-progress>1 of 24 library episodes watched</span><span>Local season numbering</span></div>
+          <div class="ob-season-tools"><label><span class="ob-kicker">Episodes</span><br><select class="ob-select cursor-interaction" aria-label="Season" data-season><option value="2">Season 2 · 24 episodes</option><option value="0">Specials · 2 episodes</option></select></label><label class="ob-check"><input type="checkbox" data-unwatched>Hide watched</label></div>
+          <div data-episode-rows aria-label="Episodes"></div>
+          <div class="ob-feedback" role="status" data-episode-feedback></div>
+          <div class="ob-actions"><button class="ob-button ob-quiet cursor-interaction" data-more-episodes>Show more episodes</button></div>
+          <p class="ob-demo">Design preview · Illustrative viewing history · Titles hidden until revealed</p>
+        </main>
+      </div>
+    </section>
+    <section data-variant="Review queue" aria-label="Library workspace focused on actionable issues" hidden>
+      <div class="ob-window" id="ob-review-concept" aria-label="Library review design">
+        <header class="ob-top"><span class="ob-logo">Oblecto</span><nav class="ob-nav" aria-label="Main navigation"><span>Home</span><span>TV Shows</span><span class="ob-current">Library tools</span></nav></header>
+        <main class="ob-main">
+          <div class="ob-heading"><div><p class="ob-kicker">Libraries / TV Shows</p><h1>The Observatory</h1></div><small>Library manager</small></div>
+          <p class="ob-muted">Episode matching</p>
+          <div class="ob-status"><strong>Completeness check paused</strong><small>One local episode needs matching. Uncertain catalogue entries aren’t counted as missing.</small></div>
+          <div class="ob-tabs" role="group" aria-label="Workspace view"><button class="cursor-interaction" data-review-tab="review" aria-pressed="true">Needs review · 1</button><button class="cursor-interaction" data-review-tab="matched" aria-pressed="false">Matched · 7</button><button class="cursor-interaction" data-review-tab="catalog" aria-pressed="false">Catalogue</button></div>
+          <div data-review-panel="review">
+            <div class="ob-review-grid">
+              <div><p class="ob-kicker" data-issue-group>Missing episode ID · 1</p><button class="ob-issue cursor-interaction" data-inspect-issue aria-pressed="true"><span class="ob-icon"><i data-lucide="circle-help" aria-hidden="true"></i>Needs matching</span><strong>S1 E8 · Episode 8</strong><small>One playable file · TMDB ID not set</small></button></div>
+              <aside class="ob-inspect" data-inspector aria-label="Episode inspection"><h3>Inspect episode 8</h3><p>The file is playable. Its identity hasn’t been confirmed against TMDB.</p><dl><div><dt>Library numbering</dt><dd>S1 E8</dd></div><div><dt>TMDB episode ID</dt><dd>Not set</dd></div><div><dt>Playable files</dt><dd>1</dd></div></dl><details><summary class="cursor-interaction">File details</summary><code>The.Observatory.S01E08.mkv</code><p>45 min · H.264 · 1080p</p></details><details><summary class="cursor-interaction">Why this needs review</summary><p>Season and episode numbers alone don’t establish identity. Provider season orders can differ.</p></details></aside>
+            </div>
+          </div>
+          <div data-review-panel="matched" hidden><table class="ob-table"><thead><tr><th>Episode</th><th>Library</th><th>TMDB</th><th>Match</th></tr></thead><tbody><tr><td>Episode 1</td><td>S1 E1</td><td>S1 E1</td><td>Exact ID</td></tr><tr><td>Episode 2</td><td>S1 E2</td><td>S1 E2</td><td>Exact ID</td></tr><tr><td>Episode 3</td><td>S1 E3</td><td>S1 E3</td><td>Exact ID</td></tr></tbody></table><p class="ob-demo">3 of 7 matched episodes shown in this preview</p></div>
+          <div data-review-panel="catalog" hidden><div class="ob-inspect"><h3>Availability is uncertain</h3><p>Unmatched catalogue entries remain unconfirmed until the local episode has been identified.</p><p>They are excluded from the actionable review count.</p></div></div>
+          <details class="ob-collapsed"><summary class="cursor-interaction">Specials &amp; upcoming releases</summary><p>Specials are tracked separately. Future and undated episodes are excluded from absence checks.</p></details>
+          <p class="ob-demo">Design preview · Fictional series data · No library changes</p>
+        </main>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  const root=document.getElementById('oblecto-ux-directions');
+  const q=s=>root.querySelector(s);
+  const home=q('#ob-home-concept'), ep=q('#ob-episode-concept'), review=q('#ob-review-concept');
+  const samples=[{title:'The Apothecary Diaries',meta:'Season 2 · Episode 2 · 10 min left',progress:58},{title:'Arrival',meta:'Movie · 42 min left',progress:64},{title:'The Observatory',meta:'Season 1 · Episode 4 · 18 min left',progress:60}];
+  const state={selected:0,saved:[],watchlist:true,hideTitles:true,compact:true,season:'2',unwatched:false,watched:[1],more:false,revealed:[],expanded:null,tab:'review',group:true};
+  let undo=null;
+  const safeRestore=s=>{if(!s||typeof s!=='object')return; if(Number.isInteger(s.selected)&&s.selected>=0&&s.selected<3)state.selected=s.selected;for(const key of ['watchlist','hideTitles','compact','unwatched','more','group'])if(typeof s[key]==='boolean')state[key]=s[key];if(['2','0'].includes(s.season))state.season=s.season;if(['review','matched','catalog'].includes(s.tab))state.tab=s.tab;for(const key of ['saved','watched','revealed'])if(Array.isArray(s[key]))state[key]=s[key].filter(n=>Number.isInteger(n)&&n>=0&&n<30);};
+  safeRestore(window.openai?.widgetState?.privateContent);
+  const save=()=>{if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{selectedTitle:samples[state.selected].title,season:state.season,workspaceView:state.tab},privateContent:{...state}}).catch(()=>{});};
+  const icons=()=>{if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});};
+  function renderHome(){const item=samples[state.selected];home.querySelector('[data-home-title]').textContent=item.title;home.querySelector('[data-home-art]').textContent=item.title.toUpperCase();home.querySelector('[data-home-meta]').textContent=item.meta;home.querySelector('[data-home-progress]').style.width=item.progress+'%';home.querySelectorAll('[data-resume]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.resume===state.selected)));const saved=state.saved.includes(state.selected);home.querySelector('[data-home-save]').setAttribute('aria-pressed',String(saved));home.querySelector('[data-home-save-text]').textContent=saved?'Saved':'Watchlist';home.querySelector('[data-home-watchlist]').hidden=!state.watchlist;}
+  function renderEpisodes(){
+    ep.style.setProperty('--ob-row-space',state.compact?'13px':'22px');q('[data-season]').value=state.season;q('[data-unwatched]').checked=state.unwatched;
+    const special=state.season==='0';const count=special?2:state.more?8:4;const rows=Array.from({length:count},(_,n)=>n+1).filter(n=>!state.unwatched||special||!state.watched.includes(n));
+    q('[data-season-progress]').textContent=special?'2 playable specials in your library':state.watched.length+' of 24 library episodes watched';
+    const list=q('[data-episode-rows]');list.replaceChildren();
+    for(const n of rows){const watched=!special&&state.watched.includes(n);const hidden=state.hideTitles&&!watched&&!state.revealed.includes(n);const titles=['Maomao and Maomao','Caravan','Corpse Fungus','Mirror'];const title=hidden?(special?'Special ':'Episode ')+n:special?'Special '+n:titles[n-1]||'Episode '+n;
+      const row=document.createElement('div');row.className='ob-episode'+(!special&&n===2?' ob-selected':'');
+      const number=document.createElement('span');number.className='ob-number';number.textContent=String(n).padStart(2,'0');row.append(number);
+      const copy=document.createElement('div');const name=document.createElement('button');name.className='ob-episode-title cursor-interaction';name.textContent=title;name.dataset.episodeDetails=n;name.setAttribute('aria-expanded',String(state.expanded===n));copy.append(name);const meta=document.createElement('div');meta.className='ob-episode-meta';meta.textContent=watched?'Watched · 24 min':!special&&n===2?'Continue · 10 min left':'Unwatched · 24 min';copy.append(meta);row.append(copy);
+      const actions=document.createElement('div');actions.className='ob-row-actions';const play=document.createElement('button');play.className='ob-button ob-quiet cursor-interaction';play.dataset.episodePlay=n;play.setAttribute('aria-label',(!special&&n===2?'Resume ':'Play ')+title);play.innerHTML='<i data-lucide="play" aria-hidden="true"></i>';actions.append(play);
+      if(!special){const mark=document.createElement('button');mark.className='ob-button ob-quiet cursor-interaction';mark.dataset.episodeWatch=n;mark.setAttribute('aria-label','Mark episode '+n+(watched?' unwatched':' watched'));mark.setAttribute('aria-pressed',String(watched));mark.innerHTML='<i data-lucide="'+(watched?'circle-check':'circle')+'" aria-hidden="true"></i>';actions.append(mark);}row.append(actions);list.append(row);
+      if(state.expanded===n){const detail=document.createElement('div');detail.className='ob-inline-detail';const txt=document.createElement('p');txt.textContent=hidden?'Episode title and synopsis are hidden by your spoiler preference.':'Episode details · Season '+state.season+', episode '+n;detail.append(txt);if(hidden){const reveal=document.createElement('button');reveal.className='ob-button ob-quiet cursor-interaction';reveal.textContent='Reveal this episode';reveal.dataset.episodeReveal=n;detail.append(reveal);}list.append(detail);}
+    }
+    q('[data-more-episodes]').hidden=special;q('[data-more-episodes]').textContent=state.more?'Show fewer episodes':'Show more episodes';icons();
+  }
+  function renderReview(){review.querySelectorAll('[data-review-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.reviewTab===state.tab)));review.querySelectorAll('[data-review-panel]').forEach(p=>p.hidden=p.dataset.reviewPanel!==state.tab);q('[data-issue-group]').hidden=!state.group;}
+  function render(){renderHome();renderEpisodes();renderReview();}
+  home.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-resume')){state.selected=+b.dataset.resume;q('[data-home-feedback]').textContent='';renderHome();save();}if(b.hasAttribute('data-home-save')){const i=state.saved.indexOf(state.selected);if(i<0)state.saved.push(state.selected);else state.saved.splice(i,1);renderHome();q('[data-home-feedback]').textContent=i<0?'Added to your watchlist.':'Removed from your watchlist.';save();}if(b.hasAttribute('data-home-play'))q('[data-home-feedback]').textContent='Playback preview · Resume '+samples[state.selected].title;});
+  ep.addEventListener('change',e=>{if(e.target.matches('[data-season]')){state.season=e.target.value;state.expanded=null;state.more=false;}if(e.target.matches('[data-unwatched]'))state.unwatched=e.target.checked;renderEpisodes();save();});
+  ep.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-episode-details')){const n=+b.dataset.episodeDetails;state.expanded=state.expanded===n?null:n;renderEpisodes();}if(b.hasAttribute('data-episode-reveal')){state.revealed.push(+b.dataset.episodeReveal);renderEpisodes();}if(b.hasAttribute('data-episode-watch')){undo=[...state.watched];const n=+b.dataset.episodeWatch;const idx=state.watched.indexOf(n);if(idx<0)state.watched.push(n);else state.watched.splice(idx,1);renderEpisodes();q('[data-episode-feedback]').innerHTML='Episode '+n+' marked '+(idx<0?'watched':'unwatched')+'. <button class="ob-button ob-quiet cursor-interaction" data-undo>Undo</button>';}if(b.hasAttribute('data-undo')&&undo){state.watched=undo;undo=null;renderEpisodes();q('[data-episode-feedback]').textContent='Previous watch state restored.';}if(b.hasAttribute('data-more-episodes')){state.more=!state.more;renderEpisodes();}if(b.hasAttribute('data-series-about')){q('[data-series-about-text]').hidden=!q('[data-series-about-text]').hidden;}if(b.hasAttribute('data-series-save')){b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));q('[data-episode-feedback]').textContent=b.getAttribute('aria-pressed')==='true'?'Added to your watchlist.':'Removed from your watchlist.';}if(b.hasAttribute('data-series-resume')||b.hasAttribute('data-episode-play'))q('[data-episode-feedback]').textContent='Playback preview · '+(b.hasAttribute('data-series-resume')?'Resume season 2, episode 2':'Play season '+state.season+', episode '+b.dataset.episodePlay);save();});
+  review.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-review-tab')){state.tab=b.dataset.reviewTab;renderReview();save();}if(b.hasAttribute('data-inspect-issue')){q('[data-inspector]').hidden=!q('[data-inspector]').hidden;b.setAttribute('aria-pressed',String(!q('[data-inspector]').hidden));}});
+  window.addEventListener('openai:set_globals',e=>{const s=e.detail?.globals?.widgetState?.privateContent;if(s){safeRestore(s);render();}});
+  render();
+  if(globalThis.Tweak){const h=new Tweak({container:home,onChange:()=>{renderHome();save();}});h.addToggle(state,'watchlist',{label:'Show watchlist'});const p=new Tweak({container:ep,onChange:()=>{renderEpisodes();save();}});p.addToggle(state,'compact',{label:'Compact episode rows'});p.addToggle(state,'hideTitles',{label:'Protect unwatched titles'});const r=new Tweak({container:review,onChange:()=>{renderReview();save();}});r.addToggle(state,'group',{label:'Group episodes by issue'});}
+})();
+</script>

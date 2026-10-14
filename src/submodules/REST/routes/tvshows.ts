@@ -1,3 +1,4 @@
+import { matchSeriesEpisodes } from '../../../lib/series/episodeMatching.js';
 import { relatedTitles } from './helpers/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response, NextFunction } from 'express';
@@ -21,6 +22,9 @@ import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
+import { favouritesAmong, favouriteIdsSql, setFavourite } from '../../../lib/users/favourites.js';
+import { isWatchlisted, setWatchlisted, watchlistIdsSql } from '../../../lib/users/seriesWatchlist.js';
+import { earlierEpisodes } from './helpers/episodeContext.js';
 import { setPlayed } from '../../../lib/playback/progress.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
@@ -136,6 +140,11 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const whereClauses: any[] = [];
         const includeClauses: any[] = [];
+        if (browseParams.list !== 'all') {
+            const userId = Number(req.authorization!.user.id);
+            const sql = browseParams.list === 'favourites' ? favouriteIdsSql(userId, 'series') : watchlistIdsSql(userId);
+            whereClauses.push({ id: { [Op.in]: literal(sql) } });
+        }
 
         if (browseParams.q) {
             whereClauses.push({
@@ -291,6 +300,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 count: items.length
             },
             appliedFilters: {
+                list: browseParams.list,
                 q: browseParams.q,
                 genre: browseParams.genres,
                 yearFrom: browseParams.yearFrom,
@@ -364,24 +374,98 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send({ items });
     });
 
-    server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const show = await Series.findByPk(req.params.id as string);
 
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
         const data: any = show.toJSON();
 
-        if (data.genre) data.genre = JSON.parse(data.genre);
+        if (data.genre) data.genre = normalizeGenres(data.genre);
         data.credits = await creditsFor('series', show.id, Series.sequelize);
+        const userId = Number(req.authorization!.user.id);
+        const [favourites, watchlist] = await Promise.all([favouritesAmong(userId, [{ type: 'series', id: show.id }]), isWatchlisted(userId, show.id)]);
+        data.userState = { favourite: favourites.has(`series:${show.id}`), watchlist };
+        delete data.episodeCatalog;
 
         res.send(data);
+    });
+
+    server.get('/series/:id/library', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+        const show = await Series.unscoped().findByPk(req.params.id as string);
+        if (!show) return res.status(404).send({ message: 'Series not found' });
+        const [snapshot, episodes] = await Promise.all([
+            oblecto.seriesExtras.getCatalog(show),
+            Episode.findAll({
+                where: { SeriesId: show.id },
+                attributes: ['id', 'tmdbid', 'tvdbid', 'airedSeason', 'airedEpisodeNumber', 'episodeName'],
+                include: [
+                    {
+                        model: File,
+                        attributes: ['id'],
+                        through: { attributes: [] }
+                    }
+                ]
+            })
+        ]);
+        res.send({
+            series: {
+                id: show.id,
+                seriesName: show.seriesName,
+                tmdbid: show.tmdbid
+            },
+            catalogUpdatedAt: snapshot.catalogUpdatedAt,
+            catalogAvailable: snapshot.catalog !== null,
+            unavailable: snapshot.unavailable,
+            rows: matchSeriesEpisodes(episodes.map(episode => episode.toJSON()), snapshot.catalog)
+        });
+    });
+
+    server.get('/series/:id/extras', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const show = await Series.unscoped().findByPk(req.params.id as string);
+        if (!show) return res.status(404).send({ message: 'Series not found' });
+        res.send(await oblecto.seriesExtras.get(show));
+    });
+
+    server.put('/series/:id/favourite', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.favourite !== 'boolean') return res.status(400).send({ message: 'favourite must be a boolean' });
+        const show = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!show) return res.status(404).send({ message: 'Series not found' });
+        await setFavourite(Number(req.authorization!.user.id), 'series', show.id, req.body.favourite);
+        res.send({ favourite: req.body.favourite });
+    });
+
+    server.put('/series/:id/watchlist', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.watchlist !== 'boolean') return res.status(400).send({ message: 'watchlist must be a boolean' });
+        const show = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!show) return res.status(404).send({ message: 'Series not found' });
+        await setWatchlisted(Number(req.authorization!.user.id), show.id, req.body.watchlist);
+        res.send({ watchlist: req.body.watchlist });
+    });
+
+    server.put('/series/:id/episodes/:episodeId/earlier/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (req.body?.watched !== true) return res.status(400).send({ message: 'watched must be true' });
+        const rows = await Episode.findAll({ where: { SeriesId: req.params.id } });
+        const anchor = rows.find(row => row.id === Number(req.params.episodeId));
+        if (!anchor) return res.status(404).send({ message: 'Episode not found in this series' });
+        const episodes = earlierEpisodes(rows.map(row => row.toJSON()), anchor.id);
+        const userId = Number(req.authorization!.user.id);
+        await Promise.all(episodes.map(episode => setPlayed(userId, 'episode', Number(episode.id), true)));
+        const tracks = await TrackEpisode.findAll({ where: { userId, episodeId: { [Op.in]: episodes.map(episode => Number(episode.id)) } } });
+        const byEpisode = new Map(tracks.map(track => [Number(track.episodeId), track.toJSON()]));
+        res.send({ watched: true, episodes: episodes.map(episode => ({ id: episode.id, track: byEpisode.get(Number(episode.id)) })) });
     });
 
     // Endpoint to get all episodes within a series
     server.get('/series/:id/episodes', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const show = await Episode.findAll({
             include: [
-                Series,
+                { model: Series, attributes: ['id', 'seriesName'] },
+                {
+                    model: File,
+                    attributes: ['id', 'duration'],
+                    through: { attributes: [] }
+                },
                 {
                     model: TrackEpisode,
                     required: false,

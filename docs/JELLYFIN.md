@@ -2,6 +2,22 @@
 
 Oblecto answers the Jellyfin API on port 8096 (`jellyfin.port`), so Jellyfin apps can sign in, browse and play. This page lists what each part of that API does.
 
+For a new native Oblecto desktop client, start with [DESKTOP_CLIENTS.md](DESKTOP_CLIENTS.md) and the [native API](API.md) on port 8080. This compatibility surface uses its own token format, ID scheme, DTOs and tick-based playback times. Its reported Jellyfin version is not a promise that every Jellyfin feature is implemented; the coverage tables below distinguish working routes from stubs.
+
+## Client connection contract
+
+An existing Jellyfin client can discover public server information with `GET /System/Info/Public`, then sign in with `POST /Users/AuthenticateByName` and JSON `{ "Username": "alice", "Pw": "password" }`. Identify the app/device in the header:
+
+```http
+X-Emby-Authorization: MediaBrowser Client="My Desktop", Device="Laptop", DeviceId="persistent-device-id", Version="1.0"
+```
+
+The response contains `User`, `SessionInfo`, `AccessToken`, and `ServerId`. Subsequent calls can use `X-Emby-Token: <AccessToken>` or the MediaBrowser header's `Token="..."` attribute. Media integrations may also use `api_key`/`ApiKey` query tokens. A native Oblecto login JWT cannot substitute for this token. Paths are lowercased by the compatibility server; query values retain their case. Authentication errors may be plain text, so do not assume all failures are JSON.
+
+Use IDs returned by the server. Ordinary item IDs are 32 hex characters with a type prefix: `1` movie, `2` series, `3` episode, `4` season, `5` person, `6` movie collection, `7` genre, `f` user. Library views use `movies`, `shows`, `collections`. These are not native numeric IDs. Playback/stream source IDs have their own roles; carry returned `MediaSourceId` and `PlaySessionId` through playback requests/reports rather than guessing them. Playback timestamps use ticks (10,000,000 per second).
+
+Browse through `/Items` or `/Users/:userid/Items`, negotiate through `/Items/:mediaid/PlaybackInfo`, and use returned media URLs. Report start, progress and stop through `/Sessions/Playing`, `/Sessions/Playing/Progress`, and `/Sessions/Playing/Stopped`. The compatibility server delegates delivery to Oblecto's playback engine and keeps URLs on its own server. Its `/socket` uses the Jellyfin/Primus protocol, not the native Socket.IO events. See the [compatibility route implementations](../src/lib/embyEmulation/ServerAPI/routes) for the implemented subset when integrating an existing Jellyfin SDK.
+
 ## Signing in and access
 
 - Every endpoint needs a signed-in session except discovery (`/System/Info/Public`, `/System/Ping`), sign-in (`/Users/AuthenticateByName`, `/Users/Public`), branding, localisation, the web client and item images.

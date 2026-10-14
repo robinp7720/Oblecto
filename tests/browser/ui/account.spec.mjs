@@ -139,6 +139,15 @@ test.describe('@desktop account and permissions', () => {
     await expect(page.getByLabel('Current password')).toHaveCount(0)
   })
 
+  test('saves spoiler preferences per account and restores them on reload', async ({ page }) => {
+    const calls = await boot(page, '/settings/account/preferences', member())
+    await page.getByLabel('Episode spoilers', { exact: true }).selectOption('hide-titles')
+    await expect(page.getByLabel('Episode spoilers', { exact: true })).toBeEnabled()
+    expect(calls.filter(call => call.path === '/api/v1/me').at(-1).body).toEqual({ preferences: { episodeSpoilers: 'hide-titles' } })
+    await page.reload()
+    await expect(page.getByLabel('Episode spoilers', { exact: true })).toHaveValue('hide-titles')
+  })
+
   test('saves each playback preference as it changes', async ({ page }) => {
     const calls = await boot(page, '/settings/account/preferences', member())
 

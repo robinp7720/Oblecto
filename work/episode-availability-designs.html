@@ -1,0 +1,164 @@
+<style>
+#episode-availability-designs .ob-preview{--ob-bg:light-dark(#fafafa,#121212);--ob-panel:light-dark(#fff,#1b1b1b);--ob-text:light-dark(#202020,#eeeeeb);--ob-muted:light-dark(#666,#aaa);--ob-line:light-dark(#ddd,#333);--ob-accent:light-dark(#167976,#68d5d1);--ob-play:#ff7049;--ob-play-text:#201713;color:var(--ob-text);background:var(--ob-bg);font:14px/1.5 Arial,sans-serif;min-height:660px;padding:28px;border:1px solid var(--ob-line);border-radius:12px;box-sizing:border-box}
+#episode-availability-designs .ob-preview *{box-sizing:border-box}
+#episode-availability-designs .ob-preview [hidden]{display:none!important}
+#episode-availability-designs .ob-preview h2{font-size:30px;line-height:1.15;letter-spacing:-.8px;font-weight:500;margin:14px 0 12px}
+#episode-availability-designs .ob-preview h3{font-size:18px;font-weight:500;margin:0}
+#episode-availability-designs .ob-preview p{margin:8px 0}
+#episode-availability-designs .ob-muted{color:var(--ob-muted)}
+#episode-availability-designs .ob-kicker{font-size:12px;color:var(--ob-muted)}
+#episode-availability-designs .ob-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:22px 0 30px}
+#episode-availability-designs .ob-preview button{font:inherit;color:var(--ob-text);border:1px solid var(--ob-line);background:var(--ob-panel);border-radius:5px;min-height:44px;padding:9px 14px}
+#episode-availability-designs .ob-preview button:hover{border-color:var(--ob-accent)}
+#episode-availability-designs .ob-preview button.ob-play{background:var(--ob-play);border-color:transparent;color:var(--ob-play-text);min-width:170px}
+#episode-availability-designs .ob-preview button.ob-quiet{background:transparent;border-color:transparent;color:var(--ob-accent);padding-left:0;padding-right:0}
+#episode-availability-designs .ob-preview button.ob-icon{width:44px;padding:10px;display:grid;place-items:center}
+#episode-availability-designs .ob-preview button[aria-pressed=true]{color:var(--ob-accent);border-color:var(--ob-accent)}
+#episode-availability-designs .ob-section-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:24px 0 6px}
+#episode-availability-designs .ob-episode{display:grid;grid-template-columns:66px minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--ob-line)}
+#episode-availability-designs .ob-thumb{display:grid;place-items:center;width:66px;height:44px;border-radius:4px;background:var(--ob-panel);color:var(--ob-muted);font-size:12px}
+#episode-availability-designs .ob-episode strong{display:block;font-weight:500}
+#episode-availability-designs .ob-episode small{color:var(--ob-muted);font-size:12px}
+#episode-availability-designs .ob-preview .ob-text-link{border:0;background:transparent;color:var(--ob-accent);padding:9px 0}
+#episode-availability-designs .ob-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+#episode-availability-designs .ob-panel{margin:18px 0 0;padding:18px;border:1px solid var(--ob-line);border-radius:7px;background:var(--ob-panel)}
+#episode-availability-designs .ob-panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#episode-availability-designs .ob-meta{font-size:12px;color:var(--ob-muted)}
+#episode-availability-designs .ob-status{color:var(--ob-accent);font-size:12px;white-space:nowrap}
+#episode-availability-designs .ob-filter{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
+#episode-availability-designs .ob-filter button{font-size:12px;padding:7px 10px}
+#episode-availability-designs .ob-preview details{margin:18px 0 0}
+#episode-availability-designs .ob-preview summary{min-height:44px;display:list-item;align-content:center;color:var(--ob-muted)}
+#episode-availability-designs .ob-preview details p{color:var(--ob-muted);font-size:12px}
+#episode-availability-designs .ob-tabs{display:flex;gap:22px;flex-wrap:wrap;border-bottom:1px solid var(--ob-line);margin:8px 0 22px}
+#episode-availability-designs .ob-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:10px 0;color:var(--ob-muted)}
+#episode-availability-designs .ob-tabs button[aria-selected=true]{border-bottom-color:var(--ob-accent);color:var(--ob-text)}
+#episode-availability-designs .ob-more{position:relative}
+#episode-availability-designs .ob-menu{position:absolute;right:0;top:52px;z-index:4;padding:7px;width:210px;border:1px solid var(--ob-line);border-radius:7px;background:var(--ob-panel);box-shadow:0 10px 28px #0003}
+#episode-availability-designs .ob-menu button{border:0;width:100%;text-align:left}
+#episode-availability-designs .ob-management{border-top:1px solid var(--ob-line);margin-top:26px;padding-top:20px}
+#episode-availability-designs .ob-matching-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 90px;gap:12px;border-bottom:1px solid var(--ob-line);padding:14px 0}
+#episode-availability-designs .ob-matching-row span{font-size:12px;color:var(--ob-muted)}
+#episode-availability-designs .ob-match-result{display:flex;align-items:center;gap:9px;color:var(--ob-accent);margin:20px 0}
+#episode-availability-designs .ob-live{font-size:12px;color:var(--ob-accent);margin-top:10px}
+#episode-availability-designs .ob-library-notice{padding:14px 0;border-bottom:1px solid var(--ob-line);color:var(--ob-muted)}
+@media(max-width:520px){#episode-availability-designs .ob-preview{padding:20px;min-height:720px}#episode-availability-designs .ob-preview h2{font-size:26px}#episode-availability-designs .ob-matching-row{grid-template-columns:minmax(0,1fr) 64px 70px;gap:8px}#episode-availability-designs .ob-panel{padding:12px}#episode-availability-designs .ob-episode{grid-template-columns:44px minmax(0,1fr);gap:10px}#episode-availability-designs .ob-thumb{width:44px}#episode-availability-designs .ob-episode>.ob-status{grid-column:2}#episode-availability-designs .ob-episode>.ob-text-link{grid-column:2;justify-self:start}#episode-availability-designs .ob-tabs{gap:16px}}
+</style>
+<div id="episode-availability-designs" class="viz-carousel viz-dotted-background" aria-label="Episode availability design alternatives">
+  <section data-variant="Watch first" aria-label="Watch first design">
+    <div class="ob-preview" id="ob-watch-first" aria-label="Watch first settings">
+      <div class="ob-kicker">‹ TV Shows</div>
+      <h2>The Apothecary Diaries</h2>
+      <p class="ob-muted">24 episodes in your library</p>
+      <div class="ob-actions">
+        <button class="ob-play cursor-interaction" data-play="S2 E1">▶ Play S2 E1</button>
+        <button class="ob-icon cursor-interaction" aria-label="Save to watchlist" aria-pressed="false" data-save><i data-lucide="bookmark" aria-hidden="true"></i></button>
+        <div class="ob-more">
+          <button class="ob-icon cursor-interaction" aria-label="More series actions" aria-expanded="false" data-menu="watch-menu"><i data-lucide="ellipsis" aria-hidden="true"></i></button>
+          <div class="ob-menu" id="watch-menu" hidden>
+            <button class="cursor-interaction" data-open="watch-catalogue">Episode catalogue</button>
+            <button class="cursor-interaction" data-manager-only hidden data-open="watch-matching">Library tools</button>
+          </div>
+        </div>
+      </div>
+      <div class="ob-section-head"><h3>Episodes</h3><span class="ob-meta">Season 2 · 24 episodes</span></div>
+      <div class="ob-episode"><div class="ob-thumb">E1</div><div><strong>Maomao and Maomao</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E1">Play</button></div>
+      <div class="ob-episode"><div class="ob-thumb">E2</div><div><strong>Caravan</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E2">Play</button></div>
+      <div class="ob-episode"><div class="ob-thumb">E3</div><div><strong>Corpse Fungus</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E3">Play</button></div>
+      <div class="ob-bottom"><span class="ob-meta">Showing 3 of 24</span><button class="ob-quiet cursor-interaction" data-open="watch-catalogue" aria-expanded="false">Episode catalogue ›</button></div>
+      <div class="ob-panel" id="watch-catalogue" hidden>
+        <div class="ob-panel-head"><h3>Episode catalogue</h3><button class="ob-icon cursor-interaction" data-close="watch-catalogue" aria-label="Close episode catalogue"><i data-lucide="x" aria-hidden="true"></i></button></div>
+        <p class="ob-meta">24 episodes available · Specials hidden</p>
+        <div class="ob-filter" aria-label="Catalogue filter"><button class="cursor-interaction" aria-pressed="true" data-filter="available">Available</button><button class="cursor-interaction" aria-pressed="false" data-filter="absent">Not in library</button></div>
+        <div data-results><div class="ob-library-notice">Season 2 · Episodes 1–24 <span class="ob-status">Available</span></div></div>
+        <details><summary class="cursor-interaction">Numbering information</summary><p>Your library’s S2 E1–24 corresponds to TMDB’s S1 E25–48. Episode IDs identify the same 24 episodes.</p></details>
+      </div>
+      <div class="ob-panel" id="watch-matching" hidden><div class="ob-panel-head"><h3>Library tools</h3><button class="ob-icon cursor-interaction" data-close="watch-matching" aria-label="Close library tools"><i data-lucide="x" aria-hidden="true"></i></button></div><p>24 episodes matched by ID.</p><p class="ob-meta">Local season labels stay unchanged.</p></div>
+      <div class="ob-live" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+  <section data-variant="Catalogue tab" aria-label="Catalogue tab design" hidden>
+    <div class="ob-preview" id="ob-catalogue-tab" aria-label="Catalogue tab settings">
+      <div class="ob-kicker">‹ TV Shows</div>
+      <h2>The Apothecary Diaries</h2>
+      <p class="ob-muted">24 episodes in your library</p>
+      <div class="ob-actions"><button class="ob-play cursor-interaction" data-play="S2 E1">▶ Play S2 E1</button><button class="ob-icon cursor-interaction" aria-label="Save to watchlist" aria-pressed="false" data-save><i data-lucide="bookmark" aria-hidden="true"></i></button></div>
+      <div class="ob-tabs" role="tablist" aria-label="Series content">
+        <button class="cursor-interaction" id="ob-available-tab" role="tab" aria-selected="true" aria-controls="ob-available-content">Available</button>
+        <button class="cursor-interaction" id="ob-catalogue-control" role="tab" aria-selected="false" aria-controls="ob-catalogue-content">Catalogue</button>
+      </div>
+      <div role="tabpanel" id="ob-available-content" aria-labelledby="ob-available-tab">
+        <div class="ob-section-head"><h3>Season 2</h3><span class="ob-meta">24 episodes</span></div>
+        <div class="ob-episode"><div class="ob-thumb">E1</div><div><strong>Maomao and Maomao</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E1">Play</button></div>
+        <div class="ob-episode"><div class="ob-thumb">E2</div><div><strong>Caravan</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E2">Play</button></div>
+        <div class="ob-episode"><div class="ob-thumb">E3</div><div><strong>Corpse Fungus</strong><small>24 min</small></div><button class="ob-text-link cursor-interaction" data-play="S2 E3">Play</button></div>
+      </div>
+      <div role="tabpanel" id="ob-catalogue-content" aria-labelledby="ob-catalogue-control" hidden>
+        <div class="ob-section-head"><h3>Episode catalogue</h3><span class="ob-meta">Specials hidden</span></div>
+        <div class="ob-filter" aria-label="Catalogue filter"><button class="cursor-interaction" aria-pressed="true" data-filter="available">Available</button><button class="cursor-interaction" aria-pressed="false" data-filter="absent">Not in library</button></div>
+        <div data-results><div class="ob-library-notice">Season 2 · Episodes 1–24 <span class="ob-status">Available</span></div></div>
+        <details><summary class="cursor-interaction">Numbering information</summary><p>Your library uses Season 2 for these 24 episodes. Matching by episode ID keeps them available even though the catalogue calls them S1 E25–48.</p></details>
+      </div>
+      <div class="ob-live" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+  <section data-variant="Library workspace" aria-label="Library workspace design" hidden>
+    <div class="ob-preview" id="ob-library-workspace" aria-label="Library workspace settings">
+      <div class="ob-kicker">Library management / TV Shows</div>
+      <h2>The Apothecary Diaries</h2>
+      <p class="ob-muted">Episode matching</p>
+      <div class="ob-match-result"><i data-lucide="check" aria-hidden="true"></i><span>24 library episodes matched by ID</span></div>
+      <div class="ob-filter" aria-label="Management section"><button class="cursor-interaction" aria-pressed="true" data-manager-view="matched">Matched</button><button class="cursor-interaction" aria-pressed="false" data-manager-view="absent">Not in library</button><button class="cursor-interaction" aria-pressed="false" data-manager-view="review">Needs review</button></div>
+      <div id="ob-manager-results">
+        <div class="ob-matching-row"><span>Episode</span><span>Library</span><span>TMDB</span></div>
+        <div class="ob-matching-row"><strong>Maomao and Maomao</strong><span>S2 E1</span><span>S1 E25</span></div>
+        <div class="ob-matching-row"><strong>Caravan</strong><span>S2 E2</span><span>S1 E26</span></div>
+        <div class="ob-matching-row"><strong>Corpse Fungus</strong><span>S2 E3</span><span>S1 E27</span></div>
+        <div class="ob-bottom"><span class="ob-meta">Showing 3 of 24 matches</span><span class="ob-status">Exact IDs</span></div>
+      </div>
+      <div class="ob-management">
+        <details><summary class="cursor-interaction">Specials · 51 catalogue entries</summary><p>Separate from regular season completeness. Catalogue entries do not necessarily correspond to files you intend to collect.</p></details>
+        <details id="ob-matching-detail"><summary class="cursor-interaction">Inspect an episode match</summary><p>Maomao and Maomao<br>TMDB episode ID: 5892111<br>Local label: S2 E1 · Catalogue label: S1 E25<br>One playable library file</p></details>
+      </div>
+      <div class="ob-live" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+</div>
+<script>
+(()=>{
+const root=document.getElementById('episode-availability-designs');
+const managerInitial=document.getElementById('ob-manager-results').innerHTML;
+const state={libraryManager:false,showMatchingDetails:false};
+const saved=window.openai?.widgetState?.privateContent;
+if(saved&&typeof saved.libraryManager==='boolean')state.libraryManager=saved.libraryManager;
+function save(){window.openai?.setWidgetState?.({modelContent:{availabilityDesignPreferences:{libraryManager:state.libraryManager,showMatchingDetails:state.showMatchingDetails}},privateContent:state})?.catch(()=>{});}
+function render(){root.querySelectorAll('[data-manager-only]').forEach(el=>el.hidden=!state.libraryManager);document.getElementById('ob-matching-detail').open=state.showMatchingDetails;}
+render();
+window.addEventListener('openai:set_globals',event=>{const value=event.detail?.globals?.widgetState?.privateContent;if(value){Object.assign(state,value);render();}});
+root.addEventListener('click',event=>{
+const button=event.target.closest('button');if(!button)return;
+const surface=button.closest('.ob-preview');if(!surface)return;
+if(button.dataset.play){surface.querySelector('.ob-live').textContent=`Playback preview · ${button.dataset.play}`;}
+if(button.hasAttribute('data-save')){const active=button.getAttribute('aria-pressed')!=='true';button.setAttribute('aria-pressed',String(active));button.setAttribute('aria-label',active?'Remove from watchlist':'Save to watchlist');}
+if(button.dataset.menu){const menu=document.getElementById(button.dataset.menu);menu.hidden=!menu.hidden;button.setAttribute('aria-expanded',String(!menu.hidden));}
+if(button.dataset.open){document.getElementById(button.dataset.open).hidden=false;button.setAttribute('aria-expanded','true');surface.querySelectorAll('.ob-menu').forEach(el=>el.hidden=true);surface.querySelectorAll('[data-menu]').forEach(el=>el.setAttribute('aria-expanded','false'));}
+if(button.dataset.close){document.getElementById(button.dataset.close).hidden=true;surface.querySelectorAll(`[data-open="${button.dataset.close}"]`).forEach(el=>el.setAttribute('aria-expanded','false'));}
+if(button.getAttribute('role')==='tab'){
+ surface.querySelectorAll('[role=tab]').forEach(el=>{const active=el===button;el.setAttribute('aria-selected',String(active));document.getElementById(el.getAttribute('aria-controls')).hidden=!active;});
+}
+if(button.dataset.filter){
+ const scope=button.closest('.ob-panel,[role=tabpanel]');scope.querySelectorAll('[data-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el===button)));
+ scope.querySelector('[data-results]').innerHTML=button.dataset.filter==='available'?'<div class="ob-library-notice">Season 2 · Episodes 1–24 <span class="ob-status">Available</span></div>':'<div class="ob-library-notice">Season 1 · Episodes 1–24 <span class="ob-meta">Not in this library</span></div><p class="ob-meta">Upcoming releases and specials are listed separately.</p>';
+}
+if(button.dataset.managerView){
+ surface.querySelectorAll('[data-manager-view]').forEach(el=>el.setAttribute('aria-pressed',String(el===button)));
+ document.getElementById('ob-manager-results').innerHTML=button.dataset.managerView==='matched'?managerInitial:button.dataset.managerView==='absent'?'<div class="ob-library-notice">Season 1 · Episodes 1–24</div><p class="ob-meta">Not in this library. Specials are excluded.</p>':'<div class="ob-library-notice">No unmatched library episodes</div><p class="ob-meta">All 24 imported episodes have an exact ID match. Different season labels do not create missing episodes.</p>';
+}
+});
+root.addEventListener('keydown',event=>{if(event.key==='Escape'){root.querySelectorAll('.ob-menu').forEach(el=>el.hidden=true);root.querySelectorAll('[data-menu]').forEach(el=>el.setAttribute('aria-expanded','false'));}});
+if(globalThis.Tweak){
+const viewer=new Tweak({container:document.getElementById('ob-watch-first'),onChange:()=>{render();save();}});viewer.addToggle(state,'libraryManager',{label:'Library manager access'});
+const manager=new Tweak({container:document.getElementById('ob-library-workspace'),onChange:()=>{render();save();}});manager.addToggle(state,'showMatchingDetails',{label:'Expand match inspection'});
+}
+})();
+</script>

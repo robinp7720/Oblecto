@@ -299,6 +299,76 @@ export const MIGRATIONS: Migration[] = [
             await addIndexIfMissing(queryInterface, 'ViewingDays', ['day'], 'viewing_day');
             await addIndexIfMissing(queryInterface, 'PlaybackHealth', ['resolution', 'bucket'], 'health_resolution_time', true);
         }
+    },
+    {
+        name: '0013-movie-details',
+        up: async ({ queryInterface }) => {
+            for (const column of ['trailers', 'certifications']) {
+                await addColumnIfMissing(queryInterface, 'Movies', column, optional(DataTypes.TEXT));
+            }
+            for (const column of ['trailersUpdatedAt', 'certificationsUpdatedAt']) {
+                await addColumnIfMissing(queryInterface, 'Movies', column, optional(DataTypes.DATE));
+            }
+            if (!await hasTable(queryInterface, 'UserWatchlists')) {
+                await queryInterface.createTable('UserWatchlists', {
+                    id: {
+                        type: DataTypes.INTEGER,
+                        primaryKey: true,
+                        autoIncrement: true
+                    },
+                    userId: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                        references: { model: 'Users', key: 'id' },
+                        onDelete: 'CASCADE'
+                    },
+                    movieId: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                        references: { model: 'Movies', key: 'id' },
+                        onDelete: 'CASCADE'
+                    },
+                    createdAt: { type: DataTypes.DATE, allowNull: false },
+                    updatedAt: { type: DataTypes.DATE, allowNull: false }
+                });
+            }
+            await addIndexIfMissing(queryInterface, 'UserWatchlists', ['userId', 'movieId'], 'UserWatchlists_user_movie', true);
+        }
+    },
+    {
+        name: '0014-series-details',
+        up: async ({ queryInterface }) => {
+            for (const column of ['trailers', 'certifications', 'episodeCatalog']) {
+                await addColumnIfMissing(queryInterface, 'Series', column, optional(DataTypes.TEXT('long')));
+            }
+            for (const column of ['trailersUpdatedAt', 'certificationsUpdatedAt', 'catalogUpdatedAt']) {
+                await addColumnIfMissing(queryInterface, 'Series', column, optional(DataTypes.DATE));
+            }
+            if (!await hasTable(queryInterface, 'UserSeriesWatchlists')) {
+                await queryInterface.createTable('UserSeriesWatchlists', {
+                    id: {
+                        type: DataTypes.INTEGER,
+                        primaryKey: true,
+                        autoIncrement: true
+                    },
+                    userId: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                        references: { model: 'Users', key: 'id' },
+                        onDelete: 'CASCADE'
+                    },
+                    seriesId: {
+                        type: DataTypes.INTEGER,
+                        allowNull: false,
+                        references: { model: 'Series', key: 'id' },
+                        onDelete: 'CASCADE'
+                    },
+                    createdAt: { type: DataTypes.DATE, allowNull: false },
+                    updatedAt: { type: DataTypes.DATE, allowNull: false }
+                });
+            }
+            await addIndexIfMissing(queryInterface, 'UserSeriesWatchlists', ['userId', 'seriesId'], 'UserSeriesWatchlists_user_series', true);
+        }
     }
 ];
 

@@ -37,6 +37,8 @@ export function buildEpisodeContext(episodes: EpisodeLike[], currentId: number):
     return {
         previous: index > 0 ? sequence[index - 1] : null,
         next: index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null,
+        nearby: seasonEpisodes.slice(Math.max(0, seasonPosition - 2), seasonPosition + 3),
+        nextUnwatched: sequence.slice(index + 1).find(episode => progress(episode) < 0.9 && (!Array.isArray(episode.Files) || episode.Files.length > 0)) ?? null,
         season: {
             number: current.airedSeason ?? null,
             position: seasonPosition >= 0 ? seasonPosition + 1 : null,
@@ -46,4 +48,18 @@ export function buildEpisodeContext(episodes: EpisodeLike[], currentId: number):
             averageRating: ratings.length ? Math.round((ratings.reduce((sum, value) => sum + value, 0) / ratings.length) * 10) / 10 : null
         }
     };
+}
+
+/** Earlier numbered episodes, excluding specials when the anchor is a regular episode. */
+export function earlierEpisodes(episodes: EpisodeLike[], currentId: number): EpisodeLike[] {
+    const current = episodes.find(episode => Number(episode.id) === currentId);
+    const season = number(current?.airedSeason);
+    const episodeNumber = number(current?.airedEpisodeNumber);
+    if (season === null || episodeNumber === null) return [];
+    return episodes.filter(episode => {
+        const s = number(episode.airedSeason);
+        const n = number(episode.airedEpisodeNumber);
+        return s !== null && n !== null && (season > 0 ? s > 0 : s === season)
+            && (s < season || (s === season && n < episodeNumber));
+    });
 }

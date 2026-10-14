@@ -23,6 +23,8 @@ import { MovieCredit, movieCreditColumns } from '../models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../models/episodeCredit.js';
 import { UserFavourite, userFavouriteColumns } from '../models/userFavourite.js';
+import { UserSeriesWatchlist, userSeriesWatchlistColumns } from '../models/userSeriesWatchlist.js';
+import { UserWatchlist, userWatchlistColumns } from '../models/userWatchlist.js';
 import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '../models/jellyfinDisplayPreferences.js';
 
 const DEFAULT_SQLITE_STORAGE = '/etc/oblecto/database.sqlite';
@@ -39,7 +41,7 @@ function initModels(sequelize: Sequelize): void {
     FederationRecord.init(federationRecordColumns, { ...modelOptions('FederationRecord'), timestamps: false });
     Episode.init(episodeColumns, modelOptions('Episode'));
     Movie.init(movieColumns, modelOptions('Movie'));
-    Series.init(seriesColumns, modelOptions('Series'));
+    Series.init(seriesColumns, { ...modelOptions('Series'), defaultScope: { attributes: { exclude: ['episodeCatalog'] } } });
     Person.init(personColumns, modelOptions('Person'));
     MovieCredit.init(movieCreditColumns, modelOptions('MovieCredit'));
     SeriesCredit.init(seriesCreditColumns, modelOptions('SeriesCredit'));
@@ -61,6 +63,26 @@ function initModels(sequelize: Sequelize): void {
     Group.init(groupColumns, modelOptions('Group'));
 
     UserFavourite.init(userFavouriteColumns, modelOptions('UserFavourite'));
+    UserWatchlist.init(userWatchlistColumns, {
+        ...modelOptions('UserWatchlist'),
+        indexes: [
+            {
+                name: 'UserWatchlists_user_movie',
+                unique: true,
+                fields: ['userId', 'movieId']
+            }
+        ]
+    });
+    UserSeriesWatchlist.init(userSeriesWatchlistColumns, {
+        ...modelOptions('UserSeriesWatchlist'),
+        indexes: [
+            {
+                name: 'UserSeriesWatchlists_user_series',
+                unique: true,
+                fields: ['userId', 'seriesId']
+            }
+        ]
+    });
     JellyfinDisplayPreferences.init(jellyfinDisplayPreferencesColumns, modelOptions('JellyfinDisplayPreferences'));
 }
 
@@ -97,6 +119,14 @@ function initAssociations(): void {
 
     UserFavourite.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
     User.hasMany(UserFavourite, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    UserWatchlist.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(UserWatchlist, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    UserWatchlist.belongsTo(Movie, { foreignKey: 'movieId', onDelete: 'CASCADE' });
+    Movie.hasMany(UserWatchlist, { foreignKey: 'movieId', onDelete: 'CASCADE' });
+    UserSeriesWatchlist.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    User.hasMany(UserSeriesWatchlist, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    UserSeriesWatchlist.belongsTo(Series, { foreignKey: 'seriesId', onDelete: 'CASCADE' });
+    Series.hasMany(UserSeriesWatchlist, { foreignKey: 'seriesId', onDelete: 'CASCADE' });
     JellyfinDisplayPreferences.belongsTo(User, { foreignKey: 'userId', onDelete: 'CASCADE' });
     User.hasMany(JellyfinDisplayPreferences, { foreignKey: 'userId', onDelete: 'CASCADE' });
 

@@ -1,6 +1,6 @@
 # Oblecto roadmap
 
-Status of the feature tracks this file used to plan in detail, as of 3 October 2026 (after 1.0.1). Pick open work from "Next".
+Status of the feature tracks this file used to plan in detail, as of 9 October 2026 (after 1.0.1). Pick open work from "Next".
 
 ## Done
 
@@ -8,6 +8,10 @@ Status of the feature tracks this file used to plan in detail, as of 3 October 2
 |---|---|
 | Viewing history, personal/admin statistics, library totals and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
+| Focused TV detail pages: manager-only episode matching workspace, scoped season actions, library viewing progress, spoilers, chapters, crew and provider links | `src/lib/series/SeriesExtras.ts`, `Oblecto-Web/src/components/details/` |
+| Movie/series favourites and private watchlists, episode favourites, and saved-list library filters | `src/lib/users/`, `src/submodules/REST/routes/movies.ts`, `Oblecto-Web/src/components/details/MovieSaveButtons.vue` |
+| Movie trailers, regional certifications, full crew, provider links, progress/finish time and per-version track details | `src/lib/movies/MovieExtras.ts`, `Oblecto-Web/src/components/pages/MovieInfo.vue` |
+| Focused movie banners with compact actions, a More menu and secondary information below the hero | `Oblecto-Web/src/components/details/MediaDetailHero.vue`, `Oblecto-Web/src/components/details/MovieActionsMenu.vue` |
 | Playback analysis: chapters, seek thumbnails, intro/credit detection and skip controls | `src/lib/analysis/`, `Oblecto-Web/src/components/player/` |
 | Player: volume, audio and subtitle tracks, speed, hotkeys, seek bar, next-episode cards and inactivity confirmation | `Oblecto-Web/src/components/player/`, `Oblecto-Web/src/playback/` |
 | Continue watching | `/movies/watching`, `/episodes/watching`, Jellyfin `/Items/Resume` |
@@ -24,7 +28,7 @@ Status of the feature tracks this file used to plan in detail, as of 3 October 2
 
 ## Next
 
-- **Favourites, watchlist and ratings in Oblecto's own API and web app.** Favourites are stored (`UserFavourites`, `src/lib/users/favourites.ts`) but only the Jellyfin API reads and writes them; the REST API and web app have no favourites yet. There is no watchlist or rating model; Jellyfin's rating endpoints answer 501.
+- **Favourites for other media in the native app.** Movie, series and episode favourites and movie/series watchlists are available. Seasons, people and collections still need native favourite controls.
 - **Editing metadata by hand, and bulk actions.** Only artwork can be replaced today.
 - **Subtitle files beside the video.** Indexing only picks up video extensions (`fileExtensions.video`), so `.srt`, `.ass` and `.vtt` sidecars are ignored and only embedded subtitles play. No subtitle search or download.
 - **Keeping libraries current on their own.** There is no file watcher or scheduled scan; scans run on demand or at boot (`indexer.runAtBoot`).

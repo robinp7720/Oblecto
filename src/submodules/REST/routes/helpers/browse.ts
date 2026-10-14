@@ -16,6 +16,7 @@ export interface BrowseParams {
     yearFrom: number | null;
     yearTo: number | null;
     watched: 'all' | 'watched' | 'unwatched' | 'inprogress';
+    list: 'all' | 'favourites' | 'watchlist';
     libraryPath: string | null;
     personId: number | null;
     creditRole: 'any' | 'cast' | 'director' | 'writer' | 'creator';
@@ -117,6 +118,9 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
     }
 
     const watched = rawWatched as 'all' | 'watched' | 'unwatched' | 'inprogress';
+    const rawList = rawParams.list ?? 'all';
+    if (!['all', 'favourites', 'watchlist'].includes(rawList as string)) throw new Error('list filter is invalid');
+    const list = rawList as BrowseParams['list'];
     const libraryPath = asString(rawParams.libraryPath);
     const rawPersonId = asString(rawParams.personId);
     const personId = rawPersonId === null ? null : asInteger(rawPersonId, Number.NaN);
@@ -131,6 +135,7 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
         yearFrom,
         yearTo,
         watched,
+        list,
         libraryPath,
         personId,
         creditRole
@@ -147,6 +152,7 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
         yearFrom,
         yearTo,
         watched,
+        list,
         libraryPath,
         personId,
         creditRole,

@@ -2,10 +2,16 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0012). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0014). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
 
+- Desktop-client API documentation with a complete native endpoint index, response models, HTTP examples, playback lifecycle, realtime integration and an implementation checklist.
+- Series and episode pages now use focused banners. Series add private favourites/watchlists with TV-library filters, trailers, regional ratings, library viewing progress and season watch actions. Episode matching lives in a separate Library tools workspace restricted to library managers; exact TMDB IDs handle anime season-order differences, with uncertain matches, specials and future releases separated from absent episodes.
+- Episode pages add favourites, remaining/finish time, a nearby-season navigator, and chapter playback when file chapters exist. Both page types expose full crew and IMDb/TMDB/TVDB links.
+- Account preferences can hide unwatched artwork and synopsis, optionally titles too, with temporary per-episode reveals. The preference also protects episode cards, adjacent previews, catalogue titles and chapter names.
+- Movie pages have favourites and private watchlists, with matching library filters. Movie favourites share their existing storage with Jellyfin apps; migration 0013 adds watchlists.
+- On-demand trailers and regional age certifications from TMDB, cached for seven days and preserved when refreshes fail. Movie pages also include full crew by department, IMDb/TMDB links, viewing progress, estimated finish times, and expanded audio/subtitle details for each file version.
 - Next-episode offers use episode-card artwork and details with a borderless credits indicator, small text actions and a subtle countdown strip. Cards appear at terminal credits, or the final 30 seconds without markers, replacing the legacy 90% threshold. A default-on account preference asks “Are you still watching?” before autoplay continues after 90 minutes without interaction.
 - Personal viewing statistics and a permission-controlled server dashboard with full session history, active watch time, distinct-coverage completions, repeat plays, library totals and playback-health charts. Native and Jellyfin clients share collection; migration 0012 stores history and operational summaries. The statistics page groups key metrics and tables into responsive panels, with chart scales, playback-method bars and expandable measurement notes.
 
@@ -25,6 +31,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 - Federation pairs servers with a one-time invitation, synchronizes catalogs as consistent snapshots every fifteen minutes (`federation.syncIntervalMs`), and has an administration page and API. See [docs/FEDERATION.md](docs/FEDERATION.md).
 
 ### Fixed
+
+- Movie banners use a focused layout with playback, trailers, a watchlist bookmark and a More menu. Progress appears once beneath the actions; genres, audience ratings and provider links are in About this movie, and technical badges are with Available files.
 
 - The mobile account menu opens as a wide panel just below its avatar, with scrolling constrained to the available viewport.
 

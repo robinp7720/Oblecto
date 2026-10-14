@@ -13,6 +13,11 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 
 - Movie and TV libraries, identified and kept up to date in the background.
 - Metadata and artwork from TMDb, TVDB and fanart.tv, with cast and crew, person pages and related titles. Oblecto ships with the project's API keys; you can use your own.
+- Movie pages include trailers, regional age certifications, full crew, IMDb/TMDB links, viewing progress and estimated finish times. Expand Available files → Audio and subtitles for each version's languages, commentary and accessibility labels.
+- Series and episode banners use the same focused layout. Shows offer trailers, favourites and a private watchlist; saved-show filters are in TV Shows. Below the banner, viewing progress counts playable library episodes. Library managers can open **More series actions → Library tools** for episode matching, separate from the viewing page. This workspace matches TMDB episode IDs across different season orders, flags uncertain entries for review, and separates specials and future releases from absent regular episodes. Season menus can play the first unwatched episode or update your watch history after confirming the scope.
+- Episode pages show remaining and estimated finish time, nearby episodes and a next-unwatched shortcut. Expand Chapters to play from a timestamp when chapter metadata exists. Full crew, regional series content ratings and external provider links sit below the banners.
+- In Account → Language & playback, choose Episode spoilers to hide unwatched artwork and synopsis, optionally titles too. Reveal individual episodes temporarily when needed; watched episodes remain visible.
+- Movie banners keep playback, trailers and the watchlist bookmark together. Open More (⋯) to start over, change watched state or save a favourite; genres and provider links are under About this movie, and technical badges are under Available files. Use the Movies library's Watchlist and Favourites filters to find saved titles. Movie favourites are shared with Jellyfin apps; watchlists stay separate from watched state.
 - A web app with browsing, search, continue watching, a full player and remote control of other devices. Progress and library changes show up as they happen. Next-episode previews use the show-page card artwork and episode details, with a borderless credits indicator, a subtle countdown strip and small text actions. They appear at terminal credits or, when markers are unavailable, in the final 30 seconds; the end screen also offers the next episode. By default, after 90 minutes without interaction, the current episode finishes and “Are you still watching?” must be confirmed before autoplay continues. Mouse movement, touch, keyboard input and remote playback commands count as interaction; automatic episode changes do not. Disable this safeguard under Account → Preferences → “Ask if I’m still watching”.
 - Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
 - A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in, browse, keep favourites and play.
@@ -21,7 +26,9 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 - A problem files page for anything that could not be identified or read, with retry.
 - Optional [federation between Oblecto servers](docs/FEDERATION.md), with mutual pairing, library synchronization and remote playback, plus seedbox import.
 
-Planned for later releases: favourites, a watchlist and ratings in the web app, editing metadata by hand, subtitle files beside the video, automatic library scans, and music. See [PLAN.md](PLAN.md).
+Trailers and age certifications load from TMDB when a movie page opens and are cached for seven days. Failed refreshes keep the last successful data. Trailer players load only when opened. The certification region initially follows your browser's locale when it includes a country; choose another region under About this movie. The country is shown beside the classification, and a missing regional certification is shown as unavailable.
+
+Planned for later releases: editing metadata by hand, subtitle files beside the video, automatic library scans, and music. See [PLAN.md](PLAN.md).
 
 ## Install
 
@@ -140,7 +147,9 @@ npm run verify           # lint, typecheck and tests, as CI runs them
 
 To run the web app from Vite's dev server against a local Oblecto, add its origin to `server.corsOrigins`.
 
-API references: [REST](docs/API.md), [realtime](docs/REALTIME_API.md), [streaming](docs/STREAMING.md), and [Jellyfin compatibility](docs/JELLYFIN.md).
+Building a desktop client or handing implementation to another agent? Start with the [desktop client guide](docs/DESKTOP_CLIENTS.md), then use the [complete endpoint index](docs/API_ENDPOINTS.md) and [response models](docs/API_MODELS.md). They cover authentication, browsing, playback lifecycle, progress, remote control, examples and an acceptance checklist.
+
+API references: [REST](docs/API.md), [realtime](docs/REALTIME_API.md), [streaming](docs/STREAMING.md), [federation](docs/FEDERATION.md), and [Jellyfin compatibility](docs/JELLYFIN.md).
 
 ## Security
 

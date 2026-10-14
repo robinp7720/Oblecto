@@ -6,6 +6,8 @@ import { unconfiguredClient } from '../common/unconfiguredClient.js';
 import { describeMissingTools, probeTools, type ToolReport } from './tools.js';
 import { maintenanceWork } from '../maintenance/dispatch.js';
 import { MovieDb } from 'moviedb-promise';
+import { SeriesExtras } from '../series/SeriesExtras.js';
+import { MovieExtras } from '../movies/MovieExtras.js';
 
 import Queue from '../queue/index.js';
 import ImageScaler from '../artwork/ArtworkScaler.js';
@@ -59,6 +61,8 @@ export default class Oblecto {
     public database: Sequelize;
     public tvdb: InstanceType<typeof TVDB>;
     public tmdb: MovieDb;
+    public movieExtras: MovieExtras;
+    public seriesExtras: SeriesExtras;
     public queue: Queue;
     public downloader: Downloader;
     public fileIndexer: FileIndexer;
@@ -104,6 +108,8 @@ export default class Oblecto {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
         this.tvdb = this.config.tvdb.key ? new (TVDB)(this.config.tvdb.key) : unconfiguredClient('TVDB', 'tvdb.key');
         this.tmdb = this.config.themoviedb.key ? new MovieDb(this.config.themoviedb.key) : unconfiguredClient<MovieDb>('TMDb', 'themoviedb.key');
+        this.movieExtras = new MovieExtras(this.tmdb);
+        this.seriesExtras = new SeriesExtras(this.tmdb);
 
         for (const [provider, key] of [['TVDB', this.config.tvdb.key], ['TMDb', this.config.themoviedb.key], ['fanart.tv', this.config['fanart.tv'].key]])
             if (!key) logger.warn(`No ${provider} API key is set, so ${provider} lookups will fail until a key is added and Oblecto is restarted`);

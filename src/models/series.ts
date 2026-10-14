@@ -1,4 +1,8 @@
-import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, type ModelAttributeColumnOptions } from 'sequelize';
+
+import type { MovieTrailer, MovieCertification } from './movie.js';
+export type CatalogEpisode = { tmdbid: number; season: number; number: number; name: string; airDate: string | null; runtime: number | null };
+export type EpisodeCatalog = { episodes: CatalogEpisode[] };
 
 export class Series extends Model<InferAttributes<Series>, InferCreationAttributes<Series>> {
     declare id: CreationOptional<number>;
@@ -24,11 +28,31 @@ export class Series extends Model<InferAttributes<Series>, InferCreationAttribut
     declare siteRating: number | null;
     declare siteRatingCount: number | null;
 
+    declare trailers: CreationOptional<MovieTrailer[] | null>;
+    declare certifications: CreationOptional<MovieCertification[] | null>;
+    declare episodeCatalog: CreationOptional<EpisodeCatalog | null>;
+    declare trailersUpdatedAt: CreationOptional<Date | null>;
+    declare certificationsUpdatedAt: CreationOptional<Date | null>;
+    declare catalogUpdatedAt: CreationOptional<Date | null>;
+
     declare directory: string | null;
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
 }
+
+const jsonColumn = (name: 'trailers' | 'certifications' | 'episodeCatalog'): ModelAttributeColumnOptions<Series> => ({
+    type: DataTypes.TEXT('long'),
+allowNull: true,
+    get(this: Series): unknown {
+        const raw = this.getDataValue(name) as unknown;
+        if (typeof raw !== 'string') return raw ?? null;
+        try { return JSON.parse(raw) as unknown; } catch { return null; }
+    },
+    set(this: Series, value: unknown): void {
+        this.setDataValue(name, (value == null ? null : JSON.stringify(value)) as never);
+    }
+});
 
 export const seriesColumns = {
     id: {
@@ -65,6 +89,12 @@ export const seriesColumns = {
     siteRatingCount: DataTypes.INTEGER,
 
     directory: DataTypes.STRING,
+    trailers: jsonColumn('trailers'),
+    certifications: jsonColumn('certifications'),
+    episodeCatalog: jsonColumn('episodeCatalog'),
+    trailersUpdatedAt: DataTypes.DATE,
+    certificationsUpdatedAt: DataTypes.DATE,
+    catalogUpdatedAt: DataTypes.DATE,
 
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,

@@ -15,6 +15,8 @@ import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js
 import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
 import { EpisodeCredit, episodeCreditColumns } from '../../src/models/episodeCredit.js';
 import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
+import { UserSeriesWatchlist, userSeriesWatchlistColumns } from '../../src/models/userSeriesWatchlist.js';
+import { UserWatchlist, userWatchlistColumns } from '../../src/models/userWatchlist.js';
 import { JellyfinDisplayPreferences, jellyfinDisplayPreferencesColumns } from '../../src/models/jellyfinDisplayPreferences.js';
 
 // A throwaway database with the models the migrations touch registered on it.
@@ -34,6 +36,8 @@ async function database(): Promise<Sequelize> {
     SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
     EpisodeCredit.init(episodeCreditColumns, { sequelize, modelName: 'EpisodeCredit' });
     UserFavourite.init(userFavouriteColumns, { sequelize, modelName: 'UserFavourite' });
+    UserSeriesWatchlist.init(userSeriesWatchlistColumns, { sequelize, modelName: 'UserSeriesWatchlist' });
+    UserWatchlist.init(userWatchlistColumns, { sequelize, modelName: 'UserWatchlist' });
     JellyfinDisplayPreferences.init(jellyfinDisplayPreferencesColumns, { sequelize, modelName: 'JellyfinDisplayPreferences' });
 
     return sequelize;
@@ -42,6 +46,64 @@ async function database(): Promise<Sequelize> {
 const columns = async (sequelize: Sequelize, table: string): Promise<string[]> => Object.keys(await sequelize.getQueryInterface().describeTable(table));
 
 describe('Database migrations', () => {
+    it('upgrades series caches and private watchlists without losing show data, and safely reruns', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const series = await Series.create({ seriesName: 'Existing show' });
+            const user = await User.create({ username: 'tv-viewer' });
+            const query = sequelize.getQueryInterface();
+            await query.dropTable('UserSeriesWatchlists');
+            for (const column of ['trailers', 'certifications', 'episodeCatalog', 'trailersUpdatedAt', 'certificationsUpdatedAt', 'catalogUpdatedAt']) await query.removeColumn('Series', column);
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0014-series-details'");
+            assert.deepEqual(await migrate(sequelize), ['0014-series-details']);
+            await series.reload();
+            assert.equal(series.seriesName, 'Existing show');
+            assert.equal(series.episodeCatalog, null);
+            await series.update({ episodeCatalog: { episodes: [] }, certifications: [{ country: 'DE', certification: '12' }] });
+            await series.reload();
+            assert.deepEqual(series.episodeCatalog, { episodes: [] });
+            await UserSeriesWatchlist.create({ userId: user.id, seriesId: series.id });
+            await assert.rejects(UserSeriesWatchlist.create({ userId: user.id, seriesId: series.id }));
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0014-series-details'");
+            assert.deepEqual(await migrate(sequelize), ['0014-series-details']);
+            assert.equal(await UserSeriesWatchlist.count(), 1);
+            await series.destroy();
+            assert.equal(await UserSeriesWatchlist.count(), 0);
+        } finally { await sequelize.close(); }
+    });
+
+    it('adds movie extras and private watchlists to an old database without changing existing movies', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const movie = await Movie.create({ movieName: 'Existing movie', siteRating: 8 });
+            const user = await User.create({ username: 'viewer' });
+            const query = sequelize.getQueryInterface();
+            await query.dropTable('UserWatchlists');
+            for (const column of ['trailers', 'certifications', 'trailersUpdatedAt', 'certificationsUpdatedAt']) await query.removeColumn('Movies', column);
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0013-movie-details'");
+            assert.deepEqual(await migrate(sequelize), ['0013-movie-details']);
+            await movie.reload();
+            assert.equal(movie.movieName, 'Existing movie');
+            assert.equal(movie.siteRating, 8);
+            assert.equal(movie.trailers, null);
+            assert.equal(movie.certifications, null);
+            await movie.update({ trailers: [], certifications: [{ country: 'US', certification: 'PG-13' }] });
+            await movie.reload();
+            assert.deepEqual(movie.trailers, []);
+            assert.deepEqual(movie.toJSON().certifications, [{ country: 'US', certification: 'PG-13' }]);
+            await UserWatchlist.create({ userId: user.id, movieId: movie.id });
+            await assert.rejects(UserWatchlist.create({ userId: user.id, movieId: movie.id }));
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0013-movie-details'");
+            assert.deepEqual(await migrate(sequelize), ['0013-movie-details']);
+            assert.equal(await UserWatchlist.count(), 1);
+            await movie.destroy();
+            assert.equal(await UserWatchlist.count(), 0);
+            assert.deepEqual(await migrate(sequelize), []);
+        } finally { await sequelize.close(); }
+    });
+
     it('adds statistics tables to older databases and preserves them on repeated migration', async () => {
         const sequelize = await database();
         try {

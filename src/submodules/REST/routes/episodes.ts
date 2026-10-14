@@ -18,6 +18,7 @@ import { containsText } from '../../../lib/common/textSearch.js';
 import { creditsFor } from './helpers/credits.js';
 import { buildEpisodeContext } from './helpers/episodeContext.js';
 import { pickNextEpisodes } from './helpers/nextEpisodes.js';
+import { favouritesAmong, setFavourite } from '../../../lib/users/favourites.js';
 import { setPlayed } from '../../../lib/playback/progress.js';
 
 export default (server: Express, oblecto: Oblecto) => {
@@ -45,7 +46,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const results = await Episode.findAll({
             include: [
-                Series,
+                { model: Series, attributes: { exclude: ['episodeCatalog'] } },
                 {
                     model: TrackEpisode,
                     required: false,
@@ -102,7 +103,7 @@ export default (server: Express, oblecto: Oblecto) => {
                     model: File,
                     include: [Stream]
                 },
-                Series,
+                { model: Series, attributes: { exclude: ['episodeCatalog'] } },
                 {
                     model: TrackEpisode,
                     required: false,
@@ -112,7 +113,20 @@ export default (server: Express, oblecto: Oblecto) => {
         });
 
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
-        res.send({ ...episode.toJSON(), credits: await creditsFor('episode', episode.id, Episode.sequelize) });
+        const favourites = await favouritesAmong(Number(req.authorization!.user.id), [{ type: 'episode', id: episode.id }]);
+        res.send({
+            ...episode.toJSON(),
+            credits: await creditsFor('episode', episode.id, Episode.sequelize),
+            userState: { favourite: favourites.has(`episode:${episode.id}`) }
+        });
+    });
+
+    server.put('/episode/:id/favourite', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        if (typeof req.body?.favourite !== 'boolean') return res.status(400).send({ message: 'favourite must be a boolean' });
+        const episode = await Episode.findByPk(req.params.id as string, { attributes: ['id'] });
+        if (!episode) return res.status(404).send({ message: 'Episode not found' });
+        await setFavourite(Number(req.authorization!.user.id), 'episode', episode.id, req.body.favourite as boolean);
+        res.send({ favourite: req.body.favourite });
     });
 
     server.put('/episode/:id/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
@@ -132,6 +146,11 @@ export default (server: Express, oblecto: Oblecto) => {
         const episodes = await Episode.findAll({
             where: { SeriesId: current.SeriesId },
             include: [
+                {
+                    model: File,
+                    attributes: ['id', 'duration'],
+                    through: { attributes: [] }
+                },
                 {
                     model: TrackEpisode,
                     required: false,
@@ -181,7 +200,7 @@ export default (server: Express, oblecto: Oblecto) => {
             where: containsText('episodeName', String(req.params.name)),
             include: [
                 File,
-                Series,
+                { model: Series, attributes: { exclude: ['episodeCatalog'] } },
                 {
                     model: TrackEpisode,
                     required: false,
@@ -199,7 +218,7 @@ export default (server: Express, oblecto: Oblecto) => {
         // search for attributes
         const watching = await Episode.findAll({
             include: [
-                Series,
+                { model: Series, attributes: { exclude: ['episodeCatalog'] } },
                 {
                     model: TrackEpisode,
                     required: true,
@@ -254,7 +273,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const next = await Episode.findAll({
             include: [
-                Series,
+                { model: Series, attributes: { exclude: ['episodeCatalog'] } },
                 {
                     model: TrackEpisode,
                     where: { userId },

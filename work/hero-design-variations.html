@@ -1,0 +1,475 @@
+<style>
+  #oblecto-hero-study .ob-stage { min-height: 650px; padding: 18px 0; }
+  #oblecto-hero-study .ob-movie {
+    --ob-bg: light-dark(#f6f6f3, #141414);
+    --ob-raised: light-dark(#ffffff, #202121);
+    --ob-text: light-dark(#172328, #f5f5f2);
+    --ob-muted: light-dark(#566366, #b4bbbb);
+    --ob-line: light-dark(#d4dcd9, #383e3e);
+    --ob-accent: light-dark(#006d6b, #65ded9);
+    --ob-coral: light-dark(#ff704a, #ff704a);
+    --ob-coral-text: light-dark(#22180f, #22180f);
+    --ob-sky: light-dark(#cad7d2, #29383b);
+    --ob-hill: light-dark(#90a8a0, #1d3030);
+    --ob-ship: light-dark(#607370, #152021);
+    --ob-fog: light-dark(#eef1e8, #71908b);
+    --ob-shadow: light-dark(#1b32352b, #00000066);
+    container-type: inline-size;
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    color: var(--ob-text);
+    background: var(--ob-bg);
+    border-radius: 12px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    box-shadow: 0 6px 24px var(--ob-shadow);
+  }
+  #oblecto-hero-study .ob-movie *,
+  #oblecto-hero-study .ob-movie *::before,
+  #oblecto-hero-study .ob-movie *::after { box-sizing: border-box; }
+  #oblecto-hero-study .ob-movie [hidden] { display: none !important; }
+  #oblecto-hero-study .ob-movie button,
+  #oblecto-hero-study .ob-movie select { font: inherit; letter-spacing: inherit; }
+  #oblecto-hero-study .ob-movie button { appearance: none; margin: 0; }
+  #oblecto-hero-study .ob-movie a { color: var(--ob-accent); text-decoration: none; }
+  #oblecto-hero-study .ob-movie a:hover { text-decoration: underline; }
+  #oblecto-hero-study .ob-movie svg { flex: 0 0 auto; width: 18px; height: 18px; }
+  #oblecto-hero-study .ob-movie h2,
+  #oblecto-hero-study .ob-movie h3,
+  #oblecto-hero-study .ob-movie p { margin: 0; color: inherit; }
+  #oblecto-hero-study .ob-movie h2 { font-size: 62px; line-height: 1.02; font-weight: 750; letter-spacing: -.045em; }
+  #oblecto-hero-study .ob-movie h3 { font-size: 16px; line-height: 1.4; font-weight: 650; }
+  #oblecto-hero-study .ob-movie button { color: var(--ob-text); }
+  #oblecto-hero-study .ob-hero { position: relative; isolation: isolate; padding: 20px 30px 28px; border-radius: 12px 12px 0 0; }
+  #oblecto-hero-study .ob-scene { position: absolute; inset: 0; overflow: hidden; z-index: -2; border-radius: inherit; background: var(--ob-sky); }
+  #oblecto-hero-study .ob-scene::before { content: ""; position: absolute; width: 100%; height: 65%; bottom: 0; background: var(--ob-hill); clip-path: polygon(0 68%, 12% 61%, 28% 70%, 42% 32%, 63% 48%, 73% 36%, 87% 12%, 100% 24%, 100% 100%, 0 100%); }
+  #oblecto-hero-study .ob-scene::after { content: ""; position: absolute; inset: 30% -10% -30%; background: radial-gradient(ellipse at 65% 30%, var(--ob-fog), transparent 61%); opacity: .6; filter: blur(22px); }
+  #oblecto-hero-study .ob-ship { position: absolute; top: 1%; right: 15%; width: 14%; height: 79%; border-radius: 50%; transform: rotate(-9deg); background: linear-gradient(90deg, var(--ob-ship) 25%, var(--ob-sky) 120%); box-shadow: -8px 2px 32px var(--ob-shadow); }
+  #oblecto-hero-study .ob-shade { position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: linear-gradient(90deg, var(--ob-bg), color-mix(in srgb, var(--ob-bg) 88%, transparent) 37%, color-mix(in srgb, var(--ob-bg) 15%, transparent)), linear-gradient(0deg, var(--ob-bg), transparent 60%); }
+  #oblecto-hero-study .ob-back { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; margin-left: -5px; border: 0; padding: 0 4px; background: transparent; color: var(--ob-muted); font-size: 12px; }
+  #oblecto-hero-study .ob-heading { margin-top: 32px; }
+  #oblecto-hero-study .ob-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 14px; font-size: 12px; color: var(--ob-muted); }
+  #oblecto-hero-study .ob-cert { border: 1px solid var(--ob-line); padding: 1px 5px; border-radius: 3px; font-size: 11px; line-height: 1.3; }
+  #oblecto-hero-study .ob-synopsis { max-width: 420px; margin-top: 18px !important; color: var(--ob-muted) !important; font-size: 14px; line-height: 1.65; }
+  #oblecto-hero-study .ob-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 26px; }
+  #oblecto-hero-study .ob-play-wrap { display: flex; position: relative; flex-shrink: 0; }
+  #oblecto-hero-study .ob-play,
+  #oblecto-hero-study .ob-device { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 46px; border: 0; background: var(--ob-coral); color: var(--ob-coral-text) !important; font-size: 14px; font-weight: 700; }
+  #oblecto-hero-study .ob-play { padding: 0 18px; border-radius: 5px 0 0 5px; min-width: 113px; }
+  #oblecto-hero-study .ob-play svg { fill: currentColor; width: 16px; height: 16px; }
+  #oblecto-hero-study .ob-device { width: 42px; border-left: 1px solid color-mix(in srgb, var(--ob-coral-text) 18%, transparent); border-radius: 0 5px 5px 0; }
+  #oblecto-hero-study .ob-device svg { width: 15px; height: 15px; }
+  #oblecto-hero-study .ob-quiet { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; border: 1px solid transparent; border-radius: 5px; background: transparent; font-size: 13px; font-weight: 600; }
+  #oblecto-hero-study .ob-quiet:hover { background: var(--ob-raised); }
+  #oblecto-hero-study .ob-icon-button { width: 44px; padding: 0; border-color: var(--ob-line); background: color-mix(in srgb, var(--ob-bg) 85%, transparent); }
+  #oblecto-hero-study .ob-icon-button[aria-pressed="true"] { color: var(--ob-accent); background: color-mix(in srgb, var(--ob-accent) 12%, var(--ob-bg)); }
+  #oblecto-hero-study .ob-icon-button[aria-pressed="true"] svg { fill: color-mix(in srgb, var(--ob-accent) 22%, transparent); }
+  #oblecto-hero-study .ob-menu-wrap { position: relative; }
+  #oblecto-hero-study .ob-popover { position: absolute; z-index: 8; right: 0; top: calc(100% + 8px); width: 220px; max-width: calc(100cqi - 32px); border: 1px solid var(--ob-line); border-radius: 8px; padding: 6px; background: var(--ob-raised); box-shadow: 0 10px 32px var(--ob-shadow); }
+  #oblecto-hero-study .ob-device-panel { left: 0; right: auto; width: 230px; }
+  #oblecto-hero-study .ob-menu-item { display: flex; gap: 10px; align-items: center; min-height: 42px; width: 100%; padding: 10px; background: transparent; border: 0; border-radius: 4px; text-align: left; font-size: 13px; }
+  #oblecto-hero-study .ob-menu-item:hover { background: var(--ob-bg); }
+  #oblecto-hero-study .ob-menu-divider { height: 1px; margin: 5px 4px; background: var(--ob-line); }
+  #oblecto-hero-study .ob-device-panel p { padding: 5px 10px; color: var(--ob-muted); font-size: 11px; }
+  #oblecto-hero-study .ob-progress { width: min(100%, 352px); margin-top: 18px; }
+  #oblecto-hero-study .ob-progress-track { height: 3px; border-radius: 4px; overflow: hidden; background: var(--ob-line); }
+  #oblecto-hero-study .ob-progress-fill { height: 100%; width: 25%; border-radius: inherit; background: var(--ob-accent); }
+  #oblecto-hero-study .ob-progress-caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 12px; margin-top: 7px; color: var(--ob-muted); font-size: 11px; }
+  #oblecto-hero-study .ob-state-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #oblecto-hero-study .ob-details { padding: 0 30px 24px; background: var(--ob-bg); border-radius: 0 0 12px 12px; }
+  #oblecto-hero-study .ob-tabbar { display: flex; gap: 24px; border-top: 1px solid var(--ob-line); border-bottom: 1px solid var(--ob-line); }
+  #oblecto-hero-study .ob-tab { min-height: 50px; padding: 12px 0; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--ob-muted) !important; font-size: 12px; font-weight: 500; }
+  #oblecto-hero-study .ob-tab[aria-selected="true"] { color: var(--ob-text) !important; border-bottom-color: var(--ob-accent); }
+  #oblecto-hero-study .ob-panel { padding-top: 20px; min-height: 99px; font-size: 12px; }
+  #oblecto-hero-study .ob-about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+  #oblecto-hero-study .ob-detail-label { display: block; color: var(--ob-muted); font-size: 11px; margin-bottom: 3px; }
+  #oblecto-hero-study .ob-detail-value { font-size: 12px; font-weight: 500; }
+  #oblecto-hero-study .ob-sources { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+  #oblecto-hero-study .ob-sources a { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; font-size: 11px; }
+  #oblecto-hero-study .ob-sources svg { width: 12px; height: 12px; }
+  #oblecto-hero-study .ob-region { color: var(--ob-muted); display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 11px; }
+  #oblecto-hero-study .ob-region select { min-height: 30px; border: 1px solid var(--ob-line); border-radius: 4px; background: var(--ob-raised); color: var(--ob-text); padding: 4px; font-size: 11px; }
+  #oblecto-hero-study .ob-credit { display: flex; justify-content: space-between; gap: 20px; padding: 7px 0; }
+  #oblecto-hero-study .ob-credit span:last-child { color: var(--ob-muted); text-align: right; }
+  #oblecto-hero-study .ob-crew { margin-top: 8px; }
+  #oblecto-hero-study .ob-crew summary { color: var(--ob-accent); min-height: 32px; padding-top: 6px; }
+  #oblecto-hero-study .ob-file { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 7px 0 10px; }
+  #oblecto-hero-study .ob-file-info { color: var(--ob-muted); font-size: 11px; }
+  #oblecto-hero-study .ob-track-details { margin-top: 9px; color: var(--ob-muted); font-size: 11px; }
+  #oblecto-hero-study .ob-track-details summary { color: var(--ob-accent); min-height: 30px; }
+  #oblecto-hero-study .ob-track-details p { margin: 6px 0; }
+  #oblecto-hero-study .ob-dock-hero { min-height: 304px; padding-bottom: 30px; }
+  #oblecto-hero-study .ob-dock-hero .ob-heading { margin-top: 48px; }
+  #oblecto-hero-study .ob-dock-hero .ob-shade { background: linear-gradient(90deg, var(--ob-bg), color-mix(in srgb, var(--ob-bg) 75%, transparent) 48%, transparent), linear-gradient(0deg, color-mix(in srgb, var(--ob-bg) 35%, transparent), transparent); }
+  #oblecto-hero-study .ob-dock { position: relative; padding: 20px 30px 22px; background: var(--ob-raised); }
+  #oblecto-hero-study .ob-dock .ob-actions { margin: 0; }
+  #oblecto-hero-study .ob-dock .ob-progress { width: 100%; margin-top: 12px; }
+  #oblecto-hero-study .ob-dock .ob-progress-track { position: absolute; top: 0; left: 0; width: 100%; border-radius: 0; }
+  #oblecto-hero-study .ob-dock .ob-progress-caption { margin: 0; justify-content: flex-start; gap: 14px; }
+  #oblecto-hero-study .ob-dock .ob-trailer { margin-left: auto; }
+  #oblecto-hero-study .ob-dock + .ob-details { padding-top: 4px; }
+  #oblecto-hero-study .ob-dock + .ob-details .ob-tabbar { border-top: 0; }
+  #oblecto-hero-study .ob-compact-hero { padding-bottom: 24px; }
+  #oblecto-hero-study .ob-poster-layout { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 24px; row-gap: 10px; margin-top: 12px; align-items: center; }
+  #oblecto-hero-study .ob-poster { position: relative; isolation: isolate; min-width: 0; aspect-ratio: 2 / 3; grid-row: 1 / 3; border-radius: 5px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 8px; color: light-dark(#ffffff, #ffffff); text-align: center; background: var(--ob-sky); }
+  #oblecto-hero-study .ob-poster .ob-scene { opacity: .8; }
+  #oblecto-hero-study .ob-poster .ob-ship { right: 36%; top: 8%; width: 34%; height: 60%; }
+  #oblecto-hero-study .ob-poster::after { content: ""; z-index: -1; position: absolute; inset: 0; background: linear-gradient(0deg, light-dark(#183333, #102526), transparent 76%); }
+  #oblecto-hero-study .ob-poster small { display: none; }
+  #oblecto-hero-study .ob-poster strong { font-size: 13px; font-weight: 500; letter-spacing: .18em; }
+  #oblecto-hero-study .ob-poster-layout h2 { font-size: 40px; }
+  #oblecto-hero-study .ob-poster-layout .ob-heading { margin: 0; align-self: end; }
+  #oblecto-hero-study .ob-poster-layout .ob-synopsis { margin: 0 !important; align-self: start; font-size: 13px; }
+  #oblecto-hero-study .ob-compact-hero .ob-actions { margin-top: 20px; }
+  #oblecto-hero-study .ob-compact-hero .ob-progress { width: 100%; }
+  #oblecto-hero-study .ob-compact-hero .ob-progress-caption { justify-content: flex-start; gap: 14px; }
+  #oblecto-hero-study .ob-preview-player { margin: 0 30px 24px; border-radius: 6px; padding: 20px; background: var(--ob-raised); }
+  #oblecto-hero-study .ob-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; }
+  #oblecto-hero-study .ob-trailer-screen { display: flex; justify-content: center; align-items: center; min-height: 100px; }
+  #oblecto-hero-study .ob-trailer-screen .ob-quiet { border: 1px solid var(--ob-line); border-radius: 50%; width: 48px; height: 48px; }
+  #oblecto-hero-study .ob-preview-time { color: var(--ob-muted); font-size: 11px; }
+  #oblecto-hero-study[data-screen="phone"] .ob-movie { max-width: 370px; }
+  #oblecto-hero-study[data-screen="phone"] .ob-stage { min-height: 790px; }
+  #oblecto-hero-study[data-artwork="false"] .ob-hero > .ob-scene { opacity: 0; }
+  @container (max-width: 540px) {
+    #oblecto-hero-study .ob-hero { padding: 16px 22px 24px; }
+    #oblecto-hero-study .ob-heading { margin-top: 24px; }
+    #oblecto-hero-study .ob-movie h2 { font-size: 49px; }
+    #oblecto-hero-study .ob-synopsis { font-size: 13px; }
+    #oblecto-hero-study .ob-actions { display: grid; grid-template-columns: minmax(0,1fr) 44px 44px; gap: 10px; margin-top: 22px; }
+    #oblecto-hero-study .ob-play-wrap { grid-column: 1 / -1; }
+    #oblecto-hero-study .ob-play { flex: 1; }
+    #oblecto-hero-study .ob-device { width: 46px; }
+    #oblecto-hero-study .ob-trailer { justify-content: flex-start; padding-left: 0; }
+    #oblecto-hero-study .ob-menu-wrap { justify-self: end; }
+    #oblecto-hero-study .ob-progress { width: 100%; margin-top: 16px; }
+    #oblecto-hero-study .ob-progress-caption { font-size: 11px; }
+    #oblecto-hero-study .ob-details { padding: 0 22px 22px; }
+    #oblecto-hero-study .ob-tabbar { gap: 20px; justify-content: space-between; }
+    #oblecto-hero-study .ob-tab { font-size: 11px; }
+    #oblecto-hero-study .ob-region { margin-left: 0; }
+    #oblecto-hero-study .ob-dock-hero { min-height: 314px; }
+    #oblecto-hero-study .ob-dock-hero .ob-heading { margin-top: 44px; }
+    #oblecto-hero-study .ob-dock { padding: 20px 22px; }
+    #oblecto-hero-study .ob-dock .ob-trailer { margin-left: 0; }
+    #oblecto-hero-study .ob-poster-layout { grid-template-columns: 86px minmax(0,1fr); column-gap: 18px; row-gap: 18px; }
+    #oblecto-hero-study .ob-poster { grid-row: 1; }
+    #oblecto-hero-study .ob-poster strong { font-size: 12px; }
+    #oblecto-hero-study .ob-poster small { display: none; }
+    #oblecto-hero-study .ob-poster-layout .ob-heading { align-self: center; }
+    #oblecto-hero-study .ob-poster-layout h2 { font-size: 36px; }
+    #oblecto-hero-study .ob-poster-layout .ob-meta { gap: 5px 8px; font-size: 11px; margin-top: 10px; }
+    #oblecto-hero-study .ob-poster-layout .ob-synopsis { grid-column: 1 / -1; }
+    #oblecto-hero-study .ob-preview-player { margin-inline: 22px; }
+  }
+  @media (max-width: 540px) { #oblecto-hero-study .ob-stage { min-height: 790px; } }
+  @media (pointer: coarse) {
+    #oblecto-hero-study .ob-back,
+    #oblecto-hero-study .ob-menu-item,
+    #oblecto-hero-study .ob-sources a,
+    #oblecto-hero-study .ob-crew summary,
+    #oblecto-hero-study .ob-track-details summary { min-height: 44px; }
+    #oblecto-hero-study .ob-region select { min-height: 44px; font-size: 16px; }
+  }
+</style>
+
+<div id="oblecto-hero-study" data-screen="fluid" data-artwork="true" aria-label="Movie hero design options">
+  <div class="viz-carousel viz-dotted-background" aria-label="Movie hero variations">
+    <section class="ob-stage" data-variant="Focused" aria-label="Focused hero">
+      <article class="ob-movie" data-design="Focused" aria-label="Focused movie page">
+        <header class="ob-hero">
+          <div class="ob-scene" aria-hidden="true"><span class="ob-ship"></span></div><div class="ob-shade" aria-hidden="true"></div>
+          <button class="ob-back cursor-interaction" type="button" data-action="back"><i data-lucide="chevron-left" aria-hidden="true"></i>Movies</button>
+          <div class="ob-heading"><h2>Arrival</h2><div class="ob-meta"><span>2016</span><span>1h 56m</span><span class="ob-cert" data-cert>12A (GB)</span></div></div>
+          <p class="ob-synopsis">A linguist must find a way to communicate with mysterious visitors before fear divides the world.</p>
+          <div data-controls></div>
+        </header>
+        <div data-detail-slot></div>
+        <span class="ob-state-status" role="status" aria-live="polite"></span>
+      </article>
+    </section>
+    <section class="ob-stage" data-variant="Playback strip" aria-label="Playback strip hero" hidden>
+      <article class="ob-movie" data-design="Playback strip" aria-label="Movie page with a playback strip">
+        <header class="ob-hero ob-dock-hero">
+          <div class="ob-scene" aria-hidden="true"><span class="ob-ship"></span></div><div class="ob-shade" aria-hidden="true"></div>
+          <button class="ob-back cursor-interaction" type="button" data-action="back"><i data-lucide="chevron-left" aria-hidden="true"></i>Movies</button>
+          <div class="ob-heading"><h2>Arrival</h2><div class="ob-meta"><span>2016</span><span>1h 56m</span><span class="ob-cert" data-cert>12A (GB)</span></div></div>
+          <p class="ob-synopsis">A linguist must find a way to communicate with mysterious visitors before fear divides the world.</p>
+        </header>
+        <div class="ob-dock" data-controls></div>
+        <div data-detail-slot></div>
+        <span class="ob-state-status" role="status" aria-live="polite"></span>
+      </article>
+    </section>
+    <section class="ob-stage" data-variant="Compact poster" aria-label="Compact poster hero" hidden>
+      <article class="ob-movie" data-design="Compact poster" aria-label="Compact movie page with poster">
+        <header class="ob-hero ob-compact-hero">
+          <button class="ob-back cursor-interaction" type="button" data-action="back"><i data-lucide="chevron-left" aria-hidden="true"></i>Movies</button>
+          <div class="ob-poster-layout">
+            <div class="ob-poster" aria-hidden="true"><div class="ob-scene"><span class="ob-ship"></span></div><small>WHY ARE THEY HERE?</small><strong>ARRIVAL</strong></div>
+            <div class="ob-heading"><h2>Arrival</h2><div class="ob-meta"><span>2016</span><span>1h 56m</span><span class="ob-cert" data-cert>12A (GB)</span></div></div>
+            <p class="ob-synopsis">A linguist must find a way to communicate with mysterious visitors before fear divides the world.</p>
+          </div>
+          <div data-controls></div>
+        </header>
+        <div data-detail-slot></div>
+        <span class="ob-state-status" role="status" aria-live="polite"></span>
+      </article>
+    </section>
+  </div>
+
+  <template id="ob-controls-template">
+    <div class="ob-actions">
+      <div class="ob-play-wrap">
+        <button class="ob-play cursor-interaction" type="button" data-action="play"><i data-lucide="play" aria-hidden="true"></i><span data-play-label>Resume</span></button>
+        <button class="ob-device cursor-interaction" type="button" data-action="device" aria-expanded="false" aria-label="Choose playback device" data-tooltip="Play on a device"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+        <div class="ob-popover ob-device-panel" data-device-panel hidden>
+          <p>Play on</p>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="select-device" data-device="This browser"><i data-lucide="monitor" aria-hidden="true"></i>This browser</button>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="select-device" data-device="Living room TV"><i data-lucide="tv" aria-hidden="true"></i>Living room TV</button>
+        </div>
+      </div>
+      <button class="ob-quiet ob-trailer cursor-interaction" type="button" data-action="trailer" aria-expanded="false"><i data-lucide="circle-play" aria-hidden="true"></i>Trailer</button>
+      <button class="ob-quiet ob-icon-button cursor-interaction" type="button" data-action="watchlist" aria-label="Add to watchlist" aria-pressed="false" data-tooltip="Add to watchlist"><i data-lucide="bookmark" aria-hidden="true"></i></button>
+      <div class="ob-menu-wrap">
+        <button class="ob-quiet ob-icon-button cursor-interaction" type="button" data-action="more" aria-label="More movie actions" aria-expanded="false" data-tooltip="More actions"><i data-lucide="ellipsis" aria-hidden="true"></i></button>
+        <div class="ob-popover" data-more-panel hidden>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="restart"><i data-lucide="rotate-ccw" aria-hidden="true"></i>Start over</button>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="watched"><i data-lucide="circle-check" aria-hidden="true"></i><span data-watched-label>Mark watched</span></button>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="favourite" aria-pressed="false"><i data-lucide="heart" aria-hidden="true"></i><span data-favourite-label>Add to favourites</span></button>
+          <div class="ob-menu-divider"></div>
+          <button class="ob-menu-item cursor-interaction" type="button" data-action="files"><i data-lucide="files" aria-hidden="true"></i>Available files</button>
+        </div>
+      </div>
+    </div>
+    <div class="ob-progress">
+      <div class="ob-progress-track" role="progressbar" aria-label="Movie progress" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"><div class="ob-progress-fill"></div></div>
+      <div class="ob-progress-caption"><span data-progress-label>87 min left</span><span data-finish-label>Finish at 10:27 PM</span></div>
+    </div>
+  </template>
+
+  <template id="ob-details-template">
+    <div class="ob-preview-player" data-trailer-panel hidden>
+      <div class="ob-preview-heading"><span>Arrival · Official trailer</span><button class="ob-quiet cursor-interaction" type="button" data-action="close-trailer" aria-label="Close trailer"><i data-lucide="x" aria-hidden="true"></i></button></div>
+      <div class="ob-trailer-screen"><button class="ob-quiet cursor-interaction" type="button" data-action="play-trailer" aria-label="Play trailer preview"><i data-lucide="play" aria-hidden="true"></i></button></div>
+      <div class="ob-preview-time" data-trailer-time>0:00 / 2:25</div>
+    </div>
+    <section class="ob-details" aria-label="Movie information">
+      <div class="ob-tabbar" role="tablist" aria-label="Movie information sections">
+        <button class="ob-tab cursor-interaction" type="button" role="tab" data-tab="details" aria-selected="true">Details</button>
+        <button class="ob-tab cursor-interaction" type="button" role="tab" data-tab="crew" aria-selected="false">Cast &amp; crew</button>
+        <button class="ob-tab cursor-interaction" type="button" role="tab" data-tab="files" aria-selected="false">Files <span aria-hidden="true">· 2</span></button>
+      </div>
+      <div class="ob-panel" role="tabpanel" data-panel="details">
+        <div class="ob-about-grid"><div><span class="ob-detail-label">Directed by</span><span class="ob-detail-value">Denis Villeneuve</span></div><div><span class="ob-detail-label">Genres</span><span class="ob-detail-value">Science fiction · Drama</span></div></div>
+        <div class="ob-sources"><a href="https://www.imdb.com/title/tt2543164/" target="_blank" rel="noopener noreferrer">IMDb<i data-lucide="arrow-up-right" aria-hidden="true"></i></a><a href="https://www.themoviedb.org/movie/329865" target="_blank" rel="noopener noreferrer">TMDB<i data-lucide="arrow-up-right" aria-hidden="true"></i></a><label class="ob-region">Certification<select data-region aria-label="Certification region"><option value="GB">United Kingdom</option><option value="US">United States</option></select></label></div>
+      </div>
+      <div class="ob-panel" role="tabpanel" data-panel="crew" hidden>
+        <div class="ob-credit"><span>Amy Adams</span><span>Louise Banks</span></div><div class="ob-credit"><span>Jeremy Renner</span><span>Ian Donnelly</span></div>
+        <details class="ob-crew"><summary class="cursor-interaction">Full crew</summary><div class="ob-credit"><span>Denis Villeneuve</span><span>Director</span></div><div class="ob-credit"><span>Eric Heisserer</span><span>Screenplay</span></div><div class="ob-credit"><span>Bradford Young</span><span>Cinematography</span></div></details>
+      </div>
+      <div class="ob-panel" role="tabpanel" data-panel="files" hidden>
+        <div class="ob-file"><span>Arrival.mkv</span><span class="ob-file-info">4K · HDR10</span><span class="ob-file-info">English · 5.1 surround</span></div>
+        <div class="ob-file"><span>Arrival-1080p.mp4</span><span class="ob-file-info">1080p</span><span class="ob-file-info">English · Stereo</span></div>
+        <details class="ob-track-details"><summary class="cursor-interaction">Audio &amp; subtitles</summary><p>Audio: English 5.1 · English commentary</p><p>Subtitles: English · French</p></details>
+      </div>
+    </section>
+  </template>
+</div>
+
+<script>
+(() => {
+  const root = document.getElementById('oblecto-hero-study');
+  const state = { screen: 'fluid', viewing: 'In progress', artwork: true };
+  const movieStates = new Map();
+  const movies = [...root.querySelectorAll('.ob-movie')];
+  const validViewing = ['In progress', 'Unwatched', 'Watched'];
+  let lastAction = null;
+
+  movies.forEach((movie, index) => {
+    movie.querySelector('[data-controls]').append(root.querySelector('#ob-controls-template').content.cloneNode(true));
+    movie.querySelector('[data-detail-slot]').append(root.querySelector('#ob-details-template').content.cloneNode(true));
+    movieStates.set(movie, { watchlist: false, favourite: false, watched: false, playing: false, started: false, tab: 'details', device: 'This browser' });
+    movie.querySelectorAll('[data-tab]').forEach(tab => {
+      const panel = movie.querySelector(`[data-panel="${tab.dataset.tab}"]`);
+      tab.id = `ob-${index}-tab-${tab.dataset.tab}`;
+      panel.id = `ob-${index}-panel-${tab.dataset.tab}`;
+      tab.setAttribute('aria-controls', panel.id);
+      panel.setAttribute('aria-labelledby', tab.id);
+    });
+    for (const kind of ['more', 'device', 'trailer']) {
+      const panel = movie.querySelector(`[data-${kind}-panel]`);
+      panel.id = `ob-${index}-${kind}`;
+      movie.querySelector(`[data-action="${kind}"]`).setAttribute('aria-controls', panel.id);
+    }
+  });
+
+  function closeMenus(movie, returnFocus = false) {
+    for (const kind of ['more', 'device']) {
+      const button = movie.querySelector(`[data-action="${kind}"]`);
+      if (returnFocus && button.getAttribute('aria-expanded') === 'true') button.focus();
+      button.setAttribute('aria-expanded', 'false');
+      movie.querySelector(`[data-${kind}-panel]`).hidden = true;
+    }
+  }
+
+  function renderMovie(movie) {
+    const local = movieStates.get(movie);
+    const watched = local.watched || state.viewing === 'Watched';
+    const unplayed = state.viewing === 'Unwatched' || local.started;
+    movie.querySelector('[data-play-label]').textContent = local.playing ? 'Pause' : watched ? 'Play again' : unplayed ? 'Play' : 'Resume';
+    const save = movie.querySelector('[data-action="watchlist"]');
+    save.setAttribute('aria-pressed', String(local.watchlist));
+    save.setAttribute('aria-label', local.watchlist ? 'Remove from watchlist' : 'Add to watchlist');
+    save.dataset.tooltip = local.watchlist ? 'In your watchlist' : 'Add to watchlist';
+    movie.querySelector('[data-favourite-label]').textContent = local.favourite ? 'Remove from favourites' : 'Add to favourites';
+    movie.querySelector('[data-action="favourite"]').setAttribute('aria-pressed', String(local.favourite));
+    movie.querySelector('[data-watched-label]').textContent = watched ? 'Mark unwatched' : 'Mark watched';
+    movie.querySelector('[data-action="restart"]').hidden = unplayed || watched;
+    const progress = watched ? 100 : unplayed ? 0 : 25;
+    movie.querySelector('.ob-progress-fill').style.width = `${progress}%`;
+    movie.querySelector('.ob-progress-track').setAttribute('aria-valuenow', String(progress));
+    movie.querySelector('[data-progress-label]').textContent = watched ? 'Watched' : unplayed ? '1h 56m' : '87 min left';
+    movie.querySelector('[data-finish-label]').textContent = local.playing ? `Playing on ${local.device.toLowerCase()}` : watched ? '' : unplayed ? 'Finish at 10:56 PM' : 'Finish at 10:27 PM';
+    movie.querySelectorAll('[data-tab]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === local.tab)));
+    movie.querySelectorAll('[data-panel]').forEach(panel => panel.hidden = panel.dataset.panel !== local.tab);
+  }
+
+  function render() {
+    root.dataset.screen = state.screen;
+    root.dataset.artwork = String(state.artwork);
+    movies.forEach(renderMovie);
+  }
+
+  function persist() {
+    if (!window.openai?.setWidgetState) return;
+    window.openai.setWidgetState({
+      modelContent: { study: 'Oblecto movie hero', preview: { ...state }, lastInteraction: lastAction },
+      privateContent: { movies: movies.map(movie => ({ design: movie.dataset.design, ...movieStates.get(movie) })) }
+    }).catch(() => {});
+  }
+
+  function applySaved(saved) {
+    const preview = saved?.modelContent?.preview;
+    if (preview) {
+      if (['fluid', 'phone'].includes(preview.screen)) state.screen = preview.screen;
+      if (validViewing.includes(preview.viewing)) state.viewing = preview.viewing;
+      if (typeof preview.artwork === 'boolean') state.artwork = preview.artwork;
+    }
+    const items = saved?.privateContent?.movies;
+    if (Array.isArray(items)) movies.forEach(movie => {
+      const item = items.find(entry => entry.design === movie.dataset.design);
+      if (!item) return;
+      const local = movieStates.get(movie);
+      for (const key of ['watchlist', 'favourite', 'watched', 'playing', 'started']) if (typeof item[key] === 'boolean') local[key] = item[key];
+      if (['details', 'crew', 'files'].includes(item.tab)) local.tab = item.tab;
+      if (['This browser', 'Living room TV'].includes(item.device)) local.device = item.device;
+    });
+    render();
+  }
+
+  root.addEventListener('click', event => {
+    const movie = event.target.closest('.ob-movie');
+    if (!movie) return;
+    const button = event.target.closest('button');
+    const local = movieStates.get(movie);
+    if (!event.target.closest('.ob-menu-wrap, .ob-play-wrap')) closeMenus(movie);
+    if (!button) return;
+    if (button.dataset.tab) {
+      local.tab = button.dataset.tab;
+      renderMovie(movie);
+      lastAction = { design: movie.dataset.design, action: `Opened ${local.tab}` };
+      persist();
+      return;
+    }
+    const action = button.dataset.action;
+    let announcement = '';
+    if (action === 'more' || action === 'device') {
+      const wasOpen = button.getAttribute('aria-expanded') === 'true';
+      closeMenus(movie);
+      button.setAttribute('aria-expanded', String(!wasOpen));
+      movie.querySelector(`[data-${action}-panel]`).hidden = wasOpen;
+      if (!wasOpen) movie.querySelector(`[data-${action}-panel] button:not([hidden])`).focus();
+    } else if (action === 'watchlist') {
+      local.watchlist = !local.watchlist;
+      announcement = local.watchlist ? 'Added to your watchlist' : 'Removed from your watchlist';
+    } else if (action === 'favourite') {
+      local.favourite = !local.favourite;
+      announcement = local.favourite ? 'Added to your favourites' : 'Removed from your favourites';
+      closeMenus(movie, true);
+    } else if (action === 'watched') {
+      const currentlyWatched = local.watched || state.viewing === 'Watched';
+      if (currentlyWatched && state.viewing === 'Watched') state.viewing = 'Unwatched';
+      local.watched = !currentlyWatched;
+      local.playing = false;
+      announcement = local.watched ? 'Marked as watched' : 'Marked as unwatched';
+      closeMenus(movie, true);
+    } else if (action === 'restart') {
+      local.started = true;
+      local.watched = false;
+      local.playing = true;
+      announcement = 'Playing from the beginning';
+      closeMenus(movie, true);
+    } else if (action === 'files') {
+      local.tab = 'files';
+      closeMenus(movie);
+      movie.querySelector('[data-tab="files"]').focus();
+    } else if (action === 'play') {
+      local.playing = !local.playing;
+      announcement = local.playing ? `Playing on ${local.device.toLowerCase()}` : 'Playback paused';
+    } else if (action === 'select-device') {
+      local.device = button.dataset.device;
+      announcement = `Playback device: ${local.device}`;
+      closeMenus(movie, true);
+    } else if (action === 'trailer' || action === 'close-trailer') {
+      const panel = movie.querySelector('[data-trailer-panel]');
+      panel.hidden = action === 'close-trailer' || !panel.hidden;
+      movie.querySelector('[data-action="trailer"]').setAttribute('aria-expanded', String(!panel.hidden));
+      (panel.hidden ? movie.querySelector('[data-action="trailer"]') : panel.querySelector('[data-action="close-trailer"]')).focus();
+    } else if (action === 'play-trailer') {
+      const playing = button.getAttribute('aria-label') !== 'Pause trailer preview';
+      button.setAttribute('aria-label', playing ? 'Pause trailer preview' : 'Play trailer preview');
+      movie.querySelector('[data-trailer-time]').textContent = playing ? 'Playing · 0:14 / 2:25' : 'Paused · 0:14 / 2:25';
+    } else if (action === 'back') {
+      announcement = 'Movies library';
+    }
+    renderMovie(movie);
+    if (announcement) movie.querySelector('[role="status"]').textContent = announcement;
+    lastAction = { design: movie.dataset.design, action };
+    persist();
+  });
+
+  root.addEventListener('change', event => {
+    if (!event.target.matches('[data-region]')) return;
+    const movie = event.target.closest('.ob-movie');
+    movie.querySelector('[data-cert]').textContent = event.target.value === 'GB' ? '12A (GB)' : 'PG-13 (US)';
+  });
+  root.addEventListener('keydown', event => {
+    const movie = event.target.closest('.ob-movie');
+    if (event.key === 'Escape' && movie) closeMenus(movie, true);
+    const tab = event.target.closest('[data-tab]');
+    if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...movie.querySelectorAll('[data-tab]')];
+    const current = tabs.indexOf(tab);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
+  });
+  window.addEventListener('openai:set_globals', event => {
+    const globals = event.detail?.globals;
+    if (globals && 'widgetState' in globals) applySaved(globals.widgetState);
+  });
+  applySaved(window.openai?.widgetState);
+  if (globalThis.lucide) lucide.createIcons({ attrs: { width: 18, height: 18 } });
+  if (globalThis.Tweak) {
+    const tweak = new Tweak({ container: root, onChange: () => { render(); persist(); } });
+    tweak.addSelect(state, 'screen', { label: 'Preview width', options: [{ label: 'Fit available width', value: 'fluid' }, { label: 'Phone', value: 'phone' }] });
+    tweak.addSelect(state, 'viewing', { label: 'Viewing state', options: validViewing });
+    tweak.addToggle(state, 'artwork', { label: 'Backdrop artwork' });
+  }
+})();
+</script>
