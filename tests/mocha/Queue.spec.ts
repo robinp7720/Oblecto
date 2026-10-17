@@ -1,5 +1,6 @@
 
 import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import Queue from '../../src/lib/queue/index.js';
 import logger from '../../src/submodules/logger/index.js';
 
@@ -18,12 +19,20 @@ describe('Queue', function () {
         queue = new Queue(1);
     });
 
-    it('should register a job successfully', function () {
-        const jobName = 'testJob';
-        queue.registerJob(jobName, async () => {});
-        // Accessing private property for verification, or we can assume no error means success
-        // and verify via execution later.
-        expect((queue as any).jobs).to.have.property(jobName);
+    it('should register and execute job names inherited by plain objects', async function () {
+        const names = ['toString', 'constructor', '__proto__'];
+        const executed: string[] = [];
+        const finished = Promise.withResolvers<void>();
+
+        for (const name of names) {
+            queue.registerJob(name, async () => { executed.push(name); });
+            queue.queueJob(name, {});
+        }
+        queue.registerJob('finished', async () => { finished.resolve(); });
+        queue.queueJob('finished', {});
+
+        await finished.promise;
+        assert.deepEqual(executed, names);
     });
 
     it('should log error when registering duplicate job', function () {

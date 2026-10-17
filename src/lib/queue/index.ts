@@ -12,7 +12,7 @@ type Job = (attr: unknown) => Promise<void>;
 
 export default class Queue {
     public maintenance = new JobTracker();
-    private jobs: Partial<Record<string, Job>> = {};
+    private jobs = new Map<string, Job>();
     private queue: async.AsyncPriorityQueue<QueueItem>;
 
     /**
@@ -20,26 +20,19 @@ export default class Queue {
      */
     constructor(concurrency: number) {
         this.queue = async.priorityQueue((job: QueueItem, callback: () => void) => {
-            const run = this.jobs[job.id];
+            const run = this.jobs.get(job.id);
 
             if (!run) {
                 this.maintenance.complete(job.maintenance, true);
                 return callback();
             }
 
-            const jobTimeout = setTimeout(() => {
-                // logger.debug( `Job ${job.id} is taking a long time. Maybe something is wrong?`, JSON.stringify(job));
-            }, 20000);
-
             Promise.resolve().then(() => this.maintenance.run(job.maintenance, () => run(job.attr)))
                 .then(() => {
-                    clearTimeout(jobTimeout);
                     this.maintenance.complete(job.maintenance, false);
                     callback();
                 })
                 .catch((err: unknown) => {
-                    clearTimeout(jobTimeout);
-
                     const level = (err as { level?: unknown } | null)?.level;
 
                     if (typeof level === 'string' && level) {
@@ -60,7 +53,7 @@ export default class Queue {
      * @param job - Function used for Queue item
      */
     registerJob<T>(id: string, job: (attr: T) => Promise<void>): void {
-        if (this.jobs[id]) {
+        if (this.jobs.has(id)) {
             logger.error(`A job has been registered which was already registered: ${id}`);
             logger.error('This should not happen');
             return;
@@ -68,7 +61,7 @@ export default class Queue {
 
         logger.debug('New queue item has been registered:', id);
         // Callers are trusted to queue attributes matching the job they registered
-        this.jobs[id] = job as Job;
+        this.jobs.set(id, job as Job);
     }
 
     /**
@@ -81,8 +74,8 @@ export default class Queue {
         const maintenance = this.maintenance.current();
         this.maintenance.enqueue(maintenance);
         void this.queue.push({
- id, attr, maintenance 
-}, priority);
+            id, attr, maintenance
+        }, priority);
     }
 
     /**

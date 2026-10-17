@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { setImmediate } from 'node:timers/promises';
 import express from 'express';
 import type { Server } from 'node:http';
 import { PlaybackService } from '../../src/lib/playback/PlaybackService.js';
@@ -57,6 +58,41 @@ describe('Playback planner and validation', () => {
 });
 
 describe('Playback scheduling and cache', () => {
+    it('releases capacity when a task throws before returning a promise', async () => {
+        const scheduler = new Scheduler(1);
+        const signal = new AbortController().signal;
+        const error = new Error('Task failed synchronously');
+        const failed = scheduler.submit('a', signal, () => { throw error; });
+
+        await assert.rejects(failed, error);
+        await scheduler.settled();
+        assert.equal(scheduler.active, 0);
+        assert.equal(await scheduler.submit('b', signal, async () => 'recovered'), 'recovered');
+        await scheduler.settled();
+    });
+    it('waits for queued work when settling the scheduler', async () => {
+        const scheduler = new Scheduler(1);
+        const signal = new AbortController().signal;
+        const firstGate = Promise.withResolvers<void>();
+        const secondGate = Promise.withResolvers<void>();
+        const first = scheduler.submit('a', signal, () => firstGate.promise);
+        const second = scheduler.submit('b', signal, () => secondGate.promise);
+        let settled = false;
+        const completion = scheduler.settled().then(() => { settled = true; });
+
+        try {
+            firstGate.resolve();
+            await first;
+            await setImmediate();
+            assert.equal(settled, false);
+            assert.equal(scheduler.active, 1);
+        } finally {
+            secondGate.resolve();
+            await Promise.all([first, second, completion]);
+        }
+        assert.equal(scheduler.active, 0);
+        assert.equal(scheduler.queued, 0);
+    });
     it('bounds the queue and cancels queued jobs', async () => {
         const scheduler = new Scheduler(1, 1); const signal = new AbortController();
         let release!: () => void;

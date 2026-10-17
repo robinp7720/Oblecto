@@ -8,10 +8,18 @@ import Queue from '../../src/lib/queue/index.js';
 const oblecto = { queue: new Queue(1) };
 
 describe('Downloader', function () {
-    it('should register queue item', function () {
-        const downloader = new Downloader(oblecto);
+    it('should execute a registered download job', async function () {
+        const originalDownload = Downloader.download;
+        const downloaded = Promise.withResolvers<[string, string, boolean | undefined]>();
 
-        expect(oblecto.queue.jobs).to.have.property('downloadFile');
+        Downloader.download = async (url, dest, overwrite) => { downloaded.resolve([url, dest, overwrite]); };
+        try {
+            new Downloader(oblecto);
+            oblecto.queue.queueJob('downloadFile', { url: 'https://example.test/artwork', dest: '/unused', overwrite: true });
+            expect(await downloaded.promise).to.eql(['https://example.test/artwork', '/unused', true]);
+        } finally {
+            Downloader.download = originalDownload;
+        }
     });
 
     it('Download test file', async function () {

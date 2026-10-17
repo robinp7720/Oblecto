@@ -156,8 +156,8 @@ export class Scheduler {
             job.signal.removeEventListener('abort', job.abort);
             this.lastOwner = job.owner;
             this.active++;
-            const promise = job
-                .task()
+            const promise = Promise.resolve()
+                .then(() => job.task())
                 .then(job.resolve, job.reject)
                 .finally(() => {
                     this.active--;
@@ -168,6 +168,8 @@ export class Scheduler {
         }
     }
     async settled(): Promise<void> {
-        await Promise.allSettled([...this.running]);
+        while (this.running.size > 0) {
+            await Promise.allSettled([...this.running]);
+        }
     }
 }
