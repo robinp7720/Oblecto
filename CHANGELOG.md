@@ -34,6 +34,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 - Playback scheduling releases capacity when a task throws before returning a promise, and waits for queued work to finish when settling. Background job names no longer collide with inherited object properties, and workers no longer allocate unused timeout timers.
 
+- Navigating between Home, TV Shows, Movies and detail pages preserves the outgoing page's spacing during its fade, avoiding sudden shifts and resizes.
+
 - Movie banners use a focused layout with playback, trailers, a watchlist bookmark and a More menu. Progress appears once beneath the actions; genres, audience ratings and provider links are in About this movie, and technical badges are with Available files.
 
 - The mobile account menu opens as a wide panel just below its avatar, with scrolling constrained to the available viewport.
