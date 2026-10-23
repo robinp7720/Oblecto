@@ -49,3 +49,17 @@ When extending the Jellyfin/Emby emulation layer:
 - Document every change you make in `PLAN.md` under the Change log section (date + short summary), and keep `docs/JELLYFIN.md` in step.
 - Keep route implementations aligned with the spec path shapes, HTTP methods, and required parameters. Register specific paths before `/:param` ones that would swallow them.
 - Route tests call handlers with plain request objects. Give them a read-only `query`, as Express 5 has it (see `tests/mocha/embyLibrary.spec.ts`), and check new behaviour against the bundled jellyfin-web too.
+
+## Completion: commit and push
+
+- Unless the user explicitly asks otherwise, completing a task includes committing and pushing all
+  working-tree changes, including pre-existing edits and new files. This is standing authorization;
+  do not ask for separate confirmation to commit or push.
+- Run checks appropriate to the changes, preserve existing work, stage all repository changes, and
+  create a descriptive commit. Push the current branch to its configured remote without force.
+- Commit and push changed submodules first, then commit and push the parent repository with the
+  updated submodule references.
+- When multiple agents share a checkout, coordinate one final commit and push after all workers
+  finish their changes.
+- Verify that the push succeeded and the working trees are clean. Report the commit IDs and any
+  check or push failures.
