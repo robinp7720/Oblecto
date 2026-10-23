@@ -8,12 +8,13 @@ import type { File } from '../../models/file.js';
 import { Movie } from '../../models/movie.js';
 import { Episode } from '../../models/episode.js';
 import { PlaybackError, validateOptions } from './types.js';
-import type { Media, PlaybackOptions, PlaybackPlan, Track } from './types.js';
+import type { Media, PlaybackOptions, PlaybackPlan, PlaybackTimings, Track } from './types.js';
 import { planPlayback } from './planner.js';
 import { run, Scheduler } from './process.js';
 import { SegmentCache } from './cache.js';
 import { sendFile } from './http.js';
 import { saveProgress } from './progress.js';
+import { MetadataCache, waitFor } from './metadataCache.js';
 import logger from '../../submodules/logger/index.js';
 
 export type RemoteSessionData = {
@@ -28,7 +29,8 @@ export type RemotePlayback = {
         sessionId: string,
         asset: string,
         req: Request,
-        res: Response
+        res: Response,
+        onFirstByte?: () => void
     ): Promise<void>;
     close(): void;
 };
@@ -42,6 +44,16 @@ export class PlaybackSession {
     updatedAt = Date.now();
     createdAt = Date.now();
     startupMs: number | null = null;
+    readonly timings: PlaybackTimings = {
+        lookupMs: 0,
+        statisticsMs: 0,
+        probeMs: 0,
+        planMs: 0,
+        preparationMs: 0,
+        firstMediaMs: null,
+        firstPlaybackMs: null
+    };
+    startedMonotonic = performance.now();
     failure: string | null = null;
     bufferingReports = 0;
     encodingSpeed: number | null = null;
@@ -75,6 +87,7 @@ export class PlaybackService {
     private pendingPeers = new Set<RemotePlayback>();
     private hardware?: Promise<string | null>;
     private probes = new Map<string, Promise<Media>>();
+    private timelines = new MetadataCache<number[]>();
     private creation = new Set<Promise<PlaybackSession>>();
     remoteFactory?: (host: string) => Promise<RemotePlayback>;
     constructor(readonly oblecto: Oblecto) {
@@ -128,7 +141,7 @@ export class PlaybackService {
                 404
             );
         });
-        const key = `${file.id}:${stat.size}:${stat.mtimeMs}`;
+        const key = JSON.stringify([file.id, file.path, stat.dev, stat.ino, stat.size, stat.mtimeMs]);
         let probe = this.probes.get(key);
         if (!probe) {
             probe = this.scheduler.submit(
@@ -183,6 +196,21 @@ export class PlaybackService {
         }
         return probe;
     }
+    private async keyframeTimeline(media: Media, videoIndex: number, signal: AbortSignal): Promise<number[]> {
+        const stat = await fs.stat(media.path);
+        const key = JSON.stringify([media.path, stat.dev, stat.ino, stat.size, stat.mtimeMs, videoIndex, media.duration, this.ffprobe]);
+        return waitFor(this.timelines.get(key, async () => {
+            const output = await this.scheduler.submit('keyframes', this.lifetime.signal, () => run(this.ffprobe, [
+                '-v', 'error', '-select_streams', String(videoIndex), '-skip_frame', 'nokey',
+                '-show_frames', '-show_entries', 'frame=best_effort_timestamp_time', '-of', 'json', media.path
+            ], this.lifetime.signal));
+            const data = JSON.parse(output) as { frames: Array<{ best_effort_timestamp_time: string }> };
+            const times = data.frames.map(frame => Number(frame.best_effort_timestamp_time))
+                .filter(time => Number.isFinite(time) && time >= 0 && time < media.duration);
+            if (!times.length || times[0] > 0.05) throw new Error('No usable keyframe timeline');
+            return times;
+        }), signal);
+    }
     async prepare(
         media: Media,
         options: PlaybackOptions,
@@ -195,43 +223,7 @@ export class PlaybackService {
         );
         if (plan.method === 'remux' && plan.video) {
             try {
-                const output = await this.scheduler.submit(
-                    'keyframes',
-                    signal,
-                    () =>
-                        run(
-                            this.ffprobe,
-                            [
-                                '-v',
-                                'error',
-                                '-select_streams',
-                                String(plan.video!.index),
-                                '-skip_frame',
-                                'nokey',
-                                '-show_frames',
-                                '-show_entries',
-                                'frame=best_effort_timestamp_time',
-                                '-of',
-                                'json',
-                                media.path
-                            ],
-                            signal
-                        )
-                );
-                const times: number[] = (
-                    JSON.parse(output) as {
-                        frames: { best_effort_timestamp_time: string }[];
-                    }
-                ).frames
-                    .map((f: { best_effort_timestamp_time: string }) =>
-                        Number(f.best_effort_timestamp_time)
-                    )
-                    .filter(
-                        (t: number) =>
-                            Number.isFinite(t) && t >= 0 && t < media.duration
-                    );
-                if (!times.length || times[0] > 0.05)
-                    throw new Error('No usable keyframe timeline');
+                const times = await this.keyframeTimeline(media, plan.video.index, signal);
                 plan.boundaries = [0];
                 for (const time of times)
                     if (time - plan.boundaries.at(-1)! >= 3.95)
@@ -253,13 +245,22 @@ export class PlaybackService {
         owner: string,
         userId: number | null,
         options: PlaybackOptions = {},
-        statisticsId: string = randomUUID()
+        statisticsId: string = randomUUID(),
+        requestedAt = performance.now()
     ): Promise<PlaybackSession> {
         const valid = validateOptions(options);
         const promise = (async () => {
+            const statisticsAt = performance.now();
             await this.oblecto.statistics?.begin(statisticsId, userId, file, owner.startsWith('emby:') ? 'jellyfin' : 'web', valid.position);
             try {
-                return await this.createSession(file, owner, userId, valid, statisticsId);
+                const statisticsMs = performance.now() - statisticsAt;
+                const session = await this.createSession(file, owner, userId, valid, statisticsId);
+                session.startedMonotonic = requestedAt;
+                session.createdAt = Date.now() - (performance.now() - requestedAt);
+                session.timings.lookupMs = statisticsAt - requestedAt;
+                session.timings.statisticsMs = statisticsMs;
+                session.timings.preparationMs = performance.now() - requestedAt;
+                return session;
             } catch (error) {
                 await this.oblecto.statistics?.failure(statisticsId, error instanceof PlaybackError ? error.code : 'PREPARATION_FAILED');
                 await this.oblecto.statistics?.end(statisticsId, 'failed');
@@ -325,7 +326,10 @@ export class PlaybackService {
                 this.pendingPeers.delete(client);
             }
         } else {
+            const probeAt = performance.now();
             const media = await this.probe(file);
+            const probeMs = performance.now() - probeAt;
+            const planAt = performance.now();
             const plan = await this.prepare(
                 media,
                 options,
@@ -340,6 +344,8 @@ export class PlaybackService {
                 plan,
                 statisticsId
             );
+            session.timings.probeMs = probeMs;
+            session.timings.planMs = performance.now() - planAt;
         }
         if (session.position > session.media.duration)
             session.position = session.media.duration;
@@ -380,6 +386,7 @@ export class PlaybackService {
             paused: s.paused,
             method: s.plan.method,
             reason: s.plan.reason,
+            timings: { ...s.timings },
             mediaUrl: url(
                 s.plan.method === 'direct' ? 'original' : 'master.m3u8'
             ),
@@ -486,6 +493,9 @@ export class PlaybackService {
         s.touch();
         s.state = s.paused ? 'paused' : 'playing';
         if (data.buffering) s.bufferingReports++;
+        if (s.timings.firstPlaybackMs === null && Number.isFinite(data.firstPlaybackMs) && data.firstPlaybackMs! >= 0 && data.firstPlaybackMs! <= 24 * 60 * 60 * 1000) {
+            s.timings.firstPlaybackMs = data.firstPlaybackMs!;
+        }
         if (s.remote)
             await s.remote.client.request('heartbeat', {sessionId: s.remote.id});
         await this.persist(s, data.position, data.revision);
@@ -567,6 +577,7 @@ export class PlaybackService {
                 reason: s.plan.reason,
                 position: s.position,
                 startupMs: s.startupMs,
+                timings: { ...s.timings },
                 bufferingReports: s.bufferingReports,
                 encodingSpeed: s.encodingSpeed,
                 failure: s.failure,
@@ -928,15 +939,17 @@ export class PlaybackService {
     ): Promise<void> {
         res.setHeader('Cache-Control', 'private, no-store');
         res.setHeader('Referrer-Policy', 'no-referrer');
+        const firstByte = (): void => {
+            if (s.timings.firstMediaMs !== null || req.method !== 'GET') return;
+            s.startupMs = s.timings.firstMediaMs = Math.round(performance.now() - s.startedMonotonic);
+        };
         if (s.remote) {
-            await s.remote.client.serve(s.remote.id, asset, req, res);
+            await s.remote.client.serve(s.remote.id, asset, req, res, asset === 'original' || /^[a-z0-9]+-\d+\.ts$/.test(asset) ? firstByte : undefined);
             return;
         }
         const plan = s.plan;
         const link = (name: string) => `${name}?token=${s.token}`;
         if (asset === 'original') {
-            if (s.startupMs === null && req.method === 'GET')
-                s.startupMs = Date.now() - s.createdAt;
             if (plan.method !== 'direct')
                 throw new PlaybackError(
                     'INVALID_SELECTION',
@@ -947,10 +960,17 @@ export class PlaybackService {
                 res,
                 s.media.path,
                 mime.lookup(s.media.path) || 'application/octet-stream',
-                s.signal.signal
+                s.signal.signal,
+                firstByte
             );
             return;
         }
+        if (s.options.forceDirect === true)
+            throw new PlaybackError(
+                'MEDIA_NOT_FOUND',
+                'Playback asset does not exist',
+                404
+            );
         if (asset === 'master.m3u8') {
             const tracks =
                 plan.subtitle && !plan.burnSubtitles
@@ -1081,9 +1101,8 @@ export class PlaybackService {
                     )
             );
         const lease = await acquire(index);
-        if (s.startupMs === null) s.startupMs = Date.now() - s.createdAt;
         try {
-            await sendFile(req, res, lease.path, 'video/mp2t', s.signal.signal);
+            await sendFile(req, res, lease.path, 'video/mp2t', s.signal.signal, firstByte);
         } finally {
             lease.release();
         }

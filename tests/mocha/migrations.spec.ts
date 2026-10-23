@@ -10,6 +10,8 @@ import { Movie, movieColumns } from '../../src/models/movie.js';
 import { Series, seriesColumns } from '../../src/models/series.js';
 import { SeriesSet, seriesSetColumns } from '../../src/models/seriesSet.js';
 import { Episode, episodeColumns } from '../../src/models/episode.js';
+import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
+import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { Person, personColumns } from '../../src/models/person.js';
 import { MovieCredit, movieCreditColumns } from '../../src/models/movieCredit.js';
 import { SeriesCredit, seriesCreditColumns } from '../../src/models/seriesCredit.js';
@@ -31,6 +33,8 @@ async function database(): Promise<Sequelize> {
     Series.init(seriesColumns, { sequelize, modelName: 'Series' });
     SeriesSet.init(seriesSetColumns, { sequelize, modelName: 'SeriesSet' });
     Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+    TrackMovie.init(trackMovieColumns, { sequelize, modelName: 'TrackMovie' });
+    TrackEpisode.init(trackEpisodesColumns, { sequelize, modelName: 'TrackEpisode' });
     Person.init(personColumns, { sequelize, modelName: 'Person' });
     MovieCredit.init(movieCreditColumns, { sequelize, modelName: 'MovieCredit' });
     SeriesCredit.init(seriesCreditColumns, { sequelize, modelName: 'SeriesCredit' });
@@ -46,6 +50,24 @@ async function database(): Promise<Sequelize> {
 const columns = async (sequelize: Sequelize, table: string): Promise<string[]> => Object.keys(await sequelize.getQueryInterface().describeTable(table));
 
 describe('Database migrations', () => {
+    it('adds browse indexes to existing data and refreshes SQLite statistics idempotently', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const movie = await Movie.create({ movieName: 'Keep this movie' });
+            await TrackMovie.bulkCreate([0.2, 0.7].map(progress => ({ userId: 1, movieId: movie.id, progress })));
+            await sequelize.getQueryInterface().removeIndex('TrackMovies', 'TrackMovies_userId_movieId_progress');
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0015-browse-indexes'");
+            assert.deepEqual(await migrate(sequelize), ['0015-browse-indexes']);
+            const names = (await sequelize.getQueryInterface().showIndex('TrackMovies') as Array<{ name: string }>).map(index => index.name);
+            assert.ok(names.includes('TrackMovies_userId_movieId_progress'));
+            const [statistics] = await sequelize.query("SELECT stat FROM sqlite_stat1 WHERE idx = 'TrackMovies_userId_movieId_progress'");
+            assert.equal(statistics.length, 1);
+            assert.equal(await TrackMovie.count(), 2, 'existing duplicate progress rows are preserved');
+            assert.equal((await movie.reload()).movieName, 'Keep this movie');
+            assert.deepEqual(await migrate(sequelize), []);
+        } finally { await sequelize.close(); }
+    });
     it('upgrades series caches and private watchlists without losing show data, and safely reruns', async () => {
         const sequelize = await database();
         try {

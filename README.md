@@ -14,6 +14,7 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 - Movie and TV libraries, identified and kept up to date in the background.
 - Metadata and artwork from TMDb, TVDB and fanart.tv, with cast and crew, person pages and related titles. Oblecto ships with the project's API keys; you can use your own.
 - Movie pages include trailers, regional age certifications, full crew, IMDb/TMDB links, viewing progress and estimated finish times. Expand Available files → Audio and subtitles for each version's languages, commentary and accessibility labels.
+- Use the copy button under Available files to get a direct HTTP link to the original file for an external player. Embedded tracks and codecs are preserved; links expire after 30 minutes of inactivity by default.
 - Series and episode banners use the same focused layout. Shows offer trailers, favourites and a private watchlist; saved-show filters are in TV Shows. Below the banner, viewing progress counts playable library episodes. Library managers can open **More series actions → Library tools** for episode matching, separate from the viewing page. This workspace matches TMDB episode IDs across different season orders, flags uncertain entries for review, and separates specials and future releases from absent regular episodes. Season menus can play the first unwatched episode or update your watch history after confirming the scope.
 - Episode pages show remaining and estimated finish time, nearby episodes and a next-unwatched shortcut. Expand Chapters to play from a timestamp when chapter metadata exists. Full crew, regional series content ratings and external provider links sit below the banners.
 - In Account → Language & playback, choose Episode spoilers to hide unwatched artwork and synopsis, optionally titles too. Reveal individual episodes temporarily when needed; watched episodes remain visible.
@@ -72,6 +73,8 @@ docker exec -it oblecto oblecto adduser USERNAME - "Your Name" you@example.com A
 ```
 
 The first start writes a config into the `/etc/oblecto` volume. Everything Oblecto keeps lives there: config, SQLite database, artwork and logs.
+
+Library browsing uses indexed queries and database-aggregated facets. Facets are cached per viewer and filter set for up to 30 seconds, with invalidation after relevant writes. Migration 0015 adds the supporting indexes; SQLite refreshes planner statistics after migration and runs bounded optimization at startup and hourly. The web app loads pages and playback on demand. See [streaming diagnostics](docs/STREAMING.md#preparation-and-startup-latency) for preparation and startup measurements.
 
 ## Configuration
 

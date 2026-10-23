@@ -14,17 +14,21 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
         this.client.ftp.verbose = false;
     }
 
+    private connectOptions(): ftp.AccessOptions {
+        return {
+            host: this.config.host,
+            port: this.config.port ?? 21,
+            user: this.config.username,
+            password: this.config.password,
+            secure: this.config.secure ?? false
+        };
+    }
+
     async setup(): Promise<void> {
         try {
-            await this.client.access({
-                host: this.config.host,
-                user: this.config.username,
-                password: this.config.password,
-                secure: this.config.secure || false
-            });
-
+            await this.client.access(this.connectOptions());
         } catch (e) {
-            logger.info( e);
+            logger.info(e);
         }
     }
 
@@ -40,29 +44,26 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
     }
 
     async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
-        const client =  new ftp.Client();
+        const client = new ftp.Client();
 
-        await client.access({
-            host: this.config.host,
-            user: this.config.username,
-            password: this.config.password,
-            secure: this.config.secure || false
-        });
+        try {
+            await client.access(this.connectOptions());
 
-        if (callback) {
-            try {
-                const size = await client.size(origin);
+            if (callback) {
+                let size = 0;
+                try {
+                    size = await client.size(origin);
+                } catch {
+                    // Some servers do not support SIZE; progress still reports transferred bytes.
+                }
                 client.trackProgress(info => {
                     callback(info.bytes, size);
                 });
-            } catch (e) {
-                // Ignore size fetch errors, maybe pass 0 as total
-                client.trackProgress(info => {
-                    callback(info.bytes, 0);
-                });
             }
-        }
 
-        await client.downloadTo(destination, origin);
+            await client.downloadTo(destination, origin);
+        } finally {
+            client.close();
+        }
     }
 }

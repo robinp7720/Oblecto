@@ -5,6 +5,10 @@ test.afterEach(async ({ page }) => { await page.evaluate(() => (window as any).c
 test('original playback starts, seeks, resumes and cleans up', async ({ page, request }) => {
     await page.click('#start');
     await page.waitForFunction(() => document.querySelector('video')!.currentTime > 0.2);
+    await expect.poll(async () => {
+        const sessions = await (await request.get('/debug')).json();
+        return sessions[0]?.timings.firstPlaybackMs;
+    }).toBeGreaterThan(0);
     await page.evaluate(() => { const video = document.querySelector('video')!; video.pause(); video.currentTime = 10; });
     await expect.poll(() => page.evaluate(() => document.querySelector('video')!.currentTime)).toBeCloseTo(10, 0);
     await page.evaluate(() => document.querySelector('video')!.play());

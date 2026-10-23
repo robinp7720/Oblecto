@@ -4,20 +4,10 @@ import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
 import type Oblecto from '../../../oblecto/index.js';
 import type { SeriesIdentification } from '../SeriesIdentifer.js';
+import type { TvdbEpisode } from '../../../common/tvdbTypes.js';
 
 export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
-    public episodeCache: Record<number, Array<{
-        id: number;
-        imdbId?: string;
-        episodeName?: string;
-        airedEpisodeNumber?: number;
-        airedSeason?: number;
-        dvdEpisodeNumber?: number;
-        dvdSeason?: number;
-        absoluteNumber?: number;
-        overview?: string;
-        firstAired?: string;
-    }>>;
+    public episodeCache: Record<number, TvdbEpisode[]>;
 
     constructor(oblecto: Oblecto) {
         super(oblecto);
@@ -30,14 +20,14 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param tvdbId - TVDBID for the series to get episodes for
      * @returns - Object containing all episodes of a series
      */
-    async getEpisodes(tvdbId: number) {
+    async getEpisodes(tvdbId: number): Promise<TvdbEpisode[]> {
         // TODO: Caching should be moved somewhere else or at least improved. This implementation is terrible
         if (this.episodeCache[tvdbId]) {
             return this.episodeCache[tvdbId];
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-        this.episodeCache[tvdbId] = await promiseTimeout(this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId));
+        this.episodeCache[tvdbId] = await promiseTimeout<TvdbEpisode[]>(this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId));
 
         return this.episodeCache[tvdbId];
     }
@@ -48,15 +38,17 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
      * @param guessitIdentification - Guessit identification of a file
      * @returns - Match an episode to a guessit Identification
      */
-    async retrieveEpisode(series: SeriesIdentification, guessitIdentification: EpisodeGuessitIdentification) {
+    async retrieveEpisode(series: SeriesIdentification, guessitIdentification: EpisodeGuessitIdentification): Promise<TvdbEpisode> {
         if (!series.tvdbid) throw new IdentificationError('tvdbid was not supplied');
         const tvdbEpisodes = await this.getEpisodes(series.tvdbid);
+        const { episode_name: name, season, episode: number } = guessitIdentification;
 
         for (const episode of tvdbEpisodes) {
-            if (episode.episodeName === guessitIdentification.episode_name) return episode;
+            if (typeof name === 'string' && name.trim() && episode.episodeName === name) return episode;
 
-            if (episode.airedSeason !== guessitIdentification.season) continue;
-            if (episode.airedEpisodeNumber !== guessitIdentification.episode) continue;
+            if (season === undefined || number === undefined) continue;
+            if (episode.airedSeason !== season) continue;
+            if (episode.airedEpisodeNumber !== number) continue;
 
             return episode;
         }

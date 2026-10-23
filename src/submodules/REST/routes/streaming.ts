@@ -63,8 +63,13 @@ export default (server: Express, oblecto: Oblecto): void => {
     };
     server.post(
         '/playback/sessions',
+        (req: OblectoRequest, _res, next) => {
+            req.playbackRequestedAt = performance.now();
+            next();
+        },
         requiresAuth,
         async (req: OblectoRequest, res) => {
+            const requestedAt = req.playbackRequestedAt ?? performance.now();
             const identity = owner(req);
             if (
                 !Number.isSafeInteger(body(req).fileId) ||
@@ -83,7 +88,9 @@ export default (server: Express, oblecto: Oblecto): void => {
                 file,
                 identity,
                 Number(identity.slice(5)),
-                options
+                options,
+                undefined,
+                requestedAt
             );
             res.status(201).send(oblecto.playback.describe(session));
         }

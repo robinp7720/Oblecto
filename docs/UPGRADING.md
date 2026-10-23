@@ -4,7 +4,7 @@ Back up your database before upgrading. For SQLite that is a copy of the databas
 
 ## Database changes happen on their own
 
-Oblecto updates the database schema when it starts. Each change is a named migration, recorded in the `SchemaMigrations` table, so it runs once. Migrations only add tables and columns; they never drop data.
+Oblecto updates the database schema when it starts. Each change is a named migration, recorded in the `SchemaMigrations` table, so it runs once. Migrations only add tables, columns and indexes; they never drop data.
 
 To see or apply pending migrations yourself:
 
@@ -32,6 +32,10 @@ Pending migrations run at the first start:
 - `0012-statistics` adds viewing sessions, daily watch time and playback-health storage.
 - `0013-movie-details` adds `UserWatchlists` (one movie per user per list entry), plus cached movie trailers, regional certifications and their refresh timestamps. Existing movies and favourites are preserved. Watchlist entries are removed when their user or movie is deleted.
 - `0014-series-details` adds private `UserSeriesWatchlists` with unique user/show pairs and cascading deletion, plus series trailers, regional TV ratings and a complete episode-catalogue cache. Existing watch history and favourites are preserved. The spoiler preference is stored in the existing user preferences JSON and defaults to showing episode details.
+
+- `0015-browse-indexes` adds indexes for common library sorts, episode/series membership, per-user tracking and reverse file links. Existing rows, including duplicate tracking records, are preserved. SQLite refreshes planner statistics with a bounded `ANALYZE` during this migration. Building indexes takes additional disk space and can lengthen the first startup for a large library.
+
+SQLite also runs bounded planner optimization at startup and hourly, following [SQLite's guidance for long-lived connections](https://www.sqlite.org/pragma.html#pragma_optimize). MariaDB and MySQL receive the indexes and continue using their own statistics maintenance.
 
 Trailers and certifications fill on demand when a movie page opens; no library-wide refresh is needed. They require the existing TMDB configuration and a TMDB ID for the movie. Successful results, including empty lists, are cached for seven days; failed requests retain old data and can be retried from the movie page. Movie favourites already saved through Jellyfin appear in the native app's Favourites filter.
 

@@ -35,6 +35,26 @@ export function planPlayback(
     const audios = media.streams.filter((t) => t.codec_type === 'audio');
     const subtitles = media.streams.filter((t) => t.codec_type === 'subtitle');
     if (!video && audios.length === 0) throw new PlaybackError('UNSUPPORTED_MEDIA', 'No playable audio or video streams', 422);
+    // External players select and decode the original file's embedded tracks themselves.
+    if (options.forceDirect === true) {
+        return {
+            method: 'direct',
+            reason: 'Original file requested',
+            video,
+            audio: audios[0] ?? null,
+            subtitle: null,
+            burnSubtitles: false,
+            hdr: ['smpte2084', 'arib-std-b67'].includes(video?.color_transfer ?? ''),
+            renditions: [
+                {
+                    id: 'source',
+                    height: video?.height ?? 0,
+                    bitrate: Math.ceil((media.size * 8) / media.duration)
+                }
+            ],
+            boundaries: [0, media.duration]
+        };
+    }
     const select = (
         tracks: Track[],
         index: number | null | undefined

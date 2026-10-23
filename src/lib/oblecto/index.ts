@@ -44,6 +44,7 @@ import FileIndexer from '../indexers/files/FileIndexer.js';
 import MediaAnalyser from '../analysis/MediaAnalyser.js';
 
 import { initDatabase } from '../../submodules/database.js';
+import { DatabaseOptimizer } from '../../submodules/databaseOptimizer.js';
 import { countAdmins, seedGroups } from '../auth/permissions.js';
 import logger from '../../submodules/logger/index.js';
 import { PlaybackService } from '../playback/PlaybackService.js';
@@ -59,6 +60,7 @@ export default class Oblecto {
 
     public config: IConfig;
     public database: Sequelize;
+    private databaseOptimizer: DatabaseOptimizer;
     public tvdb: InstanceType<typeof TVDB>;
     public tmdb: MovieDb;
     public movieExtras: MovieExtras;
@@ -103,6 +105,7 @@ export default class Oblecto {
         for (const problem of describeMissingTools(this.tools)) logger.warn(problem);
 
         this.database = initDatabase();
+        this.databaseOptimizer = new DatabaseOptimizer(this.database);
         void this.prepareGroups();
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
@@ -201,6 +204,7 @@ export default class Oblecto {
         await Promise.allSettled(closers.map(close => Promise.resolve().then(close)));
 
         await this.statistics.close();
+        await this.databaseOptimizer.close();
         await this.database.close();
     }
 }

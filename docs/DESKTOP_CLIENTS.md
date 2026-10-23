@@ -206,6 +206,8 @@ Apply language preferences by mapping `Files[].Streams[].tags_language` to sourc
 
 `original` requests compatible original delivery with remux/transcode fallback; it is not a guarantee of direct play. `auto`, numeric quality or `maxBitrate` selects adaptive output. `direct` delivers the original file with byte-range support; `remux` and `transcode` deliver HLS. A player with `hls: false` can receive 422 when conversion is needed. Actual segment encoding is on demand; allow preparation time rather than treating the 201 descriptor as fully buffered media.
 
+For an external-player link that always serves the unchanged file, create with `{ fileId: file.id, forceDirect: true }` and resolve the returned `mediaUrl` as above. The player handles all embedded tracks and source codecs. Omit quality/bitrate limits and audio/subtitle selections; conflicting transformation options return 400. The URL uses the usual session-scoped media token and idle expiry.
+
 ### Positions and reconfiguration
 
 All native positions are **absolute seconds**, including HLS after a seek or track/quality change. Set the player's initial seek from `session.position`; do not add an offset to subsequent player timestamps. Ordinary seeks operate on the player's direct/HLS source, then report progress. They do not require a new session.

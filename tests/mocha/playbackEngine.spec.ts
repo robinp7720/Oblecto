@@ -37,6 +37,28 @@ describe('Playback planner and validation', () => {
         assert.equal(planPlayback(media, { subtitleStreamIndex: 4 }).burnSubtitles, true);
         assert.throws(() => planPlayback(media, { audioStreamIndex: 90 }), /Track/);
     });
+    it('delivers the original file explicitly regardless of browser capabilities or embedded subtitles', () => {
+        const source: Media = { ...media, container: 'mkv', streams: [
+            { ...media.streams[0], codec_name: 'hevc', pix_fmt: 'yuv420p10le', color_transfer: 'smpte2084' },
+            { ...media.streams[2], disposition: { default: 1 } },
+            { ...media.streams[4], disposition: { forced: 1 } }
+        ] };
+        assert.equal(planPlayback(source, {}).method, 'transcode');
+        const plan = planPlayback(source, { forceDirect: true, capabilities: { containers: [], videoCodecs: [], audioCodecs: [], hls: false } });
+        assert.equal(plan.method, 'direct');
+        assert.equal(plan.video?.codec_name, 'hevc');
+        assert.equal(plan.audio?.codec_name, 'ac3');
+        assert.equal(plan.hdr, true);
+        assert.equal(plan.subtitle, null);
+        assert.equal(plan.burnSubtitles, false);
+    });
+    it('rejects malformed direct delivery flags and conflicting transformations', () => {
+        assert.equal(validateOptions({ forceDirect: true }).forceDirect, true);
+        for (const options of [
+            { forceDirect: 'yes' },
+            ...[{ forceHls: true }, { quality: 'auto' }, { quality: 720 }, { maxBitrate: 1000000 }, { audioStreamIndex: 1 }, { subtitleStreamIndex: null }, { subtitleMode: 'forced' }].map(extra => ({ forceDirect: true, ...extra }))
+        ]) assert.throws(() => validateOptions(options as never), PlaybackError);
+    });
     it('limits adaptive renditions to source resolution and bitrate', () => {
         assert.deepEqual(planPlayback(media, { quality: 'auto' }).renditions.map(r => r.height), [360, 480, 720]);
         assert.deepEqual(planPlayback(media, { maxBitrate: 1600000 }).renditions.map(r => r.height), [360, 480]);
@@ -287,5 +309,31 @@ describe('Real FFmpeg playback delivery', function () {
         assert.equal(session.plan.method, 'remux');
         const response = await fetch(`${base}/${session.sessionId}/1/source-1.ts`);
         assert.equal(response.status, 200); assert.ok((await response.arrayBuffer()).byteLength > 0);
+    });
+    it('shares keyframe scans between sessions and revisions, and rescans changed files', async () => {
+        const source = path.join(root, 'timeline-cache.mp4');
+        await fs.copyFile(file.path!, source);
+        const fresh = { ...file, path: source } as File;
+        const submit = service.scheduler.submit.bind(service.scheduler);
+        let scans = 0;
+        service.scheduler.submit = (owner, signal, task) => {
+            if (owner === 'keyframes') scans++;
+            return submit(owner, signal, task);
+        };
+        const sessions = [];
+        try {
+            sessions.push(...await Promise.all([1, 2].map(() => service.create(fresh, 'alice', null, { forceHls: true, subtitleMode: 'off' }))));
+            assert.ok(sessions.every(session => session.plan.method === 'remux'));
+            assert.equal(scans, 1);
+            await service.update(sessions[0], { position: 5 }, 1);
+            assert.equal(scans, 1);
+            const modified = new Date(Date.now() + 5000);
+            await fs.utimes(source, modified, modified);
+            sessions.push(await service.create(fresh, 'alice', null, { forceHls: true, subtitleMode: 'off' }));
+            assert.equal(scans, 2);
+        } finally {
+            service.scheduler.submit = submit;
+            await Promise.all(sessions.map(session => service.stop(session)));
+        }
     });
 });

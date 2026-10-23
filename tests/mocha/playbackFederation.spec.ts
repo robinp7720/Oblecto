@@ -47,8 +47,9 @@ describe('Federated playback protocol', function () {
     });
     it('proxies ranges without local transcoding and isolates remote sessions', async () => {
         const file = { id: 8, host: 'origin', path: '7' } as File;
-        const s = await receiver.playback.create(file, 'viewer:1', null, {});
+        const s = await receiver.playback.create(file, 'viewer:1', null, { forceDirect: true, capabilities: { containers: [], hls: false } });
         const description = receiver.playback.describe(s);
+        assert.equal(description.method, 'direct');
         const response = await fetch(`${base}${description.mediaUrl}`, { headers: { Range: 'bytes=0-99' } });
         assert.equal(response.status, 206, await response.clone().text()); assert.equal((await response.arrayBuffer()).byteLength, 100);
         assert.equal(receiver.playback.scheduler.active, 0); assert.equal(receiver.playback.cache.bytes, 0);

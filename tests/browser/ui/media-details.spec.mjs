@@ -19,6 +19,31 @@ async function boot (page, path, handler) {
   await page.goto(path)
 }
 const movie = { id: 1, movieName: 'Arrival', genres: '["Drama"]', siteRating: 8, siteRatingSource: 'tvdb', Files: [] }
+test('@desktop @phone copy stream URL requests the original file for an external player', async ({ page }) => {
+  const requests = []
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: {
+      writeText: async text => { window.copiedStreamUrl = text }
+    } })
+  })
+  await boot(page, '/movie/1', async (route, url) => {
+    if (url.pathname === '/movie/1/info') {
+      await reply(route, { ...movie, Files: [{ id: 11, name: 'Arrival.mkv', extension: 'mkv', Streams: [] }] })
+      return true
+    }
+    if (url.pathname === '/playback/sessions') {
+      requests.push(route.request().postDataJSON())
+      await reply(route, { method: 'direct', mediaUrl: '/playback/media/copied/1/original?token=scoped-token' }, 201)
+      return true
+    }
+    return false
+  })
+  await page.locator('#movie-files > summary').click()
+  await page.getByRole('button', { name: 'Copy stream URL for Arrival.mkv', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Stream URL copied to the clipboard.' })).toBeVisible()
+  expect(requests).toEqual([{ fileId: 11, forceDirect: true }])
+  expect(await page.evaluate(() => window.copiedStreamUrl)).toBe('http://oblecto.test/playback/media/copied/1/original?token=scoped-token')
+})
 async function openMovieActions (page) {
   const trigger = page.getByRole('button', { name: 'More movie actions', exact: true })
   if (await trigger.getAttribute('aria-expanded') !== 'true') await trigger.click()

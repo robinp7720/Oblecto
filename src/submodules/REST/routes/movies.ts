@@ -1,3 +1,4 @@
+import { browseFacets } from './helpers/facets.js';
 import { relatedTitles } from './helpers/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
@@ -34,24 +35,6 @@ const BROWSE_SORT_FIELDS = new Set([
     'popularity',
     'runtime'
 ]);
-
-const normalizeGenres = (raw: unknown): string[] => {
-    if (!raw || typeof raw !== 'string') return [];
-
-    const trimmed = raw.trim();
-    if (!trimmed) return [];
-
-    try {
-        const parsed = JSON.parse(trimmed) as unknown;
-        if (Array.isArray(parsed)) {
-            return parsed.map(entry => String(entry).trim()).filter(Boolean);
-        }
-    } catch (error) {
-        // Fall back to comma-separated parsing.
-    }
-
-    return trimmed.split(',').map(entry => entry.trim()).filter(Boolean);
-};
 
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
@@ -206,17 +189,7 @@ export default (server: Express, oblecto: Oblecto) => {
             facetQueryOptions.where = { [Op.and]: baseWhereClauses };
         }
 
-        const facetRows = await Movie.findAll(facetQueryOptions);
-        const genres = Array.from(new Set(facetRows.flatMap(item => normalizeGenres((item as any).genres))));
-        const years = Array.from(new Set(facetRows
-            .map(item => {
-                const value = (item as any).releaseDate;
-                if (!value) return null;
-
-                const parsed = parseInt(String(value).slice(0, 4), 10);
-                return Number.isInteger(parsed) ? parsed : null;
-            })
-            .filter(Boolean) as number[])).sort((a, b) => a - b);
+        const { genres, years } = await browseFacets(Movie, browseParams, Number(req.authorization!.user.id), facetQueryOptions, 'genres', 'releaseDate');
 
         if (browseParams.cursor) {
             try {

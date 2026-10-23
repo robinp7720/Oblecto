@@ -8,6 +8,7 @@ import Oblecto from '../../lib/oblecto/index.js';
 import type { Permission } from '../../lib/auth/permissions.js';
 
 export interface OblectoRequest extends Request {
+    playbackRequestedAt?: number;
     authorization?: {
         scheme: string;
         credentials: string;

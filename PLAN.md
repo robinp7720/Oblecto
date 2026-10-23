@@ -1,11 +1,12 @@
 # Oblecto roadmap
 
-Status of the feature tracks this file used to plan in detail, as of 9 October 2026 (after 1.0.1). Pick open work from "Next".
+Status of the feature tracks this file used to plan in detail, as of 23 October 2026 (after 1.0.1). Pick open work from "Next".
 
 ## Done
 
 | Track | Where it lives |
 |---|---|
+| Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/submodules/REST/routes/helpers/facets.ts`, `src/lib/playback/`, migration 0015 |
 | Viewing history, personal/admin statistics, library totals and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
 | Focused TV detail pages: manager-only episode matching workspace, scoped season actions, library viewing progress, spoilers, chapters, crew and provider links | `src/lib/series/SeriesExtras.ts`, `Oblecto-Web/src/components/details/` |

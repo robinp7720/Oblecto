@@ -10,6 +10,7 @@ export interface StatisticsReport {
     playedRanges?: Range[];
     playbackRate?: number;
     revision?: number;
+    firstPlaybackMs?: number;
 }
 export interface Checkpoint {
     position: number;

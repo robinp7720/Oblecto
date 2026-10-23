@@ -41,4 +41,41 @@ describe('AggregateIdentifier', function () {
 
         assert.deepEqual(await identifier.identify('/media/TV/a.mkv'), { tmdbid: 1, tvdbid: 2 });
     });
+
+    it('keeps useful values when later identifiers return missing or invalid metadata', async function () {
+        const identifier = new AggregateIdentifier();
+
+        identifier.loadIdentifier({ identify: async () => ({
+            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: 1, runtime: 45
+        }) });
+        identifier.loadIdentifier({ identify: async () => ({
+            tmdbid: undefined, overview: '', episodeName: '  ', airedSeason: null, runtime: NaN,
+            tvdbid: 2, airedEpisodeNumber: 0, special: false
+        }) });
+
+        assert.deepEqual(await identifier.identify('/media/TV/a.mkv'), {
+            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: 1, runtime: 45,
+            tvdbid: 2, airedEpisodeNumber: 0, special: false
+        });
+    });
+
+    it('lets later identifiers replace useful values with other useful values', async function () {
+        const identifier = new AggregateIdentifier();
+
+        identifier.loadIdentifier({ identify: async () => ({ episodeName: 'First', airedSeason: 1 }) });
+        identifier.loadIdentifier({ identify: async () => ({ episodeName: 'Last', airedSeason: 0 }) });
+
+        assert.deepEqual(await identifier.identify('/media/TV/a.mkv'), { episodeName: 'Last', airedSeason: 0 });
+    });
+
+    it('rejects identifications containing only missing or invalid values', async function () {
+        const identifier = new AggregateIdentifier();
+
+        identifier.loadIdentifier({ identify: async () => undefined });
+        identifier.loadIdentifier({ identify: async () => ({
+            tmdbid: undefined, tvdbid: null, episodeName: '  ', overview: '', runtime: Infinity
+        }) });
+
+        await assert.rejects(identifier.identify('/media/TV/a.mkv'), IdentificationError);
+    });
 });

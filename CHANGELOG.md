@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0014). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0015). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
 
@@ -30,7 +30,20 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 - Watched state, progress and favourites are pushed to open Jellyfin apps, and their sockets stay connected. Oblecto reports Jellyfin API version 12.1.0.
 - Federation pairs servers with a one-time invitation, synchronizes catalogs as consistent snapshots every fifteen minutes (`federation.syncIntervalMs`), and has an administration page and API. See [docs/FEDERATION.md](docs/FEDERATION.md).
 
+### Performance
+
+- Migration 0015 adds browse-order, episode-series, tracking and reverse file-link indexes without changing existing rows. SQLite refreshes planner statistics after migration and uses bounded optimization at startup and hourly.
+- Library facets aggregate distinct genre/year pairs in SQL and share a bounded cache scoped to database, viewer and filters, with catalogue/user-state invalidation after writes and transaction commits.
+- Remux sessions share cached keyframe timelines across sessions and revisions; changed files are rescanned and one cancelled viewer does not interrupt another's scan.
+- Web pages and the player load on demand. Remote play remains available before the player is loaded, and idle devices keep reporting their state.
+- Playback diagnostics include preparation stages, first media delivery and browser time to first playback. Startup timing now includes preparation and ignores HEAD and failed media requests.
+
 ### Fixed
+
+- Copy stream URL now returns a direct HTTP link to the original file, including MKV/HEVC and surround audio, instead of negotiating HLS using browser defaults. Session creation accepts `forceDirect: true` for external players.
+
+- Media identification preserves useful metadata when later providers return missing or invalid values. TVDB episode matching no longer treats absent names or incomplete numbering as a match.
+- FTP seedbox imports honor the configured port and close transfer connections after success or failure.
 
 - Playback scheduling releases capacity when a task throws before returning a promise, and waits for queued work to finish when settling. Background job names no longer collide with inherited object properties, and workers no longer allocate unused timeout timers.
 

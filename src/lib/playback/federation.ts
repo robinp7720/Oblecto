@@ -288,6 +288,7 @@ export async function connectPlaybackPeer(
         response?: Response;
         chunks?: Buffer[];
         playlist?: boolean;
+        onFirstByte?: () => void;
     };
     const requests = new Map<string, Pending>();
     let authenticated = false;
@@ -365,6 +366,10 @@ export async function connectPlaybackPeer(
                 if (!pending.playlist || key.toLowerCase() !== 'content-length')
                     pending.response.setHeader(key, value);
         } else if (message.op === 'data' && pending.response) {
+            if (bytes.length && !pending.playlist && pending.response.statusCode < 400) {
+                pending.onFirstByte?.();
+                pending.onFirstByte = undefined;
+            }
             if (pending.playlist) pending.chunks!.push(bytes);
             else if (!pending.response.write(bytes))
                 await new Promise<void>((resolve) => {
@@ -427,7 +432,7 @@ export async function connectPlaybackPeer(
         socket.destroy();
         throw error;
     }
-    const request = (op: string, payload: unknown, response?: Response) =>
+    const request = (op: string, payload: unknown, response?: Response, onFirstByte?: () => void) =>
         new Promise<RemoteSessionData>((resolve, reject) => {
             const id = randomUUID();
             const timer = setTimeout(() => {
@@ -445,7 +450,8 @@ export async function connectPlaybackPeer(
                 resolve,
                 reject,
                 timer,
-                response
+                response,
+                onFirstByte
             });
             const cancel = () => {
                 if (requests.delete(id)) {
@@ -473,7 +479,7 @@ export async function connectPlaybackPeer(
         });
     return {
         request,
-        async serve(sessionId, asset, req, res) {
+        async serve(sessionId, asset, req, res, onFirstByte) {
             res.locals.playbackToken = req.query?.token;
             await request(
                 'serve',
@@ -484,7 +490,8 @@ export async function connectPlaybackPeer(
                     method: req.method,
                     range: req.headers.range
                 },
-                res
+                res,
+                onFirstByte
             );
         },
         close() {

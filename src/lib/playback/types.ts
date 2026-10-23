@@ -42,6 +42,7 @@ export type PlaybackOptions = {
     quality?: 'original' | 'auto' | number;
     maxBitrate?: number;
     forceHls?: boolean;
+    forceDirect?: boolean;
 };
 export type Rendition = { id: string; height: number; bitrate: number };
 export type PlaybackPlan = {
@@ -54,6 +55,16 @@ export type PlaybackPlan = {
     hdr: boolean;
     renditions: Rendition[];
     boundaries: number[];
+};
+/** Milliseconds from request handling through the first media byte and browser playback. */
+export type PlaybackTimings = {
+    lookupMs: number;
+    statisticsMs: number;
+    probeMs: number;
+    planMs: number;
+    preparationMs: number;
+    firstMediaMs: number | null;
+    firstPlaybackMs: number | null;
 };
 export class PlaybackError extends Error {
     constructor(
@@ -101,6 +112,17 @@ export function validateOptions(input: PlaybackOptions): PlaybackOptions {
         invalid('Invalid quality');
     if (input.forceHls !== undefined && typeof input.forceHls !== 'boolean')
         invalid('Invalid forceHls');
+    if (input.forceDirect !== undefined && typeof input.forceDirect !== 'boolean')
+        invalid('Invalid forceDirect');
+    if (input.forceDirect === true && (
+        input.forceHls === true ||
+        (input.quality !== undefined && input.quality !== 'original') ||
+        input.maxBitrate !== undefined ||
+        input.audioStreamIndex !== undefined ||
+        input.subtitleStreamIndex !== undefined ||
+        input.subtitleMode === 'forced'
+    ))
+        invalid('Direct file delivery cannot apply quality or track selections');
     const c = input.capabilities;
     if (c !== undefined) {
         if (!c || typeof c !== 'object' || Array.isArray(c))

@@ -2,6 +2,7 @@ import { initDatabase } from '../submodules/database.js';
 import { migrate, pendingMigrations } from '../submodules/migrations/index.js';
 import logger from '../submodules/logger/index.js';
 import type { IConfig } from '../interfaces/config.js';
+import { optimizeDatabase } from '../submodules/databaseOptimizer.js';
 
 /**
  * Connect to the database and bring its schema up to date before anything uses it. With
@@ -21,10 +22,12 @@ export async function prepareDatabase(config: IConfig): Promise<void> {
 
         if (pending.length) throw new Error(`The database needs updating. Back it up, then run "oblecto migrate". Pending: ${pending.join(', ')}`);
 
+        await optimizeDatabase(sequelize, true);
         return;
     }
 
     const ran = await migrate(sequelize);
 
     if (ran.length) logger.info(`Database updated: ${ran.join(', ')}`);
+    await optimizeDatabase(sequelize, true);
 }

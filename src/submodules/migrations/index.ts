@@ -369,6 +369,32 @@ export const MIGRATIONS: Migration[] = [
             }
             await addIndexIfMissing(queryInterface, 'UserSeriesWatchlists', ['userId', 'seriesId'], 'UserSeriesWatchlists_user_series', true);
         }
+    },
+    {
+        name: '0015-browse-indexes',
+        up: async ({ sequelize, queryInterface }) => {
+            const indexes: Array<[string, string[]]> = [
+                ...['movieName', 'releaseDate', 'createdAt', 'popularity'].map(field => ['Movies', [field, 'id']] as [string, string[]]),
+                ...['seriesName', 'firstAired', 'createdAt', 'siteRating', 'popularity'].map(field => ['Series', [field, 'id']] as [string, string[]]),
+                ['Episodes', ['SeriesId', 'id']],
+                ['Episodes', ['createdAt', 'id']],
+                ['TrackMovies', ['userId', 'movieId', 'progress']],
+                ['TrackEpisodes', ['userId', 'episodeId', 'progress']],
+                ['TrackMovies', ['userId', 'updatedAt', 'id']],
+                ['TrackEpisodes', ['userId', 'updatedAt', 'id']],
+                ['MovieFiles', ['FileId', 'MovieId']],
+                ['EpisodeFiles', ['FileId', 'EpisodeId']]
+            ];
+            for (const [table, fields] of indexes) {
+                if (await hasTable(queryInterface, table)) {
+                    await addIndexIfMissing(queryInterface, table, fields, `${table}_${fields.join('_')}`);
+                }
+            }
+            if (sequelize.getDialect() === 'sqlite') {
+                await sequelize.query('PRAGMA analysis_limit = 1000');
+                await sequelize.query('ANALYZE');
+            }
+        }
     }
 ];
 

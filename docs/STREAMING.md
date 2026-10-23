@@ -2,6 +2,14 @@
 
 The shared playback engine serves Oblecto Web, Emby/Jellyfin and federated media. Requires FFmpeg/ffprobe on the configured executable paths (or PATH). The software baseline uses libx264, AAC, libass, zscale and tonemap. Source probing and keyframe analysis are cached in memory; streaming caches are disposable. Migration `0010-playback-markers` adds per-file chapter, segment and thumbnail metadata.
 
+In Oblecto Web, **Available files → Copy stream URL** requests direct original-file delivery (`forceDirect: true`) for external players. The copied HTTP URL serves the unchanged file with byte-range support, including MKV, HEVC and surround audio, without conversion. The external player selects embedded audio/subtitle tracks and must decode the source formats. The link expires after the configured idle timeout (30 minutes by default), or when its session is stopped or the server restarts; media requests refresh the idle timeout. Regular web playback still negotiates compatible delivery.
+
+## Preparation and startup latency
+
+Media probes and remux keyframe timelines are cached by file version. Timeline keys include the file path, device/inode, size, modification time, duration and video stream. Concurrent sessions share scans, track/position updates reuse them, and changed files are scanned again. The timeline cache retains at most 128 entries and retries failed scans. Cancelling one session stops its wait without cancelling a scan shared with another session; server shutdown cancels outstanding scans.
+
+Session descriptors and Settings → Server status expose `timings`: file lookup/authentication, statistics initialization, media probing, playback planning, total preparation, first media delivery and reported browser startup, in milliseconds. Preparation phases include scheduler/shared-work waiting. `startupMs` now includes preparation and ends at the first successful original-file or segment byte, excluding HEAD, manifests and failed requests. Browser startup runs from the play action through the first `playing` event, including title metadata and deferred player loading, and is sent as optional `firstPlaybackMs` progress telemetry. These diagnostics last for the session; they are not stored in viewing history. Browser timing is client-reported and may include autoplay delays.
+
 ## Configuration
 
 Under `streaming` in the existing configuration:

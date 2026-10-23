@@ -1,13 +1,10 @@
-import IdentificationError from '../errors/IdentificationError';
-import logger from '../../submodules/logger';
+import IdentificationError from '../errors/IdentificationError.js';
+import logger from '../../submodules/logger/index.js';
 
 type Identifier = {
     // Method syntax on purpose: each identifier narrows the arguments it accepts.
     identify(...args: unknown[]): Promise<object | undefined>;
 };
-
-// TODO: Combine this with the AggregateUpdateRetriever
-// This is no reason to have two seperate classes that basically do the same thing
 
 export default class AggregateIdentifier {
     private identifiers: Identifier[];
@@ -42,16 +39,16 @@ export default class AggregateIdentifier {
                 continue;
             }
 
-            identification = { ...identification, ...currentIdentification };
-        }
+            // Normalize each response before merging so missing values cannot erase earlier matches.
+            for (const [key, value] of Object.entries(currentIdentification)) {
+                if (value === undefined || value === null
+                    || (typeof value === 'string' && !value.trim())
+                    || (typeof value === 'number' && !Number.isFinite(value))) {
+                    delete currentIdentification[key];
+                }
+            }
 
-        // Cleanup the input data to make sure that the data is predictable
-        for (const key of Object.keys(identification)) {
-            // Remove strings from retrieved information if they are empty.
-            // The imdbid is a string which would be null if no id supplied.
-            // The empty string however causes issues.
-            // Hence, they must be removed
-            if (identification[key] === '') delete identification[key];
+            identification = { ...identification, ...currentIdentification };
         }
 
         if (Object.keys(identification).length === 0) {

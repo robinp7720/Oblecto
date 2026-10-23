@@ -63,7 +63,7 @@ function json (route, body, status = 200) {
 
 // `me` answers /api/v1/me; the body of every new playback session is pushed
 // onto `sessions`.
-async function stub (page, { me = account(), sessions = [], markers = {}, thumbnailStatus = 200, nextEpisode, artworkStatus = 404 } = {}) {
+async function stub (page, { me = account(), sessions = [], progress = [], markers = {}, thumbnailStatus = 200, nextEpisode, artworkStatus = 404 } = {}) {
   // Everything is namespaced under a dedicated API origin so the stubs cannot
   // collide with the dev server's own module paths.
   await page.route('**oblecto.test/**', route => {
@@ -91,6 +91,7 @@ async function stub (page, { me = account(), sessions = [], markers = {}, thumbn
     if (path.startsWith('/playback/sessions')) {
       const method = request.method()
       if (method === 'POST' && path === '/playback/sessions') sessions.push(request.postDataJSON())
+      if (method === 'POST' && path.endsWith('/progress')) progress.push(request.postDataJSON())
       if (method === 'POST' || method === 'PATCH') return json(route, { ...SESSION, ...markers })
       return route.fulfill({ status: 204, headers: CORS, body: '' })
     }
@@ -135,6 +136,27 @@ async function play (page) {
 }
 
 test.describe('@desktop player', () => {
+  test('loads the player on demand and accepts remote play while idle', async ({ page }) => {
+    const requests = []
+    const progress = []
+    page.on('request', request => requests.push(request.url()))
+    const errors = await boot(page, { progress })
+    await expect.poll(() => page.evaluate(async () => (await import('/src/stores/auth.js')).useAuthStore().ready)).toBe(true)
+    expect(requests.some(url => url.includes('/src/components/player/PlayerRoot.vue'))).toBe(false)
+    await expect(page.locator('.player-root')).toHaveCount(0)
+    const ack = await page.evaluate(async () => {
+      const { handleCommand } = await import('/src/remote/receiver.js')
+      return handleCommand({ command: { type: 'play', media: { kind: 'episode', id: '1' } } })
+    })
+    expect(ack.ok).toBe(true)
+    await page.waitForSelector('.player-root video')
+    await page.waitForFunction(() => document.querySelector('.player-root video')?.readyState >= 2)
+    await page.evaluate(() => document.querySelector('.player-root video').play())
+    await expect.poll(() => progress.filter(entry => Number.isFinite(entry.firstPlaybackMs)).length).toBeGreaterThan(0)
+    expect(requests.some(url => url.includes('/src/components/player/PlayerRoot.vue'))).toBe(true)
+    expect(errors).toEqual([])
+  })
+
   test('desktop: renders overlay, seek bar click seeks, no page errors', async ({ page }) => {
     const errors = await boot(page)
     await play(page)

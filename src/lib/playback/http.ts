@@ -42,7 +42,8 @@ export async function sendFile(
     res: Response,
     file: string,
     mime: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    onFirstByte?: () => void
 ): Promise<void> {
     const { size } = await fs.stat(file).catch(() => {
         throw new PlaybackError('MEDIA_NOT_FOUND', 'Media file is unavailable', 404);
@@ -69,6 +70,7 @@ export async function sendFile(
         return;
     }
     const stream = createReadStream(file, range ?? undefined);
+    if (onFirstByte) stream.once('data', onFirstByte);
     try {
         if (signal) await pipeline(stream, res, { signal });
         else await pipeline(stream, res);

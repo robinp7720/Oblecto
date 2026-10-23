@@ -106,7 +106,7 @@ Contract: [streaming](API.md#streaming). Source: [streaming.ts](../src/submodule
 
 | Endpoint | Access | Input | Success response |
 | --- | --- | --- | --- |
-| `POST /playback/sessions` | User | `{ fileId, position?, quality?, capabilities?, audioStreamIndex?, subtitleStreamIndex?, subtitleMode?, maxBitrate?, forceHls? }` | **201** descriptor |
+| `POST /playback/sessions` | User | `{ fileId, position?, quality?, capabilities?, audioStreamIndex?, subtitleStreamIndex?, subtitleMode?, maxBitrate?, forceHls?, forceDirect? }` | **201** descriptor |
 | `GET /playback/sessions/:id` | User/owner | None | Descriptor; does not refresh idle lease |
 | `PATCH /playback/sessions/:id` | User/owner | Current `revision`, explicit current `position`, changed playback options | Replacement descriptor with incremented revision |
 | `POST /playback/sessions/:id/progress` | User/owner | `{ revision, position, paused?, buffering?, sequence?, activeSeconds?, playedRanges?, playbackRate?, failed? }` | **204** |
