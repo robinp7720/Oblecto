@@ -410,6 +410,12 @@ export const MIGRATIONS: Migration[] = [
                 if (await hasTable(queryInterface, table)) await removeDuplicateLegacyIndexes(queryInterface, table);
             }
         }
+    },
+    {
+        name: '0017-playback-preparation',
+        up: async ({ queryInterface }) => {
+            await addColumnIfMissing(queryInterface, 'Files', 'playbackMetadata', optional(DataTypes.TEXT('long')));
+        }
     }
 ];
 

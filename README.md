@@ -74,7 +74,7 @@ docker exec -it oblecto oblecto adduser USERNAME - "Your Name" you@example.com A
 
 The first start writes a config into the `/etc/oblecto` volume. Everything Oblecto keeps lives there: config, SQLite database, artwork and logs.
 
-Library browsing uses indexed queries and database-aggregated facets. Facets are cached per viewer and filter set for up to 30 seconds, with invalidation after relevant writes. Migration 0015 adds the supporting indexes; SQLite refreshes planner statistics after migration and runs bounded optimization at startup and hourly. The web app loads pages and playback on demand. See [streaming diagnostics](docs/STREAMING.md#preparation-and-startup-latency) for preparation and startup measurements.
+Library browsing uses indexed queries and database-aggregated facets. Facets are cached per viewer and filter set for up to 30 seconds, with invalidation after relevant writes. Migration 0015 adds the supporting indexes; SQLite refreshes planner statistics after migration and runs bounded optimization at startup and hourly. The web app loads pages and playback on demand. Unset playback quality preferences use Auto, starting at a low rendition and adapting to bandwidth; saved Original and fixed-quality choices are preserved. Compatible H.264 video can be copied while unsupported audio is converted to AAC. See [streaming diagnostics](docs/STREAMING.md#preparation-and-startup-latency) for preparation and startup measurements.
 
 ## Configuration
 
@@ -100,6 +100,7 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `files.doHash`, `fileExtensions.video` | Hash files to find duplicates (on), and which extensions count as video |
 | `ffmpeg.pathFFmpeg`, `ffmpeg.pathFFprobe` | FFmpeg and ffprobe to use, if not the ones on `PATH` |
 | `streaming.trickplay`, `streaming.trickplayInterval`, `streaming.detectSegments` | Generate seek thumbnails (on), every 10 seconds (1–60); detect intro/credit segments (on). Existing libraries: Settings → Maintenance → Analyse playback |
+| `streaming.encoderMode` | `segment` (default) or opt-in `window` for sequential HLS production in bounded 12-second runs; see performance acceptance in [streaming](docs/STREAMING.md) |
 | `streaming`, `transcoding` | Playback cache, encoder limits and hardware encoding; see [docs/STREAMING.md](docs/STREAMING.md) |
 | `assets`, `artwork` | Where artwork, avatars and seek thumbnails (`assets.trickplayLocation`) are stored, and the sizes artwork is scaled to |
 | `federation`, `seedboxes` | Federation with other Oblecto servers ([docs/FEDERATION.md](docs/FEDERATION.md)) and seedbox imports |

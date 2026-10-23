@@ -1,3 +1,4 @@
+import type { PreparedMetadata } from '../lib/playback/metadataCache.js';
 import { DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, HasManyGetAssociationsMixin, NonAttribute, HasManyCountAssociationsMixin, BelongsToManyCountAssociationsMixin } from 'sequelize';
 import type { Stream } from './stream.js';
 import type { Movie } from './movie.js';
@@ -65,6 +66,7 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
     declare chapters: CreationOptional<Chapter[] | null>;
     declare segments: CreationOptional<Segment[] | null>;
     declare trickplay: CreationOptional<Trickplay | null>;
+    declare playbackMetadata: CreationOptional<PreparedMetadata | null>;
 
     declare createdAt: CreationOptional<Date>;
     declare updatedAt: CreationOptional<Date>;
@@ -80,7 +82,7 @@ export class File extends Model<InferAttributes<File>, InferCreationAttributes<F
 }
 
 // Stored as JSON text, which SQLite and MariaDB both handle the same way
-const jsonColumn = (name: 'chapters' | 'segments' | 'trickplay') => ({
+const jsonColumn = (name: 'chapters' | 'segments' | 'trickplay' | 'playbackMetadata') => ({
     type: DataTypes.TEXT,
     allowNull: true,
     get(this: File): unknown {
@@ -126,6 +128,7 @@ export const fileColumns = {
     chapters: jsonColumn('chapters'),
     segments: jsonColumn('segments'),
     trickplay: jsonColumn('trickplay'),
+    playbackMetadata: { ...jsonColumn('playbackMetadata'), type: DataTypes.TEXT('long') },
 
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,

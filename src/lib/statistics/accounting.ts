@@ -11,6 +11,8 @@ export interface StatisticsReport {
     playbackRate?: number;
     revision?: number;
     firstPlaybackMs?: number;
+    bufferedSeconds?: number;
+    rebufferDurationMs?: number;
 }
 export interface Checkpoint {
     position: number;

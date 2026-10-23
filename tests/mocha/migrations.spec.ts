@@ -222,6 +222,17 @@ describe('Database migrations', () => {
         } finally { await sequelize.close(); }
     });
 
+    it('preserves persisted playback preparation when its migration is rerun', async () => {
+        const sequelize = await database();
+        try {
+            await migrate(sequelize);
+            const metadata = { version: 1, source: 'fixture-version', media: { duration: 30 }, keyframes: null };
+            const file = await File.create({ path: '/fixture.mp4', playbackMetadata: metadata as any });
+            await sequelize.query("DELETE FROM SchemaMigrations WHERE name = '0017-playback-preparation'");
+            assert.deepEqual(await migrate(sequelize), ['0017-playback-preparation']);
+            assert.deepEqual((await file.reload()).playbackMetadata, metadata);
+        } finally { await sequelize.close(); }
+    });
     it('does nothing the second time', async () => {
         const sequelize = await database();
 
@@ -258,7 +269,7 @@ describe('Database migrations', () => {
         const userColumnNames = await columns(sequelize, 'Users');
 
         for (const column of ['groupId', 'preferences', 'publicProfile', 'passwordlessLocal', 'avatar']) assert.ok(userColumnNames.includes(column), column);
-        for (const column of ['problematic', 'error', 'problemStage', 'problemIgnored']) assert.ok((await columns(sequelize, 'Files')).includes(column), column);
+        for (const column of ['problematic', 'error', 'problemStage', 'problemIgnored', 'playbackMetadata']) assert.ok((await columns(sequelize, 'Files')).includes(column), column);
         assert.ok(await queryInterface.tableExists('Groups'));
 
         const robin = await User.findOne({ where: { username: 'robin' } });

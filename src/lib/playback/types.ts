@@ -10,6 +10,7 @@ export type Track = {
     channels?: number;
     color_transfer?: string;
     avg_frame_rate?: string;
+    bit_rate?: string;
     tags?: { language?: string; title?: string };
     disposition?: { default?: number; forced?: number; attached_pic?: number };
 };
@@ -48,6 +49,8 @@ export type Rendition = { id: string; height: number; bitrate: number };
 export type PlaybackPlan = {
     method: 'direct' | 'remux' | 'transcode';
     reason: string;
+    videoOperation?: 'copy' | 'encode' | 'none';
+    audioOperation?: 'copy' | 'encode' | 'none';
     audio: Track | null;
     subtitle: Track | null;
     video: Track | null;
@@ -107,7 +110,7 @@ export function validateOptions(input: PlaybackOptions): PlaybackOptions {
         invalid('Invalid subtitleMode');
     if (
         input.quality !== undefined &&
-        !['original', 'auto', 360, 480, 720, 1080].includes(input.quality)
+        !['original', 'auto', 240, 360, 480, 720, 1080].includes(input.quality)
     )
         invalid('Invalid quality');
     if (input.forceHls !== undefined && typeof input.forceHls !== 'boolean')

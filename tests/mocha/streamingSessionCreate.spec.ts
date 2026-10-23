@@ -129,6 +129,15 @@ describe('Playback session REST API', () => {
                 assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}/progress`, { method: 'POST', headers: headers(), body: JSON.stringify({ revision: 1, position: 0, paused: false, firstPlaybackMs }) })).status, 204);
             }
             assert.equal(session.timings.firstPlaybackMs, 800);
+            for (const extra of [
+                { bufferedSeconds: 12, rebufferDurationMs: 200 },
+                { bufferedSeconds: -1, rebufferDurationMs: 100 },
+                { bufferedSeconds: 'bad', rebufferDurationMs: 'bad' }
+            ]) {
+                assert.equal((await fetch(`${base}/playback/sessions/${session.sessionId}/progress`, { method: 'POST', headers: headers(), body: JSON.stringify({ revision: 1, position: 0, ...extra }) })).status, 204);
+            }
+            assert.equal(session.delivery.bufferedSeconds, 12);
+            assert.equal(session.delivery.rebufferDurationMs, 200);
             await service.stop(session);
         } finally { File.findByPk = lookup; service.probe = probe; service.create = create; }
     });

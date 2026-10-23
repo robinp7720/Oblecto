@@ -6,6 +6,7 @@ Status of the feature tracks this file used to plan in detail, as of 23 October 
 
 | Track | Where it lives |
 |---|---|
+| Adaptive playback defaults/240p, audio-only conversion, delivery overlap, bounded sequential HLS (opt-in), persistent preparation and constrained-network benchmark | `src/lib/playback/`, migration 0017, [streaming](docs/STREAMING.md) |
 | Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/submodules/REST/routes/helpers/facets.ts`, `src/lib/playback/`, migration 0015 |
 | Viewing history, personal/admin statistics, library totals and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
@@ -29,6 +30,8 @@ Status of the feature tracks this file used to plan in detail, as of 23 October 
 
 ## Next
 
+- **Sequential playback rollout.** Window mode remains opt-in until repeatable startup/rebuffer and direct-play regression targets pass on representative media and clients; see [performance acceptance](docs/STREAMING.md#performance-acceptance).
+
 - **Favourites for other media in the native app.** Movie, series and episode favourites and movie/series watchlists are available. Seasons, people and collections still need native favourite controls.
 - **Editing metadata by hand, and bulk actions.** Only artwork can be replaced today.
 - **Subtitle files beside the video.** Indexing only picks up video extensions (`fileExtensions.video`), so `.srt`, `.ass` and `.vtt` sidecars are ignored and only embedded subtitles play. No subtitle search or download.
@@ -39,3 +42,7 @@ Status of the feature tracks this file used to plan in detail, as of 23 October 
 - **Tests.** `npm run typecheck` covers `src/` only: including `tests/` gives 173 type errors, almost all loose mock typings in `tests/mocha`. `/api/v1/libraries` has no route-level specs; set privacy and validation have route-level coverage; user, group and system routes are covered mainly for permission checks. `tests/network` had five TVDB assertions that no longer matched TVDB's answers at 1.0.
 - **Web UI.** Only six of 74 components use i18n, and English is the only locale.
 - **Jellyfin.** QuickConnect, device and session lists, remote control of Jellyfin apps, creating and deleting users, library folder management, and creating collections and playlists. See `src/lib/embyEmulation/PLAN.md` for the full list.
+
+## Change log
+
+- 2026-10-23: Improved adaptive quality, audio-only conversion, encoding/delivery overlap and cache fairness; added opt-in sequential HLS windows, persistent playback preparation, diagnostics and constrained-network acceptance tooling.

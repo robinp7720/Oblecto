@@ -11,6 +11,7 @@ export class SegmentCache {
     private reservations = new Map<string, number>();
     readonly root: Promise<string>;
     bytes = 0;
+    private publication: Promise<unknown> = Promise.resolve();
     constructor(
         readonly limit = 10 * 1024 ** 3,
         directory = path.join(os.tmpdir(), 'oblecto-playback')
@@ -85,35 +86,40 @@ export class SegmentCache {
         try {
             await generate(output);
             const { size } = await fs.stat(output);
-            for (const [oldKey, old] of [...this.entries].sort(
-                (a, b) => a[1].used - b[1].used
-            )) {
-                if (this.bytes + size <= this.limit) break;
-                if (
-                    old.readers ||
-                    this.reservations.has(oldKey) ||
-                    !this.entries.has(oldKey)
-                )
-                    continue;
-                this.entries.delete(oldKey);
-                this.bytes -= old.size;
-                await fs.rm(old.path, { force: true });
-            }
-            if (this.bytes + size > this.limit)
-                throw new PlaybackError(
-                    'STORAGE_FULL',
-                    'Playback cache is full',
-                    503
-                );
-            const fresh = {
-                path: output,
-                size,
-                readers: 0,
-                used: Date.now()
-            };
-            this.entries.set(key, fresh);
-            this.bytes += size;
-            return fresh;
+            // Admission and eviction must be atomic across concurrent segment completions.
+            const publication = this.publication.catch(() => {}).then(async () => {
+                for (const [oldKey, old] of [...this.entries].sort(
+                    (a, b) => a[1].used - b[1].used
+                )) {
+                    if (this.bytes + size <= this.limit) break;
+                    if (
+                        old.readers ||
+                        this.reservations.has(oldKey) ||
+                        !this.entries.has(oldKey)
+                    )
+                        continue;
+                    this.entries.delete(oldKey);
+                    this.bytes -= old.size;
+                    await fs.rm(old.path, { force: true });
+                }
+                if (this.bytes + size > this.limit)
+                    throw new PlaybackError(
+                        'STORAGE_FULL',
+                        'Playback cache is full',
+                        503
+                    );
+                const fresh = {
+                    path: output,
+                    size,
+                    readers: 0,
+                    used: Date.now()
+                };
+                this.entries.set(key, fresh);
+                this.bytes += size;
+                return fresh;
+            });
+            this.publication = publication;
+            return await publication;
         } catch (error) {
             await fs.rm(output, { force: true });
             throw error;

@@ -2,7 +2,7 @@
 export const ALL_PERMISSIONS = ['settings.manage', 'users.manage', 'libraries.manage', 'system.manage', 'statistics.view']
 
 export const DEFAULT_PREFERENCES = {
-  language: null, audioLanguage: null, subtitleLanguage: null, subtitleMode: 'auto', quality: 'original', autoplayNext: true
+  language: null, audioLanguage: null, subtitleLanguage: null, subtitleMode: 'auto', quality: 'auto', autoplayNext: true
 }
 
 export function account (overrides = {}) {

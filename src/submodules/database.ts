@@ -47,7 +47,7 @@ function initModels(sequelize: Sequelize): void {
     SeriesCredit.init(seriesCreditColumns, modelOptions('SeriesCredit'));
     EpisodeCredit.init(episodeCreditColumns, modelOptions('EpisodeCredit'));
 
-    File.init(fileColumns, modelOptions('File'));
+    File.init(fileColumns, { ...modelOptions('File'), defaultScope: { attributes: { exclude: ['playbackMetadata'] } } });
     Stream.init(streamColumns, modelOptions('Stream'));
 
     EpisodeFiles.init(episodeFilesColumns, modelOptions('EpisodeFiles'));

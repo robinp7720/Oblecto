@@ -226,12 +226,19 @@ test.describe('@desktop player', () => {
     expect(sessions[0]).toMatchObject({ fileId: 11, quality: 720, audioStreamIndex: 2, subtitleStreamIndex: null, subtitleMode: 'off' })
   })
 
+  test('keeps an explicit Original quality preference', async ({ page }) => {
+    const sessions = []
+    await boot(page, { sessions, me: account({ preferences: { quality: 'original' } }) })
+    await play(page)
+    expect(sessions[0].quality).toBe('original')
+  })
+
   test('leaves tracks to the server without a preference', async ({ page }) => {
     const sessions = []
     await boot(page, { sessions })
     await play(page)
 
-    expect(sessions[0]).toMatchObject({ quality: 'original', subtitleMode: 'auto' })
+    expect(sessions[0]).toMatchObject({ quality: 'auto', subtitleMode: 'auto' })
     expect(sessions[0].audioStreamIndex).toBeUndefined()
     expect(sessions[0].subtitleStreamIndex).toBeUndefined()
   })
@@ -274,6 +281,16 @@ test.describe('@desktop player', () => {
 
     await page.mouse.click(60, 60)
     await expect(page.locator('.as-popover .container')).toHaveCount(0)
+  })
+
+  test('240p quality can be selected without interrupting player controls', async ({ page }) => {
+    const errors = await boot(page)
+    await play(page)
+    await page.click('button[aria-label="Playback settings"]')
+    await page.click('button[role="radio"]:has-text("240p")')
+    await expect(page.locator('button[role="radio"]:has-text("240p")')).toHaveAttribute('aria-checked', 'true')
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').readyState)).toBeGreaterThanOrEqual(2)
+    expect(errors).toEqual([])
   })
 
   test('playback speed survives a track change', async ({ page }) => {

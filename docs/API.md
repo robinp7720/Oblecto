@@ -41,7 +41,7 @@ The HTTP status is authoritative. Error bodies vary:
 ```
 
 ```json
-{ "error": "Check the highlighted preferences.", "fields": { "quality": "Choose one of original, auto, 360, 480, 720, 1080." } }
+{ "error": "Check the highlighted preferences.", "fields": { "quality": "Choose one of original, auto, 240, 360, 480, 720, 1080." } }
 ```
 
 Some handlers return only `{ "message": "..." }` or `{ "error": "..." }`. Unknown routes, middleware errors and proxy failures can return non-JSON or empty bodies. Read defensively; display `message`, then `error`, then an HTTP-status fallback. Some legacy lookups return empty 200 bodies for absent records; see the endpoint index.
@@ -502,8 +502,8 @@ All control requests require `Authorization: Bearer <token>` and JSON request bo
 Creation requires a positive integer `fileId`. Optional fields:
 
 - `position`: nonnegative seconds, default 0; starting positions beyond the duration are clamped to the end.
-- `quality`: `original` (default), `auto`, or a height of `360`, `480`, `720`, or `1080`. Original prefers compatible direct playback, then remux, then adaptive transcoding. Auto explicitly requests adaptive HLS. Fixed height selects the highest available rendition at or below that height.
-- `maxBitrate`: total bandwidth ceiling in bits/second, at least 200000. Supplying a limit selects adaptive output.
+- `quality`: `original` (API default; the web account default is Auto), `auto`, or a height of `240`, `360`, `480`, `720`, or `1080`. Original prefers compatible direct playback, then remux, then adaptive transcoding. Auto explicitly requests adaptive HLS. Fixed height selects the highest available rendition at or below that height.
+- `maxBitrate`: total bandwidth ceiling in bits/second, at least 200000. Compatible originals within the ceiling can still be delivered directly. Over-budget sources select adaptive output; rendition budgets include audio and a 10% transport allowance.
 - `audioStreamIndex`, `subtitleStreamIndex`: absolute ffprobe stream indexes, or `null` to disable that track. Omission applies language/default/forced selection. Invalid or negative indexes return 400.
 - `subtitleMode`: `off`, `auto` (default), or `forced`.
 - `forceHls`: request HLS instead of original delivery, including decoder recovery.
@@ -522,6 +522,7 @@ Example descriptor:
   "paused": true,
   "method": "transcode",
   "reason": "Adaptive quality requested",
+  "operations": { "video": "encode", "audio": "encode" },
   "mediaUrl": "/playback/media/uuid/1/master.m3u8?token=opaque",
   "selectedTracks": { "audioStreamIndex": 1, "subtitleStreamIndex": null, "subtitleMode": "off" },
   "tracks": [],
@@ -535,6 +536,8 @@ Example descriptor:
 
 `chapters` is an array of `{ "start": 0, "end": 90, "title": "Opening" }` (seconds; title may be null). `segments` contains `{ "type": "intro", "start": 0, "end": 90 }` with types `intro`, `credits`, `recap`, or `preview`. `trickplay` is null or `{ "width": 320, "height": 180, "tileWidth": 10, "tileHeight": 10, "interval": 10, "count": 720, "sheets": ["/playback/media/.../trickplay-0.jpg?token=..."] }`. Resolve sheet URLs against the API base, and use `floor(time / interval)` to choose a thumbnail, clamped to `count - 1`. Each sheet holds `tileWidth * tileHeight` thumbnails, row by row. Pending or remote analysis is represented by empty arrays and null trickplay in the session descriptor.
 
+`operations` describes each output track as `copy`, `encode` or `none`. Public `method` values remain `direct`, `remux` and `transcode`; `remux` can now copy compatible H.264 video while converting only audio to AAC. HLS manifests advertise output CODECS and video/audio bandwidth with transport allowance.
+
 Descriptors also include `timings`, with millisecond values for `lookupMs` (authentication/file lookup in the native creation handler), `statisticsMs`, `probeMs`, `planMs`, and `preparationMs` (total time to a prepared session). `probeMs` and `planMs` include waiting for preparation capacity or shared work. `firstMediaMs` is elapsed time from creation handling to the first successful original-file/segment byte; manifests, HEAD requests and failed requests do not set it. `firstPlaybackMs` is the browser's reported time from its play action to its first `playing` event. Both start as null. Server and browser measurements use their own monotonic clocks; do not add them together. Other clients begin server timing at the playback service call; remote preparation is included in `preparationMs` without local probe/plan phases. These timings are transient session diagnostics, not persisted viewing-history fields.
 
 `method` is `direct`, `remux`, or `transcode`. `tracks` contains probed audio/subtitle metadata, including indexes, codecs, language tags and dispositions. Quality bitrates describe video; transcoded audio adds 128 kbps. `subtitleUrl` points to WebVTT when a separate text track is selected. ASS/SSA and bitmap subtitles are rendered into video when required.
@@ -543,7 +546,7 @@ PATCH accepts the creation options except `fileId`, plus the current integer `re
 
 Progress body: `{ "revision": 1, "position": 123.5, "paused": false, "buffering": false }`. Send every ten seconds and on pause, seek completion, stop, and end. Send the final progress update before deleting the session. Progress is saved using existing movie/episode tracking records; stale revisions return 409. Positions beyond duration plus one second are rejected.
 
-Optional telemetry: `sequence` (increasing nonnegative safe integer), `activeSeconds` (cumulative active wall-clock seconds), `playedRanges` (cumulative `[start,end]` media-second pairs, at most 1024), `playbackRate` (positive, up to 16 for estimated accounting), and `failed` (boolean). Send the first three together for reported watch time; keep counters across revisions, resetting on a new session. Exclude pause, seek and buffering time. Malformed/stale statistics telemetry is ignored independently of resume persistence: `sequence` does not protect resume position from out-of-order HTTP requests. Serialize progress sends. See [statistics](#statistics). The optional `firstPlaybackMs` field reports browser startup in milliseconds, including metadata loading and deferred player loading. The first finite nonnegative value up to 86,400,000 is retained for the session; later values and invalid values are ignored, independently of resume persistence.
+Optional telemetry: `sequence` (increasing nonnegative safe integer), `activeSeconds` (cumulative active wall-clock seconds), `playedRanges` (cumulative `[start,end]` media-second pairs, at most 1024), `playbackRate` (positive, up to 16 for estimated accounting), and `failed` (boolean). Send the first three together for reported watch time; keep counters across revisions, resetting on a new session. Exclude pause, seek and buffering time. Malformed/stale statistics telemetry is ignored independently of resume persistence: `sequence` does not protect resume position from out-of-order HTTP requests. Serialize progress sends. See [statistics](#statistics). Optional `bufferedSeconds` reports finite buffered media ahead of the position (0 to media duration). Optional `rebufferDurationMs` reports cumulative milliseconds stalled after first playback, excluding seeks and intentional pauses; finite monotonic values up to seven days are retained in session diagnostics. These fields do not change watch-time accounting. The optional `firstPlaybackMs` field reports browser startup in milliseconds, including metadata loading and deferred player loading. The first finite nonnegative value up to 86,400,000 is retained for the session; later values and invalid values are ignored, independently of resume persistence.
 
 Playback options are not populated automatically from account preferences. Apply saved quality/subtitle mode and map preferred languages to source stream indexes. Omitted indexes use the server's configured target language, then default/first-track selection. Numeric quality is a number (`720`), not a string. On every PATCH send current absolute `position` explicitly; omission may reuse an earlier creation/reconfiguration position. PATCH configures output; it does not start, pause or seek the local player.
 
@@ -631,7 +634,7 @@ The account object is the user object plus:
 - `language`: interface language as a BCP 47 tag (`"en"`, `"pt-BR"`); `null` follows the browser.
 - `audioLanguage`, `subtitleLanguage`: preferred track languages (ISO 639 code as found in the media, e.g. `"en"` or `"jpn"`); `null` leaves selection to the playback defaults. Native clients map non-null preferences to stream indexes themselves.
 - `subtitleMode`: `off`, `auto` or `forced`.
-- `quality`: `original`, `auto`, `360`, `480`, `720` or `1080`.
+- `quality`: `original`, `auto`, `240`, `360`, `480`, `720` or `1080`; unset account preferences default to `auto`, preserving explicitly saved choices.
 - `autoplayNext`: start the next episode when one ends.
 - `episodeSpoilers`: `off` (default), `hide` (hide unwatched episode artwork/synopsis), or `hide-titles` (also hide titles). This native-web presentation preference applies to pages, cards, catalogue titles, adjacent previews and chapter titles. Progress of at least 0.9 counts as watched. Individual reveals are temporary and reset on navigation/reload; this is not an API access restriction.
 - `stillWatchingPrompt`: boolean, default `true`. The default web player finishes the current episode and asks before automatic continuation after 90 minutes without interaction.
@@ -764,7 +767,7 @@ Get list of available identifiers and updaters.
 
 ### Active Sessions
 
-`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file: { id, name, extension }` (name without directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup includes preparation and is measured from creation handling to the first successful original/segment byte. `timings` contains preparation phases, `firstMediaMs` and client-reported `firstPlaybackMs` as described under managed playback. Startup/speed/failure can be null. Queue, encoder and cache values are server-wide gauges repeated in each row; do not sum them across sessions. Diagnostic `bufferingReports` counts truthy reports; statistics health counts buffering transitions.
+`GET /api/v1/status/sessions` requires authentication and returns only the current user's sessions, including their Emby sessions. Each entry contains `sessionId`, `state`, `file: { id, name, extension }` (name without directory), `method`, `reason`, `position`, `startupMs`, `bufferingReports`, `encodingSpeed`, `failure`, `queueDepth`, `activeEncoders`, `cacheBytes`, `operations` (per-track copy/encode/none), `delivery` (`queueWaitMs`, `generationMs`, `bufferedSeconds`, `rebufferDurationMs`), and `output` (`format`, `videoCodec`, `audioCodec`). No filesystem paths or media tokens are exposed. Encoding speed is media seconds per wall-clock second; startup includes preparation and is measured from creation handling to the first successful original/segment byte. `timings` contains preparation phases, `firstMediaMs` and client-reported `firstPlaybackMs` as described under managed playback. Startup/speed/failure can be null. Queue, encoder and cache values are server-wide gauges repeated in each row; do not sum them across sessions. Diagnostic `bufferingReports` counts truthy reports; statistics health counts buffering transitions.
 
 ### Connected Clients
 Get the authenticated user's connected realtime devices. Scoped to the caller, even for administrators: an unfiltered listing would expose other people's devices. `user` carries the id and nothing else.

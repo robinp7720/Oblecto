@@ -39,6 +39,7 @@
     "test": "npm run test:mocha",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "benchmark:playback": "node --import tsx scripts/benchmark-playback.mjs",
     "test:playback:browser": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:player:ui": "playwright test --project=player-desktop --project=player-phone",
     "typecheck": "tsc --noEmit -p tsconfig.src.json",

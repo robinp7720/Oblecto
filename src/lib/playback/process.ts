@@ -85,6 +85,8 @@ export function run(
 
 type Job = {
     owner: string;
+    priority: number;
+    key?: string;
     task: () => Promise<unknown>;
     resolve: (v: unknown) => void;
     reject: (e: unknown) => void;
@@ -106,7 +108,9 @@ export class Scheduler {
     submit<T>(
         owner: string,
         signal: AbortSignal,
-        task: () => Promise<T>
+        task: () => Promise<T>,
+        priority = 0,
+        key?: string
     ): Promise<T> {
         if (signal.aborted)
             return Promise.reject(
@@ -123,6 +127,8 @@ export class Scheduler {
         return new Promise<T>((resolve, reject) => {
             const job: Job = {
                 owner,
+                priority,
+                key,
                 signal,
                 task,
                 resolve: resolve as (v: unknown) => void,
@@ -147,11 +153,18 @@ export class Scheduler {
             this.drain();
         });
     }
+    /** A requested segment may already be queued as speculative work. */
+    promote(owner: string, key: string): void {
+        for (const job of this.jobs) if (job.owner === owner && job.key === key) job.priority = 0;
+        this.drain();
+    }
     private drain(): void {
         while (this.active < this.concurrency && this.jobs.length) {
-            const index = this.jobs.findIndex(
-                (j) => j.owner !== this.lastOwner
-            );
+            const priority = Math.min(...this.jobs.map(job => job.priority));
+            // Leave capacity available for demand while one background job runs.
+            if (priority > 0 && this.active >= Math.max(1, this.concurrency - 1)) break;
+            let index = this.jobs.findIndex(j => j.priority === priority && j.owner !== this.lastOwner);
+            if (index < 0) index = this.jobs.findIndex(j => j.priority === priority);
             const job = this.jobs.splice(Math.max(index, 0), 1)[0];
             job.signal.removeEventListener('abort', job.abort);
             this.lastOwner = job.owner;

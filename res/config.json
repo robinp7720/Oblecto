@@ -135,6 +135,7 @@
   "streaming": {
     "defaultTargetLanguageCode": "eng",
     "encodingConcurrency": 2,
+    "encoderMode": "segment",
     "maxQueue": 64,
     "cacheBytes": 10737418240,
     "idleTimeoutMs": 1800000,

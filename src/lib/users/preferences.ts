@@ -2,7 +2,7 @@
 // needs no schema change; unknown keys are rejected rather than stored.
 
 export type SubtitleMode = 'off' | 'auto' | 'forced';
-export type Quality = 'original' | 'auto' | 360 | 480 | 720 | 1080;
+export type Quality = 'original' | 'auto' | 240 | 360 | 480 | 720 | 1080;
 
 export interface UserPreferences {
     // Interface language (BCP 47); null follows the browser
@@ -23,14 +23,14 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     audioLanguage: null,
     subtitleLanguage: null,
     subtitleMode: 'auto',
-    quality: 'original',
+    quality: 'auto',
     autoplayNext: true,
     stillWatchingPrompt: true,
     episodeSpoilers: 'off',
 };
 
 const SUBTITLE_MODES: SubtitleMode[] = ['off', 'auto', 'forced'];
-const QUALITIES: Quality[] = ['original', 'auto', 360, 480, 720, 1080];
+const QUALITIES: Quality[] = ['original', 'auto', 240, 360, 480, 720, 1080];
 const LANGUAGE_TAG = /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i;
 
 const isLanguage = (value: unknown): value is string | null =>

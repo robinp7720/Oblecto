@@ -143,6 +143,7 @@ string
     'streaming': {
         'defaultTargetLanguageCode': string,
         encodingConcurrency?: number;
+        encoderMode?: 'segment' | 'window';
         maxQueue?: number;
         cacheBytes?: number;
         cacheDirectory?: string;

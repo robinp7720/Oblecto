@@ -2,6 +2,9 @@ import { invalid, PlaybackError } from './types.js';
 import type { Media, PlaybackOptions, PlaybackPlan, Track } from './types.js';
 export const LADDER = [
     {
+        id: '240', height: 240, bitrate: 300000
+    },
+    {
         id: '360',
         height: 360,
         bitrate: 800000
@@ -40,6 +43,8 @@ export function planPlayback(
         return {
             method: 'direct',
             reason: 'Original file requested',
+            videoOperation: video ? 'copy' : 'none',
+            audioOperation: audios.length ? 'copy' : 'none',
             video,
             audio: audios[0] ?? null,
             subtitle: null,
@@ -121,10 +126,9 @@ export function planPlayback(
         c.nativeTracks === true ||
         ((!audio || audio.index === audios[0]?.index) &&
             !(options.audioStreamIndex === null && audios.length));
-    const adaptive =
-        options.quality === 'auto' ||
-        typeof options.quality === 'number' ||
-        options.maxBitrate !== undefined;
+    const sourceBitrate = Math.ceil((media.size * 8) / media.duration);
+    const overBudget = options.maxBitrate !== undefined && sourceBitrate * 1.1 > options.maxBitrate;
+    const adaptive = options.quality === 'auto' || typeof options.quality === 'number' || overBudget;
     const direct =
         videoOK &&
         audioOK &&
@@ -136,7 +140,6 @@ export function planPlayback(
     const method = direct
         ? 'direct'
         : videoOK &&
-            audioOK &&
             !burnSubtitles &&
             !adaptive &&
             (!video || video.codec_name === 'h264')
@@ -148,21 +151,23 @@ export function planPlayback(
             'This client cannot play the required HLS output',
             422
         );
+    const videoOperation = !video ? 'none' : method === 'transcode' ? 'encode' : 'copy';
+    const audioOperation = !audio ? 'none' : method === 'direct' || (audioOK && audio.codec_name === 'aac' && videoOperation !== 'encode') ? 'copy' : 'encode';
     const height = Math.min(video?.height ?? 360, c.maxHeight ?? 1080);
     let renditions = LADDER.filter(
         (r) =>
             r.height <= height &&
             (options.maxBitrate === undefined ||
-                r.bitrate + 128000 <= options.maxBitrate)
+                (r.bitrate + (audio ? 128000 : 0)) * 1.1 <= options.maxBitrate)
     );
     if (!renditions.length)
         renditions = [
             {
                 id: 'low',
-                height: Math.max(2, Math.floor(height / 2) * 2),
+                height: Math.max(2, Math.floor(Math.min(height, 240) / 2) * 2),
                 bitrate: Math.min(
-                    800000,
-                    (options.maxBitrate ?? 928000) - 128000
+                    300000,
+                    Math.floor((options.maxBitrate ?? 928000) / 1.1) - (audio ? 128000 : 0)
                 )
             }
         ];
@@ -181,10 +186,12 @@ export function planPlayback(
             }
         ];
     const boundaries: number[] = [];
-    for (let time = 0; time < media.duration; time += 4) boundaries.push(time);
+    for (let time = 0; time < media.duration; time += videoOperation === 'encode' ? 2 : 4) boundaries.push(time);
     boundaries.push(media.duration);
     return {
         method,
+        videoOperation,
+        audioOperation,
         reason: direct
             ? 'Original is compatible'
             : burnSubtitles
@@ -192,7 +199,7 @@ export function planPlayback(
               : adaptive
                 ? 'Adaptive quality requested'
                 : method === 'remux'
-                  ? 'Container or track selection requires remuxing'
+                  ? audioOperation === 'encode' ? 'Audio conversion required; video copied' : 'Container or track selection requires remuxing'
                   : 'Source exceeds client capabilities',
         audio,
         video,
@@ -202,4 +209,28 @@ export function planPlayback(
         renditions,
         boundaries
     };
+}
+
+/** MPEG-TS allowance prevents advertising only elementary video bitrate to ABR clients. */
+export function renditionBandwidth(plan: PlaybackPlan, bitrate: number): { average: number; peak: number } {
+    const average = Math.ceil(plan.videoOperation === 'encode' || (plan.videoOperation === undefined && plan.method === 'transcode')
+        ? bitrate + (plan.audio ? 128000 : 0) : bitrate);
+    return { average, peak: Math.ceil(average * 1.1) };
+}
+
+export function renditionCodecs(plan: PlaybackPlan): string {
+    const codecs: string[] = [];
+    if (plan.video) {
+        if (plan.videoOperation === 'encode' || (plan.videoOperation === undefined && plan.method === 'transcode')) codecs.push('avc1.4d4028');
+        else if (plan.video.codec_name === 'h264') {
+            const profile = plan.video.profile ?? 'High';
+            const prefix = profile.includes('Baseline') ? '42c0' : profile === 'Main' ? '4d40' : '6400';
+            codecs.push(`avc1.${prefix}${(plan.video.level ?? 40).toString(16).padStart(2, '0')}`);
+        }
+    }
+    if (plan.audio) {
+        const encode = plan.audioOperation === 'encode' || (plan.audioOperation === undefined && plan.method === 'transcode');
+        codecs.push(encode ? 'mp4a.40.2' : plan.audio.profile === 'HE-AACv2' ? 'mp4a.40.29' : plan.audio.profile === 'HE-AAC' ? 'mp4a.40.5' : 'mp4a.40.2');
+    }
+    return codecs.join(',');
 }

@@ -27,7 +27,9 @@ const media: Media = { path: '/fixture.mp4', container: 'mp4', duration: 12, siz
 describe('Playback planner and validation', () => {
     it('checks codecs and selected audio rather than container alone', () => {
         assert.equal(planPlayback(media, {}).method, 'direct');
-        assert.equal(planPlayback(media, { audioStreamIndex: 2 }).method, 'transcode');
+        assert.equal(planPlayback(media, { audioStreamIndex: 2 }).method, 'remux');
+        assert.equal(planPlayback(media, { audioStreamIndex: 2 }).audioOperation, 'encode');
+        assert.equal(planPlayback(media, { audioStreamIndex: 2 }).videoOperation, 'copy');
         assert.equal(planPlayback({ ...media, container: 'mkv' }, {}).method, 'remux');
         assert.equal(planPlayback({ ...media, streams: [{ ...media.streams[0], codec_name: 'hevc' }] }, {}).method, 'transcode');
     });
@@ -60,9 +62,16 @@ describe('Playback planner and validation', () => {
         ]) assert.throws(() => validateOptions(options as never), PlaybackError);
     });
     it('limits adaptive renditions to source resolution and bitrate', () => {
-        assert.deepEqual(planPlayback(media, { quality: 'auto' }).renditions.map(r => r.height), [360, 480, 720]);
-        assert.deepEqual(planPlayback(media, { maxBitrate: 1600000 }).renditions.map(r => r.height), [360, 480]);
+        assert.deepEqual(planPlayback(media, { quality: 'auto' }).renditions.map(r => r.height), [240, 360, 480, 720]);
+        assert.deepEqual(planPlayback(media, { quality: 'auto', maxBitrate: 1800000 }).renditions.map(r => r.height), [240, 360, 480]);
         assert.equal(planPlayback(media, { quality: 1080 }).renditions[0].height, 720);
+    });
+    it('uses bitrate ceilings without forcing conversion and advertises transport overhead', () => {
+        const plan = planPlayback(media, { maxBitrate: 1000000 });
+        assert.equal(plan.method, 'direct');
+        assert.equal(planPlayback(media, { maxBitrate: 300000 }).videoOperation, 'encode');
+        assert.equal(planPlayback(media, { quality: 240 }).renditions[0].height, 240);
+        assert.equal(validateOptions({ quality: 240 }).quality, 240);
     });
     it('handles absent audio and requires HDR capability', () => {
         assert.equal(planPlayback({ ...media, streams: [media.streams[0]] }, {}).audio, null);
@@ -198,7 +207,7 @@ describe('Real FFmpeg playback delivery', function () {
         assert.equal(updated.position, 7);
         assert.equal(updated.plan.method, 'transcode');
         assert.equal(updated.revision, 2);
-        assert.deepEqual(updated.plan.renditions.map(r => r.height), [360]);
+        assert.deepEqual(updated.plan.renditions.map(r => r.height), [240]);
         const reset = await embyPlayback(emby, request({ StartTimeTicks: 0 }), file, 'play');
         assert.equal(reset.position, 0);
         reset.updatedAt = 0;
@@ -229,6 +238,10 @@ describe('Real FFmpeg playback delivery', function () {
         const prefix = `${base}/${session.sessionId}/1`;
         const master = await (await fetch(`${prefix}/master.m3u8`)).text();
         assert.match(master, /360.m3u8/); assert.match(master, /480.m3u8/);
+        assert.match(master, /CODECS="avc1.4d4028,mp4a.40.2"/);
+        const bandwidth = /BANDWIDTH=(\d+),AVERAGE-BANDWIDTH=(\d+)/.exec(master)!;
+        assert.equal(Number(bandwidth[2]), 428000, 'the lowest rendition includes AAC audio');
+        assert.ok(Number(bandwidth[1]) > Number(bandwidth[2]), 'transport overhead is advertised');
         const playlist = await (await fetch(`${prefix}/360.m3u8`)).text();
         assert.match(playlist, /PLAYLIST-TYPE:VOD/); assert.match(playlist, /360-2.ts/); assert.match(playlist, /ENDLIST/);
         for (const [variant, segment] of [['360', 0], ['480', 1], ['360', 2]] as const) {
@@ -240,7 +253,7 @@ describe('Real FFmpeg playback delivery', function () {
             const video = metadata.streams.find((stream: any) => stream.codec_type === 'video');
             const audio = metadata.streams.find((stream: any) => stream.codec_type === 'audio');
             assert.equal(video.height, Number(variant));
-            assert.ok(Math.abs(Number(video.start_time) - segment * 4) < 0.15, `video timestamp ${video.start_time}`);
+            assert.ok(Math.abs(Number(video.start_time) - segment * 2) < 0.15, `video timestamp ${video.start_time}`);
             assert.ok(Math.abs(Number(video.start_time) - Number(audio.start_time)) < 0.15, 'A/V drift');
         }
         const subtitles = await (await fetch(`${prefix}/subtitle.vtt`)).text();
@@ -259,7 +272,7 @@ describe('Real FFmpeg playback delivery', function () {
         const without = await service.create(styled, 'alice', null, { quality: 360, subtitleMode: 'off' });
         const hashes: string[] = [];
         for (const session of [withSub, without]) {
-            const response = await fetch(`${base}/${session.sessionId}/1/360-1.ts`);
+            const response = await fetch(`${base}/${session.sessionId}/1/360-2.ts`);
             assert.equal(response.status, 200, await response.clone().text());
             const output = path.join(root, `${session.sessionId}.ts`);
             await fs.writeFile(output, new Uint8Array(await response.arrayBuffer()));
@@ -303,6 +316,101 @@ describe('Real FFmpeg playback delivery', function () {
         session.updatedAt = Date.now() - 31 * 60 * 1000;
         assert.throws(() => service.get(session.sessionId), /unavailable/);
         await service.stop(session);
+    });
+    it('copies compatible video while converting surround audio to AAC', async () => {
+        const source = path.join(root, 'surround.mkv');
+        await run('ffmpeg', ['-v', 'error', '-y', '-i', file.path!, '-map', '0:v', '-map', '0:a', '-c:v', 'copy', '-c:a', 'ac3', '-ac', '6', source]);
+        const session = await service.create({ ...file, id: 9, path: source, extension: 'mkv' } as File, 'alice', null, { subtitleMode: 'off' });
+        try {
+            assert.equal(session.plan.videoOperation, 'copy');
+            assert.equal(session.plan.audioOperation, 'encode');
+            const response = await fetch(`${base}/${session.sessionId}/1/source-1.ts`);
+            assert.equal(response.status, 200);
+            const output = path.join(root, 'audio-converted.ts');
+            await fs.writeFile(output, new Uint8Array(await response.arrayBuffer()));
+            const metadata = JSON.parse(await run('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', output]));
+            assert.equal(metadata.streams.find((track: any) => track.codec_type === 'audio').codec_name, 'aac');
+            assert.equal(metadata.streams.find((track: any) => track.codec_type === 'audio').channels, 2);
+            const diagnostics = service.diagnostics().find(item => item.sessionId === session.sessionId)!;
+            assert.equal((diagnostics.output as any).audioCodec, 'aac');
+            const videoHash = (source: string) => run('ffmpeg', ['-v', 'error', '-i', source, '-map', '0:v', '-c', 'copy', '-f', 'hash', '-hash', 'sha256', '-']);
+            const reference = path.join(root, 'reference.ts');
+            await run('ffmpeg', ['-v', 'error', '-y', '-ss', '4', '-i', source, '-t', '4', '-map', '0:v', '-c', 'copy', reference]);
+            assert.equal(await videoHash(output), await videoHash(reference));
+        } finally { await service.stop(session); }
+    });
+    it('publishes sequential two-second segments with one bounded encoding job', async () => {
+        const sequential = new PlaybackService({ config: { ffmpeg: {}, streaming: { encoderMode: 'window', cacheDirectory: path.join(root, 'window-cache') }, transcoding: {} } } as unknown as Oblecto);
+        const session = await sequential.create(file, 'alice', null, { quality: 360, subtitleMode: 'off' });
+        let jobs = 0;
+        const submit = sequential.scheduler.submit.bind(sequential.scheduler);
+        sequential.scheduler.submit = (owner, signal, task, priority) => { jobs++; return submit(owner, signal, task, priority); };
+        const app = express();
+        app.get('/:asset', (req, res) => sequential.serve(session, session.revision, req.params.asset, req, res));
+        const server = app.listen(0); await new Promise<void>(resolve => server.once('listening', resolve));
+        const url = `http://127.0.0.1:${(server.address() as any).port}`;
+        try {
+            for (let n = 0; n < 6; n++) {
+                const response = await fetch(`${url}/360-${n}.ts`);
+                assert.equal(response.status, 200);
+                const output = path.join(root, `sequential-${n}.ts`);
+                await fs.writeFile(output, new Uint8Array(await response.arrayBuffer()));
+                const data = JSON.parse(await run('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', output]));
+                const video = data.streams.find((track: any) => track.codec_type === 'video');
+                const audio = data.streams.find((track: any) => track.codec_type === 'audio');
+                assert.equal(video.height, 360);
+                assert.ok(Math.abs(Number(video.start_time) - n * 2) < 0.15, video.start_time);
+                assert.ok(Math.abs(Number(audio.start_time) - Number(video.start_time)) < 0.15);
+            }
+            assert.equal(jobs, 1, 'six segments share one FFmpeg process');
+            await sequential.update(session, { position: 8, quality: 240 }, 1);
+            const response = await fetch(`${url}/240-4.ts`);
+            assert.equal(response.status, 200); await response.arrayBuffer();
+            await sequential.stop(session);
+            assert.equal(sequential.scheduler.active, 0);
+            assert.equal((await fs.readdir(await sequential.cache.root)).filter(name => name.startsWith('window-')).length, 0);
+        } finally { await sequential.close(); await new Promise<void>(resolve => server.close(() => resolve())); }
+    });
+    it('promotes shared background preparation when a viewer requests playback', async () => {
+        const startup = new PlaybackService({ config: { ffmpeg: {}, streaming: { encodingConcurrency: 1, cacheDirectory: path.join(root, 'priority-cache') }, transcoding: {} } } as unknown as Oblecto);
+        const signal = new AbortController().signal; const gate = Promise.withResolvers<void>();
+        const queued = Promise.withResolvers<void>(); const promoted = Promise.withResolvers<void>(); const order: string[] = [];
+        const submit = startup.scheduler.submit.bind(startup.scheduler); const promote = startup.scheduler.promote.bind(startup.scheduler);
+        startup.scheduler.submit = (owner, signal, task, priority, key) => {
+            const result = submit(owner, signal, async () => { if (owner === 'probe') order.push('probe'); return task(); }, priority, key);
+            if (owner === 'probe') queued.resolve();
+            return result;
+        };
+        startup.scheduler.promote = (owner, key) => { promote(owner, key); if (owner === 'probe') promoted.resolve(); };
+        const blocked = submit('blocker', signal, () => gate.promise);
+        const speculative = submit('other viewer', signal, async () => { order.push('prefetch'); }, 1);
+        const background = startup.probe(file, 1);
+        try {
+            await queued.promise;
+            const requested = startup.probe(file);
+            await promoted.promise; gate.resolve();
+            assert.equal(await requested, await background);
+            await Promise.all([blocked, speculative]);
+            assert.deepEqual(order, ['probe', 'prefetch']);
+        } finally { gate.resolve(); await startup.close(); }
+    });
+    it('reuses persisted preparation after restart and invalidates changed sources', async () => {
+        const source = path.join(root, 'prepared.mp4'); await fs.copyFile(file.path!, source);
+        const prepared = { ...file, path: source, async update(changes: object) { Object.assign(this, changes); return this; } } as File;
+        await service.analyseFile(prepared);
+        assert.ok(prepared.playbackMetadata?.keyframes?.times.length);
+        const restarted = new PlaybackService({ config: { ffmpeg: {}, streaming: { cacheDirectory: path.join(root, 'restart-cache') }, transcoding: {} } } as unknown as Oblecto);
+        let probes = 0;
+        const submit = restarted.scheduler.submit.bind(restarted.scheduler);
+        restarted.scheduler.submit = (owner, signal, task, priority) => { probes++; return submit(owner, signal, task, priority); };
+        try {
+            const session = await restarted.create(prepared, 'alice', null, { forceHls: true, subtitleMode: 'off' });
+            assert.equal(session.plan.method, 'remux'); assert.equal(probes, 0);
+            await restarted.stop(session);
+            await fs.utimes(source, new Date(), new Date(Date.now() + 5000));
+            await restarted.create(prepared, 'alice', null, { forceHls: true, subtitleMode: 'off' });
+            assert.equal(probes, 2, 'both probe and timeline must be refreshed');
+        } finally { await restarted.close(); }
     });
     it('remuxes from verified keyframe boundaries', async () => {
         const session = await service.create(file, 'alice', null, { forceHls: true, subtitleMode: 'off' });

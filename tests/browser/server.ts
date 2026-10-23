@@ -14,8 +14,9 @@ import type Oblecto from '../../src/lib/oblecto/index.js';
 import type { OblectoRequest } from '../../src/submodules/REST/index.js';
 
 const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'oblecto-browser-'));
-await run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '20', '-c:v', 'libx264', '-preset', 'ultrafast', '-threads', '2', '-g', '120', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(directory, 'source.mp4')]);
-const service = new PlaybackService({ config: { ffmpeg: {}, streaming: { cacheDirectory: path.join(directory, 'cache') }, transcoding: {} } } as unknown as Oblecto);
+await run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=30', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000', '-t', '60', '-c:v', 'libx264', '-preset', 'ultrafast', '-threads', '2', '-g', '120', '-pix_fmt', 'yuv420p', '-c:a', 'aac', path.join(directory, 'source.mp4')]);
+const settings = { ffmpeg: {}, streaming: { cacheDirectory: path.join(directory, 'cache'), encoderMode: 'segment' as 'segment' | 'window' }, transcoding: {} };
+const service = new PlaybackService({ config: settings } as unknown as Oblecto);
 const create = service.create.bind(service);
 service.create = (file, owner, _userId, options) => create(file, owner, null, options);
 User.findByPk = (async (id: number) => ({ id, password: null }) as User) as typeof User.findByPk;
@@ -24,6 +25,10 @@ await build({ entryPoints: ['tests/browser/entry.js'], bundle: true, format: 'es
 const app = express(); app.use(express.json());
 app.use((req: OblectoRequest, _res, next) => { if (req.headers.authorization) req.authorization = { scheme: 'Bearer', credentials: req.headers.authorization.split(' ')[1] }; next(); });
 streamingRoutes(app, { playback: service } as unknown as Oblecto);
+app.post('/debug/encoder', (req, res) => {
+    if (!['segment', 'window'].includes(req.body.mode)) { res.sendStatus(400); return; }
+    settings.streaming.encoderMode = req.body.mode; res.sendStatus(204);
+});
 app.get('/debug', (_req, res) => res.json(service.diagnostics()));
 app.get('/entry.js', (_req, res) => res.sendFile(path.join(directory, 'entry.js')));
 app.get('/', (_req, res) => res.type('html').send(`<!doctype html><video id="video" muted playsinline controls></video><button id="start">Play</button><button id="stop">Stop</button><div role="alert" id="error"></div><script>window.token=${JSON.stringify(issueAccessToken({ id: 1, password: null }, config.authentication))}</script><script type="module" src="/entry.js"></script>`));

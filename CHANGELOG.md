@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0016). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0017). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
 
@@ -31,6 +31,10 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 - Federation pairs servers with a one-time invitation, synchronizes catalogs as consistent snapshots every fifteen minutes (`federation.syncIntervalMs`), and has an administration page and API. See [docs/FEDERATION.md](docs/FEDERATION.md).
 
 ### Performance
+
+- Playback defaults to Auto for unset preferences, starts at a low rendition, adds 240p, bounds browser buffering and overlaps encoding ahead with downloads. Compatible video is copied while unsupported audio converts to AAC; bitrate ceilings no longer force unnecessary video encoding.
+- Opt-in `streaming.encoderMode: "window"` produces sequential two-second HLS segments in bounded 12-second runs. Completed segments are served during production; producers and staging are cancelled and awaited on seeks/revisions/stop. Concurrent cache admission respects its budget.
+- Migration 0017 persists versioned probe/keyframe preparation for reuse after restart. Diagnostics add track operations, queue/generation time, buffered seconds and rebuffer duration. A temporary-fixture Chromium benchmark compares an archived baseline and both encoder modes under controlled network limits; window mode remains opt-in pending release performance acceptance.
 
 - Migration 0015 adds browse-order, episode-series, tracking and reverse file-link indexes without changing existing rows. SQLite refreshes planner statistics after migration and uses bounded optimization at startup and hourly.
 - Library facets aggregate distinct genre/year pairs in SQL and share a bounded cache scoped to database, viewer and filters, with catalogue/user-state invalidation after writes and transaction commits.

@@ -135,7 +135,7 @@ export default class MediaAnalyser {
      */
     async collectAll(kind: 'movies' | 'episodes'): Promise<void> {
         const { trickplay, segments } = this.settings;
-        const missing: WhereOptions<File>[] = [{ chapters: null }];
+        const missing: WhereOptions<File>[] = [{ chapters: null }, { playbackMetadata: null }];
 
         if (trickplay) missing.push({ trickplay: null });
         if (segments) missing.push({ segments: null });
@@ -185,6 +185,12 @@ export default class MediaAnalyser {
 
         if (!file || !local(file)) return;
 
+        // Playback analysis is independent of thumbnails and marker detection settings.
+        try { await this.oblecto.playback?.analyseFile(file, this.signal.signal); }
+        catch (error) {
+            if (this.signal.signal.aborted) return;
+            logger.warn(`Could not prepare playback metadata for file ${file.id}: ${(error as Error).message}`);
+        }
         const { trickplay, interval, segments } = this.settings;
         const needsTrickplay = trickplay && !file.trickplay;
         const isMovie = (file.Movies ?? []).length > 0;

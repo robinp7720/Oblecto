@@ -253,3 +253,5 @@ Change log
 - 2026-10-03: Share the movie-set visibility predicate with the native REST API; new sets created there are shared with their creator. Jellyfin collection endpoint shapes and visibility rules are unchanged.
 
 - 2026-10-06: Track Jellyfin viewing through the shared statistics collector, with managed/fallback deduplication and client failures.
+
+- 2026-10-23: Shared playback delivery adds audio-only conversion with copied H.264 video, bitrate ceilings, accurate HLS codec/bandwidth metadata, persistent preparation and opt-in sequential HLS windows; endpoint shapes remain unchanged.
