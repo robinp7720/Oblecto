@@ -3,6 +3,7 @@ import { federationRecordColumns } from '../../models/federationRecord.js';
 import { DataTypes, type DataType, type ModelAttributeColumnOptions, type QueryInterface, type Sequelize } from 'sequelize';
 import { SequelizeStorage, Umzug } from 'umzug';
 import logger from '../logger/index.js';
+import { isIndexLimitError, removeDuplicateLegacyIndexes } from './legacyIndexes.js';
 
 type Context = { sequelize: Sequelize; queryInterface: QueryInterface };
 
@@ -39,7 +40,13 @@ async function addColumnIfMissing(queryInterface: QueryInterface, table: string,
 async function addIndexIfMissing(queryInterface: QueryInterface, table: string, fields: string[], name: string, unique = false): Promise<void> {
     const indexes = await queryInterface.showIndex(table) as Array<{ name: string }>;
     if (indexes.some(index => sameName(index.name, name))) return;
-    await queryInterface.addIndex(table, fields, { name, unique });
+    try {
+        await queryInterface.addIndex(table, fields, { name, unique });
+    } catch (error) {
+        // Recover upgrades already blocked before the cleanup migration can run.
+        if (!isIndexLimitError(error) || await removeDuplicateLegacyIndexes(queryInterface, table) === 0) throw error;
+        await queryInterface.addIndex(table, fields, { name, unique });
+    }
 }
 
 type ColumnDefinition = ModelAttributeColumnOptions;
@@ -393,6 +400,14 @@ export const MIGRATIONS: Migration[] = [
             if (sequelize.getDialect() === 'sqlite') {
                 await sequelize.query('PRAGMA analysis_limit = 1000');
                 await sequelize.query('ANALYZE');
+            }
+        }
+    },
+    {
+        name: '0016-legacy-duplicate-indexes',
+        up: async ({ queryInterface }) => {
+            for (const table of ['Movies', 'Series', 'Episodes']) {
+                if (await hasTable(queryInterface, table)) await removeDuplicateLegacyIndexes(queryInterface, table);
             }
         }
     }

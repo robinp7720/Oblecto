@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0015). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
+Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0016). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New
 
@@ -39,6 +39,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 - Playback diagnostics include preparation stages, first media delivery and browser time to first playback. Startup timing now includes preparation and ignores HEAD and failed media requests.
 
 ### Fixed
+
+- Legacy MySQL/MariaDB upgrades recover from the 64-index limit caused by older Sequelize alter-syncs. Migration 0016 removes only numbered exact copies of provider-ID indexes, retaining the original unique constraints and every row.
 
 - Copy stream URL now returns a direct HTTP link to the original file, including MKV/HEVC and surround audio, instead of negotiating HLS using browser defaults. Session creation accepts `forceDirect: true` for external players.
 
