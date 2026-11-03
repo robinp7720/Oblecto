@@ -44,6 +44,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 ### Fixed
 
+- Moving the mouse over the player reveals the progress bar and controls, and keeps them visible until the cursor is idle.
+
 - Legacy MySQL/MariaDB upgrades recover from the 64-index limit caused by older Sequelize alter-syncs. Migration 0016 removes only numbered exact copies of provider-ID indexes, retaining the original unique constraints and every row.
 
 - Copy stream URL now returns a direct HTTP link to the original file, including MKV/HEVC and surround audio, instead of negotiating HLS using browser defaults. Session creation accepts `forceDirect: true` for external players.

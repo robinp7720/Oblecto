@@ -136,6 +136,35 @@ async function play (page) {
 }
 
 test.describe('@desktop player', () => {
+  test('mouse movement reveals the progress bar and keeps controls visible until idle', async ({ page }) => {
+    const errors = await boot(page)
+    await play(page)
+    await page.evaluate(() => document.querySelector('.player-root video').play())
+
+    const overlay = page.locator('.player-root .overlay')
+    const seekBar = page.getByRole('slider', { name: 'Seek', exact: true })
+    await expect(overlay).toHaveCSS('opacity', '0', { timeout: 10000 })
+
+    // Hovering the video must work without clicking or starting a drag.
+    const stage = await page.locator('.player-root .stage').boundingBox()
+    await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2)
+    await expect(overlay).toHaveCSS('opacity', '1')
+    await expect(seekBar).toBeVisible()
+    await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').paused)).toBe(false)
+
+    // Movement also resets the timer while the pointer stays over the controls.
+    const controls = await page.locator('.player-root .controls').boundingBox()
+    await page.mouse.move(controls.x + controls.width / 2, controls.y + controls.height / 2)
+    for (let step = 1; step <= 2; step += 1) {
+      await page.waitForTimeout(1800)
+      await page.mouse.move(controls.x + controls.width / 2 + step * 10, controls.y + controls.height / 2)
+      await expect(overlay).toHaveCSS('opacity', '1')
+    }
+
+    await expect(overlay).toHaveCSS('opacity', '0', { timeout: 10000 })
+    expect(errors).toEqual([])
+  })
+
   test('loads the player on demand and accepts remote play while idle', async ({ page }) => {
     const requests = []
     const progress = []
