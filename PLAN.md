@@ -6,6 +6,7 @@ Status of the feature tracks this file used to plan in detail, as of 7 November 
 
 | Track | Where it lives |
 |---|---|
+| Playback preparation separated from session management, with explicit scheduler/lifetime/storage dependencies | `src/lib/playback/MediaPreparation.ts`, `tests/mocha/mediaPreparation.spec.ts` |
 | Shared library queries, typed credits, related titles and watch predicates; whole-genre filtering across native and Jellyfin APIs | `src/lib/library/`, `src/lib/common/genres.ts`, library contract tests |
 | Awaited startup, partial-startup rollback, ordered shutdown and background job draining | `src/lib/oblecto/ServiceLifecycle.ts`, `src/lib/queue/`, startup smoke tests |
 | Adaptive playback defaults/240p, audio-only conversion, delivery overlap, bounded sequential HLS (opt-in), persistent preparation and constrained-network benchmark | `src/lib/playback/`, migration 0017, [streaming](docs/STREAMING.md) |

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Playback preparation refactor
+
+- Extracted probing, metadata reuse, keyframe scans and plan preparation from `PlaybackService` into `MediaPreparation`, with explicit scheduling, cancellation, configuration and persistence dependencies. Playback APIs, stored metadata format and delivery behavior are preserved.
+- Added isolated preparation tests for probe sharing/retry, viewer cancellation during shared scans, remux fallback/retry, shutdown cancellation of active and queued analysis, and source changes during analysis. Existing real FFmpeg coverage checks delivery, persisted reuse and queue priority through the service adapter.
+
 ### Shared library queries
 
 - Movie and series browse queries, facet caching, typed credits and related-title ranking live in `src/lib/library/`. REST routes handle request/response conversion, and Jellyfin uses shared watch predicates, credits and related titles without importing REST helpers.

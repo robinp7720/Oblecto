@@ -8,14 +8,14 @@ import { File } from '../../models/file.js';
 import { Movie } from '../../models/movie.js';
 import { Episode } from '../../models/episode.js';
 import { PlaybackError, validateOptions } from './types.js';
-import type { Media, PlaybackOptions, PlaybackPlan, PlaybackTimings, Track } from './types.js';
-import { planPlayback, renditionBandwidth, renditionCodecs } from './planner.js';
+import type { Media, PlaybackOptions, PlaybackPlan, PlaybackTimings } from './types.js';
+import { renditionBandwidth, renditionCodecs } from './planner.js';
 import { run, Scheduler } from './process.js';
 import { SegmentCache } from './cache.js';
 import { SegmentWindows } from './windows.js';
 import { sendFile } from './http.js';
 import { saveProgress } from './progress.js';
-import { MetadataCache, waitFor, sourceVersion, preparedMetadata } from './metadataCache.js';
+import { MediaPreparation } from './MediaPreparation.js';
 import logger from '../../submodules/logger/index.js';
 
 export type RemoteSessionData = {
@@ -91,8 +91,7 @@ export class PlaybackService {
     private lifetime = new AbortController();
     private pendingPeers = new Set<RemotePlayback>();
     private hardware?: Promise<string | null>;
-    private probes = new Map<string, Promise<Media>>();
-    private timelines = new MetadataCache<number[]>();
+    private readonly preparation: MediaPreparation<File>;
     private creation = new Set<Promise<PlaybackSession>>();
     remoteFactory?: (host: string) => Promise<RemotePlayback>;
     constructor(readonly oblecto: Oblecto) {
@@ -116,6 +115,19 @@ export class PlaybackService {
             config?.encodingConcurrency ?? 2,
             config?.maxQueue ?? 64
         );
+        this.preparation = new MediaPreparation<File>({
+            scheduler: this.scheduler,
+            signal: this.lifetime.signal,
+            ffprobe: () => this.ffprobe,
+            defaultLanguage: () => this.oblecto.config.streaming?.defaultTargetLanguageCode,
+            loadMetadata: async file => {
+                // Preparation data is excluded from ordinary library queries and DTOs.
+                if (file.playbackMetadata !== undefined || !(file instanceof File)) return file.playbackMetadata;
+                return (await File.unscoped().findByPk(file.id, { attributes: ['playbackMetadata'] }))?.playbackMetadata;
+            },
+            saveMetadata: async (file, playbackMetadata) => { await file.update({ playbackMetadata }); },
+            queueAnalysis: file => { this.oblecto.mediaAnalyser?.queueFile(file); }
+        });
         this.cache = new SegmentCache(
             config?.cacheBytes ?? 10 * 1024 ** 3,
             config?.cacheDirectory
@@ -135,166 +147,14 @@ export class PlaybackService {
     get ffprobe(): string {
         return this.oblecto.config.ffmpeg.pathFFprobe || 'ffprobe';
     }
-    private async storedMetadata(file: File) {
-        // Keep potentially large preparation data out of ordinary library queries/DTOs.
-        if (file.playbackMetadata !== undefined || !(file instanceof File)) return file.playbackMetadata;
-        return (await File.unscoped().findByPk(file.id, { attributes: ['playbackMetadata'] }))?.playbackMetadata;
+    probe(file: File, priority = 0): Promise<Media> {
+        return this.preparation.probe(file, priority);
     }
-    async probe(file: File, priority = 0): Promise<Media> {
-        if (!file.path)
-            throw new PlaybackError(
-                'UNSUPPORTED_MEDIA',
-                'Media file has no source',
-                422
-            );
-        const stat = await fs.stat(file.path).catch(() => {
-            throw new PlaybackError(
-                'MEDIA_NOT_FOUND',
-                'Media file is unavailable',
-                404
-            );
-        });
-        const key = sourceVersion(file.path, stat, this.ffprobe);
-        const cached = this.probes.get(key);
-        if (cached) {
-            if (priority === 0) this.scheduler.promote('probe', key);
-            return cached;
-        }
-        const stored = preparedMetadata(await this.storedMetadata(file), key);
-        if (stored) {
-            if (stored.keyframes) {
-                const timelineKey = this.timelineKey(stored.media, stored.keyframes.videoIndex, key);
-                void this.timelines.get(timelineKey, async () => stored.keyframes!.times);
-            }
-            if (this.probes.size >= 128) this.probes.delete(this.probes.keys().next().value!);
-            this.probes.set(key, Promise.resolve(stored.media));
-            return stored.media;
-        }
-        this.oblecto.mediaAnalyser?.queueFile(file);
-        let probe = this.probes.get(key);
-        if (!probe) {
-            probe = this.scheduler.submit(
-                'probe',
-                this.lifetime.signal,
-                async () => {
-                    const data = JSON.parse(
-                        await run(
-                            this.ffprobe,
-                            [
-                                '-v',
-                                'error',
-                                '-show_streams',
-                                '-show_format',
-                                '-of',
-                                'json',
-                                file.path!
-                            ],
-                            this.lifetime.signal
-                        )
-                    ) as { format?: { duration?: string }; streams: Track[] };
-                    const duration = Number(
-                        data.format?.duration ?? file.duration
-                    );
-                    if (
-                        !Number.isFinite(duration) ||
-                        duration <= 0 ||
-                        duration > 7 * 86400
-                    )
-                        throw new PlaybackError(
-                            'UNSUPPORTED_MEDIA',
-                            'A finite media duration is required',
-                            422
-                        );
-                    return {
-                        path: file.path!,
-                        duration,
-                        size: stat.size,
-                        container: (
-                            file.extension ??
-                            file.path!.split('.').at(-1) ??
-                            ''
-                        ).toLowerCase(),
-                        streams: data.streams
-                    };
-                },
-                priority,
-                key
-            );
-            if (this.probes.size >= 128)
-                this.probes.delete(this.probes.keys().next().value!);
-            this.probes.set(key, probe);
-            void probe.catch(() => this.probes.delete(key));
-        }
-        return probe;
+    analyseFile(file: File, signal: AbortSignal = this.lifetime.signal): Promise<void> {
+        return this.preparation.analyseFile(file, signal);
     }
-    private timelineKey(media: Media, videoIndex: number, source: string): string {
-        return JSON.stringify([source, videoIndex, media.duration]);
-    }
-    /** Low-priority library analysis persists complete metadata; playback remains available meanwhile. */
-    async analyseFile(file: File, signal: AbortSignal = this.lifetime.signal): Promise<void> {
-        if (!file.path || (file.host && file.host !== 'local')) return;
-        const source = sourceVersion(file.path, await fs.stat(file.path), this.ffprobe);
-        const stored = preparedMetadata(await this.storedMetadata(file), source);
-        if (stored && (stored.keyframes || !stored.media.streams.some(track => track.codec_type === 'video' && !track.disposition?.attached_pic))) return;
-        const media = await waitFor(this.probe(file, 1), signal);
-        const video = media.streams.find(track => track.codec_type === 'video' && !track.disposition?.attached_pic);
-        let keyframes = null;
-        if (video) {
-            try { keyframes = { videoIndex: video.index, times: await this.keyframeTimeline(media, video.index, signal, 1) }; }
-            catch (error) { if (signal.aborted) throw error; }
-        }
-        if (!signal.aborted && sourceVersion(file.path, await fs.stat(file.path), this.ffprobe) === source)
-            await file.update({
-                playbackMetadata: {
-                    version: 1, source, media, keyframes
-                }
-            });
-    }
-    private async keyframeTimeline(media: Media, videoIndex: number, signal: AbortSignal, priority = 0): Promise<number[]> {
-        const stat = await fs.stat(media.path);
-        const key = this.timelineKey(media, videoIndex, sourceVersion(media.path, stat, this.ffprobe));
-        if (priority === 0) this.scheduler.promote('keyframes', key);
-        return waitFor(this.timelines.get(key, async () => {
-            const output = await this.scheduler.submit('keyframes', this.lifetime.signal, () => run(this.ffprobe, [
-                '-v', 'error', '-select_streams', String(videoIndex), '-skip_frame', 'nokey',
-                '-show_frames', '-show_entries', 'frame=best_effort_timestamp_time', '-of', 'json', media.path
-            ], this.lifetime.signal), priority, key);
-            const data = JSON.parse(output) as { frames: Array<{ best_effort_timestamp_time: string }> };
-            const times = data.frames.map(frame => Number(frame.best_effort_timestamp_time))
-                .filter(time => Number.isFinite(time) && time >= 0 && time < media.duration)
-                .sort((a, b) => a - b).filter((time, index, times) => index === 0 || time > times[index - 1]);
-            if (!times.length || times[0] > 0.05) throw new Error('No usable keyframe timeline');
-            return times;
-        }), signal);
-    }
-    async prepare(
-        media: Media,
-        options: PlaybackOptions,
-        signal: AbortSignal
-    ): Promise<PlaybackPlan> {
-        const plan = planPlayback(
-            media,
-            options,
-            this.oblecto.config.streaming?.defaultTargetLanguageCode
-        );
-        if (plan.videoOperation === 'copy' && plan.method !== 'direct' && plan.video) {
-            try {
-                const times = await this.keyframeTimeline(media, plan.video.index, signal);
-                plan.boundaries = [0];
-                for (const time of times)
-                    if (time - plan.boundaries.at(-1)! >= 3.95)
-                        plan.boundaries.push(time);
-                plan.boundaries.push(media.duration);
-            } catch (error) {
-                if (signal.aborted) throw error;
-                return planPlayback(
-                    media,
-                    { ...options, quality: 'auto' },
-                    this.oblecto.config.streaming?.defaultTargetLanguageCode
-                );
-            }
-        }
-        return plan;
+    prepare(media: Media, options: PlaybackOptions, signal: AbortSignal): Promise<PlaybackPlan> {
+        return this.preparation.prepare(media, options, signal);
     }
     create(
         file: File,

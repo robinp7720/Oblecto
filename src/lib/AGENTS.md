@@ -7,6 +7,7 @@ What lives here
 - Library browsing, facets, typed credits, related titles and watch predicates (`library/`). Keep HTTP parsing, cursor encoding and protocol-specific response formatting in the API adapters; shared library services must not import REST route helpers.
 - Queue and maintenance job tracking (`queue/`, `maintenance/`).
 - Playback sessions and transcoding (`playback/`, see `docs/STREAMING.md`).
+- Playback preparation (`playback/MediaPreparation.ts`) receives explicit scheduling, lifetime and persistence dependencies. Keep session/HTTP/database-model access in `PlaybackService` adapters; shared scans use the service shutdown signal, while individual viewers cancel only their wait.
 - Accounts: tokens, permissions, sign-in policy and throttling (`auth/`); avatars, preferences,
   passwords and favourites (`users/`).
 - Settings validation and the config writer (`settings/`), local network and CORS rules (`network/`).
