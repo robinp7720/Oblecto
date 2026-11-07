@@ -1,3 +1,4 @@
+import { libraryStatistics } from '../../../../lib/statistics/libraries.js';
 import type { Express } from 'express';
 import type Oblecto from '../../../../lib/oblecto/index.js';
 import type { OblectoRequest } from '../../index.js';
@@ -20,6 +21,9 @@ export default (server: Express, oblecto: Oblecto): void => {
             });
         }
     }
-    server.get('/api/v1/statistics/server/library', auth.requiresPermission('statistics.view'), async (_req, res) => { res.send(await queries.library()); });
+    server.get('/api/v1/statistics/server/library', auth.requiresPermission('statistics.view'), async (_req, res) => {
+        const [totals, libraries] = await Promise.all([queries.library(), libraryStatistics(oblecto.database, oblecto.config)]);
+        res.send({ ...totals, libraries });
+    });
     server.get('/api/v1/statistics/server/health', auth.requiresPermission('statistics.view'), async (req, res) => { res.send(await queries.health(readPeriod(req.query))); });
 };

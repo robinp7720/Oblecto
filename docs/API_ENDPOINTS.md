@@ -163,6 +163,7 @@ Contract: [settings and system](API.md#settings--system-v1). Sources: [settings.
 | `PATCH /api/v1/settings/:section` | `settings.manage` | Section update | Updated scrubbed section |
 | `POST /api/v1/settings/providers/:provider/test` | `settings.manage` | Provider `themoviedb`, `tvdb`, `fanart.tv`; no body | `{ ok, code, message }`; provider failure remains 200 |
 | `GET /api/v1/libraries` | User | None | `{ movies: configuration, tvshows: configuration }` |
+| `GET /api/v1/libraries/statistics` | `libraries.manage` | None | `{ libraries }`; current local inventory for each configured folder; see [definitions](API.md#per-folder-inventory) |
 | `GET /api/v1/libraries/:type` | User | Library type | Directory array, e.g. `[{ path }]` |
 | `PATCH /api/v1/libraries/:type` | `libraries.manage` | Nonempty partial library configuration | Updated library section |
 | `POST /api/v1/libraries/:type/paths` | `libraries.manage` | `{ path }` | Updated directory array; duplicate: 409 |
@@ -213,7 +214,7 @@ Contract: [statistics](API.md#statistics). Source: [statistics.ts](../src/submod
 | `GET /api/v1/statistics/me/history` | User | `from,to,limit,cursor` | `{ items, nextCursor, collection }`; ignores supplied user ID |
 | `GET /api/v1/statistics/server/summary` | `statistics.view` | `from,to,userId?` | Summary, optional viewer breakdown |
 | `GET /api/v1/statistics/server/history` | `statistics.view` | `from,to,userId?,limit,cursor` | `{ items, nextCursor, collection }` |
-| `GET /api/v1/statistics/server/library` | `statistics.view` | None | `{ movies, series, episodes, files, localBytes, remoteFiles, missingSize, problematicFiles }` |
+| `GET /api/v1/statistics/server/library` | `statistics.view` | None | `{ movies, series, episodes, files, localBytes, remoteFiles, missingSize, problematicFiles, libraries }` |
 | `GET /api/v1/statistics/server/health` | `statistics.view` | `from,to`; always server-wide | `{ resolution, buckets, failures }` |
 
 ## Web assets and other transports

@@ -23,7 +23,7 @@ Oblecto is a self-hosted media server for the movies and TV shows you already ow
 - Direct play, and on-the-fly conversion to HLS with FFmpeg when a device needs it.
 - A Jellyfin-compatible API on port 8096, so Jellyfin apps on phones, TVs and desktops can sign in, browse, keep favourites and play.
 - Accounts with groups and permissions, per-user preferences and avatars, and an optional profile picker on the local network.
-- Personal viewing statistics and full session history, plus administrator library and playback-health dashboards. Open Statistics from the account menu, or Settings → Statistics with `statistics.view`. Tracking begins after upgrade; see [metric definitions and retention](docs/API.md#statistics).
+- Personal viewing statistics and full session history, plus administrator library and playback-health dashboards. Per-folder title counts, indexed files, known storage and problem counts appear in Settings → Statistics and beside folders in Settings → Libraries; overlapping folders include the same files. Open Statistics from the account menu, or Settings → Statistics with `statistics.view`. Tracking begins after upgrade; see [metric definitions and retention](docs/API.md#statistics).
 - A problem files page for anything that could not be identified or read, with retry.
 - Optional [federation between Oblecto servers](docs/FEDERATION.md), with mutual pairing, library synchronization and remote playback, plus seedbox import.
 

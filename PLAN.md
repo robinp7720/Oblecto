@@ -8,7 +8,7 @@ Status of the feature tracks this file used to plan in detail, as of 23 October 
 |---|---|
 | Adaptive playback defaults/240p, audio-only conversion, delivery overlap, bounded sequential HLS (opt-in), persistent preparation and constrained-network benchmark | `src/lib/playback/`, migration 0017, [streaming](docs/STREAMING.md) |
 | Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/submodules/REST/routes/helpers/facets.ts`, `src/lib/playback/`, migration 0015 |
-| Viewing history, personal/admin statistics, library totals and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
+| Viewing history, personal/admin statistics, server and per-folder library totals in statistics/library settings, and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
 | Focused TV detail pages: manager-only episode matching workspace, scoped season actions, library viewing progress, spoilers, chapters, crew and provider links | `src/lib/series/SeriesExtras.ts`, `Oblecto-Web/src/components/details/` |
 | Movie/series favourites and private watchlists, episode favourites, and saved-list library filters | `src/lib/users/`, `src/submodules/REST/routes/movies.ts`, `Oblecto-Web/src/components/details/MovieSaveButtons.vue` |
@@ -44,5 +44,7 @@ Status of the feature tracks this file used to plan in detail, as of 23 October 
 - **Jellyfin.** QuickConnect, device and session lists, remote control of Jellyfin apps, creating and deleting users, library folder management, and creating collections and playlists. See `src/lib/embyEmulation/PLAN.md` for the full list.
 
 ## Change log
+
+- 2026-11-07: Added current per-folder local inventory to Statistics and Library settings, with distinct title counts, known storage, missing sizes and problem counts.
 
 - 2026-10-23: Improved adaptive quality, audio-only conversion, encoding/delivery overlap and cache fairness; added opt-in sequential HLS windows, persistent playback preparation, diagnostics and constrained-network acceptance tooling.

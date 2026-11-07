@@ -6,6 +6,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 ### New
 
+- Per-library folder statistics in Settings → Statistics and Settings → Libraries: distinct title counts, indexed local files, known storage, missing sizes and problem files. Library managers can read folder inventory without viewing-history access. Nested folders include descendants; overlapping totals are not additive.
+
 - Desktop-client API documentation with a complete native endpoint index, response models, HTTP examples, playback lifecycle, realtime integration and an implementation checklist.
 - Series and episode pages now use focused banners. Series add private favourites/watchlists with TV-library filters, trailers, regional ratings, library viewing progress and season watch actions. Episode matching lives in a separate Library tools workspace restricted to library managers; exact TMDB IDs handle anime season-order differences, with uncertain matches, specials and future releases separated from absent episodes.
 - Episode pages add favourites, remaining/finish time, a nearby-season navigator, and chapter playback when file chapters exist. Both page types expose full crew and IMDb/TMDB/TVDB links.

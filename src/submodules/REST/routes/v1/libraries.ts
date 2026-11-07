@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
+import { libraryStatistics } from '../../../../lib/statistics/libraries.js';
 import { Express, Request, Response, NextFunction } from 'express';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
@@ -17,6 +18,10 @@ export default (server: Express, oblecto: any) => {
             libs[lib] = oblecto.config[lib as keyof any];
         });
         res.send(libs);
+    });
+
+    server.get('/api/v1/libraries/statistics', authMiddleWare.requiresPermission('libraries.manage'), async (_req, res) => {
+        res.send({ libraries: await libraryStatistics(oblecto.database, oblecto.config) });
     });
 
     // GET /api/v1/libraries/:type

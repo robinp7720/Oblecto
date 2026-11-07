@@ -691,6 +691,8 @@ Manage media libraries and sources. Mutations follow the same persistence guaran
 
 - **List Libraries:** `GET /api/v1/libraries`
   - **Response:** `{ "movies": { ... }, "tvshows": { ... } }`, the complete library configuration sections.
+- **Folder Statistics:** `GET /api/v1/libraries/statistics`
+  - Requires `libraries.manage`; returns `{ libraries }` with the [per-folder inventory](#per-folder-inventory) described below. This does not grant access to server viewing history or playback health.
 - **Get Library Paths:** `GET /api/v1/libraries/:type` (`movies` | `tvshows`)
   - **Response:** Array of directory objects (e.g., `[{ "path": "/path/to/media" }]`).
 - **Update Library Config:** `PATCH /api/v1/libraries/:type`
@@ -944,7 +946,7 @@ Collection begins after migration 0012. Existing progress is not imported as wat
 | `GET /api/v1/statistics/me/history` | Signed-in user, own data only | `{ items, nextCursor, collection }` |
 | `GET /api/v1/statistics/server/summary` | `statistics.view` | Summary, including viewer breakdown |
 | `GET /api/v1/statistics/server/history` | `statistics.view` | `{ items, nextCursor, collection }` |
-| `GET /api/v1/statistics/server/library` | `statistics.view` | `{ movies, series, episodes, files, localBytes, remoteFiles, missingSize, problematicFiles }` |
+| `GET /api/v1/statistics/server/library` | `statistics.view` | `{ movies, series, episodes, files, localBytes, remoteFiles, missingSize, problematicFiles, libraries }` |
 | `GET /api/v1/statistics/server/health` | `statistics.view` | `{ resolution, buckets, failures }` |
 
 ### Filters and paging
@@ -999,6 +1001,47 @@ server's user, while the serving peer contributes local operational load.
 
 Library totals are current, not historical. Files are counted once, independent of movie/episode joins;
 local byte totals exclude remote files and unknown sizes. `missingSize` counts files with null size.
+
+### Per-folder inventory
+
+The server library response adds `libraries`, also available as `{ libraries }` from
+`GET /api/v1/libraries/statistics` for library managers. Both read the current configured movie and TV
+folders on every request. Rows follow configuration order (movies first, then TV), including empty folders:
+
+```json
+{
+  "type": "movies",
+  "path": "/media/movies",
+  "movies": 12,
+  "series": 0,
+  "episodes": 0,
+  "files": 14,
+  "localBytes": 15032385536,
+  "missingSize": 1,
+  "problematicFiles": 1
+}
+```
+
+`type` is `movies` or `tvshows`; `path` is the configured folder string. Counts are current indexed
+local inventory, independent of date/viewer filters. Local files have a null, empty, or `local` host.
+Files and known byte sizes are counted once per folder regardless of title associations; unmatched
+files and ignored problem files are included. `missingSize` counts null sizes. Movie, episode and
+series counts are distinct linked records, so alternate versions do not inflate title counts and a
+multi-episode file can contribute multiple episodes. A series counts when a linked episode has a file
+in the folder. Titles without a local file in the folder do not count.
+
+Membership includes all descendants, using lexical paths and directory boundaries on the server's
+platform. Relative paths resolve from the server working directory; trailing separators and `.`/`..`
+segments are normalized. Symlinks are not resolved and disk availability is not checked. Remote files
+never contribute to folder rows. Overlapping folders include the same files and titles, so rows must
+not be summed to reproduce the server totals. Removing a configured folder removes its row immediately;
+server totals can still include indexed files outside configured folders until cleanup.
+
+Settings → Statistics shows this breakdown with `statistics.view`. Settings → Libraries shows each
+folder's counts with `libraries.manage`, independently of general settings access, and provides refresh
+and retry controls. Folder changes refresh those counts. No historical snapshots or migration are needed.
+
+### Playback-health retention
 
 Health samples every 15 seconds. Each bucket has `{ at, samples, means, peaks }`; gauge fields are
 `viewers`, `sessions`, `direct`, `remux`, `transcode`, `encoders`, `queue`, and `cacheBytes`. Viewers are

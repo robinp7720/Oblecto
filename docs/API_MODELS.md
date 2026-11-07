@@ -205,6 +205,8 @@ File marker records are `{ id, duration, chapters, segments, trickplay }`; null 
 
 The [REST reference](API.md#settings--system-v1) defines configuration, maintenance jobs and status. Settings are section objects matching [res/config.json](../res/config.json) and [IConfig](../src/interfaces/config.ts); settings writes accept only the sections listed in the REST reference. Read existing values and PATCH only changed fields. Configuration responses contain sensitive administration data and are not a public server-discovery contract.
 
+The [per-folder inventory](API.md#per-folder-inventory) defines the `libraries` array shared by server statistics and library-manager statistics: configured type/path, distinct linked titles, indexed local files, known bytes, missing sizes and problem counts. Overlapping folder rows are non-additive.
+
 The [statistics reference](API.md#statistics) defines summary totals, daily/title/viewer breakdowns, session history, health buckets, collection degradation and retention. History is cursor-paged and includes historical title snapshots, so a missing current item must not discard a history row. Its ISO dates and UTC reporting periods are distinct from realtime epoch-millisecond timestamps.
 
 Wire-shape sources: [models](../src/models), [REST routes](../src/submodules/REST/routes), [playback types](../src/lib/playback/types.ts), [realtime types](../src/lib/realtime/types.ts).
