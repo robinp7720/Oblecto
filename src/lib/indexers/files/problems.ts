@@ -4,11 +4,10 @@ import path from 'path';
 import type { File, ProblemStage } from '../../../models/file.js';
 import type Oblecto from '../../oblecto/index.js';
 
-type ProblemOblecto = Pick<Oblecto, 'config' | 'queue'> & {
-    realTimeController?: Pick<Oblecto['realTimeController'], 'broadcast'>;
-};
+type ProblemEvents = { realTimeController?: Pick<Oblecto['realTimeController'], 'broadcast'> };
+type ProblemOblecto = Pick<Oblecto, 'config' | 'queue'> & ProblemEvents;
 
-const broadcast = (oblecto: ProblemOblecto, file: File): void => {
+const broadcast = (oblecto: ProblemEvents, file: File): void => {
     oblecto.realTimeController?.broadcast('indexer', {
         event: 'problem',
         fileId: file.id,
@@ -25,7 +24,7 @@ const broadcast = (oblecto: ProblemOblecto, file: File): void => {
  * @param stage - Stage that failed
  * @param message - Human readable reason
  */
-export async function markProblematic(oblecto: ProblemOblecto, file: File, stage: ProblemStage, message: string): Promise<void> {
+export async function markProblematic(oblecto: ProblemEvents, file: File, stage: ProblemStage, message: string): Promise<void> {
     file.set({
         problematic: true,
         problemStage: stage,
@@ -70,7 +69,7 @@ function withoutPath(message: string, filePath: string | null): string {
  * @param file - File that was processed successfully
  * @param stage - Stage that succeeded
  */
-export async function clearProblem(oblecto: ProblemOblecto, file: File, stage: ProblemStage): Promise<void> {
+export async function clearProblem(oblecto: ProblemEvents, file: File, stage: ProblemStage): Promise<void> {
     if (!file.problematic) return;
     if (file.problemStage !== null && file.problemStage !== undefined && file.problemStage !== stage) return;
 

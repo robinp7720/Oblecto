@@ -2,11 +2,13 @@ import IdentificationError from '../../../errors/IdentificationError.js';
 import EpisodeIdentifier, { EpisodeGuessitIdentification, EpisodeIdentification } from '../EpisodeIdentifier.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { SeriesIdentification } from '../SeriesIdentifer.js';
 
-export default class TmdbEpisodeIdentifier extends EpisodeIdentifier {
-    constructor(oblecto: Oblecto) {
+type ServiceDependencies = Dependencies<'tmdb', never>;
+
+export default class TmdbEpisodeIdentifier extends EpisodeIdentifier<ServiceDependencies> {
+    constructor(oblecto: ServiceDependencies) {
         super(oblecto);
     }
     /**

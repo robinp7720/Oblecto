@@ -147,7 +147,7 @@ cd Oblecto
 npm ci
 npm run build:web
 OBLECTO_CONFIG_PATH=/path/to/dev-config.json npm run dev
-npm run verify           # lint, typecheck and tests, as CI runs them
+npm run verify           # source lint, backend + test typecheck, and unit/integration tests
 ```
 
 `npm run build` builds both web apps and the server into `dist/`. `npm run test:network` runs the tests that call the real metadata services. The Playwright suites run with `npm run test:player:ui` and `npm run test:playback:browser`.

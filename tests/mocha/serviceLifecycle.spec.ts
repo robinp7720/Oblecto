@@ -88,7 +88,7 @@ describe('Service lifecycle', () => {
 
     it('keeps the database open while an accepted job enqueues and finishes follow-up work', async () => {
         const lifecycle = new ServiceLifecycle();
-        const queue = new Queue(1);
+        const queue = new Queue<{ child: null; parent: null }>(1);
         const running = Promise.withResolvers<void>();
         const release = Promise.withResolvers<void>();
         const events: string[] = [];

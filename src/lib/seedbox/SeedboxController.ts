@@ -3,6 +3,7 @@ import logger from '../../submodules/logger/index.js';
 import { Movie } from '../../models/movie.js';
 import { File } from '../../models/file.js';
 import Queue from '../queue/index.js';
+import type { ImportJobs } from '../queue/jobs.js';
 import { basename, parse, dirname } from 'path';
 import path from 'path';
 import { rename } from 'fs/promises';
@@ -13,7 +14,7 @@ import type Oblecto from '../oblecto/index.js';
 export default class SeedboxController {
     public oblecto: Oblecto;
     public seedBoxes: Seedbox[];
-    public importQueue: Queue;
+    public importQueue: Queue<ImportJobs>;
     private poller?: NodeJS.Timeout;
     private starting?: Promise<void>;
     private polling?: Promise<void>;
@@ -29,7 +30,7 @@ export default class SeedboxController {
         this.oblecto = oblecto;
         this.seedBoxes = [];
 
-        this.importQueue = new Queue(oblecto.config.seedboxImport.concurrency);
+        this.importQueue = new Queue<ImportJobs>(oblecto.config.seedboxImport.concurrency);
 
         this.importQueue.registerJob('importMovie', async (job: { seedbox: Seedbox; origin: string; destination: string }) => await this.importMovie(job.seedbox, job.origin, job.destination));
         this.importQueue.registerJob('importEpisode', async (job: { seedbox: Seedbox; origin: string; destination: string }) => await this.importEpisode(job.seedbox, job.origin, job.destination));
@@ -143,7 +144,7 @@ export default class SeedboxController {
             });
         } catch (e) {
             logger.error( `Could not download ${origin}:`, e);
-            
+
             this.oblecto.realTimeController.broadcast('seedbox', {
                 event: 'import_error',
                 seedbox: seedbox.name,

@@ -240,6 +240,7 @@ Notes
 - When extending or modifying endpoints, update this file and the change log below.
 
 Change log
+- 2026-11-07: Typed item image tags and dispatched metadata refresh through the typed backend job map with model-specific payloads. Existing refresh permissions, 204 response and DTO fields remain aligned with the bundled Jellyfin 12.1.0 OpenAPI spec. Shared typed route fixtures now support full test typechecking.
 - 2026-11-07: Moved watch predicates, typed credits and related-title ranking into `src/lib/library/`, removing imports from REST route helpers. Native genre matching now uses the same whole-name predicate as Jellyfin. Contract tests preserve viewer isolation, 0.9 completion, whole-series played/unplayed semantics (including empty series), resumable filtering and grouped credit roles. Endpoint shapes and parameters remain aligned with the bundled Jellyfin 12.1.0 spec and web filter dialog.
 - 2026-11-07: Separated HTTP construction from awaited listener startup; preserved optional-port failure behavior. Shutdown stops intake and disconnects sockets before draining shared work, then awaits HTTP closure. Pending socket authentication cannot admit a connection during shutdown. Endpoint shapes remain aligned with the bundled Jellyfin 12.1.0 OpenAPI spec.
 - 2026-01-18: Added image-type handling for /items/{id}/images/* with size selection + episode thumb tags; added regression test for episode Thumb tags; created PLAN.md + AGENTS.md for Jellyfin emulation tracking.

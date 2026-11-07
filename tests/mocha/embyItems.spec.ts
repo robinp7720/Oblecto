@@ -1,3 +1,4 @@
+import { associatedFile } from '../helpers/models.js';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
@@ -81,7 +82,7 @@ describe('Emby items routes', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
 
         // Initialize models
@@ -101,7 +102,7 @@ describe('Emby items routes', () => {
         Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
         TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
         Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
-        
+
         Episode.hasMany(File);
         File.belongsTo(Episode);
         Movie.hasMany(File);
@@ -116,8 +117,8 @@ describe('Emby items routes', () => {
 
         ep1_1 = await Episode.create({
             episodeName: 'S1E1',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: series1.id
         });
 
@@ -126,7 +127,7 @@ describe('Emby items routes', () => {
              releaseDate: '2020-01-01'
         });
 
-        file1 = await File.create({ path: '/tmp/movie.mkv', MovieId: movie1.id });
+        file1 = await associatedFile({ path: '/tmp/movie.mkv', MovieId: movie1.id });
     });
 
     describe('GET /items', () => {
@@ -208,13 +209,13 @@ describe('Emby items routes', () => {
             itemsRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('POST /items/:mediaid/playbackinfo');
-            const req = { 
+            const req = {
                 params: { mediaid: formatId(movie1.id, 'movie') },
                 headers: { emby: { Token: 'test-token' } },
                 query: {}
             };
             const res = makeRes();
-            
+
             // Mock session for token
             mockEmbyEmulation.sessions['test-token'] = { Id: userIdUuid };
 
@@ -265,7 +266,7 @@ describe('Emby items routes', () => {
             for (const route of routes) {
                 const [method, path] = route.split(' ');
                 const handler = server.handlers.get(route);
-                
+
                 if (!handler) {
                     throw new Error(`Handler not found for ${route}`);
                 }
@@ -297,15 +298,15 @@ describe('Emby items routes', () => {
                 assert.equal(res.statusCode, 404, `Should be 404 for ${route}`);
             }
         });
-        
+
         it('should return 204 for post actions', async () => {
              const server = makeServer();
             itemsRoutes(server as any, mockEmbyEmulation);
-            
+
             const routes = [
                 'POST /items/remotesearch/apply/:itemid'
             ];
-            
+
             for (const route of routes) {
                 const handler = server.handlers.get(route);
                 const req = { params: { itemid: '1' } };

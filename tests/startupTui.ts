@@ -1,3 +1,5 @@
+import type Queue from '../src/lib/queue/index.js';
+import type { BackendJobs } from '../src/lib/queue/jobs.js';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
 import { startupConfig } from './startupConfig.js';
@@ -13,18 +15,19 @@ try {
     const release = Promise.withResolvers<void>();
     const events: string[] = [];
     const app = core.oblecto;
-    app.queue.registerJob('shutdownChild', async () => {
+    const queue = app.queue as Queue<BackendJobs & { shutdownChild: null; shutdownParent: null }>;
+    queue.registerJob('shutdownChild', async () => {
         await app.database.query('SELECT 1');
         events.push('child');
     });
-    app.queue.registerJob('shutdownParent', async () => {
+    queue.registerJob('shutdownParent', async () => {
         running.resolve();
         await release.promise;
         await app.database.query('SELECT 1');
         events.push('parent');
-        app.queue.queueJob('shutdownChild', null);
+        queue.queueJob('shutdownChild', null);
     });
-    app.queue.queueJob('shutdownParent', null);
+    queue.queueJob('shutdownParent', null);
     await running.promise;
     let closed = false;
     const closing = core.close().then(() => { closed = true; });

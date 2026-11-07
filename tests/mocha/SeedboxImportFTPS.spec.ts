@@ -62,7 +62,7 @@ describe('SeedboxImportFTPS', function () {
                 if (!sizeAvailable) throw new Error('SIZE unsupported');
                 return 100;
             });
-            mock.method(Client.prototype, 'trackProgress', handler => {
+            mock.method(Client.prototype, 'trackProgress', (handler: Parameters<Client['trackProgress']>[0]) => {
                 handler?.({ name: 'movie.mkv', type: 'download', bytes: 50, bytesOverall: 50 });
             });
             const progress: number[][] = [];

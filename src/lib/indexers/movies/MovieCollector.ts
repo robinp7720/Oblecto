@@ -1,16 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, jsdoc/require-returns-description */
+/* eslint-disable jsdoc/require-returns-description */
 import recursive from 'recursive-readdir';
 import path from 'path';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue', 'fileExtensions' | 'movies'>;
 
 export default class MovieCollector {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

@@ -1,6 +1,5 @@
 import { Op } from 'sequelize';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars */
-import { Express, Request, Response, NextFunction } from 'express';
+import { Express, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 
 import authMiddleWare from '../middleware/auth.js';
@@ -30,7 +29,7 @@ export default (server: Express, oblecto: Oblecto) => {
         const combined_params = req.combined_params!;
         const AllowedOrders = ['desc', 'asc'];
 
-        const order = String(combined_params.order ?? '').toLowerCase();
+        const order = (typeof combined_params.order === 'string' ? combined_params.order : '').toLowerCase();
 
         if (AllowedOrders.indexOf(order) === -1)
             return res.status(400).send({ message: 'Sorting order is invalid' });
@@ -50,7 +49,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization!.user.id }
+                    where: { userId: req.authorization!.user!.id }
                 }
             ],
             order: [[String(req.params.sorting), order]],
@@ -65,7 +64,7 @@ export default (server: Express, oblecto: Oblecto) => {
     // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
     // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/episode/:id/banner', async function (req: OblectoRequest, res: Response) {
-        const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
+        const episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         if (!episode) return res.status(404).send({ message: 'Episode does not exist' });
 
@@ -75,7 +74,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.put('/episode/:id/banner', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
-        const episode = await Episode.findByPk(req.params.id as string, { include: [File] });
+        const episode = await Episode.findByPk(req.params.id, { include: [File] });
 
         if (!episode) {
             return res.status(404).send({ message: 'Episode does not exist' });
@@ -87,17 +86,17 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Endpoint to list all stored files for the specific episode
-    server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
-        const episode: any = await Episode.findByPk(req.params.id as string, { include: [File] });
+    server.get('/episode/:id/files', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
+        const episode = await Episode.findByPk(req.params.id, { include: [File] });
 
-        res.send(episode.Files);
+        res.send(episode?.get('Files') ?? []);
     });
 
     // Endpoint to retrieve episode details based on the local episode ID
     server.get('/episode/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
 
-        const episode = await Episode.findByPk(req.params.id as string, {
+        const episode = await Episode.findByPk(req.params.id, {
             include: [
                 {
                     model: File,
@@ -107,13 +106,13 @@ export default (server: Express, oblecto: Oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization!.user.id },
+                    where: { userId: req.authorization!.user!.id },
                 }
             ]
         });
 
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
-        const favourites = await favouritesAmong(Number(req.authorization!.user.id), [{ type: 'episode', id: episode.id }]);
+        const favourites = await favouritesAmong(Number(req.authorization!.user!.id), [{ type: 'episode', id: episode.id }]);
         res.send({
             ...episode.toJSON(),
             credits: await creditsFor('episode', episode.id, Episode.sequelize),
@@ -123,25 +122,25 @@ export default (server: Express, oblecto: Oblecto) => {
 
     server.put('/episode/:id/favourite', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         if (typeof req.body?.favourite !== 'boolean') return res.status(400).send({ message: 'favourite must be a boolean' });
-        const episode = await Episode.findByPk(req.params.id as string, { attributes: ['id'] });
+        const episode = await Episode.findByPk(req.params.id, { attributes: ['id'] });
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
-        await setFavourite(Number(req.authorization!.user.id), 'episode', episode.id, req.body.favourite as boolean);
+        await setFavourite(Number(req.authorization!.user!.id), 'episode', episode.id, req.body.favourite);
         res.send({ favourite: req.body.favourite });
     });
 
     server.put('/episode/:id/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         if (typeof req.body?.watched !== 'boolean') return res.status(400).send({ message: 'watched must be a boolean' });
         const watched: boolean = req.body.watched;
-        const episode = await Episode.findByPk(req.params.id as string, { attributes: ['id'] });
+        const episode = await Episode.findByPk(req.params.id, { attributes: ['id'] });
         if (!episode) return res.status(404).send({ message: 'Episode not found' });
-        const userId = Number(req.authorization!.user.id);
+        const userId = Number(req.authorization!.user!.id);
         await setPlayed(userId, 'episode', episode.id, watched);
         const track = await TrackEpisode.findOne({ where: { userId, episodeId: episode.id } });
         res.send({ watched, track });
     });
 
     server.get('/episode/:id/context', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const current = await Episode.findByPk(req.params.id as string);
+        const current = await Episode.findByPk(req.params.id);
         if (!current) return res.status(404).send({ message: 'Episode not found' });
         const episodes = await Episode.findAll({
             where: { SeriesId: current.SeriesId },
@@ -154,7 +153,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization!.user.id }
+                    where: { userId: req.authorization!.user!.id }
                 }
             ]
         });
@@ -163,9 +162,9 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Endpoint to retrieve the episode next in series based on the local episode ID
-    server.get('/episode/:id/next', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/episode/:id/next', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         // search for attributes
-        const results = await Episode.findByPk(req.params.id as string);
+        const results = await Episode.findByPk(req.params.id);
 
         if (!results) {
             res.status(404).send({ message: 'Episode not found' });
@@ -204,7 +203,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization!.user.id }
+                    where: { userId: req.authorization!.user!.id }
                 }
             ]
         });
@@ -223,7 +222,7 @@ export default (server: Express, oblecto: Oblecto) => {
                     model: TrackEpisode,
                     required: true,
                     where: {
-                        userId: req.authorization!.user.id,
+                        userId: req.authorization!.user!.id,
                         progress: { [Op.lt]: 0.9 },
                         updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
                     },
@@ -236,7 +235,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/episodes/next', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const userId = req.authorization!.user.id;
+        const userId = req.authorization!.user!.id;
 
         // Episodes finished in the last week, most recent first
         const finished = await TrackEpisode.findAll({
@@ -256,7 +255,7 @@ export default (server: Express, oblecto: Oblecto) => {
             order: [['updatedAt', 'DESC']]
         });
 
-        const watched = finished.map(track => (track as any).Episode as Episode);
+        const watched = finished.map(track => track.get('Episode') as Episode);
         const seriesIds = [...new Set(watched.map(episode => episode.SeriesId).filter(id => id !== null))];
 
         if (!seriesIds.length) return res.send([]);

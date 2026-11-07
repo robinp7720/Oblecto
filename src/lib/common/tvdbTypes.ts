@@ -29,3 +29,11 @@ export type TvdbSeries = {
     imdbId?: string;
     zap2itId?: string;
 };
+
+export interface TvdbClient {
+    getSeriesByName(name: string): Promise<TvdbSeries[]>;
+    getSeriesById(id: number): Promise<TvdbSeries>;
+    getEpisodesBySeriesId(id: number): Promise<TvdbEpisode[]>;
+    getEpisodeById(id: number): Promise<TvdbEpisode>;
+    getSeriesPosters(id: number): Promise<Array<{ fileName: string }>>;
+}

@@ -1,5 +1,4 @@
 import MediaIdentifier from '../MediaIdentifier.js';
-import type Oblecto from '../../oblecto/index.js';
 import type { GuessitIdentification } from '../../../submodules/guessit.js';
 
 export interface SeriesIdentification {
@@ -10,8 +9,8 @@ export interface SeriesIdentification {
     overview?: string | null;
 }
 
-export default class SeriesIdentifier extends MediaIdentifier {
-    constructor(oblecto: Oblecto) {
+export default class SeriesIdentifier<D extends object = object> extends MediaIdentifier<D> {
+    constructor(oblecto: D) {
         super(oblecto);
     }
     /**

@@ -1,22 +1,23 @@
 import type { StatisticsReport } from '../statistics/accounting.js';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
-import mime from 'mime-types';
 import type { Request, Response } from 'express';
-import type Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
 import { File } from '../../models/file.js';
 import { Movie } from '../../models/movie.js';
 import { Episode } from '../../models/episode.js';
 import { PlaybackError, validateOptions } from './types.js';
 import type { Media, PlaybackOptions, PlaybackPlan, PlaybackTimings } from './types.js';
-import { renditionBandwidth, renditionCodecs } from './planner.js';
-import { run, Scheduler } from './process.js';
+import { trackOperations } from './planner.js';
+import { Scheduler } from './process.js';
 import { SegmentCache } from './cache.js';
 import { SegmentWindows } from './windows.js';
-import { sendFile } from './http.js';
+import { AssetDelivery } from './AssetDelivery.js';
+import { SegmentEncoder } from './SegmentEncoder.js';
 import { saveProgress } from './progress.js';
 import { MediaPreparation } from './MediaPreparation.js';
 import logger from '../../submodules/logger/index.js';
+
+type ServiceDependencies = Dependencies<'mediaAnalyser' | 'statistics', 'ffmpeg' | 'streaming' | 'transcoding'>;
 
 export type RemoteSessionData = {
     sessionId: string;
@@ -90,11 +91,11 @@ export class PlaybackService {
     private closing = false;
     private lifetime = new AbortController();
     private pendingPeers = new Set<RemotePlayback>();
-    private hardware?: Promise<string | null>;
+    private readonly delivery: AssetDelivery;
     private readonly preparation: MediaPreparation<File>;
     private creation = new Set<Promise<PlaybackSession>>();
     remoteFactory?: (host: string) => Promise<RemotePlayback>;
-    constructor(readonly oblecto: Oblecto) {
+    constructor(readonly oblecto: ServiceDependencies) {
         const config = oblecto.config.streaming;
         for (const [name, value] of Object.entries({
             concurrency: config?.encodingConcurrency ?? 2,
@@ -133,6 +134,21 @@ export class PlaybackService {
             config?.cacheDirectory
         );
         this.windows = new SegmentWindows(this.cache);
+        const encoder = new SegmentEncoder({
+            cache: this.cache,
+            ffmpeg: () => this.ffmpeg,
+            transcoding: () => this.oblecto.config.transcoding,
+            vaapiDevice: () => this.oblecto.config.streaming?.vaapiDevice
+        });
+        this.delivery = new AssetDelivery({
+            cache: this.cache,
+            scheduler: this.scheduler,
+            windows: this.windows,
+            encoder,
+            ffmpeg: () => this.ffmpeg,
+            encoderMode: () => this.oblecto.config.streaming?.encoderMode,
+            trickplaySheet: (file, index) => this.oblecto.mediaAnalyser?.trickplaySheet(file, index)
+        });
         this.idleMs = config?.idleTimeoutMs ?? 30 * 60 * 1000;
         this.timer = setInterval(() => {
             for (const s of this.sessions.values())
@@ -315,7 +331,7 @@ export class PlaybackService {
                 ['audio', 'subtitle'].includes(t.codec_type)
             ),
             qualities: s.plan.renditions,
-            operations: this.operations(s),
+            operations: trackOperations(s.plan),
             subtitleUrl:
                 s.plan.subtitle && !s.plan.burnSubtitles
                     ? url('subtitle.vtt')
@@ -476,12 +492,6 @@ export class PlaybackService {
         await this.scheduler.settled();
         await this.cache.close();
     }
-    private operations(s: PlaybackSession) {
-        return {
-            video: s.plan.videoOperation ?? (s.plan.video ? s.plan.method === 'transcode' ? 'encode' : 'copy' : 'none'),
-            audio: s.plan.audioOperation ?? (s.plan.audio ? s.plan.method === 'transcode' ? 'encode' : 'copy' : 'none')
-        };
-    }
     diagnostics(owner?: string): Record<string, unknown>[] {
         return [...this.sessions.values()]
             .filter(
@@ -508,7 +518,7 @@ export class PlaybackService {
                 bufferingReports: s.bufferingReports,
                 encodingSpeed: s.encodingSpeed,
                 delivery: { ...s.delivery },
-                operations: this.operations(s),
+                operations: trackOperations(s.plan),
                 failure: s.failure,
                 queueDepth: this.scheduler.queued,
                 activeEncoders: this.scheduler.active,
@@ -517,11 +527,11 @@ export class PlaybackService {
                     format:
                         s.plan.method === 'direct' ? s.media.container : 'hls',
                     videoCodec:
-                        this.operations(s).video === 'encode'
+                        trackOperations(s.plan).video === 'encode'
                             ? 'h264'
                             : s.plan.video?.codec_name,
                     audioCodec:
-                        this.operations(s).audio === 'encode'
+                        trackOperations(s.plan).audio === 'encode'
                             ? 'aac'
                             : s.plan.audio?.codec_name
                 }
@@ -538,7 +548,7 @@ export class PlaybackService {
         const sheet = /^trickplay-(\d+)\.jpg$/.exec(asset);
         if (sheet && !s.signal.signal.aborted) {
             s.touch();
-            return this.serveTrickplay(s, Number(sheet[1]), req, res);
+            return this.delivery.serveTrickplay(s, Number(sheet[1]), req, res);
         }
         if (revision !== s.revision || s.signal.signal.aborted)
             return Promise.reject(
@@ -549,7 +559,7 @@ export class PlaybackService {
                 )
             );
         s.touch();
-        const promise = this.serveAsset(s, asset, req, res).catch((error) => {
+        const promise = this.delivery.serve(s, asset, req, res).catch((error) => {
             if (!s.signal.signal.aborted && !res.destroyed) {
                 s.failure =
                     error instanceof PlaybackError
@@ -565,286 +575,6 @@ export class PlaybackService {
             .finally(() => s.operations.delete(promise))
             .catch(() => {});
         return promise;
-    }
-    private async encoder(): Promise<string | null> {
-        this.hardware ??= (async () => {
-            if (!this.oblecto.config.transcoding?.hardwareAcceleration)
-                return null;
-            const type = this.oblecto.config.transcoding.hardwareAccelerator;
-            const candidate =
-                type === 'cuda'
-                    ? 'h264_nvenc'
-                    : type === 'vaapi'
-                      ? 'h264_vaapi'
-                      : null;
-            if (!candidate) return null;
-            const available = await run(this.ffmpeg, [
-                '-hide_banner',
-                '-encoders'
-            ]).catch(() => '');
-            return available.includes(candidate) ? candidate : null;
-        })();
-        return this.hardware;
-    }
-    private async segment(
-        s: PlaybackSession,
-        rendition: string,
-        index: number,
-        output: string,
-        endIndex = index + 1,
-        signal = s.signal.signal,
-        window = false
-    ): Promise<void> {
-        const plan = s.plan;
-        const start = plan.boundaries[index];
-        const length = plan.boundaries[endIndex] - start;
-        const outputArgs = window
-            ? ['-f', 'hls', '-hls_time', '2', '-hls_playlist_type', 'vod', '-hls_flags', 'temp_file', '-start_number', String(index), '-hls_segment_filename', `${output}/%d.ts`, `${output}/index.m3u8`]
-            : ['-f', 'mpegts', output];
-        const quality = plan.renditions.find((r) => r.id === rendition)!;
-        const args = [
-            '-hide_banner',
-            '-loglevel',
-            'error',
-            '-nostdin',
-            '-y',
-            '-ss',
-            String(start),
-            '-i',
-            s.media.path,
-            '-t',
-            String(length)
-        ];
-        if (plan.video) args.push('-map', `0:${plan.video.index}`);
-        else args.push('-vn');
-        if (plan.audio) args.push('-map', `0:${plan.audio.index}`);
-        else args.push('-an');
-        args.push('-sn');
-        const encode = async (hardware: string | null) => {
-            const command = [...args];
-            if (this.operations(s).video !== 'encode') {
-                if (plan.video) command.push('-c:v', 'copy');
-                if (plan.audio) command.push('-c:a', this.operations(s).audio === 'copy' ? 'copy' : 'aac');
-                if (this.operations(s).audio === 'encode') command.push('-b:a', '128k', '-ac', '2', '-ar', '48000');
-            }
-            else {
-                if (plan.video) {
-                    const filters: string[] = [];
-                    if (plan.hdr)
-                        filters.push(
-                            'zscale=t=linear:npl=100',
-                            'format=gbrpf32le',
-                            'zscale=p=bt709',
-                            'tonemap=tonemap=hable:desat=0',
-                            'zscale=t=bt709:m=bt709:r=tv'
-                        );
-                    if (plan.burnSubtitles && plan.subtitle) {
-                        if (
-                            ['ass', 'ssa'].includes(
-                                plan.subtitle.codec_name ?? ''
-                            )
-                        ) {
-                            // Use a safe generated filename rather than interpolating source paths into filter expressions.
-                            const lease = await this.cache.acquire(
-                                `${s.sessionId}/${s.revision}/ass`,
-                                async (file) => {
-                                    await run(
-                                        this.ffmpeg,
-                                        [
-                                            '-v',
-                                            'error',
-                                            '-y',
-                                            '-i',
-                                            s.media.path,
-                                            '-map',
-                                            `0:${plan.subtitle!.index}`,
-                                            '-c:s',
-                                            'ass',
-                                            '-f',
-                                            'ass',
-                                            file
-                                        ],
-                                        signal
-                                    );
-                                }
-                            );
-                            try {
-                                filters.push(
-                                    `setpts=PTS+${start}/TB`,
-                                    `ass=filename='${lease.path}'`,
-                                    `setpts=PTS-STARTPTS`
-                                );
-                                await this.encodeVideo(
-                                    s,
-                                    command,
-                                    filters,
-                                    quality,
-                                    hardware,
-                                    start,
-                                    outputArgs,
-                                    signal
-                                );
-                            } finally {
-                                lease.release();
-                            }
-                            return;
-                        }
-                        // Bitmap subtitles are decoded alongside video and composited before scaling.
-                        command.splice(
-                            command.indexOf('-t'),
-                            0,
-                            '-i',
-                            s.media.path
-                        );
-                        command.push(
-                            '-filter_complex',
-                            `[0:${plan.video.index}]setpts=PTS+${start}/TB[base];[1:${plan.subtitle.index}]scale=${plan.video.width}:${plan.video.height}[sub];[base][sub]overlay=eof_action=pass,setpts=PTS-STARTPTS[vsub]`,
-                            '-map',
-                            '-0:v',
-                            '-map',
-                            '[vsub]'
-                        );
-                    }
-                    await this.encodeVideo(
-                        s,
-                        command,
-                        filters,
-                        quality,
-                        hardware,
-                        start,
-                        outputArgs,
-                        signal
-                    );
-                    return;
-                }
-                if (plan.audio)
-                    command.push(
-                        '-c:a',
-                        'aac',
-                        '-b:a',
-                        '128k',
-                        '-ac',
-                        '2',
-                        '-ar',
-                        '48000'
-                    );
-            }
-            command.push(
-                '-output_ts_offset',
-                String(start),
-                '-muxdelay',
-                '0',
-                '-muxpreload',
-                '0',
-                ...outputArgs
-            );
-            await run(this.ffmpeg, command, signal, 60000);
-        };
-        const begun = Date.now();
-        const hardware =
-            this.operations(s).video === 'encode' ? await this.encoder() : null;
-        try {
-            await encode(hardware);
-        } catch (error) {
-            if (!hardware || signal.aborted) throw error;
-            this.hardware = Promise.resolve(null);
-            await encode(null);
-        }
-        s.delivery.generationMs = Date.now() - begun;
-        s.encodingSpeed = length / Math.max(0.001, (Date.now() - begun) / 1000);
-    }
-    private async encodeVideo(
-        s: PlaybackSession,
-        command: string[],
-        filters: string[],
-        quality: { height: number; bitrate: number },
-        hardware: string | null,
-        start: number,
-        outputArgs: string[],
-        signal: AbortSignal
-    ): Promise<void> {
-        filters.push(
-            `scale=w=-2:h='min(${quality.height},ih)'`,
-            'fps=30',
-            'format=yuv420p'
-        );
-        if (hardware === 'h264_vaapi') {
-            command.unshift(
-                '-vaapi_device',
-                this.oblecto.config.streaming?.vaapiDevice ??
-                    '/dev/dri/renderD128'
-            );
-            filters.push('format=nv12', 'hwupload');
-        }
-        if (command.includes('-filter_complex')) {
-            const i = command.indexOf('-filter_complex');
-            command[i + 1] = command[i + 1].replace(
-                '[vsub]',
-                `[overlay];[overlay]${filters.join(',')}[vsub]`
-            );
-        } else command.push('-vf', filters.join(','));
-        if (s.plan.hdr) command.push('-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709');
-        command.push('-c:v', hardware ?? 'libx264');
-        if (!hardware)
-            command.push(
-                '-preset',
-                'veryfast',
-                '-threads',
-                '2',
-                '-sc_threshold',
-                '0'
-            );
-        command.push(
-            '-profile:v', 'main', '-level:v', '4.0',
-            '-b:v',
-            String(quality.bitrate),
-            '-maxrate',
-            String(quality.bitrate),
-            '-bufsize',
-            String(quality.bitrate * 2),
-            '-g',
-            '60',
-            '-keyint_min',
-            '60',
-            '-force_key_frames',
-            'expr:gte(t,n_forced*2)',
-            '-pix_fmt',
-            hardware === 'h264_vaapi' ? 'vaapi' : 'yuv420p'
-        );
-        if (s.plan.audio)
-            command.push(
-                '-c:a',
-                'aac',
-                '-b:a',
-                '128k',
-                '-ac',
-                '2',
-                '-ar',
-                '48000'
-            );
-        command.push(
-            '-output_ts_offset',
-            String(start),
-            '-muxdelay',
-            '0',
-            '-muxpreload',
-            '0',
-            ...outputArgs
-        );
-        await run(this.ffmpeg, command, signal, 60000);
-    }
-    private async serveTrickplay(
-        s: PlaybackSession,
-        index: number,
-        req: Request,
-        res: Response
-    ): Promise<void> {
-        const sheet = s.remote ? null : this.oblecto.mediaAnalyser?.trickplaySheet(s.file, index);
-        if (!sheet)
-            throw new PlaybackError('MEDIA_NOT_FOUND', 'No such thumbnail sheet', 404);
-        res.setHeader('Cache-Control', 'private, max-age=86400');
-        res.setHeader('Referrer-Policy', 'no-referrer');
-        await sendFile(req, res, sheet, 'image/jpeg', s.signal.signal);
     }
     /** Chapters, skippable segments and seek thumbnails of the session's file. */
     markers(s: PlaybackSession, url: (asset: string) => string) {
@@ -868,200 +598,5 @@ export class PlaybackService {
                 }
                 : null
         };
-    }
-    private async serveAsset(
-        s: PlaybackSession,
-        asset: string,
-        req: Request,
-        res: Response
-    ): Promise<void> {
-        res.setHeader('Cache-Control', 'private, no-store');
-        res.setHeader('Referrer-Policy', 'no-referrer');
-        const firstByte = (): void => {
-            if (s.timings.firstMediaMs !== null || req.method !== 'GET') return;
-            s.startupMs = s.timings.firstMediaMs = Math.round(performance.now() - s.startedMonotonic);
-        };
-        if (s.remote) {
-            await s.remote.client.serve(s.remote.id, asset, req, res, asset === 'original' || /^[a-z0-9]+-\d+\.ts$/.test(asset) ? firstByte : undefined);
-            return;
-        }
-        const plan = s.plan;
-        const link = (name: string) => `${name}?token=${s.token}`;
-        if (asset === 'original') {
-            if (plan.method !== 'direct')
-                throw new PlaybackError(
-                    'INVALID_SELECTION',
-                    'Original playback was not negotiated'
-                );
-            await sendFile(
-                req,
-                res,
-                s.media.path,
-                mime.lookup(s.media.path) || 'application/octet-stream',
-                s.signal.signal,
-                firstByte
-            );
-            return;
-        }
-        if (s.options.forceDirect === true)
-            throw new PlaybackError(
-                'MEDIA_NOT_FOUND',
-                'Playback asset does not exist',
-                404
-            );
-        if (asset === 'master.m3u8') {
-            const tracks =
-                plan.subtitle && !plan.burnSubtitles
-                    ? [`#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Subtitles",DEFAULT=YES,AUTOSELECT=YES,URI="${link('subtitles.m3u8')}"`]
-                    : [];
-            const variants = plan.renditions.flatMap((r) => [
-                `#EXT-X-STREAM-INF:BANDWIDTH=${renditionBandwidth(plan, r.bitrate).peak},AVERAGE-BANDWIDTH=${renditionBandwidth(plan, r.bitrate).average},CODECS="${renditionCodecs(plan)}"${plan.video && r.height ? `,RESOLUTION=${Math.floor(((plan.video.width ?? 640) * r.height) / (plan.video.height ?? 360) / 2) * 2}x${r.height}` : ''}${tracks.length ? ',SUBTITLES="subs"' : ''}`,
-                link(`${r.id}.m3u8`)
-            ]);
-            res.type('application/vnd.apple.mpegurl').send(
-                [
-                    '#EXTM3U',
-                    '#EXT-X-VERSION:3',
-                    ...tracks,
-                    ...variants,
-                    ''
-                ].join('\n')
-            );
-            return;
-        }
-        if (
-            asset === 'subtitles.m3u8' &&
-            plan.subtitle &&
-            !plan.burnSubtitles
-        ) {
-            res.type('application/vnd.apple.mpegurl').send(
-                `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:${Math.ceil(s.media.duration)}\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXTINF:${s.media.duration.toFixed(6)},\n${link('subtitle.vtt')}\n#EXT-X-ENDLIST\n`
-            );
-            return;
-        }
-        const variant = /^([a-z0-9]+)\.m3u8$/.exec(asset);
-        if (variant && plan.renditions.some((r) => r.id === variant[1])) {
-            const durations = plan.boundaries
-                .slice(0, -1)
-                .map((t, i) => plan.boundaries[i + 1] - t);
-            res.type('application/vnd.apple.mpegurl').send(
-                [
-                    '#EXTM3U',
-                    '#EXT-X-VERSION:3',
-                    `#EXT-X-TARGETDURATION:${Math.ceil(durations.reduce((max, duration) => Math.max(max, duration), 0))}`,
-                    '#EXT-X-MEDIA-SEQUENCE:0',
-                    '#EXT-X-PLAYLIST-TYPE:VOD',
-                    ...durations.flatMap((d, i) => [
-                        `#EXTINF:${d.toFixed(6)},`,
-                        link(`${variant[1]}-${i}.ts`)
-                    ]),
-                    '#EXT-X-ENDLIST',
-                    ''
-                ].join('\n')
-            );
-            return;
-        }
-        if (asset === 'subtitle.vtt' || /^subtitle-\d+\.vtt$/.test(asset)) {
-            const subtitle = asset === 'subtitle.vtt' ? plan.subtitle : s.media.streams.find(track => track.codec_type === 'subtitle' && track.index === Number(asset.slice(9, -4)));
-            if (!subtitle || !['subrip', 'webvtt', 'mov_text', 'text'].includes(subtitle.codec_name ?? '')) throw new PlaybackError('UNSUPPORTED_MEDIA', 'Subtitle requires video rendering', 422);
-            const lease = await this.cache.acquire(
-                `${s.sessionId}/${s.revision}/vtt/${subtitle.index}`,
-                (file) =>
-                    this.scheduler.submit(
-                        s.sessionId,
-                        s.signal.signal,
-                        async () => {
-                            await run(
-                                this.ffmpeg,
-                                [
-                                    '-v',
-                                    'error',
-                                    '-y',
-                                    '-i',
-                                    s.media.path,
-                                    '-map',
-                                    `0:${subtitle.index}`,
-                                    '-f',
-                                    'webvtt',
-                                    file
-                                ],
-                                s.signal.signal
-                            );
-                            if ((await fs.stat(file)).size > 16 * 1024 ** 2)
-                                throw new PlaybackError(
-                                    'UNSUPPORTED_MEDIA',
-                                    'Subtitle track exceeds supported size',
-                                    422
-                                );
-                            const contents = await fs.readFile(file, 'utf8');
-                            await fs.writeFile(
-                                file,
-                                contents.replace(
-                                    'WEBVTT',
-                                    'WEBVTT\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0'
-                                )
-                            );
-                        }
-                    )
-            );
-            try {
-                await sendFile(
-                    req,
-                    res,
-                    lease.path,
-                    'text/vtt',
-                    s.signal.signal
-                );
-            } finally {
-                lease.release();
-            }
-            return;
-        }
-        const segment = /^([a-z0-9]+)-(\d+)\.ts$/.exec(asset);
-        if (
-            !segment ||
-            !plan.renditions.some((r) => r.id === segment[1]) ||
-            Number(segment[2]) >= plan.boundaries.length - 1
-        )
-            throw new PlaybackError(
-                'MEDIA_NOT_FOUND',
-                'Playback asset does not exist',
-                404
-            );
-        const index = Number(segment[2]);
-        const revision = s.revision;
-        this.scheduler.promote(s.sessionId, `${s.sessionId}/${revision}/${segment[1]}/${index}`);
-        const track = (operation: Promise<void>) => {
-            s.operations.add(operation);
-            void operation.finally(() => s.operations.delete(operation)).catch(() => {});
-        };
-        const acquire = (n: number, priority = 0) => {
-            const scope = `${s.sessionId}/${revision}/${segment[1]}`;
-            const queuedAt = performance.now();
-            const encode = (directory: string, first: number, end: number, signal: AbortSignal) =>
-                this.scheduler.submit(s.sessionId, signal, () => {
-                    s.delivery.queueWaitMs = performance.now() - queuedAt;
-                    return this.segment(s, segment[1], first, directory, end, signal, true);
-                }, priority);
-            if (this.oblecto.config.streaming?.encoderMode === 'window' && this.operations(s).video === 'encode')
-                return this.windows.acquire(s.sessionId, scope, n, plan.boundaries.length - 1, s.signal.signal, encode, track);
-            return this.cache.acquire(`${scope}/${n}`, file =>
-                this.scheduler.submit(s.sessionId, s.signal.signal, () => {
-                    s.delivery.queueWaitMs = performance.now() - queuedAt;
-                    return this.segment(s, segment[1], n, file);
-                }, priority, `${scope}/${n}`));
-        };
-        const lease = await acquire(index);
-        // Encode ahead during transfer; slow clients no longer serialize these two costs.
-        if (this.oblecto.config.streaming?.encoderMode !== 'window' || this.operations(s).video !== 'encode') {
-            for (let ahead = 1; ahead <= 2; ahead++) {
-                if (index + ahead >= plan.boundaries.length - 1 || this.scheduler.queued > 0 || s.signal.signal.aborted) break;
-                track(acquire(index + ahead, 1).then(l => l.release()).catch(() => {}));
-            }
-        }
-        try {
-            await sendFile(req, res, lease.path, 'video/mp2t', s.signal.signal, firstByte);
-        } finally { lease.release(); }
-
     }
 }

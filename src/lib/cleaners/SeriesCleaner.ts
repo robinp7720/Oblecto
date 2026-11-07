@@ -5,8 +5,6 @@ import { File } from '../../models/file.js';
 import { Series } from '../../models/series.js';
 import logger from '../../submodules/logger/index.js';
 
-import type Oblecto from '../oblecto/index.js';
-
 type EpisodeWithFiles = Episode & {
     Files?: File[];
 };
@@ -16,16 +14,6 @@ type SeriesWithEpisodes = Series & {
 };
 
 export default class SeriesCleaner {
-    public oblecto: Oblecto;
-
-    /**
-     *
-     * @param oblecto - Oblecto server instance
-     */
-    constructor(oblecto: Oblecto) {
-        this.oblecto = oblecto;
-    }
-
     /**
      * Remove all episodes from the database without any linked files
      */

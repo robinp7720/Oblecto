@@ -21,7 +21,7 @@ Notes
 - Smoke tests use a throwaway config, in-memory database and ephemeral ports.
 - The federation and playback specs need OpenSSL, FFmpeg and ffprobe; they generate their certificates and
   media in temporary directories.
-- `npm run typecheck` does not cover `tests/` yet (the mocks are loosely typed); keep new specs typed anyway.
+- `npm run typecheck` covers `src/` and all test TypeScript, including network, startup and browser fixtures. Keep fixtures typed; use `tests/helpers/routes.ts` for isolated route responses and `tests/types/` for compile-only contracts. Route helpers omit middleware, so use a real HTTP server when testing authentication or global request validation.
 - Model classes are shared across specs; when a spec declares associations, check
   `Model.associations` first so it does not add a second alias.
 - If you change CLI commands or startup flow, update the smoke tests accordingly.

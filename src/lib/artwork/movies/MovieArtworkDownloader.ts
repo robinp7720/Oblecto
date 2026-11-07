@@ -3,8 +3,11 @@ import FanarttvMovieArtworkRetriever from './artworkRetrievers/FanarttvMovieArtw
 import AggregateMovieArtworkRetriever from './AggregateMovieArtworkRetriever.js';
 import logger from '../../../submodules/logger/index.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
 import type { Movie } from '../../../models/movie.js';
+
+type ServiceDependencies = Dependencies<'artworkUtils' | 'queue' | 'realTimeController' | 'tmdb', 'artwork' | 'fanart.tv'>;
 
 type RescaleJob = {
     from: string;
@@ -13,10 +16,10 @@ type RescaleJob = {
 };
 
 export default class MovieArtworkDownloader {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public movieArtworkRetriever: AggregateMovieArtworkRetriever;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.movieArtworkRetriever = new AggregateMovieArtworkRetriever(this.oblecto);

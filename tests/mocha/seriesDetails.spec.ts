@@ -114,7 +114,7 @@ describe('TV navigation and presentation', () => {
         assert.equal(buildEpisodeContext(episodes, 999), null);
     });
     it('distinguishes library progress from the complete catalog and flags unknown remaining runtime', () => {
-        const progress = seriesViewingProgress(episodes, { episodes: [{ season: 1, number: 1 }, { season: 1, number: 2 }, { season: 2, number: 1 }, { season: 3, number: 1 }] });
+        const progress = seriesViewingProgress(episodes);
         assert.equal(progress.total, 3);
         assert.equal(progress.watched, 1);
         assert.equal(progress.completedSeasons, 0);
@@ -126,7 +126,7 @@ describe('TV navigation and presentation', () => {
         assert.equal(resolvePreferences({}).episodeSpoilers, 'off');
         assert.deepEqual(validatePreferences({ episodeSpoilers: 'hide-titles' }), {});
         assert.ok(validatePreferences({ episodeSpoilers: ['hide'] }).episodeSpoilers);
-        const item = { episodeName: 'The killer revealed', overview: 'A spoiler', airedEpisodeNumber: 2, TrackEpisodes: [{ progress: 0.5 }] };
+        const item = { episodeName: 'The killer revealed', overview: 'A spoiler', airedEpisodeNumber: '2', TrackEpisodes: [{ progress: 0.5 }] };
         assert.deepEqual(episodeSpoilerState(item, 'hide-titles'), { hidden: true, title: 'Episode 2', overview: '' });
         assert.equal(episodeSpoilerState(item, 'hide').title, item.episodeName);
         assert.equal(episodeSpoilerState(item, 'hide-titles', true).hidden, false);
@@ -137,7 +137,7 @@ describe('TV navigation and presentation', () => {
         assert.deepEqual(tvProviderLinks('episode', { tmdbid: 999 }), []);
         assert.equal(tvProviderLinks('episode', { Series: { tmdbid: 123 }, airedSeason: '0', airedEpisodeNumber: '2' })[0].url, 'https://www.themoviedb.org/tv/123/season/0/episode/2');
         assert.deepEqual(tvProviderLinks('episode', { tvdbid: 'javascript:alert(1)', imdbid: 'bad' }), []);
-        assert.deepEqual(fileChapters({ duration: 100, chapters: [{ start: 20 }, { start: -1 }, { start: 100 }, { start: 0 }, { start: '5' }] }).map(chapter => chapter.start), [0, 20]);
+        assert.deepEqual(fileChapters({ duration: 100, chapters: [{ start: 20 }, { start: -1 }, { start: 100 }, { start: 0 }, { start: '5' }] }).map((chapter: { title: string; start: number }) => chapter.start), [0, 20]);
     });
 });
 

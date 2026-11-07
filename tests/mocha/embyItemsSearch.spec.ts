@@ -1,3 +1,4 @@
+import { makeServer, makeRes, embyFixture } from '../helpers/routes.js';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
@@ -15,43 +16,14 @@ import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
 import { formatUuid } from '../../src/lib/embyEmulation/helpers.js';
 
-const makeServer = () => {
-    const handlers = new Map();
-
-    const register = (method) => (route, handler) => {
-        handlers.set(`${method} ${route}`, handler);
-    };
-
-    return {
-        handlers,
-        get: register('GET'),
-        post: register('POST'),
-        put: register('PUT'),
-        delete: register('DELETE')
-    };
-};
-
-const makeRes = () => ({
-    statusCode: 200,
-    body: null,
-    status(code) {
-        this.statusCode = code;
-        return this;
-    },
-    send(payload) {
-        this.body = payload;
-        return this;
-    }
-});
-
 describe('Emby items search routes', () => {
-    let sequelize;
-    let movie;
-    let series;
+    let sequelize: Sequelize;
+    let movie: Movie;
+    let series: Series;
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
 
         Movie.init(movieColumns, { sequelize, modelName: 'Movie' });
@@ -93,7 +65,7 @@ describe('Emby items search routes', () => {
         const server = makeServer();
         const embyEmulation = { serverId: 'test-server-id' };
 
-        itemsRoutes(server, embyEmulation);
+        itemsRoutes(server, embyFixture(embyEmulation));
 
         const handler = server.handlers.get('GET /items');
         const req = {
@@ -120,7 +92,7 @@ describe('Emby items search routes', () => {
         const server = makeServer();
         const embyEmulation = { serverId: 'test-server-id' };
 
-        itemsRoutes(server, embyEmulation);
+        itemsRoutes(server, embyFixture(embyEmulation));
 
         const handler = server.handlers.get('GET /search/hints');
         const req = {
@@ -145,7 +117,7 @@ describe('Emby items search routes', () => {
         const server = makeServer();
         const embyEmulation = { serverId: 'test-server-id' };
 
-        usersRoutes(server, embyEmulation);
+        usersRoutes(server, embyFixture(embyEmulation));
 
         const handler = server.handlers.get('GET /users/:userid/items');
         const req = {

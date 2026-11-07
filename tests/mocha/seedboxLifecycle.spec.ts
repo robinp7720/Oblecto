@@ -14,11 +14,11 @@ describe('Seedbox lifecycle', () => {
         const entered = Promise.withResolvers<void>();
         const release = Promise.withResolvers<void>();
         const events: string[] = [];
-        seedboxes.importQueue.registerJob('testImport', async () => { events.push('import'); });
+        seedboxes.importMovie = async () => { events.push('import'); };
         seedboxes.importAllEpisodes = async () => {
             entered.resolve();
             await release.promise;
-            seedboxes.importQueue.queueJob('testImport', null);
+            seedboxes.importQueue.queueJob('importMovie', { seedbox: seedboxes.seedBoxes[0], origin: 'fixture', destination: 'fixture' });
         };
         seedboxes.importAllMovies = async () => {};
         seedboxes.seedBoxes.push({ storageDriver: { close: async () => { events.push('driver'); } } } as unknown as Seedbox);

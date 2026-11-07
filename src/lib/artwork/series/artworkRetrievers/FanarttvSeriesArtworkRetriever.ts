@@ -5,17 +5,19 @@ import { Episode } from '../../../../models/episode.js';
 import { Series } from '../../../../models/series.js';
 import InfoExtendableError from '../../../errors/InfoExtendableError.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
+
+type ServiceDependencies = Dependencies<never, 'fanart.tv'>;
 
 type FanartResponse = {
     tvposter?: Array<{ url: string }>;
 };
 
 export default class FanarttvSeriesArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public key: string;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.key = this.oblecto.config['fanart.tv'].key;

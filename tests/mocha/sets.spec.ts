@@ -1,3 +1,4 @@
+import type { ModelStatic } from 'sequelize';
 import assert from 'node:assert/strict';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import type { Server } from 'node:http';
@@ -64,7 +65,7 @@ describe('Native set privacy and validation', () => {
         for (const model of [MovieSet, Movie, SeriesSet, Series]) {
             for (const association of Object.values(model.associations)) {
                 if (association.associationType !== 'BelongsToMany') continue;
-                const through = (association as BelongsToMany).through.model;
+                const through = (association as unknown as { through: { model: ModelStatic<Model> } }).through.model;
                 if (through.sequelize !== sequelize) through.init(through.getAttributes(), { sequelize, modelName: through.name });
                 const relation = association as unknown as {
                     accessors: { add: string };
@@ -161,7 +162,7 @@ describe('Native set privacy and validation', () => {
                 const result = await call('POST', `/set/${kind}`, owner, body);
                 assert.equal(result.status, 400, JSON.stringify(body));
             }
-            const model = kind === 'movie' ? MovieSet : SeriesSet;
+            const model: ModelStatic<Model> = kind === 'movie' ? MovieSet : SeriesSet;
             assert.equal(await model.count(), 3);
             assert.equal((await call('POST', `/set/${kind}`, member, { name: 'Denied', public: true })).status, 403);
         });

@@ -1,6 +1,5 @@
 import { col, fn, WhereOptions } from 'sequelize';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
-import { Express, Request, Response, NextFunction } from 'express';
+import { Express, Response, NextFunction } from 'express';
 import authMiddleWare from '../middleware/auth.js';
 import { File } from '../../../models/file.js';
 import { Episode } from '../../../models/episode.js';
@@ -29,7 +28,7 @@ function problematicWhere(query: { stage?: unknown; includeIgnored?: unknown }):
 }
 
 export default (server: Express, oblecto: Oblecto) => {
-    server.get('/files/duplicates', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response) {
+    server.get('/files/duplicates', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
         const fileHashCounts = await File.findAll({
             attributes: [
                 'hash',
@@ -42,7 +41,7 @@ export default (server: Express, oblecto: Oblecto) => {
         const duplicates = [];
 
         for (const fileHashCount of fileHashCounts) {
-            const data: any = fileHashCount.toJSON();
+            const data = { ...fileHashCount.toJSON(), count: Number(fileHashCount.get('count')) };
 
             if (data.count <= 1) break;
 
@@ -57,7 +56,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(duplicates);
     });
 
-    server.get('/files/problematic', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.get('/files/problematic', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
             const files = await File.findAll({
                 where: problematicWhere(req.query),
@@ -85,7 +84,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Registered before `/files/:id/retry` so `problematic` is not taken for an id
-    server.post('/files/problematic/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.post('/files/problematic/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
             const files = await File.findAll({ where: problematicWhere({ stage: req.body?.stage }) });
 
@@ -111,9 +110,9 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.post('/files/:id/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.post('/files/:id/retry', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
-            const file = await File.findByPk(req.params.id as string);
+            const file = await File.findByPk(req.params.id);
 
             if (!file) {
                 res.status(404).send({ message: 'File not found' });
@@ -145,7 +144,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.patch('/files/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.patch('/files/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
             const problemIgnored = req.body?.problemIgnored;
 
@@ -154,7 +153,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 return;
             }
 
-            const file = await File.findByPk(req.params.id as string);
+            const file = await File.findByPk(req.params.id);
 
             if (!file) {
                 res.status(404).send({ message: 'File not found' });
@@ -178,9 +177,9 @@ export default (server: Express, oblecto: Oblecto) => {
         trickplay: file.trickplay
     });
 
-    server.get('/files/:id/markers', authMiddleWare.requiresAuth, async function (req: Request, res: Response, next: NextFunction) {
+    server.get('/files/:id/markers', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
-            const file = await File.findByPk(req.params.id as string);
+            const file = await File.findByPk(req.params.id);
 
             if (!file) {
                 res.status(404).send({ message: 'File not found' });
@@ -194,9 +193,9 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     // Segments set here are kept: detection only looks at files that have none
-    server.put('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.put('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
-            const file = await File.findByPk(req.params.id as string);
+            const file = await File.findByPk(req.params.id);
 
             if (!file) {
                 res.status(404).send({ message: 'File not found' });
@@ -217,9 +216,9 @@ export default (server: Express, oblecto: Oblecto) => {
         }
     });
 
-    server.delete('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response, next: NextFunction) {
+    server.delete('/files/:id/segments', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response, next: NextFunction) {
         try {
-            const file = await File.findByPk(req.params.id as string);
+            const file = await File.findByPk(req.params.id);
 
             if (!file) {
                 res.status(404).send({ message: 'File not found' });

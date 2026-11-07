@@ -1,22 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { libraryStatistics } from '../../../../lib/statistics/libraries.js';
-import { Express, Request, Response, NextFunction } from 'express';
+import { Express, Response, NextFunction } from 'express';
+import type { OblectoRequest } from '../../index.js';
+import type Oblecto from '../../../../lib/oblecto/index.js';
 import authMiddleWare from '../../middleware/auth.js';
 import errors from '../../errors.js';
 import { mergeSettings, validateSettings } from '../../../../lib/settings/validation.js';
 import { ConfigManager } from '../../../../config.js';
 
-const ALLOWED_LIBRARIES = ['movies', 'tvshows'];
+const isLibrary = (value: string): value is 'movies' | 'tvshows' => value === 'movies' || value === 'tvshows';
 
-export default (server: Express, oblecto: any) => {
-    
+export default (server: Express, oblecto: Pick<Oblecto, 'config' | 'database'>): void => {
+
     // GET /api/v1/libraries
-    server.get('/api/v1/libraries', authMiddleWare.requiresAuth, (req: Request, res: Response) => {
-        const libs: any = {};
-
-        ALLOWED_LIBRARIES.forEach(lib => {
-            libs[lib] = oblecto.config[lib as keyof any];
-        });
+    server.get('/api/v1/libraries', authMiddleWare.requiresAuth, (req: OblectoRequest, res: Response) => {
+        const libs = { movies: oblecto.config.movies, tvshows: oblecto.config.tvshows };
         res.send(libs);
     });
 
@@ -25,41 +22,41 @@ export default (server: Express, oblecto: any) => {
     });
 
     // GET /api/v1/libraries/:type
-    server.get('/api/v1/libraries/:type', authMiddleWare.requiresAuth, (req: Request, res: Response, next: NextFunction) => {
-        const type = req.params.type as string;
+    server.get('/api/v1/libraries/:type', authMiddleWare.requiresAuth, (req: OblectoRequest, res: Response, next: NextFunction) => {
+        const type = req.params.type;
 
-        if (!ALLOWED_LIBRARIES.includes(type)) {
+        if (!isLibrary(type)) {
             return next(new errors.BadRequestError('Invalid library type'));
         }
-        res.send(oblecto.config[type as keyof any].directories || []);
+        res.send(oblecto.config[type].directories || []);
     });
 
     // PATCH /api/v1/libraries/:type - Update general library settings (identifiers, updaters, etc)
-    server.patch('/api/v1/libraries/:type', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
-        const type = req.params.type as string;
+    server.patch('/api/v1/libraries/:type', authMiddleWare.requiresPermission('libraries.manage'), async (req: OblectoRequest, res: Response, next: NextFunction) => {
+        const type = req.params.type;
 
-        if (!ALLOWED_LIBRARIES.includes(type)) {
+        if (!isLibrary(type)) {
             return next(new errors.BadRequestError('Invalid library type'));
         }
-        
+
         const updates = req.body;
 
         if (!updates || Object.keys(updates).length === 0) {
             return next(new errors.BadRequestError('Empty configuration provided'));
         }
 
-        const fields = validateSettings({ [type]: updates }, oblecto.config);
+        const fields = validateSettings({ [type]: updates }, { ...oblecto.config });
         if (Object.keys(fields).length) return res.status(400).send({ error: 'Check library settings.', fields });
         await ConfigManager.updateConfig(draft => mergeSettings(draft, { [type]: updates }), oblecto.config);
 
-        res.send(oblecto.config[type as keyof any]);
+        res.send(oblecto.config[type]);
     });
 
     // POST /api/v1/libraries/:type/paths - Add a source directory
-    server.post('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
-        const type = req.params.type as string;
+    server.post('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: OblectoRequest, res: Response, next: NextFunction) => {
+        const type = req.params.type;
 
-        if (!ALLOWED_LIBRARIES.includes(type)) {
+        if (!isLibrary(type)) {
             return next(new errors.BadRequestError('Invalid library type'));
         }
 
@@ -70,7 +67,7 @@ export default (server: Express, oblecto: any) => {
         }
 
         await ConfigManager.updateConfig(draft => {
-            const library = draft[type as 'movies' | 'tvshows'];
+            const library = draft[type];
             library.directories ??= [];
             if (library.directories.some(d => d.path === path)) throw new errors.ConflictError('Path already exists');
             library.directories.push({ path });
@@ -79,10 +76,10 @@ export default (server: Express, oblecto: any) => {
     });
 
     // DELETE /api/v1/libraries/:type/paths - Remove a source directory
-    server.delete('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: Request, res: Response, next: NextFunction) => {
-        const type = req.params.type as string;
+    server.delete('/api/v1/libraries/:type/paths', authMiddleWare.requiresPermission('libraries.manage'), async (req: OblectoRequest, res: Response, next: NextFunction) => {
+        const type = req.params.type;
 
-        if (!ALLOWED_LIBRARIES.includes(type)) {
+        if (!isLibrary(type)) {
             return next(new errors.BadRequestError('Invalid library type'));
         }
 
@@ -93,7 +90,7 @@ export default (server: Express, oblecto: any) => {
         }
 
         await ConfigManager.updateConfig(draft => {
-            const library = draft[type as 'movies' | 'tvshows'];
+            const library = draft[type];
             library.directories ??= [];
             const index = library.directories.findIndex(d => d.path === path);
             if (index === -1) throw new errors.NotFoundError('Path not found');

@@ -18,7 +18,7 @@ Core architecture
 
 Conventions
 - All source is TypeScript (`.ts`), imported with `.js` extensions (ESM).
-- Most services are classes that accept the `Oblecto` instance and store `this.oblecto`.
+- Domain services accept narrow service/configuration ports from `lib/contracts.ts`; `lib/oblecto` remains the composition root. Existing `this.oblecto` fields hold those ports, not the complete container.
 - Background work is scheduled through `lib/queue` (register jobs in constructors).
 - Long-lived components should expose `close()` so `core.close()` can clean up.
 

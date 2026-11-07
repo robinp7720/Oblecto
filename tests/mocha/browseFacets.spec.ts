@@ -19,7 +19,7 @@ describe('Browse facet aggregation and freshness', () => {
         await database.sync({ force: true });
         await Movie.bulkCreate(Array.from({ length: 100 }, (_, i) => ({ id: i + 1, movieName: `Film ${i}`, genres: '["Drama","Comedy"]', releaseDate: '2020-01-01' })));
         reads = 0;
-        Movie.addHook('afterFind', rows => {
+        Movie.addHook('afterFind', 'facet-shape', rows => {
             reads++;
             assert.equal((rows as unknown[]).length, 1, 'SQL returns one genre/year pair, not every title');
         });
@@ -44,7 +44,8 @@ describe('Browse facet aggregation and freshness', () => {
         await Movie.destroy({ where: {} });
         assert.equal(reads, 2);
         // Empty aggregate results are valid too.
-        const result = await browseFacets(Movie, parseBrowseParams({}), 1, { include: [], hooks: false }, 'genres', 'releaseDate');
+        Movie.removeHook('afterFind', 'facet-shape');
+        const result = await browseFacets(Movie, parseBrowseParams({}), 1, { include: [] }, 'genres', 'releaseDate');
         assert.deepEqual(result, { genres: [], years: [] });
     });
 

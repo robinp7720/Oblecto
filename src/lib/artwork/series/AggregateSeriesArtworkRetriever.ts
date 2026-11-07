@@ -3,9 +3,12 @@ import logger from '../../../submodules/logger/index.js';
 import DebugExtendableError from '../../errors/DebugExtendableError.js';
 import Downloader from '../../downloader/index.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
 import type { Episode } from '../../../models/episode.js';
 import type { Series } from '../../../models/series.js';
+
+type ServiceDependencies = Dependencies<'artworkUtils', never>;
 
 type SeriesArtworkRetriever = {
     retrieveEpisodeBanner: (episode: Episode) => Promise<string[]>;
@@ -13,10 +16,10 @@ type SeriesArtworkRetriever = {
 };
 
 export default class AggregateSeriesArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     private retrievers: SeriesArtworkRetriever[];
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.retrievers = [];

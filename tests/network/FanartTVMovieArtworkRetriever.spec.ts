@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-import * as chai from 'chai';
+import assert from 'node:assert/strict';
 
 import FanarttvMovieArtworkRetriever from '../../src/lib/artwork/movies/artworkRetrievers/FanarttvMovieArtworkRetriever.js';
 import Queue from '../../src/lib/queue/index.js';
 
 import { FANART_KEY } from './keys.js';
 
-chai.should();
 
-const TMDBID_TEST_ID = '299534';
+
+const TMDBID_TEST_ID = 299534;
 const IMDBD_TEST_ID = 'tt4154796';
 
 const oblecto = {
@@ -22,24 +22,24 @@ describe('FanartTV Movie Artwork Retriever', function () {
     it('Fanart artwork retrieval using TMDBID', async function () {
         const images = await ArtworkRetriever.retrieveFanart({ tmdbid: TMDBID_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 
     it('Fanart artwork retrieval using IMDBID', async function () {
-        const images = await ArtworkRetriever.retrieveFanart({ tmdbid: IMDBD_TEST_ID });
+        const images = await ArtworkRetriever.retrieveFanart({ imdbid: IMDBD_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 
     it('Poster artwork retrieval using TMDBID', async function () {
-        const images = await ArtworkRetriever.retrievePoster({ imdbid: TMDBID_TEST_ID });
+        const images = await ArtworkRetriever.retrievePoster({ tmdbid: TMDBID_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 
     it('Poster artwork retrieval using IMDBID', async function () {
         const images = await ArtworkRetriever.retrievePoster({ imdbid: IMDBD_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 });

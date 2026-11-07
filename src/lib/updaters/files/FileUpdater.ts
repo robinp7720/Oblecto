@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { promises as fs, createReadStream } from 'fs';
-import type { FfprobeData, FfprobeStream } from 'fluent-ffmpeg';
+import type { FfprobeData } from 'fluent-ffmpeg';
 
 import ffprobe from '../../../submodules/ffprobe.js';
 import VideoAnalysisError from '../../errors/VideoAnalysisError.js';
@@ -8,15 +8,17 @@ import VideoAnalysisError from '../../errors/VideoAnalysisError.js';
 import { File } from '../../../models/file.js';
 import { clearProblem, markProblematic } from '../../indexers/files/problems.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue' | 'realTimeController', 'files'>;
 
 export default class FileUpdater {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.oblecto.queue.registerJob('updateFile', async (file: File) => {
@@ -40,16 +42,16 @@ export default class FileUpdater {
         });
     }
 
-    static async getPrimaryVideoStream(metadata: FfprobeData): Promise<FfprobeStream | null> {
+    static async getPrimaryVideoStream<T extends { codec_type?: string; duration?: string | number }>(metadata: { streams: T[] }): Promise<T | null> {
         const streams = metadata.streams ?? [];
-        let primaryStream: FfprobeStream | null = null;
+        let primaryStream: T | null = null;
         let primaryDuration = 0;
 
         for (const stream of streams) {
             if (stream.codec_type !== 'video')
                 continue;
 
-            const duration = typeof stream.duration === 'number' ? stream.duration : 0;
+            const duration = Number(stream.duration) || 0;
 
             if (duration >= primaryDuration) {
                 primaryStream = stream;
@@ -60,16 +62,16 @@ export default class FileUpdater {
         return primaryStream;
     }
 
-    static async getPrimaryAudioStream(metadata: FfprobeData): Promise<FfprobeStream | null> {
+    static async getPrimaryAudioStream<T extends { codec_type?: string; duration?: string | number }>(metadata: { streams: T[] }): Promise<T | null> {
         const streams = metadata.streams ?? [];
-        let primaryStream: FfprobeStream | null = null;
+        let primaryStream: T | null = null;
         let primaryDuration = 0;
 
         for (const stream of streams) {
             if (stream.codec_type !== 'audio')
                 continue;
 
-            const duration = typeof stream.duration === 'number' ? stream.duration : 0;
+            const duration = Number(stream.duration) || 0;
 
             if (duration >= primaryDuration) {
                 primaryStream = stream;

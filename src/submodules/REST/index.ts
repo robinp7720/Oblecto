@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain */
 import { HttpListener } from '../httpListener.js';
 import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
@@ -6,19 +5,19 @@ import logger from '../logger/index.js';
 import { corsFor } from '../../lib/network/cors.js';
 import { Server } from 'http';
 import Oblecto from '../../lib/oblecto/index.js';
+import type { AccessClaims } from '../../lib/auth/tokens.js';
 import type { Permission } from '../../lib/auth/permissions.js';
 
-export interface OblectoRequest extends Request {
+export interface OblectoRequest extends Request<Record<string, string>, unknown, Record<string, unknown>> {
     playbackRequestedAt?: number;
     authorization?: {
         scheme: string;
         credentials: string;
-        user?: any;
+        user?: AccessClaims;
         // Loaded from the database once per request by requiresPermission
         principal?: { id: number; permissions: Permission[] } | null;
     };
-    files?: any;
-    combined_params?: Record<string, any>;
+    combined_params?: Record<string, unknown>;
 }
 
 export default class OblectoAPI {
@@ -59,6 +58,11 @@ export default class OblectoAPI {
 
         // Map query and body params to req.combined_params for compatibility with existing code
         app.use((req: OblectoRequest, res: Response, next: NextFunction) => {
+            const body: unknown = req.body;
+            if (body !== undefined && (body === null || typeof body !== 'object' || Array.isArray(body))) {
+                res.status(400).json({ code: 400, message: 'Expected an object body' });
+                return;
+            }
             req.combined_params = { ...req.query, ...req.body };
             next();
         });
@@ -67,12 +71,13 @@ export default class OblectoAPI {
         routes(app, this.oblecto);
 
         // Error handling middleware
-        app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+        app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
             if (!err) return next();
 
             if (res.headersSent) return next(err);
-            const statusCode = (err.statusCode as number) || 500;
-            const message = (err.message as string) || 'Internal Server Error';
+            const details = typeof err === 'object' && err !== null ? err as Record<string, unknown> : {};
+            const statusCode = typeof details.statusCode === 'number' && Number.isInteger(details.statusCode) && details.statusCode >= 400 && details.statusCode <= 599 ? details.statusCode : 500;
+            const message = typeof details.message === 'string' && details.message ? details.message : 'Internal Server Error';
 
             logger.error( `HTTP ${statusCode} - ${message}`, err);
 

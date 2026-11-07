@@ -489,14 +489,16 @@ const providerIds = (item: MediaItem, type: string): { ProviderIds: Record<strin
  * Describe a movie, series, season or episode as a Jellyfin BaseItemDto. Only what Oblecto knows:
  * a rating, genre or tagline it does not have is left out rather than made up.
  */
-export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: EmbyEmulationLike): Record<string, unknown> => {
+export type MediaItemDto = Record<string, unknown> & { ImageTags: Record<string, string> };
+
+export const formatMediaItem = (item: MediaItem, type: string, embyEmulation: EmbyEmulationLike): MediaItemDto => {
     const id = formatId(item.id, type);
     const name = firstNonEmpty(item.movieName, item.seasonName, item.episodeName, item.seriesName);
     const premiere = firstNonEmpty(item.releaseDate, item.firstAired);
     const genres = genresFrom(item.genres ?? item.genre);
     const playable = type === 'movie' || type === 'episode';
 
-    const res: Record<string, unknown> = {
+    const res: MediaItemDto = {
         'Name': name,
         'SortName': name.toLowerCase(),
         'ServerId': embyEmulation.serverId,

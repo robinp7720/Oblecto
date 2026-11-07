@@ -3,8 +3,11 @@ import logger from '../../../submodules/logger/index.js';
 import Downloader from '../../downloader/index.js';
 import DebugExtendableError from '../../errors/DebugExtendableError.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
 import type { Movie } from '../../../models/movie.js';
+
+type ServiceDependencies = Dependencies<'artworkUtils', never>;
 
 type MovieArtworkRetriever = {
     retrieveFanart: (movie: Movie) => Promise<string[]>;
@@ -12,10 +15,10 @@ type MovieArtworkRetriever = {
 };
 
 export default class AggregateMovieArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     private retrievers: MovieArtworkRetriever[];
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.retrievers = [];

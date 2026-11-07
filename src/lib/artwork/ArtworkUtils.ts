@@ -1,13 +1,15 @@
-import type Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
 import type { Episode } from '../../models/episode.js';
 import type { Series } from '../../models/series.js';
 import type { Movie } from '../../models/movie.js';
 import type { Person } from '../../models/person.js';
 
-export default class ArtworkUtils {
-    public oblecto: Oblecto;
+type ServiceDependencies = Dependencies<never, 'artwork' | 'assets'>;
 
-    constructor(oblecto: Oblecto) {
+export default class ArtworkUtils {
+    public oblecto: ServiceDependencies;
+
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

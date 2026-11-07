@@ -1,5 +1,5 @@
 
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import { fileExists } from '../../src/submodules/utils.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -21,11 +21,11 @@ describe('Utils', function () {
 
     it('should return true if file exists', async function () {
         const result = await fileExists(tempFile);
-        expect(result).to.be(true);
+        assert.equal(result, true);
     });
 
     it('should return false if file does not exist', async function () {
         const result = await fileExists('non_existent_file_12345.txt');
-        expect(result).to.be(false);
+        assert.equal(result, false);
     });
 });

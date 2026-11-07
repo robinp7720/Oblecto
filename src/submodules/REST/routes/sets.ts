@@ -64,14 +64,14 @@ export default (server: Express, _oblecto: Oblecto): void => {
     });
 
     server.delete('/set/movie/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
-        const set = await MovieSet.findByPk(req.params.id as string);
+        const set = await MovieSet.findByPk(req.params.id);
         if (!set) throw new errors.NotFoundError('Set not found');
         await set.destroy();
         res.send({ success: true });
     });
 
     server.delete('/set/series/:id', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
-        const set = await SeriesSet.findByPk(req.params.id as string);
+        const set = await SeriesSet.findByPk(req.params.id);
         if (!set) throw new errors.NotFoundError('Set not found');
         await set.destroy();
         res.send({ success: true });

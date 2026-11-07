@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Backend contracts and service boundaries
+
+- Queue job names and payloads are checked together for handlers and producers, including seedbox imports. Duplicate registrations and unknown jobs fail immediately; accepted-job draining and maintenance tracking are preserved.
+- Playback now separates preparation, segment encoding/hardware fallback, and asset delivery from session management. Indexers, updaters, collectors, cleaners, artwork and analysis accept the service/configuration ports they use instead of the application container.
+- TVDB responses pass through a typed adapter that validates entity IDs and lists, normalizes numeric strings and ignores malformed optional fields. FFprobe primary-stream selection compares numeric-string durations numerically.
+- Native request bodies must be objects. Browse mode rejects malformed numeric and string filters and malformed cursor payloads; movie/series set membership requires a positive integer `setId`. Missing episodes return an empty file list. Valid response formats and legacy pagination remain compatible.
+- `npm run typecheck` now covers backend, unit, network, startup and browser test TypeScript. Shared typed route fixtures replace duplicate mocks; regression coverage includes invalid provider/API inputs, library settings permissions and persistence, queue contracts and software fallback after hardware failure.
+
 ### Playback preparation refactor
 
 - Extracted probing, metadata reuse, keyframe scans and plan preparation from `PlaybackService` into `MediaPreparation`, with explicit scheduling, cancellation, configuration and persistence dependencies. Playback APIs, stored metadata format and delivery behavior are preserved.

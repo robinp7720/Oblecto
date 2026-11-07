@@ -4,8 +4,11 @@ import logger from '../../../submodules/logger/index.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
 import { syncCredits, type RetrievedCredit } from '../common/CreditSync.js';
+
+type ServiceDependencies = Dependencies<'queue' | 'realTimeController' | 'tmdb', 'movies'>;
 
 type MovieSetInfo = {
     id: number;
@@ -17,17 +20,17 @@ type MovieUpdateData = Record<string, unknown> & {
     _credits?: RetrievedCredit[];
 };
 
-type UpdaterConstructor = new (oblecto: Oblecto) => {
+type UpdaterConstructor = new (oblecto: ServiceDependencies) => {
     // Method syntax on purpose: each retriever narrows the entity it accepts.
     retrieveInformation(entity: unknown): Promise<Record<string, unknown>>;
 };
 
 export default class MovieUpdater {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public aggregateMovieUpdateRetriever: AggregateUpdateRetriever;
     public availableUpdaters: string[];
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.aggregateMovieUpdateRetriever = new AggregateUpdateRetriever();

@@ -2,7 +2,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import type { UploadedFile } from 'express-fileupload';
-import type Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue', 'artwork'>;
 
 export type ArtworkKind = 'poster' | 'fanart' | 'banner';
 
@@ -39,13 +41,13 @@ export class ArtworkUploadError extends Error {
  * Store an uploaded image as an item's artwork and queue its scaled copies.
  * The upload is re-encoded to JPEG, since artwork paths end in .jpg whatever was sent,
  * and its temporary file is removed whether or not it was accepted.
- * @param oblecto - Oblecto instance, for the artwork sizes and the job queue
+ * @param oblecto - Required services and configuration, for the artwork sizes and the job queue
  * @param upload - The uploaded file
  * @param kind - Which artwork this is, which decides its shape and sizes
  * @param pathFor - Where the original (no size) and each scaled size live
  */
 export async function saveArtwork(
-    oblecto: Oblecto,
+    oblecto: ServiceDependencies,
     upload: UploadedFile | undefined,
     kind: ArtworkKind,
     pathFor: (size?: string) => string

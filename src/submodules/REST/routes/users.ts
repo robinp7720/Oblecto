@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import config from '../../../config.js';
@@ -81,7 +81,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
 
         // The body only: a password in the query string would end up in access logs.
-        const params = (req.body ?? {}) as Record<string, unknown>;
+        const params = (req.body ?? {});
 
         if (params.username) {
             user.username = params.username as string;
@@ -135,7 +135,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.put('/user/:id/avatar', authMiddleWare.requiresSelfOrPermission('users.manage'), upload, async function (req: OblectoRequest, res: Response) {
-        const user = await User.findByPk(req.params.id as string);
+        const user = await User.findByPk(req.params.id);
 
         if (!user) {
             res.status(404).send({ message: 'User not found' });

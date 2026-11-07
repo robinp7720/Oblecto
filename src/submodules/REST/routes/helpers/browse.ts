@@ -68,6 +68,19 @@ function clampCount(value: number): number {
 
 export function parseBrowseParams(rawParams: Record<string, unknown>): BrowseParams {
     const mode: 'legacy' | 'browse' = rawParams.mode === 'browse' ? 'browse' : 'legacy';
+    if (mode === 'browse') {
+        for (const field of ['count', 'page', 'yearFrom', 'yearTo', 'personId']) {
+            const value = rawParams[field];
+            if (value === undefined || value === null) continue;
+            if (!((typeof value === 'number' || (typeof value === 'string' && /^-?\d+$/.test(value.trim()))) && Number.isSafeInteger(Number(value))))
+                throw new Error(`${field} must be a whole number`);
+        }
+        for (const field of ['q', 'libraryPath', 'cursor', 'order', 'watched', 'creditRole']) {
+            if (rawParams[field] != null && typeof rawParams[field] !== 'string') throw new Error(`${field} must be a string`);
+        }
+        if (rawParams.genre != null && !(typeof rawParams.genre === 'string' || (Array.isArray(rawParams.genre) && rawParams.genre.every(value => typeof value === 'string'))))
+            throw new Error('genre must contain strings');
+    }
     const rawOrder = (asString(rawParams.order) || 'asc').toLowerCase();
 
     if (!ALLOWED_ORDERS.has(rawOrder)) {
@@ -112,7 +125,7 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
     if (!['all', 'favourites', 'watchlist'].includes(rawList as string)) throw new Error('list filter is invalid');
     const list = rawList as BrowseParams['list'];
     const libraryPath = asString(rawParams.libraryPath);
-    const rawPersonId = asString(rawParams.personId);
+    const rawPersonId = asString(typeof rawParams.personId === 'number' ? String(rawParams.personId) : rawParams.personId);
     const personId = rawPersonId === null ? null : asInteger(rawPersonId, Number.NaN);
     if (personId !== null && (!Number.isInteger(personId) || personId < 1)) throw new Error('personId is invalid');
     const rawCreditRole = (asString(rawParams.creditRole) || 'any').toLowerCase();
@@ -163,25 +176,22 @@ export function encodeCursor(sort: string, order: 'asc' | 'desc', sortValue: unk
 }
 
 export function decodeCursor(cursor: string, expectedSort: string, expectedOrder: 'asc' | 'desc', expectedFilterHash: string): CursorPayload {
-    let payload: CursorPayload;
-
-    try {
-        payload = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8')) as CursorPayload;
-    } catch (error) {
-        throw new Error('cursor is invalid');
-    }
-
-    if (!payload || typeof payload !== 'object') {
-        throw new Error('cursor is invalid');
-    }
-
-    if (payload.sort !== expectedSort || payload.order !== expectedOrder || payload.filterHash !== expectedFilterHash) {
+    let decoded: unknown;
+    if (cursor.length > 8192) throw new Error('cursor is invalid');
+    try { decoded = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8')); }
+    catch { throw new Error('cursor is invalid'); }
+    if (decoded === null || typeof decoded !== 'object' || Array.isArray(decoded)) throw new Error('cursor is invalid');
+    const payload = decoded as Record<string, unknown>;
+    if (payload.sort !== expectedSort || payload.order !== expectedOrder || payload.filterHash !== expectedFilterHash)
         throw new Error('cursor does not match the current query');
-    }
-
-    if (!Number.isInteger(payload.id)) {
+    if (typeof payload.id !== 'number' || !Number.isSafeInteger(payload.id) || payload.id < 1 ||
+        !(payload.sortValue === null || typeof payload.sortValue === 'string' || (typeof payload.sortValue === 'number' && Number.isFinite(payload.sortValue))))
         throw new Error('cursor is invalid');
-    }
-
-    return payload;
+    return {
+        sort: expectedSort,
+order: expectedOrder,
+filterHash: expectedFilterHash,
+        id: payload.id,
+sortValue: payload.sortValue
+    };
 }

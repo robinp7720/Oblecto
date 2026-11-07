@@ -6,7 +6,7 @@ In Oblecto Web, **Available files → Copy stream URL** requests direct original
 
 ## Preparation and startup latency
 
-`src/lib/playback/MediaPreparation.ts` owns probing, cached/persisted metadata reuse, keyframe scans and plan preparation. It receives the scheduler, service shutdown signal, tool/language settings and metadata load/save/analysis callbacks explicitly; it has no session, HTTP or database-model dependencies. `PlaybackService` supplies those adapters and retains session ownership, delivery, encoding and shutdown. Viewer cancellation stops only that viewer's wait; the service lifetime owns shared preparation jobs and the service drains the scheduler before closing its cache.
+`src/lib/playback/MediaPreparation.ts` owns probing, cached/persisted metadata reuse, keyframe scans and plan preparation. It receives the scheduler, service shutdown signal, tool/language settings and metadata load/save/analysis callbacks explicitly; it has no session, HTTP or database-model dependencies. `PlaybackService` supplies those adapters and owns sessions, revision validation, active-request tracking and shutdown. `SegmentEncoder` owns segment commands, hardware detection and software fallback; `AssetDelivery` owns manifests, subtitles, original/remote file delivery and segment/window scheduling. Both receive explicit dependencies and use the same service-owned cache, schedulers and cancellation signals. Hardware failure disables that encoder for subsequent segments in the service lifetime. Viewer cancellation stops only that viewer's wait; the service lifetime owns shared preparation jobs and the service drains the scheduler before closing its cache.
 
 Unset account quality preferences now use **Auto**. Explicit Original and fixed-height preferences are preserved. Auto starts with the lowest available rendition, then hls.js increases quality when bandwidth permits. The startup rendition is held until the first `playing` event, avoiding WebKit losing its initial frames during an early resolution switch. The browser targets 30 seconds ahead, caps forward buffering at 60 seconds and keeps 30 seconds behind. Original remains available for compatible direct playback and external-player links.
 
@@ -62,6 +62,10 @@ An exploratory run on 23 October 2026 compared baseline `9dbf52f60d0bd42e1b7ff78
 | 10 Mbps Original startup p95 | 0.665 s | 0.666 s | 0.663 s |
 
 There were no playback failures. Auto used the new 240p rendition on the 0.75 Mbps link versus the baseline's 360p minimum, so these results include the intended startup-quality tradeoff. They do not establish a fixed-quality encoding speedup or satisfy the broader release gate. Automated regression checks also cover both modes at 3 and 10 Mbps, a bandwidth drop, and basic playback/seek/retry on Chromium, Firefox and WebKit; bandwidth emulation itself is Chromium-only.
+
+### Browser regression limitation (7 November 2026)
+
+The backend-refactor validation passed 26 browser cases and skipped the 18 Chromium-only bandwidth cases on Firefox/WebKit. WebKit's `media failures stop retrying and expose an actionable error` case intermittently timed out waiting for playback to advance after retry: two of three isolated reruns passed. The same failure reproduced against pre-refactor backend `83876c3` with the same frontend and browser runtime. Media requests returned 200 after retry but the first segment was repeatedly requested. This remains a pre-existing playback recovery issue to investigate; the backend extraction does not establish that this acceptance case is reliable.
 
 ## Federation
 

@@ -8,6 +8,7 @@ What lives here
 - Queue and maintenance job tracking (`queue/`, `maintenance/`).
 - Playback sessions and transcoding (`playback/`, see `docs/STREAMING.md`).
 - Playback preparation (`playback/MediaPreparation.ts`) receives explicit scheduling, lifetime and persistence dependencies. Keep session/HTTP/database-model access in `PlaybackService` adapters; shared scans use the service shutdown signal, while individual viewers cancel only their wait.
+- Playback encoding/hardware fallback lives in `playback/SegmentEncoder.ts`; asset/playlist delivery lives in `playback/AssetDelivery.ts`. Keep service lifetime, revision checks and active-request tracking in `PlaybackService`.
 - Accounts: tokens, permissions, sign-in policy and throttling (`auth/`); avatars, preferences,
   passwords and favourites (`users/`).
 - Settings validation and the config writer (`settings/`), local network and CORS rules (`network/`).
@@ -15,7 +16,7 @@ What lives here
   (`seedbox/`), and the Jellyfin emulation (`embyEmulation/`, see its own `AGENTS.md`).
 
 Common patterns
-- Classes accept the `Oblecto` instance in the constructor and keep `this.oblecto` for shared services.
+- Domain classes accept `Dependencies<service keys, config keys>` from `contracts.ts`; expose only required collaborators and configuration sections. Wire concrete services in `oblecto`; do not expand a dependency to the whole container for convenience. TVDB SDK responses enter through `common/TvdbAdapter.ts`.
 - Use `this.oblecto.queue` to register and enqueue background work (`registerJob`, `queueJob`, `pushJob`).
 - Log through `src/submodules/logger` instead of `console` for system logs.
 - Tell open web clients about library changes with `this.oblecto.realTimeController?.broadcast('indexer', …)`
@@ -25,7 +26,7 @@ Adding new behavior
 - Prefer adding a new service class and wire it in `lib/oblecto` so it is constructed once.
 - Register queue jobs in the constructor so they are available at startup.
 - Keep file and network work async and avoid blocking the event loop.
-- Define interfaces for job payloads.
+- Define job names and payloads in `queue/jobs.ts` (`BackendJobs` or `ImportJobs`); producers and handlers must agree. Register before enqueueing: duplicate registrations and unknown job names throw immediately. Tests with custom jobs should instantiate `Queue<TheirJobMap>`.
 
 ## Completion: commit and push
 

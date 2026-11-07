@@ -3,23 +3,11 @@ import { Movie } from '../../models/movie.js';
 import { File } from '../../models/file.js';
 import logger from '../../submodules/logger/index.js';
 
-import type Oblecto from '../oblecto/index.js';
-
 type MovieWithFiles = Movie & {
     Files?: File[];
 };
 
 export default class MovieCleaner {
-    public oblecto: Oblecto;
-
-    /**
-     *
-     * @param oblecto - Oblecto server instance
-     */
-    constructor(oblecto: Oblecto) {
-        this.oblecto = oblecto;
-    }
-
     /**
      * Remove all movies from the database without any linked files
      */

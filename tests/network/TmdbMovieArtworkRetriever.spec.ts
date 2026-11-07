@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
-import * as chai from 'chai';
+import assert from 'node:assert/strict';
 
 import TmdbMovieArtworkRetriever from '../../src/lib/artwork/movies/artworkRetrievers/TmdbMovieArtworkRetriever.js';
 import Queue from '../../src/lib/queue/index.js';
@@ -7,9 +7,9 @@ import { MovieDb } from 'moviedb-promise';
 
 import { FANART_KEY, TMDB_KEY } from './keys.js';
 
-chai.should();
 
-const TMDBID_TEST_ID = '299534';
+
+const TMDBID_TEST_ID = 299534;
 
 const oblecto = {
     queue: new Queue(1),
@@ -23,12 +23,12 @@ describe('Tmdb Movie Artwork Retriever', function () {
     it('Fanart artwork retrieval using TMDBID', async function () {
         const images = await ArtworkRetriever.retrieveFanart({ tmdbid: TMDBID_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 
     it('Poster artwork retrieval using TMDBID', async function () {
         const images = await ArtworkRetriever.retrievePoster({ tmdbid: TMDBID_TEST_ID });
 
-        images.should.have.length.above(1);
+        assert.ok(images.length > 1);
     });
 });

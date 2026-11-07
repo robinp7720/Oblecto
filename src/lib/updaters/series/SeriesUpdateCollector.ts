@@ -1,16 +1,18 @@
 import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue', never>;
 
 export default class SeriesUpdateCollector {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

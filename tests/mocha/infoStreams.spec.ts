@@ -86,8 +86,8 @@ describe('Media info routes include stream metadata', () => {
         await Stream.create({ FileId: movieFile.id, index: 0, codec_type: 'video', codec_name: 'h264' });
 
         const series = await Series.create({ seriesName: 'Series One' });
-        const episode = await Episode.create({ episodeName: 'Episode One', airedSeason: 1, airedEpisodeNumber: 1, SeriesId: series.id });
-        await Episode.create({ episodeName: 'Special', airedSeason: 0, airedEpisodeNumber: 1, SeriesId: series.id });
+        const episode = await Episode.create({ episodeName: 'Episode One', airedSeason: '1', airedEpisodeNumber: '1', SeriesId: series.id });
+        await Episode.create({ episodeName: 'Special', airedSeason: '0', airedEpisodeNumber: '1', SeriesId: series.id });
         const episodeFile = await File.create({ path: '/tmp/episode-one.mkv' });
         await EpisodeFiles.create({ EpisodeId: episode.id, FileId: episodeFile.id });
         await Stream.create({ FileId: episodeFile.id, index: 1, codec_type: 'audio', codec_name: 'aac' });

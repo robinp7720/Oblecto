@@ -3,10 +3,12 @@ import logger from '../../../../submodules/logger/index.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { Episode } from '../../../../models/episode.js';
 import type { Series } from '../../../../models/series.js';
 import type { RetrievedCredit } from '../../common/CreditSync.js';
+
+type ServiceDependencies = Dependencies<'tmdb', never>;
 
 type EpisodeWithSeries = Episode & {
     airedSeason: string;
@@ -17,9 +19,9 @@ type EpisodeWithSeries = Episode & {
 };
 
 export default class TmdbEpisodeRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

@@ -416,13 +416,13 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             Protocol: 'Http',
             RunTimeTicks: session.media.duration * 10000000,
             MediaStreams: createStreamsList(session.media.streams.map(track => ({
- ...track, tags_language: track.tags?.language, tags_title: track.tags?.title, disposition_default: track.disposition?.default, disposition_forced: track.disposition?.forced 
+ ...track, tags_language: track.tags?.language, tags_title: track.tags?.title, disposition_default: track.disposition?.default, disposition_forced: track.disposition?.forced
 }))).map(stream => {
                 if (stream.Type !== 'Subtitle') return stream;
                 const text = ['subrip', 'webvtt', 'mov_text', 'text'].includes(String(stream.Codec));
                 const url = playback.mediaUrl.replace(/\/[^/?]+\?token=/, `/subtitle-${String(stream.Index)}.vtt?token=`);
                 return {
- ...stream, DeliveryMethod: text ? 'External' : 'Encode', DeliveryUrl: text ? url : undefined, IsExternal: text, IsTextSubtitleStream: text, SupportsExternalStream: text 
+ ...stream, DeliveryMethod: text ? 'External' : 'Encode', DeliveryUrl: text ? url : undefined, IsExternal: text, IsTextSubtitleStream: text, SupportsExternalStream: text
 };
             }),
             SupportsDirectPlay: session.plan.method === 'direct',
@@ -436,7 +436,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             DefaultSubtitleStreamIndex: session.plan.subtitle?.index ?? -1
         }));
         res.send({
- MediaSources: sources, PlaySessionId: playSessionId, MediaSourceId: formatFileId(file.id) 
+ MediaSources: sources, PlaySessionId: playSessionId, MediaSourceId: formatFileId(file.id)
 });
     };
     server.post('/items/:mediaid/playbackinfo', playbackInfo);
@@ -568,7 +568,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
             for (const candidate of candidates) {
                 if (candidate && await fileExists(candidate)) {
                     images.push({
- ImageType: kind, ImageIndex: kind === 'Backdrop' ? 0 : undefined, ImageTag: kind.toLowerCase() 
+ ImageType: kind, ImageIndex: kind === 'Backdrop' ? 0 : undefined, ImageTag: kind.toLowerCase()
 });
                     break;
                 }
@@ -613,7 +613,9 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
 
         if (!item) return res.status(404).send('Item not found');
 
-        embyEmulation.oblecto.queue.pushJob(type === 'movie' ? 'updateMovie' : type === 'series' ? 'updateSeries' : 'updateEpisode', item);
+        if (item instanceof Movie) embyEmulation.oblecto.queue.pushJob('updateMovie', item);
+        else if (item instanceof Series) embyEmulation.oblecto.queue.pushJob('updateSeries', item);
+        else embyEmulation.oblecto.queue.pushJob('updateEpisode', item);
         res.status(204).send();
     });
     server.get('/items/:itemid/contenttype', (req, res) => { res.send({}); }); // Guessing response

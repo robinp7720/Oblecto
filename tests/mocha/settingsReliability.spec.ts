@@ -69,7 +69,7 @@ describe('Settings persistence', () => {
 
 describe('Maintenance tracking', () => {
     it('waits for descendants and excludes unrelated queue jobs', async () => {
-        const queue = new Queue(2);
+        const queue = new Queue<{ child: object; parent: object; unrelated: object; fail: object }>(2);
         let release!: () => void;
         const gate = new Promise<void>(resolve => { release = resolve; });
         queue.registerJob('unrelated', async () => gate);
@@ -87,7 +87,7 @@ describe('Maintenance tracking', () => {
         release();
     });
     it('records collection and worker failures without exposing exception text', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ child: object; parent: object; unrelated: object; fail: object }>(1);
         queue.registerJob('fail', async () => { throw new Error('private detail'); });
         queue.maintenance.start('scan', 'movies', async () => { queue.queueJob('fail', {}); throw new Error('private collection detail'); });
         await until(() => Boolean(queue.maintenance.list()[0].finishedAt));
@@ -161,7 +161,7 @@ describe('Settings route contracts', () => {
             const router = fakeRouter();
             const current = { indexer: { runAtBoot: false } };
             settingsRoutes(router.server, { config: current });
-            systemRoutes(router.server, { queue: new Queue(1) });
+            systemRoutes(router.server, { queue: new Queue<{ child: object; parent: object; unrelated: object; fail: object }>(1) });
             const response = fakeResponse();
             await router.call('patch /api/v1/settings', { body: { indexer: { runAtBoot: true }, artwork: { poster: { small: -1 } } } }, response);
             assert.equal(response.statusCode, 400);

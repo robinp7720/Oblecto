@@ -3,7 +3,9 @@ import { AxiosRequestConfig } from 'axios';
 import axiosTimeout from '../../submodules/axiosTimeout.js';
 import logger from '../../submodules/logger/index.js';
 import DebugExtendableError from '../errors/DebugExtendableError.js';
-import Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue', never>;
 
 interface DownloadJob {
     url: string;
@@ -12,13 +14,13 @@ interface DownloadJob {
 }
 
 export default class Downloader {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
      *  Downloader module for oblecto
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.oblecto.queue.registerJob('downloadFile', async (job: DownloadJob) => {

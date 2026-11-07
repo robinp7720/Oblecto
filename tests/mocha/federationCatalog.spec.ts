@@ -72,7 +72,7 @@ describe('Federation catalog snapshots', () => {
         await Movie.create({ tmdbid: 50, movieName: 'Provider match' });
         await applySnapshot('origin', await stage([movieRecord()]), 1, () => false);
         await applySnapshot('origin', await stage([]), 0, () => false);
-        await new MovieCleaner({} as any).removeFileLessMovies();
+        await new MovieCleaner().removeFileLessMovies();
         assert.equal(await Movie.count(), 2);
     });
     it('reconciles deletions only after a complete valid snapshot', async () => {
@@ -84,7 +84,7 @@ describe('Federation catalog snapshots', () => {
         await assert.rejects(applySnapshot('origin', await stage([]), 0, () => true), /cancelled/);
         await applySnapshot('origin', await stage([]), 0, () => false);
         assert.equal(await File.count(), 1); assert.equal(await Movie.count(), 1);
-        await new MovieCleaner({} as any).removeFileLessMovies();
+        await new MovieCleaner().removeFileLessMovies();
         assert.equal(await Movie.count(), 1);
     });
     it('exports only local files without filesystem paths and retains every association', async () => {

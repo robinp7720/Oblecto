@@ -1,12 +1,11 @@
+import { positiveId } from './helpers/input.js';
 import { normalizeGenres } from '../../../lib/library/facets.js';
 import { matchSeriesEpisodes } from '../../../lib/series/episodeMatching.js';
 import { relatedTitles } from '../../../lib/library/related.js';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, @typescript-eslint/prefer-nullish-coalescing */
-import { Express, Request, Response, NextFunction } from 'express';
+import { Express, Response } from 'express';
 import { Op } from 'sequelize';
 
 import authMiddleWare from '../middleware/auth.js';
-import errors from '../errors.js';
 
 import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
@@ -37,8 +36,8 @@ export default (server: Express, oblecto: Oblecto) => {
         let browseParams;
         try {
             browseParams = parseBrowseParams(params);
-        } catch (error: any) {
-            return res.status(400).send({ message: error.message || 'Invalid browse query' });
+        } catch (error) {
+            return res.status(400).send({ message: error instanceof Error ? error.message : 'Invalid browse query' });
         }
 
         if (browseParams.mode !== 'browse') {
@@ -62,7 +61,7 @@ export default (server: Express, oblecto: Oblecto) => {
         }
 
         try {
-            return res.send(await browseResponse('series', String(req.params.sorting), browseParams, Number(req.authorization!.user.id)));
+            return res.send(await browseResponse('series', String(req.params.sorting), browseParams, Number(req.authorization!.user!.id)));
         } catch (error) {
             if (error instanceof InvalidBrowseQueryError) return res.status(400).send({ message: error.message });
             throw error;
@@ -70,7 +69,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/series/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const results = await SeriesSet.findAll({ where: visibleSeriesSets(req.authorization!.user.id) });
+        const results = await SeriesSet.findAll({ where: visibleSeriesSets(req.authorization!.user!.id) });
 
         res.send(results);
     });
@@ -82,7 +81,7 @@ export default (server: Express, oblecto: Oblecto) => {
 
         const results = await SeriesSet.findAll({
             include: [{ model: Series }],
-            where: { [Op.and]: [{ id: req.params.id }, visibleSeriesSets(req.authorization!.user.id)] },
+            where: { [Op.and]: [{ id: req.params.id }, visibleSeriesSets(req.authorization!.user!.id)] },
             limit,
             offset: limit * page
         });
@@ -91,60 +90,62 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/series/:id/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const series: any = await Series.findByPk(req.params.id as string, {
+        const series = await Series.findByPk(req.params.id, {
             attributes: [],
             include: [
                 {
                     model: SeriesSet,
                     required: false,
-                    where: visibleSeriesSets(req.authorization!.user.id),
+                    where: visibleSeriesSets(req.authorization!.user!.id),
                     include: [{ model: Series }]
                 }
             ]
         });
 
-        res.send(series ? series.SeriesSets : []);
+        res.send(series ? series.get('SeriesSets') : []);
     });
 
-    server.put('/series/:id/sets', authMiddleWare.requiresPermission('libraries.manage'), async function (req: Request, res: Response) {
+    server.put('/series/:id/sets', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
+        const setId = positiveId(req.body?.setId, 'setId');
         try {
-            const series = await Series.findByPk(req.params.id as string);
-            const set = await SeriesSet.findByPk(req.body.setId);
+            const series = await Series.findByPk(req.params.id);
+            const set = await SeriesSet.findByPk(setId);
 
             if (!series || !set) return res.status(404).send({ message: 'Series or set not found' });
             await set.addSeries(series);
             res.send({ success: true });
-        } catch (e) {
+        } catch {
             return res.status(500).send({ message: 'Error adding series to set' });
         }
     });
 
     server.get('/series/:id/related', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const item = await Series.findByPk(req.params.id as string);
+        const item = await Series.findByPk(req.params.id);
         if (!item) return res.status(404).send({ message: 'Series not found' });
         const items = await relatedTitles(Series.sequelize!, 'series', item.id, item.genre);
         res.send({ items });
     });
 
     server.get('/series/:id/info', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id);
 
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
-        const data: any = show.toJSON();
+        const { episodeCatalog: _catalog, ...data } = show.toJSON();
 
-        if (data.genre) data.genre = normalizeGenres(data.genre);
-        data.credits = await creditsFor('series', show.id, Series.sequelize);
-        const userId = Number(req.authorization!.user.id);
+        const credits = await creditsFor('series', show.id, Series.sequelize);
+        const userId = Number(req.authorization!.user!.id);
         const [favourites, watchlist] = await Promise.all([favouritesAmong(userId, [{ type: 'series', id: show.id }]), isWatchlisted(userId, show.id)]);
-        data.userState = { favourite: favourites.has(`series:${show.id}`), watchlist };
-        delete data.episodeCatalog;
-
-        res.send(data);
+        res.send({
+            ...data,
+            genre: data.genre ? normalizeGenres(data.genre) : data.genre,
+            credits,
+            userState: { favourite: favourites.has(`series:${show.id}`), watchlist }
+        });
     });
 
     server.get('/series/:id/library', authMiddleWare.requiresPermission('libraries.manage'), async function (req: OblectoRequest, res: Response) {
-        const show = await Series.unscoped().findByPk(req.params.id as string);
+        const show = await Series.unscoped().findByPk(req.params.id);
         if (!show) return res.status(404).send({ message: 'Series not found' });
         const [snapshot, episodes] = await Promise.all([
             oblecto.seriesExtras.getCatalog(show),
@@ -174,24 +175,24 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.get('/series/:id/extras', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        const show = await Series.unscoped().findByPk(req.params.id as string);
+        const show = await Series.unscoped().findByPk(req.params.id);
         if (!show) return res.status(404).send({ message: 'Series not found' });
         res.send(await oblecto.seriesExtras.get(show));
     });
 
     server.put('/series/:id/favourite', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         if (typeof req.body?.favourite !== 'boolean') return res.status(400).send({ message: 'favourite must be a boolean' });
-        const show = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        const show = await Series.findByPk(req.params.id, { attributes: ['id'] });
         if (!show) return res.status(404).send({ message: 'Series not found' });
-        await setFavourite(Number(req.authorization!.user.id), 'series', show.id, req.body.favourite);
+        await setFavourite(Number(req.authorization!.user!.id), 'series', show.id, req.body.favourite);
         res.send({ favourite: req.body.favourite });
     });
 
     server.put('/series/:id/watchlist', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         if (typeof req.body?.watchlist !== 'boolean') return res.status(400).send({ message: 'watchlist must be a boolean' });
-        const show = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        const show = await Series.findByPk(req.params.id, { attributes: ['id'] });
         if (!show) return res.status(404).send({ message: 'Series not found' });
-        await setWatchlisted(Number(req.authorization!.user.id), show.id, req.body.watchlist);
+        await setWatchlisted(Number(req.authorization!.user!.id), show.id, req.body.watchlist);
         res.send({ watchlist: req.body.watchlist });
     });
 
@@ -201,7 +202,7 @@ export default (server: Express, oblecto: Oblecto) => {
         const anchor = rows.find(row => row.id === Number(req.params.episodeId));
         if (!anchor) return res.status(404).send({ message: 'Episode not found in this series' });
         const episodes = earlierEpisodes(rows.map(row => row.toJSON()), anchor.id);
-        const userId = Number(req.authorization!.user.id);
+        const userId = Number(req.authorization!.user!.id);
         await Promise.all(episodes.map(episode => setPlayed(userId, 'episode', Number(episode.id), true)));
         const tracks = await TrackEpisode.findAll({ where: { userId, episodeId: { [Op.in]: episodes.map(episode => Number(episode.id)) } } });
         const byEpisode = new Map(tracks.map(track => [Number(track.episodeId), track.toJSON()]));
@@ -221,7 +222,7 @@ export default (server: Express, oblecto: Oblecto) => {
                 {
                     model: TrackEpisode,
                     required: false,
-                    where: { userId: req.authorization!.user.id }
+                    where: { userId: req.authorization!.user!.id }
                 }
             ],
             where: { SeriesId: req.params.id },
@@ -237,14 +238,14 @@ export default (server: Express, oblecto: Oblecto) => {
     server.put('/series/:id/seasons/:season/watched', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         if (typeof req.body?.watched !== 'boolean') return res.status(400).send({ message: 'watched must be a boolean' });
         const watched: boolean = req.body.watched;
-        const series = await Series.findByPk(req.params.id as string, { attributes: ['id'] });
+        const series = await Series.findByPk(req.params.id, { attributes: ['id'] });
         if (!series) return res.status(404).send({ message: 'Series not found' });
         const episodes = await Episode.findAll({
             attributes: ['id'],
             where: { SeriesId: series.id, airedSeason: String(req.params.season) }
         });
         if (!episodes.length) return res.status(404).send({ message: 'Season not found' });
-        const userId = Number(req.authorization!.user.id);
+        const userId = Number(req.authorization!.user!.id);
         await Promise.all(episodes.map(episode => setPlayed(userId, 'episode', episode.id, watched)));
         const tracks = await TrackEpisode.findAll({ where: { userId, episodeId: { [Op.in]: episodes.map(episode => episode.id) } } });
         const byEpisode = new Map(tracks.map(track => [Number(track.episodeId), track.toJSON()]));
@@ -257,13 +258,13 @@ export default (server: Express, oblecto: Oblecto) => {
     // Public on purpose: the web UI and Jellyfin apps load artwork with plain <img> requests, which
     // cannot carry a token. Artwork reveals titles in the library, nothing about users. See SECURITY.md.
     server.get('/series/:id/fanart', async function (req: OblectoRequest, res: Response) {
-        const show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id);
         if (!show) return res.status(404).send({ message: 'Series not found' });
         res.sendFile(oblecto.artworkUtils.seriesFanartPath(show, (req.combined_params?.size as string) || 'large'));
     });
 
     server.get('/series/:id/poster', async function (req: OblectoRequest, res: Response) {
-        const show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id);
 
         if (!show) return res.status(404).send({ message: 'Series not found' });
 
@@ -273,7 +274,7 @@ export default (server: Express, oblecto: Oblecto) => {
     });
 
     server.put('/series/:id/poster', authMiddleWare.requiresPermission('libraries.manage'), upload, async function (req: OblectoRequest, res: Response) {
-        const show = await Series.findByPk(req.params.id as string);
+        const show = await Series.findByPk(req.params.id);
 
         if (!show) {
             return res.status(404).send({ message: 'Series does not exist' });
@@ -284,7 +285,7 @@ export default (server: Express, oblecto: Oblecto) => {
         res.send(['success']);
     });
 
-    server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: Request, res: Response) {
+    server.get('/shows/search/:name', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const series = await Series.findAll({ where: containsText('seriesName', String(req.params.name)) });
 
         res.send(series);

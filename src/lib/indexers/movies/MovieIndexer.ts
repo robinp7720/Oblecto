@@ -4,11 +4,13 @@ import { Movie } from '../../../models/movie.js';
 import { File } from '../../../models/file.js';
 import { clearProblem, markProblematic } from '../files/problems.js';
 import logger from '../../../submodules/logger/index.js';
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unused-vars, jsdoc/require-returns-description */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions, jsdoc/require-returns-description */
 import guessit, { GuessitIdentification } from '../../../submodules/guessit.js';
 import IdentificationError from '../../errors/IdentificationError.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'fileIndexer' | 'mediaAnalyser' | 'queue' | 'realTimeController' | 'tmdb', 'movies'>;
 
 interface MovieIdentification {
     [key: string]: unknown;
@@ -17,19 +19,19 @@ interface MovieIdentification {
     overview?: string | null;
 }
 
-type MovieIdentifierConstructor = new (oblecto: Oblecto) => {
+type MovieIdentifierConstructor = new (oblecto: ServiceDependencies) => {
     identify: (path: string, guessit: GuessitIdentification) => Promise<MovieIdentification>;
 };
 
 export default class MovieIndexer {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public movieIdentifier: AggregateIdentifier;
     public availableIdentifiers: string[];
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.movieIdentifier = new AggregateIdentifier();
@@ -120,7 +122,7 @@ export default class MovieIndexer {
 
         if (!movieCreated && !doReindex) return;
 
-        this.oblecto.realTimeController.broadcast('indexer', {
+        this.oblecto.realTimeController?.broadcast('indexer', {
             event: 'added',
             type: 'movie',
             id: movie.id

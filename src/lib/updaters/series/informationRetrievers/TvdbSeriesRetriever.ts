@@ -2,20 +2,22 @@ import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
 import type { Series } from '../../../../models/series.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { TvdbSeries } from '../../../common/tvdbTypes.js';
+
+type ServiceDependencies = Dependencies<'tvdb', never>;
 
 type SeriesWithTvdb = Series & {
     tvdbid: number | null;
 };
 
 export default class TvdbSeriesRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
-     * @param oblecto - Oblecto server Instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 
@@ -27,32 +29,21 @@ export default class TvdbSeriesRetriever {
     async retrieveInformation(series: SeriesWithTvdb): Promise<Record<string, unknown>> {
         if (!series.tvdbid) throw new DebugExtendableError('No tvdbid attached to series');
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
         const seriesInfo = await promiseTimeout<TvdbSeries>(this.oblecto.tvdb.getSeriesById(series.tvdbid));
 
         // TODO: TMDB Voting should be separated from TVDB voting
 
         return {
-             
             seriesName: seriesInfo.seriesName,
-             
             status: seriesInfo.status,
-             
             firstAired: seriesInfo.firstAired,
-             
             overview: seriesInfo.overview,
-             
             siteRatingSource: 'tvdb',
             siteRating: seriesInfo.siteRating,
-             
             siteRatingCount: seriesInfo.siteRatingCount,
-             
             rating: seriesInfo.rating,
-             
             airsDayOfWeek: seriesInfo.airsDayOfWeek,
-             
             airsTime: seriesInfo.airsTime,
-             
             network: seriesInfo.network,
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
             imdbid: seriesInfo.imdbId || null,

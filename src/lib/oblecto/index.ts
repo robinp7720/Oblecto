@@ -3,7 +3,8 @@ import { prepareDatabase } from '../../submodules/prepareDatabase.js';
 import { StatisticsService } from '../statistics/StatisticsService.js';
 import { FederationService } from '../federation/FederationService.js';
 import pkg from '../../../package.json';
-import TVDB from 'node-tvdb';
+import { createTvdbClient } from '../common/TvdbAdapter.js';
+import type { TvdbClient } from '../common/tvdbTypes.js';
 import { unconfiguredClient } from '../common/unconfiguredClient.js';
 import { describeMissingTools, probeTools, type ToolReport } from './tools.js';
 import { maintenanceWork } from '../maintenance/dispatch.js';
@@ -63,7 +64,7 @@ export default class Oblecto {
     public config: IConfig;
     public database!: Sequelize;
     private databaseOptimizer!: DatabaseOptimizer;
-    public tvdb!: InstanceType<typeof TVDB>;
+    public tvdb!: TvdbClient;
     public tmdb!: MovieDb;
     public movieExtras!: MovieExtras;
     public seriesExtras!: SeriesExtras;
@@ -122,8 +123,7 @@ export default class Oblecto {
         this.databaseOptimizer = new DatabaseOptimizer(this.database);
         this.lifecycle.defer('database optimizer', 'persistence', () => this.databaseOptimizer.close());
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
-        this.tvdb = this.config.tvdb.key ? new (TVDB)(this.config.tvdb.key) : unconfiguredClient('TVDB', 'tvdb.key');
+        this.tvdb = this.config.tvdb.key ? createTvdbClient(this.config.tvdb.key) : unconfiguredClient<TvdbClient>('TVDB', 'tvdb.key');
         this.tmdb = this.config.themoviedb.key ? new MovieDb(this.config.themoviedb.key) : unconfiguredClient<MovieDb>('TMDb', 'themoviedb.key');
         this.movieExtras = new MovieExtras(this.tmdb);
         this.seriesExtras = new SeriesExtras(this.tmdb);
@@ -160,8 +160,8 @@ export default class Oblecto {
         this.movieUpdateCollector = new MovieUpdateCollector(this);
 
         this.fileCleaner = new FileCleaner(this);
-        this.movieCleaner = new MovieCleaner(this);
-        this.seriesCleaner = new SeriesCleaner(this);
+        this.movieCleaner = new MovieCleaner();
+        this.seriesCleaner = new SeriesCleaner();
 
         this.mediaAnalyser = new MediaAnalyser(this);
         this.lifecycle.defer('media analyser', 'playback', () => this.mediaAnalyser.close());

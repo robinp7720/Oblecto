@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { Express, Response } from 'express';
 import authMiddleWare from '../middleware/auth.js';
 import type Oblecto from '../../../lib/oblecto/index.js';
@@ -15,13 +14,17 @@ import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { enrichPerson, personProfileFile, PROFILE_SIZES, type ProfileSize } from '../../../lib/people/index.js';
 import { containsText } from '../../../lib/common/textSearch.js';
 
-function groupCredits(rows: Array<Record<string, any>>, mediaKey: string): unknown[] {
-    const grouped = new Map<number, { item: unknown; roles: Array<Record<string, unknown>> }>();
+type CreditRow = {
+    Movie?: { id: number }; Series?: { id: number }; Episode?: { id: number };
+    creditType: string; character: string | null; job: string | null; department: string | null; episodeCount?: number | null;
+};
+function groupCredits(rows: CreditRow[], mediaKey: 'Movie' | 'Series' | 'Episode'): Array<{ item: { id: number }; roles: Array<Record<string, unknown>> }> {
+    const grouped = new Map<number, { item: { id: number }; roles: Array<Record<string, unknown>> }>();
 
     for (const row of rows) {
         const item = row[mediaKey];
         if (!item) continue;
-        const existing: { item: unknown; roles: Array<Record<string, unknown>> } = grouped.get(item.id) ?? { item, roles: [] };
+        const existing: { item: { id: number }; roles: Array<Record<string, unknown>> } = grouped.get(item.id) ?? { item, roles: [] };
         existing.roles.push({
             type: row.creditType,
             character: row.character,
@@ -47,11 +50,11 @@ export default (server: Express, oblecto: Oblecto): void => {
     });
 
     server.get('/person/:id/info', authMiddleWare.requiresAuth, async (req: OblectoRequest, res: Response) => {
-        const person = await Person.findByPk(req.params.id as string);
+        const person = await Person.findByPk(req.params.id);
         if (!person) return res.status(404).send({ message: 'Person not found' });
 
         await enrichPerson(oblecto, person);
-        const userId = req.authorization!.user.id;
+        const userId = req.authorization!.user!.id;
         const [movieRows, seriesRows, episodeRows] = await Promise.all([
             MovieCredit.findAll({
                 include: [
@@ -90,18 +93,18 @@ export default (server: Express, oblecto: Oblecto): void => {
         res.send({
             ...person.toJSON(),
             credits: {
-                movies: groupCredits(movieRows.map(row => row.toJSON() as Record<string, any>), 'Movie'),
-                series: groupCredits(seriesRows.map(row => row.toJSON() as Record<string, any>), 'Series'),
-                episodes: groupCredits(episodeRows.map(row => row.toJSON() as Record<string, any>), 'Episode')
+                movies: groupCredits(movieRows.map(row => row.toJSON() as CreditRow), 'Movie'),
+                series: groupCredits(seriesRows.map(row => row.toJSON() as CreditRow), 'Series'),
+                episodes: groupCredits(episodeRows.map(row => row.toJSON() as CreditRow), 'Episode')
             }
         });
     });
 
     server.get('/person/:id/profile', async (req: OblectoRequest, res: Response) => {
-        const person = await Person.findByPk(req.params.id as string);
+        const person = await Person.findByPk(req.params.id);
         if (!person?.profilePath) return res.status(404).send({ message: 'Profile image not found' });
 
-        const requested = String(req.combined_params?.size || 'medium');
+        const requested = typeof req.combined_params?.size === 'string' ? req.combined_params.size : 'medium';
         const size = requested in PROFILE_SIZES ? requested as ProfileSize : 'medium';
         const path = await personProfileFile(oblecto, person, size);
 

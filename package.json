@@ -42,7 +42,7 @@
     "benchmark:playback": "node --import tsx scripts/benchmark-playback.mjs",
     "test:playback:browser": "playwright test --project=chromium --project=firefox --project=webkit",
     "test:player:ui": "playwright test --project=player-desktop --project=player-phone",
-    "typecheck": "tsc --noEmit -p tsconfig.src.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:src": "eslint src",
     "test:network": "mocha --config tests/network/.mocharc.cjs",
     "verify": "npm run lint:src && npm run typecheck && npm test"

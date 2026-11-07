@@ -83,8 +83,8 @@ describe('Emby Emulation Helpers', () => {
             const episode = {
                 id: 42,
                 episodeName: 'Pilot',
-                airedSeason: 1,
-                airedEpisodeNumber: 1,
+                airedSeason: '1',
+                airedEpisodeNumber: '1',
                 Series: { id: 7, seriesName: 'Sample Show' }
             };
             const embyEmulation = { serverId: 'test-server' };

@@ -1,3 +1,4 @@
+import { SegmentEncoder } from '../../src/lib/playback/SegmentEncoder.js';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
@@ -281,21 +282,30 @@ describe('Real FFmpeg playback delivery', function () {
         }
         assert.notEqual(hashes[0], hashes[1], 'Subtitle must be visible after the seek');
     });
-    it('falls back once when a hardware encoder fails', async () => {
-        const hardwareService = new PlaybackService({ config: { ffmpeg: {}, streaming: {}, transcoding: {} } } as unknown as Oblecto);
-        // An unavailable encoder exercises real process failure independently of the host GPU.
-        (hardwareService as unknown as { hardware: Promise<string> }).hardware = Promise.resolve('oblecto_missing_encoder');
+    it('falls back once on hardware failure and keeps subsequent segments on software', async () => {
+        const selected: string[] = [];
+        const encoder = new SegmentEncoder({
+            cache: service.cache,
+            ffmpeg: () => service.ffmpeg,
+            transcoding: () => ({ hardwareAcceleration: true, hardwareAccelerator: 'cuda' }),
+            vaapiDevice: () => undefined,
+            run: (binary, args, signal, timeout) => {
+                if (args.includes('-encoders')) return Promise.resolve('h264_nvenc');
+                const codec = args[args.indexOf('-c:v') + 1];
+                selected.push(codec);
+                return run(binary, args.map(arg => arg === 'h264_nvenc' ? 'oblecto_missing_encoder' : arg), signal, timeout);
+            }
+        });
+        const session = await service.create(file, 'alice', null, { quality: 360, subtitleMode: 'off' });
         try {
-            const session = await hardwareService.create(file, 'alice', null, { quality: 360, subtitleMode: 'off' });
-            const app = express();
-            app.get('/', (req, res) => hardwareService.serve(session, 1, '360-0.ts', req, res));
-            const server = app.listen(0); await new Promise<void>(resolve => server.once('listening', resolve));
-            try {
-                const response = await fetch(`http://127.0.0.1:${(server.address() as { port: number }).port}`);
-                assert.equal(response.status, 200); assert.ok((await response.arrayBuffer()).byteLength > 0);
-                assert.equal(await (hardwareService as unknown as { hardware: Promise<null> }).hardware, null);
-            } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
-        } finally { await hardwareService.close(); }
+            const first = path.join(root, 'fallback-first.ts');
+            const second = path.join(root, 'fallback-second.ts');
+            await encoder.segment(session, '360', 0, first);
+            await encoder.segment(session, '360', 1, second);
+            assert.deepEqual(selected, ['h264_nvenc', 'libx264', 'libx264']);
+            assert.ok((await fs.stat(first)).size > 0);
+            assert.ok((await fs.stat(second)).size > 0);
+        } finally { await service.stop(session); }
     });
     it('regenerates evicted segments and serializes competing revisions', async () => {
         const session = await service.create(file, 'alice', null, { quality: 360, subtitleMode: 'off' });

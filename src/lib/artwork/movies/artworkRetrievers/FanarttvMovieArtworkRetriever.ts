@@ -2,8 +2,10 @@ import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import axiosTimeout from '../../../../submodules/axiosTimeout.js';
 import InfoExtendableError from '../../../errors/InfoExtendableError.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { Movie } from '../../../../models/movie.js';
+
+type ServiceDependencies = Dependencies<never, 'fanart.tv'>;
 
 type FanartMovieResponse = {
     moviebackground?: Array<{ url: string }>;
@@ -11,10 +13,10 @@ type FanartMovieResponse = {
 };
 
 export default class FanarttvMovieArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public key: string;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.key = this.oblecto.config['fanart.tv'].key;
@@ -38,7 +40,7 @@ export default class FanarttvMovieArtworkRetriever {
         }
     }
 
-    async retrieveFanart(movie: Movie): Promise<string[]> {
+    async retrieveFanart(movie: Partial<Pick<Movie, 'tmdbid' | 'imdbid' | 'movieName'>>): Promise<string[]> {
         if (!((movie.tmdbid !== null && movie.tmdbid !== undefined) || (movie.imdbid !== null && movie.imdbid !== undefined && movie.imdbid !== ''))) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
 
         const data = await this.getArtwork((movie.tmdbid ?? movie.imdbid)!);
@@ -48,7 +50,7 @@ export default class FanarttvMovieArtworkRetriever {
         return data.moviebackground.map(image => image.url);
     }
 
-    async retrievePoster(movie: Movie): Promise<string[]> {
+    async retrievePoster(movie: Partial<Pick<Movie, 'tmdbid' | 'imdbid' | 'movieName'>>): Promise<string[]> {
         if (!((movie.tmdbid !== null && movie.tmdbid !== undefined) || (movie.imdbid !== null && movie.imdbid !== undefined && movie.imdbid !== ''))) throw new DebugExtendableError(`No tmdbid or imdb id found for movie ${movie.movieName}`);
 
         const data = await this.getArtwork((movie.tmdbid ?? movie.imdbid)!);

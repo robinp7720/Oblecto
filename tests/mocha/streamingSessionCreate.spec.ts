@@ -107,7 +107,7 @@ describe('Playback session REST API', () => {
         const lookup = File.findByPk;
         // This API fixture has no catalogue database; ownership still uses the authenticated owner.
         service.create = (file, owner, _userId, options, id, at) => create(file, owner, null, options, id, at);
-        File.findByPk = (async (...args) => { await delay(20); return lookup(...args); }) as typeof File.findByPk;
+        File.findByPk = (async (...args) => { await delay(20); return lookup.apply(File, args); }) as typeof File.findByPk;
         service.probe = async source => { await delay(20); return probe(source); };
         try {
             const response = await fetch(`${base}/playback/sessions`, { method: 'POST', headers: headers(), body: JSON.stringify({ fileId: 2, forceDirect: true }) });

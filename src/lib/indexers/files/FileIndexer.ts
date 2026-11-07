@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/no-unused-vars, jsdoc/require-param-description, jsdoc/require-returns-description */
+/* eslint-disable @typescript-eslint/no-unused-vars, jsdoc/require-param-description, jsdoc/require-returns-description */
 import * as crypto from 'crypto';
 
 import path from 'path';
@@ -13,7 +13,9 @@ import logger from '../../../submodules/logger/index.js';
 import { clearProblem, markProblematic } from './problems.js';
 
 import type { FfprobeData } from 'fluent-ffmpeg';
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'fileUpdateCollector' | 'queue' | 'realTimeController', never>;
 
 type StreamMetadata = Record<string, unknown> & {
     disposition?: Record<string, number | null | undefined>;
@@ -36,13 +38,13 @@ type StreamRecord = Record<string, unknown> & {
 };
 
 export default class FileIndexer {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.oblecto.queue.registerJob('indexFileStreams', (file: File) => this.indexVideoFileStreams(file));

@@ -11,7 +11,9 @@ import { detectSharedSegments, fingerprint, fingerprintRegions, type EpisodePrin
 import { runBinary } from './process.js';
 import { generateTrickplay, type VideoStream } from './trickplay.js';
 
-import type Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
+
+type ServiceDependencies = Dependencies<'playback' | 'queue', 'assets' | 'ffmpeg' | 'streaming'>;
 
 type Probe = {
     duration: number;
@@ -39,7 +41,7 @@ export default class MediaAnalyser {
     private dirtySeasons = new Set<string>();
     private chromaprint?: Promise<boolean>;
 
-    constructor(private oblecto: Oblecto) {
+    constructor(private oblecto: ServiceDependencies) {
         oblecto.queue.registerJob('analyseFile', async (fileId: number) => {
             try { await this.run(() => this.analyseFile(fileId)); }
             finally { this.pending.delete(`file:${fileId}`); }

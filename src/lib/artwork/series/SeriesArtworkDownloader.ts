@@ -10,7 +10,9 @@ import logger from '../../../submodules/logger/index.js';
 import { Series } from '../../../models/series.js';
 import { Episode } from '../../../models/episode.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'artworkUtils' | 'queue' | 'realTimeController' | 'tmdb' | 'tvdb', 'artwork' | 'fanart.tv'>;
 
 type RescaleJob = {
     from: string;
@@ -19,10 +21,10 @@ type RescaleJob = {
 };
 
 export default class SeriesArtworkDownloader {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public seriesArtworkRetriever: AggregateSeriesArtworkRetriever;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.seriesArtworkRetriever = new AggregateSeriesArtworkRetriever(this.oblecto);

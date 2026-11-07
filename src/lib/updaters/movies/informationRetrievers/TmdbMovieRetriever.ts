@@ -2,8 +2,10 @@ import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import { optionalMetadata, validCreditLists } from '../../common/optionalMetadata.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 import type { Movie } from '../../../../models/movie.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { RetrievedCredit } from '../../common/CreditSync.js';
+
+type ServiceDependencies = Dependencies<'tmdb', never>;
 
 type MovieWithTmdb = Movie & {
     tmdbid: number | null;
@@ -15,12 +17,12 @@ type MovieSetInfo = {
 };
 
 export default class TmdbMovieRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

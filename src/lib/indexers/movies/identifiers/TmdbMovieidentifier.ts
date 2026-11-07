@@ -2,10 +2,12 @@ import MovieIdentifier, { MovieIdentification } from '../MovieIdentifier.js';
 import IdentificationError from '../../../errors/IdentificationError.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import type { GuessitIdentification } from '../../../../submodules/guessit.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 
-export default class TmdbMovieIdentifier extends MovieIdentifier {
-    constructor(oblecto: Oblecto) {
+type ServiceDependencies = Dependencies<'tmdb', never>;
+
+export default class TmdbMovieIdentifier extends MovieIdentifier<ServiceDependencies> {
+    constructor(oblecto: ServiceDependencies) {
         super(oblecto);
     }
     /**

@@ -2,14 +2,16 @@ import IdentificationError from '../../../errors/IdentificationError.js';
 import EpisodeIdentifier, { EpisodeGuessitIdentification, EpisodeIdentification } from '../EpisodeIdentifier.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { SeriesIdentification } from '../SeriesIdentifer.js';
 import type { TvdbEpisode } from '../../../common/tvdbTypes.js';
 
-export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
+type ServiceDependencies = Dependencies<'tvdb', never>;
+
+export default class TvdbEpisodeIdentifier extends EpisodeIdentifier<ServiceDependencies> {
     public episodeCache: Record<number, TvdbEpisode[]>;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         super(oblecto);
 
         this.episodeCache = {};
@@ -26,7 +28,6 @@ export default class TvdbEpisodeIdentifier extends EpisodeIdentifier {
             return this.episodeCache[tvdbId];
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         this.episodeCache[tvdbId] = await promiseTimeout<TvdbEpisode[]>(this.oblecto.tvdb.getEpisodesBySeriesId(tvdbId));
 
         return this.episodeCache[tvdbId];

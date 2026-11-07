@@ -4,7 +4,9 @@ import { Movie } from '../../models/movie.js';
 import { Episode } from '../../models/episode.js';
 import logger from '../../submodules/logger/index.js';
 
-import type Oblecto from '../oblecto/index.js';
+import type { Dependencies } from '../contracts.js';
+
+type ServiceDependencies = Dependencies<'mediaAnalyser', 'movies' | 'tvshows'>;
 
 type FileWithAssociations = File & {
     Movies: Movie[];
@@ -12,9 +14,9 @@ type FileWithAssociations = File & {
 };
 
 export default class FileCleaner {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 
@@ -50,7 +52,7 @@ export default class FileCleaner {
      * whole library and everyone's watch progress with it.
      */
     async offlineLibraries(): Promise<string[]> {
-        const config = this.oblecto.config as Oblecto['config'] | undefined;
+        const config = this.oblecto.config as ServiceDependencies['config'] | undefined;
         const roots = [...config?.movies?.directories ?? [], ...config?.tvshows?.directories ?? []].map(directory => directory.path);
         const offline: string[] = [];
 

@@ -1,20 +1,15 @@
 
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import { Episode } from '../../src/models/episode.js';
 import { Series } from '../../src/models/series.js';
 import SeriesCleaner from '../../src/lib/cleaners/SeriesCleaner.js';
 import logger from '../../src/submodules/logger/index.js';
-import Queue from '../../src/lib/queue/index.js';
 
 describe('SeriesCleaner', function () {
     let seriesCleaner: SeriesCleaner;
     let originalEpisodeFindAll: any;
     let originalSeriesFindAll: any;
     let originalSeriesDestroy: any;
-
-    const mockOblecto: any = {
-        queue: new Queue(1)
-    };
 
     before(function () {
         logger.silent = true;
@@ -25,7 +20,7 @@ describe('SeriesCleaner', function () {
     });
 
     beforeEach(function () {
-        seriesCleaner = new SeriesCleaner(mockOblecto);
+        seriesCleaner = new SeriesCleaner();
         originalEpisodeFindAll = Episode.findAll;
         originalSeriesFindAll = Series.findAll;
         originalSeriesDestroy = Series.destroy;
@@ -43,7 +38,7 @@ describe('SeriesCleaner', function () {
     describe('removeFileLessEpisodes', function () {
         it('should remove episodes without linked files', async function () {
             const destroyedIds: number[] = [];
-            
+
             const mockEpisodes = [
                 {
                     id: 1,
@@ -65,9 +60,9 @@ describe('SeriesCleaner', function () {
 
             await seriesCleaner.removeFileLessEpisodes();
 
-            expect(destroyedIds).to.contain(2);
-            expect(destroyedIds).to.not.contain(1);
-            expect(destroyedIds.length).to.be(1);
+            assert.ok(destroyedIds?.includes(2));
+            assert.ok(!destroyedIds.includes(1));
+            assert.equal(destroyedIds.length, 1);
         });
     });
 
@@ -83,14 +78,14 @@ describe('SeriesCleaner', function () {
 
             await seriesCleaner.removePathLessShows();
 
-            expect(destroyQuery).to.eql({ where: { directory: '' } });
+            assert.deepEqual(destroyQuery, { where: { directory: '' } });
         });
     });
 
     describe('removeEpisodeslessShows', function () {
         it('should remove series without attached episodes', async function () {
             const destroyedIds: number[] = [];
-            
+
             const mockSeries = [
                 {
                     id: 1,
@@ -112,9 +107,9 @@ describe('SeriesCleaner', function () {
 
             await seriesCleaner.removeEpisodeslessShows();
 
-            expect(destroyedIds).to.contain(2);
-            expect(destroyedIds).to.not.contain(1);
-            expect(destroyedIds.length).to.be(1);
+            assert.ok(destroyedIds?.includes(2));
+            assert.ok(!destroyedIds.includes(1));
+            assert.equal(destroyedIds.length, 1);
         });
     });
 });

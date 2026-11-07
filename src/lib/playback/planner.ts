@@ -234,3 +234,11 @@ export function renditionCodecs(plan: PlaybackPlan): string {
     }
     return codecs.join(',');
 }
+
+/** Operations also support plans received from older compatible federation peers. */
+export function trackOperations(plan: PlaybackPlan): { video: 'copy' | 'encode' | 'none'; audio: 'copy' | 'encode' | 'none' } {
+    return {
+        video: plan.videoOperation ?? (plan.video ? plan.method === 'transcode' ? 'encode' : 'copy' : 'none'),
+        audio: plan.audioOperation ?? (plan.audio ? plan.method === 'transcode' ? 'encode' : 'copy' : 'none')
+    };
+}

@@ -4,7 +4,7 @@ import { Episode } from '../../../../../models/episode';
 import { Movie } from '../../../../../models/movie';
 import { File } from '../../../../../models/file';
 import { parseId } from '../../../helpers';
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing */
 import { getEmbyToken, getRequestValue } from '../../requestUtils.js';
 import { getPlaybackEntry, setLastMediaSource, upsertPlaybackEntry, statisticsPlaybackId, legacyStatisticsId } from '../../playbackState.js';
 
@@ -49,7 +49,7 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         if (mediaSourceId !== undefined) setLastMediaSource(embyEmulation, token, String(itemId), String(mediaSourceId));
         if (start) (embyEmulation.sessions[token] as any).playSession = { ...req.query, ...req.body };
         const playback = entry?.streamSessionId ? embyEmulation.oblecto.playback?.sessions.get(String(entry.streamSessionId)) : undefined;
-        if (playback && playback.owner === `emby:${token}`) {
+        if (playback?.owner === `emby:${token}`) {
             await embyEmulation.oblecto.playback.report(playback, {
  revision: playback.revision, position: time, paused: stop || String(getRequestValue(req, 'IsPaused')) === 'true' 
 });

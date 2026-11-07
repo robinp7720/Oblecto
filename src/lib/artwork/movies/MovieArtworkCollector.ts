@@ -2,16 +2,18 @@ import { Movie } from '../../../models/movie.js';
 import { fileExists } from '../../../submodules/utils.js';
 import logger from '../../../submodules/logger/index.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'artworkUtils' | 'queue', never>;
 
 export default class MovieArtworkCollector {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

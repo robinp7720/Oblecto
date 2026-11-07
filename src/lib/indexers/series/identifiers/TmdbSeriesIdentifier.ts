@@ -2,12 +2,14 @@ import IdentificationError from '../../../errors/IdentificationError.js';
 import SeriesIdentifer, { SeriesIdentification } from '../SeriesIdentifer.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import type { GuessitIdentification } from '../../../../submodules/guessit.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 
-export default class TmdbSeriesIdentifier extends SeriesIdentifer {
+type ServiceDependencies = Dependencies<'tmdb', never>;
+
+export default class TmdbSeriesIdentifier extends SeriesIdentifer<ServiceDependencies> {
     public tvShowCache: Record<string, SeriesIdentification>;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         super(oblecto);
 
         this.tvShowCache = {};

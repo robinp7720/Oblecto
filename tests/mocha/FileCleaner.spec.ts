@@ -1,5 +1,5 @@
 
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import { promises as fs } from 'fs';
 import { File } from '../../src/models/file.js';
 import FileCleaner from '../../src/lib/cleaners/FileCleaner.js';
@@ -38,7 +38,7 @@ describe('FileCleaner', function () {
     describe('removedDeletedFiled', function () {
         it('should remove files that do not exist on disk', async function () {
             const destroyedIds: number[] = [];
-            
+
             const mockFiles = [
                 {
                     id: 1,
@@ -67,8 +67,8 @@ describe('FileCleaner', function () {
 
             await fileCleaner.removedDeletedFiled();
 
-            expect(destroyedIds).to.contain(2);
-            expect(destroyedIds).to.not.contain(1);
+            assert.ok(destroyedIds?.includes(2));
+            assert.ok(!destroyedIds.includes(1));
         });
     });
 
@@ -95,14 +95,14 @@ describe('FileCleaner', function () {
                 fs.readdir = originalReaddir;
             }
 
-            expect(destroyedIds).to.eql([2]);
+            assert.deepEqual(destroyedIds, [2]);
         });
     });
 
     describe('removeAssoclessFiles', function () {
         it('should remove files with no movies or episodes', async function () {
             const destroyedIds: number[] = [];
-            
+
             const mockFiles = [
                 {
                     id: 1,
@@ -130,10 +130,10 @@ describe('FileCleaner', function () {
 
             await fileCleaner.removeAssoclessFiles();
 
-            expect(destroyedIds).to.contain(3);
-            expect(destroyedIds).to.not.contain(1);
-            expect(destroyedIds).to.not.contain(2);
-            expect(destroyedIds.length).to.be(1);
+            assert.ok(destroyedIds?.includes(3));
+            assert.ok(!destroyedIds.includes(1));
+            assert.ok(!destroyedIds.includes(2));
+            assert.equal(destroyedIds.length, 1);
         });
 
         it('should keep problematic files so their error and ignored state survive', async function () {
@@ -154,7 +154,7 @@ describe('FileCleaner', function () {
 
             await fileCleaner.removeAssoclessFiles();
 
-            expect(destroyedIds.length).to.be(0);
+            assert.equal(destroyedIds.length, 0);
         });
     });
 });

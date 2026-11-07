@@ -1,4 +1,5 @@
 import async from 'async';
+import type { BackendJobs } from './jobs.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { JobTracker } from '../maintenance/JobTracker.js';
 import logger from '../../submodules/logger/index.js';
@@ -11,7 +12,10 @@ export interface QueueItem {
 
 type Job = (attr: unknown) => Promise<void>;
 
-export default class Queue {
+type Arguments<Jobs> = { [K in keyof Jobs & string]: [id: K, attr: Jobs[K], priority?: number] }[keyof Jobs & string];
+type ImmediateArguments<Jobs> = { [K in keyof Jobs & string]: [id: K, attr: Jobs[K]] }[keyof Jobs & string];
+
+export default class Queue<Jobs extends object = BackendJobs> {
     public maintenance = new JobTracker();
     private jobs = new Map<string, Job>();
     private queue: async.AsyncPriorityQueue<QueueItem>;
@@ -59,16 +63,11 @@ export default class Queue {
      * @param id - ID/Name for job
      * @param job - Function used for Queue item
      */
-    registerJob<T>(id: string, job: (attr: T) => Promise<void>): void {
-        if (this.jobs.has(id)) {
-            logger.error(`A job has been registered which was already registered: ${id}`);
-            logger.error('This should not happen');
-            return;
-        }
-
+    registerJob<K extends keyof Jobs & string>(id: K, job: (attr: Jobs[K]) => Promise<void>): void {
+        if (this.jobs.has(id)) throw new Error(`Job already registered: ${id}`);
         logger.debug('New queue item has been registered:', id);
-        // Callers are trusted to queue attributes matching the job they registered
-        this.jobs.set(id, job as Job);
+        // Type erasure is confined to storage; every public producer is checked against Jobs.
+        this.jobs.set(id, attr => job(attr as Jobs[K]));
     }
 
     /**
@@ -77,11 +76,12 @@ export default class Queue {
      * @param attr - Attributes to be passed to the job
      * @param priority - Priority for the job
      */
-    queueJob(id: string, attr: unknown, priority: number = 5): void {
+    queueJob(...[id, attr, priority = 5]: Arguments<Jobs>): void {
         // Accepted jobs and in-flight discovery may enqueue descendants while draining. A stale
         // async context (for example a detached timer after its job finished) grants no admission.
         if (!this.accepting && !this.execution.getStore()?.active && !this.maintenance.current()?.job.discovering)
             throw new Error('Queue is shutting down');
+        if (!this.jobs.has(id)) throw new Error(`Job is not registered: ${id}`);
         const maintenance = this.maintenance.current();
         this.maintenance.enqueue(maintenance);
         void this.queue.push({
@@ -94,8 +94,8 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed to the job
      */
-    lowPriorityJob(id: string, attr: unknown): void {
-        this.queueJob(id, attr, 20);
+    lowPriorityJob(...args: ImmediateArguments<Jobs>): void {
+        this.queueJob(...[...args, 20] as Arguments<Jobs>);
     }
 
     /**
@@ -103,8 +103,8 @@ export default class Queue {
      * @param id - Id for the job to be called
      * @param attr - Attributes to be passed the job
      */
-    pushJob(id: string, attr: unknown): void {
-        this.queueJob(id, attr, 0);
+    pushJob(...args: ImmediateArguments<Jobs>): void {
+        this.queueJob(...[...args, 0] as Arguments<Jobs>);
     }
 
     /**

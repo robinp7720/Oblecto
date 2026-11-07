@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions */
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import { Response, NextFunction } from 'express';
 import errors from '../errors.js';
 import config from '../../../config.js';
@@ -17,7 +17,7 @@ export async function principalOf(req: OblectoRequest): Promise<{ id: number; pe
     if (!authorization?.user) return null;
     if (authorization.principal !== undefined) return authorization.principal;
 
-    const user = await User.findByPk(authorization.user.id as number, { attributes: ['id', 'groupId'] });
+    const user = await User.findByPk(authorization.user.id, { attributes: ['id', 'groupId'] });
 
     authorization.principal = user ? { id: user.id, permissions: await permissionsOf(user) } : null;
 

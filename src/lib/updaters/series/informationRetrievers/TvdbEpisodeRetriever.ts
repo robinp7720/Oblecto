@@ -1,25 +1,26 @@
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
 import type { Episode } from '../../../../models/episode.js';
 import type { TvdbEpisode } from '../../../common/tvdbTypes.js';
+
+type ServiceDependencies = Dependencies<'tvdb', never>;
 
 type EpisodeWithTvdb = Episode & {
     tvdbid: number | null;
 };
 
 export default class TvdbEpisodeRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 
     async retrieveInformation(episode: EpisodeWithTvdb): Promise<Record<string, unknown>> {
         if (!episode.tvdbid) throw new DebugExtendableError('No tvdbid attached to episode');
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
         const episodeInfo = await promiseTimeout<TvdbEpisode>(this.oblecto.tvdb.getEpisodeById(episode.tvdbid));
 
         // Only these fields: the raw response carries TVDB's own id, which must never reach episode.update().

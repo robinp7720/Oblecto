@@ -1,11 +1,13 @@
 
-import expect from 'expect.js';
+
 import assert from 'node:assert/strict';
 import Queue from '../../src/lib/queue/index.js';
 import logger from '../../src/submodules/logger/index.js';
 
 describe('Queue', function () {
-    let queue: Queue;
+    type Jobs = { toString: object; constructor: object; __proto__: object; finished: object; duplicateJob: object;
+        execJob: { foo: string }; concurrencyJob: object; priorityJob: { name: string }; blocker: object; errorJob: { shouldFail: boolean }; statsJob: object };
+    let queue: Queue<Jobs>;
 
     before(function () {
         logger.silent = true;
@@ -16,11 +18,11 @@ describe('Queue', function () {
     });
 
     beforeEach(function () {
-        queue = new Queue(1);
+        queue = new Queue<Jobs>(1);
     });
 
     it('should register and execute job names inherited by plain objects', async function () {
-        const names = ['toString', 'constructor', '__proto__'];
+        const names = ['toString', 'constructor', '__proto__'] as const;
         const executed: string[] = [];
         const finished = Promise.withResolvers<void>();
 
@@ -35,20 +37,19 @@ describe('Queue', function () {
         assert.deepEqual(executed, names);
     });
 
-    it('should log error when registering duplicate job', function () {
-        const jobName = 'duplicateJob';
-        queue.registerJob(jobName, async () => {});
-        
-        // We can't easily assert on logger output without spying on it, 
-        // but we can ensure it doesn't throw.
-        queue.registerJob(jobName, async () => {});
+    it('rejects duplicate and unregistered jobs before counting maintenance work', async () => {
+        queue.registerJob('duplicateJob', async () => {});
+        assert.throws(() => queue.registerJob('duplicateJob', async () => {}), /already registered/);
+        assert.throws(() => queue.queueJob('execJob', { foo: 'bar' }), /not registered/);
+        assert.equal(queue.getStats().length, 0);
+        await queue.close();
     });
 
     it('should execute a queued job', function (done) {
         const jobName = 'execJob';
         queue.registerJob(jobName, async (attr) => {
             try {
-                expect(attr).to.eql({ foo: 'bar' });
+                assert.deepEqual(attr, { foo: 'bar' });
                 done();
             } catch (e) {
                 done(e);
@@ -59,7 +60,7 @@ describe('Queue', function () {
     });
 
     it('should respect concurrency', function (done) {
-        queue = new Queue(1);
+        queue = new Queue<Jobs>(1);
         const jobName = 'concurrencyJob';
         let running = 0;
         let maxRunning = 0;
@@ -73,7 +74,7 @@ describe('Queue', function () {
             completed++;
             if (completed === 2) {
                 try {
-                    expect(maxRunning).to.be(1);
+                    assert.equal(maxRunning, 1);
                     done();
                 } catch (e) {
                     done(e);
@@ -86,7 +87,7 @@ describe('Queue', function () {
     });
 
     it('should respect priority', function (done) {
-        queue = new Queue(1); // Concurrency 1 to force queuing
+        queue = new Queue<Jobs>(1); // Concurrency 1 to force queuing
         const jobName = 'priorityJob';
         const order: string[] = [];
 
@@ -99,8 +100,8 @@ describe('Queue', function () {
             order.push(attr.name);
             if (order.length === 2) {
                 try {
-                    expect(order[0]).to.be('high');
-                    expect(order[1]).to.be('low');
+                    assert.equal(order[0], 'high');
+                    assert.equal(order[1], 'low');
                     done();
                 } catch (e) {
                     done(e);
@@ -137,13 +138,13 @@ describe('Queue', function () {
     });
 
     it('should return correct stats', function (done) {
-         queue = new Queue(1);
+         queue = new Queue<Jobs>(1);
          const jobName = 'statsJob';
 
          queue.registerJob(jobName, async () => {
              const stats = queue.getStats();
              try {
-                expect(stats.running).to.be(1);
+                assert.equal(stats.running, 1);
                 // length might be 1 if the second job is already pushed but not picked up?
                 // async.queue length is waiting tasks.
              } catch (e) {
@@ -158,7 +159,7 @@ describe('Queue', function () {
          // Immediate check
          // Depending on async.queue implementation, it might pick up first task immediately.
          // Let's just wait for completion.
-         
+
          const checkStats = setInterval(() => {
              const stats = queue.getStats();
              if (stats.length === 1 && stats.running === 1) {

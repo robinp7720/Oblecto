@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unused-vars */
 import { promises as fs } from 'fs';
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 
 import Downloader from '../../src/lib/downloader/index.js';
 import Queue from '../../src/lib/queue/index.js';
@@ -16,7 +16,7 @@ describe('Downloader', function () {
         try {
             new Downloader(oblecto);
             oblecto.queue.queueJob('downloadFile', { url: 'https://example.test/artwork', dest: '/unused', overwrite: true });
-            expect(await downloaded.promise).to.eql(['https://example.test/artwork', '/unused', true]);
+            assert.deepEqual(await downloaded.promise, ['https://example.test/artwork', '/unused', true]);
         } finally {
             Downloader.download = originalDownload;
         }

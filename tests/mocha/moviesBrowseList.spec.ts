@@ -1,3 +1,4 @@
+import type { Model, ModelStatic } from 'sequelize';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
@@ -73,8 +74,8 @@ describe('Movies browse list route', () => {
 
         await sequelize.sync({ force: true });
 
-        await User.create({ id: 1, name: 'tester', password: 'x' });
-        await User.create({ id: 2, name: 'other viewer', password: 'x' });
+        await User.create({ id: 1, username: 'user1', name: 'tester', password: 'x' });
+        await User.create({ id: 2, username: 'user2', name: 'other viewer', password: 'x' });
 
         const movieA = await Movie.create({
             movieName: 'Action Hero',
@@ -124,7 +125,8 @@ describe('Movies browse list route', () => {
     it('saves favourites and watchlists idempotently, validates writes and never uses a supplied user ID', async () => {
         const server = makeServer();
         moviesRoutes(server as any, {} as any);
-        for (const [field, model] of [['favourite', UserFavourite], ['watchlist', UserWatchlist]] as const) {
+        for (const [field, originalModel] of [['favourite', UserFavourite], ['watchlist', UserWatchlist]] as const) {
+            const model: ModelStatic<Model> = originalModel;
             const handler = server.handlers.get(`PUT /movie/:id/${field}`);
             const req = { params: { id: '1' }, authorization: { user: { id: 1 } }, body: { [field]: true, userId: 2 } };
             const first = makeRes();

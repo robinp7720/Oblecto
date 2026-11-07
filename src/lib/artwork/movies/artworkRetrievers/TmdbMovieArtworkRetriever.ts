@@ -1,7 +1,9 @@
 import DebugExtendableError from '../../../errors/DebugExtendableError.js';
 
 import type { Movie } from '../../../../models/movie.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
+
+type ServiceDependencies = Dependencies<'tmdb', never>;
 
 type TmdbImage = { file_path: string };
 
@@ -11,9 +13,9 @@ type TmdbImageResponse = {
 };
 
 export default class TmdbMovieArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 
@@ -22,7 +24,7 @@ export default class TmdbMovieArtworkRetriever {
      * @param movie - Movie for which to get fanart URLs for
      * @returns - Array of fanart URLs
      */
-    async retrieveFanart(movie: Movie): Promise<string[]> {
+    async retrieveFanart(movie: Partial<Pick<Movie, 'tmdbid' | 'imdbid' | 'movieName'>>): Promise<string[]> {
         if (movie.tmdbid === null || movie.tmdbid === undefined) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
 
         const data = await this.oblecto.tmdb.movieImages({ id: movie.tmdbid }) as TmdbImageResponse;
@@ -35,7 +37,7 @@ export default class TmdbMovieArtworkRetriever {
      * @param movie - Movie for which to get poster URLs for
      * @returns - Array of poster URLs
      */
-    async retrievePoster(movie: Movie): Promise<string[]> {
+    async retrievePoster(movie: Partial<Pick<Movie, 'tmdbid' | 'imdbid' | 'movieName'>>): Promise<string[]> {
         if (movie.tmdbid === null || movie.tmdbid === undefined) throw new DebugExtendableError(`No tmdbid id found for movie ${movie.movieName}`);
 
         const data = await this.oblecto.tmdb.movieImages({ id: movie.tmdbid }) as TmdbImageResponse;

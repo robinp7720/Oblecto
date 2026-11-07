@@ -1,17 +1,12 @@
 
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import { Movie } from '../../src/models/movie.js';
 import MovieCleaner from '../../src/lib/cleaners/MovieCleaner.js';
 import logger from '../../src/submodules/logger/index.js';
-import Queue from '../../src/lib/queue/index.js';
 
 describe('MovieCleaner', function () {
     let movieCleaner: MovieCleaner;
     let originalFindAll: any;
-
-    const mockOblecto: any = {
-        queue: new Queue(1)
-    };
 
     before(function () {
         logger.silent = true;
@@ -22,7 +17,7 @@ describe('MovieCleaner', function () {
     });
 
     beforeEach(function () {
-        movieCleaner = new MovieCleaner(mockOblecto);
+        movieCleaner = new MovieCleaner();
         originalFindAll = Movie.findAll;
     });
 
@@ -34,7 +29,7 @@ describe('MovieCleaner', function () {
     describe('removeFileLessMovies', function () {
         it('should remove movies without linked files', async function () {
             const destroyedIds: number[] = [];
-            
+
             const mockMovies = [
                 {
                     id: 1,
@@ -56,9 +51,9 @@ describe('MovieCleaner', function () {
 
             await movieCleaner.removeFileLessMovies();
 
-            expect(destroyedIds).to.contain(2);
-            expect(destroyedIds).to.not.contain(1);
-            expect(destroyedIds.length).to.be(1);
+            assert.ok(destroyedIds?.includes(2));
+            assert.ok(!destroyedIds.includes(1));
+            assert.equal(destroyedIds.length, 1);
         });
     });
 });

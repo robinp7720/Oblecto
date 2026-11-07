@@ -16,7 +16,9 @@ import logger from '../../../submodules/logger/index.js';
 import { clearProblem, markProblematic } from '../files/problems.js';
 import guessit, { GuessitIdentification } from '../../../submodules/guessit.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'fileIndexer' | 'mediaAnalyser' | 'queue' | 'realTimeController' | 'tmdb' | 'tvdb', 'tvshows'>;
 
 interface SeriesIdentification {
     [key: string]: unknown;
@@ -38,11 +40,11 @@ type EpisodeGuessitIdentification = GuessitIdentification & {
     episode_title?: string;
 };
 
-type SeriesIdentifierConstructor = new (oblecto: Oblecto) => {
+type SeriesIdentifierConstructor = new (oblecto: ServiceDependencies) => {
     identify: (path: string, guessit: GuessitIdentification) => Promise<SeriesIdentification>;
 };
 
-type EpisodeIdentifierConstructor = new (oblecto: Oblecto) => {
+type EpisodeIdentifierConstructor = new (oblecto: ServiceDependencies) => {
     identify: (
         path: string,
         guessit: EpisodeGuessitIdentification,
@@ -54,16 +56,16 @@ type EpisodeIdentifierConstructor = new (oblecto: Oblecto) => {
  * Oblecto module to identify and index series and episodes
  */
 export default class SeriesIndexer {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public seriesIdentifier: AggregateIdentifier;
     public episodeIdentifer: AggregateIdentifier;
     public availableSeriesIdentifiers: string[];
     public availableEpisodeIdentifiers: string[];
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.seriesIdentifier = new AggregateIdentifier();
@@ -130,8 +132,8 @@ export default class SeriesIndexer {
             });
 
         if (seriesCreated) {
-            this.oblecto.realTimeController.broadcast('indexer', {
- event: 'added', type: 'series', id: series.id 
+            this.oblecto.realTimeController?.broadcast('indexer', {
+ event: 'added', type: 'series', id: series.id
 });
             this.oblecto.queue.pushJob('updateSeries', series);
             this.oblecto.queue.queueJob('downloadSeriesPoster', series);
@@ -221,7 +223,7 @@ export default class SeriesIndexer {
         const series = await this.indexSeries(seriesIdentification);
 
         logger.debug( `${file.path} episode identified ${episodeIdentification.episodeName}`);
-         
+
         const [episode, episodeCreated] = await Episode.findOrCreate(
             {
                 // The columns are strings but identifiers return numbers; the database compares them as before.
@@ -239,8 +241,8 @@ export default class SeriesIndexer {
         this.oblecto.mediaAnalyser?.queueFile(file);
 
         if (episodeCreated) {
-            this.oblecto.realTimeController.broadcast('indexer', {
- event: 'added', type: 'episode', id: episode.id 
+            this.oblecto.realTimeController?.broadcast('indexer', {
+ event: 'added', type: 'episode', id: episode.id
 });
             this.oblecto.queue.pushJob('updateEpisode', episode);
             this.oblecto.queue.queueJob('downloadEpisodeBanner', episode);

@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions */
-import { Op, type Transaction } from 'sequelize';
+import { Op, type Transaction, type Model, type ModelStatic } from 'sequelize';
 import { Person } from '../../../models/person.js';
 import { MovieCredit } from '../../../models/movieCredit.js';
 import { SeriesCredit } from '../../../models/seriesCredit.js';
@@ -35,14 +34,14 @@ const mediaKey = {
 /** Atomically replace one title's credits after a successful provider response. */
 export async function syncCredits(mediaType: MediaType, mediaId: number, credits: RetrievedCredit[], preserveCreators = false): Promise<void> {
     // The three models intentionally share a runtime shape; Sequelize's static union cannot express it.
-    const model = creditModel[mediaType] as any;
+    const model: ModelStatic<Model> = creditModel[mediaType];
     const sequelize = model.sequelize;
 
     if (!sequelize) throw new Error('Credit models are not initialized');
 
     await sequelize.transaction(async (transaction: Transaction) => {
         const where = { [mediaKey[mediaType]]: mediaId, ...(preserveCreators ? { [Op.or]: [{ job: { [Op.ne]: 'Creator' } }, { job: null }] } : {}) };
-        await model.destroy({ where, transaction } as never);
+        await model.destroy({ where, transaction });
 
         const seen = new Set<string>();
         for (const credit of credits) {
@@ -82,7 +81,7 @@ export async function syncCredits(mediaType: MediaType, mediaId: number, credits
                 department: credit.department ?? null,
                 sortOrder: credit.sortOrder ?? null,
                 ...(mediaType === 'series' ? { episodeCount: credit.episodeCount ?? null } : {})
-            } as never, { transaction });
+            }, { transaction });
         }
     });
 }

@@ -4,14 +4,16 @@ import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import { Episode } from '../../../../models/episode.js';
 import { Series } from '../../../../models/series.js';
 
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
+
+type ServiceDependencies = Dependencies<'tmdb', never>;
 
 type TmdbImage = { file_path: string };
 
 export default class TmdbSeriesArtworkRetriever {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 
@@ -52,7 +54,7 @@ export default class TmdbSeriesArtworkRetriever {
 
     async retrieveSeriesPoster(series: Series): Promise<string[]> {
         if (series.tmdbid === null || series.tmdbid === undefined) throw new DebugExtendableError(`TMDB Series poster retriever failed for ${series.seriesName}`);
-         
+
         const { posters } = await promiseTimeout(this.oblecto.tmdb.tvImages({ id: series.tmdbid }));
 
         return (posters as TmdbImage[]).map(image => `https://image.tmdb.org/t/p/original${image.file_path}`);

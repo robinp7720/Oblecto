@@ -22,6 +22,7 @@ When `web.enabled` is on, `/` redirects to `/web/`, which serves the web app, an
 - Native HTTP and Socket.IO use `server.port` (default **8080**). Paths such as `/movies/list/movieName` are at the root; do not prepend `/api/v1`. Only explicitly versioned routes have that prefix. `/web/` is the UI, not the API base.
 - The optional Jellyfin server uses `jellyfin.port` (default **8096**) and separate tokens, IDs and endpoints. Native clients should use the native API throughout.
 - Send `Accept: application/json`, `Content-Type: application/json` for JSON bodies, and `Authorization: Bearer <accessToken>` on protected calls. No cookie, API key registration, CSRF token or OAuth flow is required. `API-Token` is not an alternative authentication header, despite appearing in the CORS allowlist.
+- JSON bodies must be objects; arrays, null and scalar bodies return **400** before route execution.
 - Send read filters in the query string and writes in the body. URL-encode path segments and query values, especially search strings and opaque cursors. JSON booleans and playback numbers must not be strings.
 - Success is **200** unless documented otherwise. **204** has no body. Collections generally return arrays; browse and statistics have their own envelopes. There is no common `{ data: ... }` wrapper or universal total count.
 - Media, person, file, set and user IDs are database integers in separate namespaces. Playback session IDs are opaque strings. Remote `media.id` is a string representation of a native movie/episode ID. Store IDs with the server address and media kind.
@@ -178,7 +179,7 @@ Send `mode=browse` to filter and page with a cursor. The same parameters work fo
 - `libraryPath`: only titles whose files are under this library folder.
 - `personId`, `creditRole`: see [Filter Libraries by Person](#filter-libraries-by-person).
 
-Invalid filters, sorts and cursors return 400 with `{ "message": "..." }`; `count` is clamped to 1–100. Browse uses `cursor`, not `page` (which is ignored). The response is:
+In browse mode, `count`, `page`, `yearFrom`, `yearTo` and `personId` must be safe whole numbers (JSON numbers or whole-number strings); fractional or partially numeric values and arrays are rejected. Text filters must be strings, and `genre` accepts a string or an array of strings. Cursor payloads require a positive safe integer ID and a null, string or finite numeric sort value, and are limited to 8192 encoded characters. Invalid filters, sorts and cursors return 400 with `{ "message": "..." }`; `count` is clamped to 1–100. Browse uses `cursor`, not `page` (which is ignored). The response is:
 
 ```json
 {
@@ -264,7 +265,7 @@ Search for movies by name.
 - **List Sets:** `GET /movies/sets`
 - **Get Set Details:** `GET /movies/set/:id` (Supports pagination `count`, `page`, `order`).
 - **Get Sets for Movie:** `GET /movie/:id/sets`
-- **Add Movie to Set:** `PUT /movie/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`)
+- **Add Movie to Set:** `PUT /movie/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`). `setId` must be a positive safe integer or digit string; invalid values return 400.
 
 Creating and deleting sets is under [Sets](#sets). Reads show public sets and private sets shared with the caller.
 
@@ -345,7 +346,7 @@ There is no native season-list route: group this array by `airedSeason`, keeping
 - **Get Sets for Series:** `GET /series/:id/sets`. Each set includes its member titles in `Series`.
 - **List Sets:** `GET /series/sets`
 - **Get Set Details:** `GET /series/set/:id` (supports `count` and `page`)
-- **Add Series to Set:** `PUT /series/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`)
+- **Add Series to Set:** `PUT /series/:id/sets` (Body: `{ "setId": 1 }`; needs `libraries.manage`). `setId` must be a positive safe integer or digit string; invalid values return 400.
 
 ### Series Poster
 - **URL:** `/series/:id/poster`
@@ -373,7 +374,7 @@ Get a paginated list of episodes from all series.
 ### Get Episode Files
 - **URL:** `/episode/:id/files`
 - **Method:** `GET`
-- **Response:** Array of the episode's File objects.
+- **Response:** Array of the episode's File objects; an absent episode returns `[]`.
 
 ### Get Episode Info
 - **URL:** `/episode/:id/info`

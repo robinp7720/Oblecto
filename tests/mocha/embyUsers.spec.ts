@@ -1,3 +1,4 @@
+import { associatedFile } from '../helpers/models.js';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
@@ -59,7 +60,7 @@ describe('Emby users routes', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
 
         // Initialize models
@@ -79,7 +80,7 @@ describe('Emby users routes', () => {
         Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
         TrackMovie.belongsTo(Movie, { foreignKey: 'movieId' });
         Movie.hasMany(TrackMovie, { foreignKey: 'movieId' });
-        
+
         Episode.hasMany(File);
         File.belongsTo(Episode);
         Movie.hasMany(File);
@@ -91,7 +92,7 @@ describe('Emby users routes', () => {
         await sequelize.sync({ force: true });
 
         // Seed data
-        user1 = await User.create({ name: 'Test User', password: '' });
+        user1 = await User.create({ username: 'Test User', name: 'Test User', password: '' });
         // Hardcode ID 1 if possible or use created ID
         if (user1.id !== 1) {
              // Forcing ID 1 because some logic might rely on specific IDs or just consistency in tests
@@ -102,8 +103,8 @@ describe('Emby users routes', () => {
 
         ep1_1 = await Episode.create({
             episodeName: 'S1E1',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: series1.id
         });
 
@@ -112,8 +113,8 @@ describe('Emby users routes', () => {
              releaseDate: '2020-01-01'
         });
 
-        await File.create({ path: '/tmp/s1e1.mkv', EpisodeId: ep1_1.id });
-        await File.create({ path: '/tmp/movie.mkv', MovieId: movie1.id });
+        await associatedFile({ path: '/tmp/s1e1.mkv', EpisodeId: ep1_1.id });
+        await associatedFile({ path: '/tmp/movie.mkv', MovieId: movie1.id });
     });
 
     describe('GET /users', () => {
@@ -139,7 +140,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items');
-            const req = { 
+            const req = {
                 query: { IncludeItemTypes: 'Movie' },
                 params: { userid: userIdUuid }
             };
@@ -157,7 +158,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items');
-            const req = { 
+            const req = {
                 query: { IncludeItemTypes: 'Series' },
                 params: { userid: userIdUuid }
             };
@@ -175,7 +176,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items');
-            const req = { 
+            const req = {
                 query: { IncludeItemTypes: 'Episode' },
                 params: { userid: userIdUuid }
             };
@@ -193,7 +194,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items');
-            const req = { 
+            const req = {
                 query: { IncludeItemTypes: 'Movie', SearchTerm: 'NonExistent' },
                 params: { userid: userIdUuid }
             };
@@ -211,7 +212,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items/:mediaid');
-            const req = { 
+            const req = {
                 params: { userid: userIdUuid, mediaid: formatId(movie1.id, 'movie') }
             };
             const res = makeRes();
@@ -227,7 +228,7 @@ describe('Emby users routes', () => {
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items/:mediaid');
-            const req = { 
+            const req = {
                 params: { userid: userIdUuid, mediaid: formatId(ep1_1.id, 'episode') }
             };
             const res = makeRes();
@@ -237,13 +238,13 @@ describe('Emby users routes', () => {
             assert.equal(res.body.Name, 'S1E1');
             assert.equal(res.body.Type, 'Episode');
         });
-        
+
         it('should return 404 for unknown item', async () => {
             const server = makeServer();
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /users/:userid/items/:mediaid');
-            const req = { 
+            const req = {
                 params: { userid: userIdUuid, mediaid: formatId(99999, 'movie') }
             };
             const res = makeRes();
@@ -253,19 +254,19 @@ describe('Emby users routes', () => {
             assert.equal(res.statusCode, 404);
         });
     });
-    
+
     describe('GET /items/latest', () => {
          it('should return latest movies', async () => {
             const server = makeServer();
             usersRoutes(server as any, mockEmbyEmulation);
 
             const handler = server.handlers.get('GET /items/latest');
-            const req = { 
+            const req = {
                 query: { ParentId: 'movies' },
                 headers: { emby: { Token: 'test-token' } }
             };
             const res = makeRes();
-            
+
             // Mock session for userId retrieval if needed
             mockEmbyEmulation.sessions['test-token'] = { Id: userIdUuid };
 

@@ -10,25 +10,28 @@ import { Episode } from '../../../models/episode.js';
 
 import logger from '../../../submodules/logger/index.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
 import { syncCredits, type RetrievedCredit } from '../common/CreditSync.js';
 
-type UpdaterConstructor = new (oblecto: Oblecto) => {
+type ServiceDependencies = Dependencies<'queue' | 'realTimeController' | 'tmdb' | 'tvdb', 'tvshows'>;
+
+type UpdaterConstructor = new (oblecto: ServiceDependencies) => {
     // Method syntax on purpose: each retriever narrows the entity it accepts.
     retrieveInformation(entity: unknown): Promise<Record<string, unknown>>;
 };
 
 export default class SeriesUpdater {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
     public aggregateSeriesUpdateRetriever: AggregateUpdateRetriever;
     public aggregateEpisodeUpdaterRetriever: AggregateUpdateRetriever;
     public availableSeriesUpdaters: string[];
     public availableEpisodeUpdaters: string[];
 
     /**
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
 
         this.aggregateSeriesUpdateRetriever = new AggregateUpdateRetriever();

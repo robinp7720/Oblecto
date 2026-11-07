@@ -1,3 +1,5 @@
+import { associatedFile } from '../helpers/models.js';
+import { makeServer, makeRes, embyFixture } from '../helpers/routes.js';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
@@ -11,35 +13,6 @@ import { File, fileColumns } from '../../src/models/file.js';
 import { Stream, streamColumns } from '../../src/models/stream.js';
 import { formatUuid, formatId } from '../../src/lib/embyEmulation/helpers.js';
 
-const makeServer = () => {
-    const handlers = new Map();
-
-    const register = (method: string) => (route: string, handler: any) => {
-        handlers.set(`${method} ${route}`, handler);
-    };
-
-    return {
-        handlers,
-        get: register('GET'),
-        post: register('POST'),
-        put: register('PUT'),
-        delete: register('DELETE')
-    };
-};
-
-const makeRes = () => ({
-    statusCode: 200,
-    body: null as any,
-    status(code: number) {
-        this.statusCode = code;
-        return this;
-    },
-    send(payload: any) {
-        this.body = payload;
-        return this;
-    }
-});
-
 describe('Emby shows routes', () => {
     let sequelize: Sequelize;
     let series1: Series;
@@ -49,7 +22,7 @@ describe('Emby shows routes', () => {
 
     before(async () => {
         sequelize = new Sequelize({
-            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false 
+            dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false
         });
 
         // Initialize models
@@ -64,7 +37,7 @@ describe('Emby shows routes', () => {
         Series.hasMany(Episode);
         TrackEpisode.belongsTo(Episode, { foreignKey: 'episodeId' });
         Episode.hasMany(TrackEpisode, { foreignKey: 'episodeId' });
-        
+
         Episode.hasMany(File);
         File.belongsTo(Episode);
         File.hasMany(Stream);
@@ -77,20 +50,20 @@ describe('Emby shows routes', () => {
 
         ep1_1 = await Episode.create({
             episodeName: 'S1E1',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
-            SeriesId: series1.id
-        });
-        
-        ep1_2 = await Episode.create({
-            episodeName: 'S1E2',
-            airedSeason: 1,
-            airedEpisodeNumber: 2,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: series1.id
         });
 
-        await File.create({ path: '/tmp/s1e1.mkv', EpisodeId: ep1_1.id });
-        await File.create({ path: '/tmp/s1e2.mkv', EpisodeId: ep1_2.id });
+        ep1_2 = await Episode.create({
+            episodeName: 'S1E2',
+            airedSeason: '1',
+            airedEpisodeNumber: '2',
+            SeriesId: series1.id
+        });
+
+        await associatedFile({ path: '/tmp/s1e1.mkv', EpisodeId: ep1_1.id });
+        await associatedFile({ path: '/tmp/s1e2.mkv', EpisodeId: ep1_2.id });
 
         // User watched S1E1 fully
         await TrackEpisode.create({
@@ -115,7 +88,7 @@ describe('Emby shows routes', () => {
             assert.deepEqual(res.body.Items, []);
             assert.equal(res.body.TotalRecordCount, 0);
         });
-        
+
         it('should resume episode if progress < 1', async () => {
             // Add partially watched episode
             await TrackEpisode.create({
@@ -150,9 +123,9 @@ describe('Emby shows routes', () => {
             showsRoutes(server as any, { serverId: 'test' } as any);
 
             const handler = server.handlers.get('GET /shows/:seriesid/seasons');
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(series1.id, 'series') },
-                query: {} 
+                query: {}
             };
             const res = makeRes();
 
@@ -169,9 +142,9 @@ describe('Emby shows routes', () => {
             showsRoutes(server as any, {} as any);
 
             const handler = server.handlers.get('GET /shows/:seriesid/seasons');
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(99999, 'series') },
-                query: {} 
+                query: {}
             };
             const res = makeRes();
 
@@ -187,9 +160,9 @@ describe('Emby shows routes', () => {
             showsRoutes(server as any, { serverId: 'test' } as any);
 
             const handler = server.handlers.get('GET /shows/:seriesid/episodes');
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(series1.id, 'series') },
-                query: {} 
+                query: {}
             };
             const res = makeRes();
 
@@ -205,9 +178,9 @@ describe('Emby shows routes', () => {
             showsRoutes(server as any, { serverId: 'test' } as any);
 
             const handler = server.handlers.get('GET /shows/:seriesid/episodes');
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(series1.id, 'series') },
-                query: { season: '1' } 
+                query: { season: '1' }
             };
             const res = makeRes();
 
@@ -223,9 +196,9 @@ describe('Emby shows routes', () => {
 
             const handler = server.handlers.get('GET /shows/:seriesid/episodes');
             const seasonId = series1.id * 1000 + 1; // Pseudo-id logic
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(series1.id, 'series') },
-                query: { SeasonId: formatId(seasonId, 'season') } 
+                query: { SeasonId: formatId(seasonId, 'season') }
             };
             const res = makeRes();
 
@@ -240,9 +213,9 @@ describe('Emby shows routes', () => {
             showsRoutes(server as any, { serverId: 'test' } as any);
 
             const handler = server.handlers.get('GET /shows/:seriesid/episodes');
-            const req = { 
+            const req = {
                 params: { seriesid: formatId(series1.id, 'series') },
-                query: { userId: userIdUuid } 
+                query: { userId: userIdUuid }
             };
             const res = makeRes();
 
@@ -251,6 +224,7 @@ describe('Emby shows routes', () => {
             assert.ok(res.body.Items);
             const ep1 = res.body.Items.find((i: any) => i.Name === 'S1E1');
             // Assuming formatMediaItem puts user data in UserData
+            assert.ok(ep1);
             assert.ok(ep1.UserData, 'UserData should be present');
             assert.equal(ep1.UserData.Played, true);
         });

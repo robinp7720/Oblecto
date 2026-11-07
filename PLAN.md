@@ -6,6 +6,10 @@ Status of the feature tracks this file used to plan in detail, as of 7 November 
 
 | Track | Where it lives |
 |---|---|
+| Typed job names/payloads and runtime registration guards, including seedbox imports | `src/lib/queue/jobs.ts`, queue runtime/type contract tests |
+| Playback encoding/hardware fallback and asset delivery separated from session management | `src/lib/playback/SegmentEncoder.ts`, `AssetDelivery.ts` |
+| Narrow service/configuration dependencies and validated TVDB responses | `src/lib/contracts.ts`, `src/lib/common/TvdbAdapter.ts` |
+| Typed native request boundaries and full backend/test typechecking; library settings HTTP contracts | `src/submodules/REST/`, `tests/mocha/backendBoundaries.spec.ts`, `librarySettings.spec.ts`, `tsconfig.json` |
 | Playback preparation separated from session management, with explicit scheduler/lifetime/storage dependencies | `src/lib/playback/MediaPreparation.ts`, `tests/mocha/mediaPreparation.spec.ts` |
 | Shared library queries, typed credits, related titles and watch predicates; whole-genre filtering across native and Jellyfin APIs | `src/lib/library/`, `src/lib/common/genres.ts`, library contract tests |
 | Awaited startup, partial-startup rollback, ordered shutdown and background job draining | `src/lib/oblecto/ServiceLifecycle.ts`, `src/lib/queue/`, startup smoke tests |
@@ -42,11 +46,13 @@ Status of the feature tracks this file used to plan in detail, as of 7 November 
 - **Per-library access and parental controls.** Groups grant actions, not visibility of libraries or ratings.
 - **Playlists and downloads.** Not implemented.
 - **Music.** Undecided. The Jellyfin audio routes answer 404 and the artist routes return empty lists.
-- **Tests.** `npm run typecheck` covers `src/` only: including `tests/` gives 173 type errors, almost all loose mock typings in `tests/mocha`. `/api/v1/libraries` has no route-level specs; set privacy and validation have route-level coverage; user, group and system routes are covered mainly for permission checks. `tests/network` had five TVDB assertions that no longer matched TVDB's answers at 1.0.
+- **Tests.** Extend behavior coverage for user, group and system operations beyond existing permission checks. Live provider tests remain opt-in and depend on current upstream metadata; they are typechecked by default. Investigate intermittent WebKit playback recovery after aborted segment requests, reproduced on backend `83876c3` as well as the refactor (see [streaming validation](docs/STREAMING.md#browser-regression-limitation-7-november-2026)).
 - **Web UI.** Only six of 74 components use i18n, and English is the only locale.
 - **Jellyfin.** QuickConnect, device and session lists, remote control of Jellyfin apps, creating and deleting users, library folder management, and creating collections and playlists. See `src/lib/embyEmulation/PLAN.md` for the full list.
 
 ## Change log
+
+- 2026-11-07: Completed typed queues, playback encoding/delivery extraction, narrowed domain dependencies, validated provider/request boundaries, and typechecking across backend tests. Added library-settings HTTP and malformed-input regression coverage.
 
 - 2026-11-07: Added current per-folder local inventory to Statistics and Library settings, with distinct title counts, known storage, missing sizes and problem counts.
 

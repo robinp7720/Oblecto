@@ -99,22 +99,22 @@ describe('Series browse list route', () => {
 
         const episodeA = await Episode.create({
             episodeName: 'Galaxy Pilot',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: seriesA.id
         });
 
         const episodeB = await Episode.create({
             episodeName: 'Town Pilot',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: seriesB.id
         });
 
         const episodeC = await Episode.create({
             episodeName: 'Nature Pilot',
-            airedSeason: 1,
-            airedEpisodeNumber: 1,
+            airedSeason: '1',
+            airedEpisodeNumber: '1',
             SeriesId: seriesC.id
         });
 

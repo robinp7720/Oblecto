@@ -1,9 +1,8 @@
-import Oblecto from '../oblecto/index.js';
 
-export default class MediaIdentifier {
-    public oblecto: Oblecto;
+export default class MediaIdentifier<D extends object> {
+    public oblecto: D;
 
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: D) {
         this.oblecto = oblecto;
     }
 }

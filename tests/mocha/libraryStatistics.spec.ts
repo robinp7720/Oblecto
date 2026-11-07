@@ -52,7 +52,7 @@ describe('Per-library statistics', () => {
     });
 
     it('counts distinct titles and files independently, including unmatched and ignored problems', async () => {
-        const movie = await Movie.create({ title: 'Movie' });
+        const movie = await Movie.create({ movieName: 'Movie' });
         const series = await Series.create({ seriesName: 'Series' });
         const episodes = await Episode.bulkCreate([1, 2].map(n => ({ airedSeason: '1', airedEpisodeNumber: String(n), SeriesId: series.id })));
         const files = await File.bulkCreate([
@@ -90,7 +90,7 @@ describe('Per-library statistics', () => {
     });
 
     it('retains distinct counts across bounded batches and reads configuration changes immediately', async () => {
-        const movie = await Movie.create({ title: 'Many versions' });
+        const movie = await Movie.create({ movieName: 'Many versions' });
         const files = await File.bulkCreate(Array.from({ length: 501 }, (_, i) => ({ path: `/movies/${i}.mkv`, size: 1 })));
         await MovieFiles.bulkCreate(files.map(file => ({ FileId: file.id, MovieId: movie.id })));
         const current = configuration(['/movies']);

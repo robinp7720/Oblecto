@@ -4,16 +4,17 @@ import IdentificationError from '../../../errors/IdentificationError.js';
 import promiseTimeout from '../../../../submodules/promiseTimeout.js';
 import SeriesIdentifier, { SeriesIdentification } from '../SeriesIdentifer.js';
 import type { GuessitIdentification } from '../../../../submodules/guessit.js';
-import type Oblecto from '../../../oblecto/index.js';
+import type { Dependencies } from '../../../contracts.js';
+import type { TvdbSeries } from '../../../common/tvdbTypes.js';
 
-type TvdbSeries = { id: number; seriesName: string; overview?: string; firstAired?: string };
+type ServiceDependencies = Dependencies<'tvdb', never>;
 
-export default class TvdbSeriesIdentifier extends SeriesIdentifier {
+export default class TvdbSeriesIdentifier extends SeriesIdentifier<ServiceDependencies> {
     public tvShowCache: Record<string, SeriesIdentification>;
     /**
-     * @param oblecto - Oblecto instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         super(oblecto);
 
         this.tvShowCache = {};
@@ -33,6 +34,7 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
         let shortestItem: TvdbSeries | undefined;
 
         for (const item of found) {
+            if (!item.seriesName) continue;
             const currentDistance = distance(title, item.seriesName);
 
             if (shortestDistance === -1 || currentDistance < shortestDistance) {
@@ -53,7 +55,6 @@ export default class TvdbSeriesIdentifier extends SeriesIdentifier {
             title = title.join(' ');
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         const tvdbSearch = await promiseTimeout<TvdbSeries[]>(this.oblecto.tvdb.getSeriesByName(title));
 
         if (!guessitIdentification.year) return this.findMatch(tvdbSearch, guessitIdentification);

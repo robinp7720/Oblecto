@@ -46,16 +46,16 @@ describe('AggregateIdentifier', function () {
         const identifier = new AggregateIdentifier();
 
         identifier.loadIdentifier({ identify: async () => ({
-            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: 1, runtime: 45
+            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: '1', runtime: 45
         }) });
         identifier.loadIdentifier({ identify: async () => ({
             tmdbid: undefined, overview: '', episodeName: '  ', airedSeason: null, runtime: NaN,
-            tvdbid: 2, airedEpisodeNumber: 0, special: false
+            tvdbid: 2, airedEpisodeNumber: '0', special: false
         }) });
 
         assert.deepEqual(await identifier.identify('/media/TV/a.mkv'), {
-            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: 1, runtime: 45,
-            tvdbid: 2, airedEpisodeNumber: 0, special: false
+            tmdbid: 1, overview: 'Synopsis', episodeName: 'Pilot', airedSeason: '1', runtime: 45,
+            tvdbid: 2, airedEpisodeNumber: '0', special: false
         });
     });
 

@@ -1,18 +1,20 @@
 import { File } from '../../../models/file.js';
 
-import type Oblecto from '../../oblecto/index.js';
+import type { Dependencies } from '../../contracts.js';
+
+type ServiceDependencies = Dependencies<'queue', never>;
 
 /**
  * Module for oblecto to queue file updates
  */
 export default class FileUpdateCollector {
-    public oblecto: Oblecto;
+    public oblecto: ServiceDependencies;
 
     /**
      *
-     * @param oblecto - Oblecto server instance
+     * @param oblecto - Required services and configuration
      */
-    constructor(oblecto: Oblecto) {
+    constructor(oblecto: ServiceDependencies) {
         this.oblecto = oblecto;
     }
 

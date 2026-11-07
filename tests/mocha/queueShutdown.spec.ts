@@ -4,7 +4,7 @@ import Queue from '../../src/lib/queue/index.js';
 
 describe('Queue shutdown', () => {
     it('closes an idle queue and rejects every external submission path', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ job: null; record: string; parent: null; child: null; failed: null }>(1);
         const closing = queue.close();
         assert.equal(queue.close(), closing);
         await closing;
@@ -15,7 +15,7 @@ describe('Queue shutdown', () => {
     });
 
     it('waits for running, queued and descendant jobs while rejecting external submissions', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ job: null; record: string; parent: null; child: null; failed: null }>(1);
         const entered = Promise.withResolvers<void>();
         const release = Promise.withResolvers<void>();
         const events: string[] = [];
@@ -40,7 +40,7 @@ describe('Queue shutdown', () => {
     });
 
     it('waits for discovery that has not enqueued anything yet and completes maintenance tracking', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ job: null; record: string; parent: null; child: null; failed: null }>(1);
         const release = Promise.withResolvers<void>();
         let executed = 0;
         queue.registerJob('child', async () => { executed++; });
@@ -64,7 +64,7 @@ describe('Queue shutdown', () => {
     });
 
     it('settles after job and discovery failures without losing maintenance counts', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ job: null; record: string; parent: null; child: null; failed: null }>(1);
         queue.registerJob('failed', () => { throw new Error('Expected job failure'); });
         queue.maintenance.start('scan', 'all', async () => {
             queue.queueJob('failed', null);
@@ -79,7 +79,7 @@ describe('Queue shutdown', () => {
     });
 
     it('does not admit detached work through a finished job context', async () => {
-        const queue = new Queue(1);
+        const queue = new Queue<{ job: null; record: string; parent: null; child: null; failed: null }>(1);
         const release = Promise.withResolvers<void>();
         let detached!: Promise<void>;
         queue.registerJob('parent', async () => {

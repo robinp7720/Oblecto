@@ -60,31 +60,19 @@ export interface IConfig {
         'customCss'?: string
     },
     'tvshows': {
-        'seriesIdentifiers': [
-            string
-        ],
-        'episodeIdentifiers': [
-            string
-        ],
-        'seriesUpdaters': [
-            string
-        ],
-        'episodeUpdaters': [
-            string
-        ],
+        'seriesIdentifiers': string[],
+        'episodeIdentifiers': string[],
+        'seriesUpdaters': string[],
+        'episodeUpdaters': string[],
         'directories': { path: string }[]
     },
     'movies': {
-        'movieIdentifiers': [
-            string
-        ],
-        'movieUpdaters': [
-            string
-        ],
+        'movieIdentifiers': string[],
+        'movieUpdaters': string[],
         'directories': { path: string }[]
     },
     'files': {
-        'doHash': true
+        'doHash': boolean
     },
     'artwork': {
         'fanart': {
@@ -104,9 +92,7 @@ export interface IConfig {
         }
     },
     'fileExtensions': {
-        'video': [
-string
-        ]
+        'video': string[]
     },
     'authentication': {
         'secret': string,

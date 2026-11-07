@@ -1,5 +1,5 @@
 
-import expect from 'expect.js';
+import assert from 'node:assert/strict';
 import ffprobe from '../../src/submodules/ffprobe.js';
 import ffmpeg from '../../src/submodules/ffmpeg.js';
 import { FfprobeData } from 'fluent-ffmpeg';
@@ -24,12 +24,12 @@ describe('ffprobe submodule', function () {
 
         // @ts-ignore
         ffmpeg.ffprobe = (path: string, callback: (err: any, data: any) => void) => {
-            expect(path).to.be('/path/to/video.mkv');
+            assert.equal(path, '/path/to/video.mkv');
             callback(null, mockMetadata);
         };
 
         const result = await ffprobe('/path/to/video.mkv');
-        expect(result).to.eql(mockMetadata);
+        assert.deepEqual(result, mockMetadata);
     });
 
     it('should reject with error on failure', async function () {
@@ -40,9 +40,9 @@ describe('ffprobe submodule', function () {
 
         try {
             await ffprobe('/path/to/video.mkv');
-            expect().fail('Should have thrown error');
+            assert.fail('Should have thrown error');
         } catch (e: any) {
-            expect(e.message).to.be('Probe failed');
+            assert.equal(e.message, 'Probe failed');
         }
     });
 
@@ -54,10 +54,10 @@ describe('ffprobe submodule', function () {
 
         try {
             await ffprobe('/path/to/video.mkv');
-            expect().fail('Should have thrown error');
+            assert.fail('Should have thrown error');
         } catch (e: any) {
-            expect(e).to.be.an(Error);
-            expect(e.message).to.be('Probe failed string');
+            assert.ok(e instanceof Error);
+            assert.equal(e.message, 'Probe failed string');
         }
     });
 });

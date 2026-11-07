@@ -1,5 +1,5 @@
 {
-  // The typecheck gate: server sources only. tests/ still has loose mock typings to clean up.
+  // Optional fast source-only check. The CI typecheck gate uses tsconfig.json, including tests.
   "extends": "./tsconfig.json",
   "include": ["src/**/*"]
 }
