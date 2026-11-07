@@ -1,5 +1,5 @@
 import { col, fn, type FindOptions, type IncludeOptions, type Model, type ModelStatic, type Sequelize, type Transaction } from 'sequelize';
-import type { BrowseParams } from './browse.js';
+import { filterKey, type LibraryFilters } from './types.js';
 
 export type BrowseFacets = { genres: string[]; years: number[] };
 type Entry = { dependencies: Set<string>; userId: number; expires: number; value: Promise<BrowseFacets> };
@@ -79,7 +79,7 @@ function projectionOnly(item: IncludeOptions): IncludeOptions {
 
 /** Aggregate distinct genre/year pairs in SQL, without hydrating titles or joined models. */
 export function browseFacets(
-    model: ModelStatic<Model>, params: BrowseParams, userId: number, options: FindOptions,
+    model: ModelStatic<Model>, params: LibraryFilters, userId: number, options: FindOptions,
     genreField: string, dateField: string
 ): Promise<BrowseFacets> {
     const database = model.sequelize!;
@@ -100,7 +100,7 @@ export function browseFacets(
     if (params.libraryPath !== null) {
         for (const name of movie ? ['File', 'MovieFiles'] : ['File', 'Episode', 'EpisodeFiles']) dependencies.add(name);
     }
-    return cache.get(`${model.name}:${userId}:${params.filterHash}`, userId, dependencies, async () => {
+    return cache.get(`${model.name}:${userId}:${filterKey(params)}`, userId, dependencies, async () => {
         const genre = col(`${model.name}.${genreField}`);
         const year = fn('SUBSTR', col(`${model.name}.${dateField}`), 1, 4);
         const include = (options.include as IncludeOptions[]).filter(item => item.required === true || params.watched !== 'all').map(projectionOnly);

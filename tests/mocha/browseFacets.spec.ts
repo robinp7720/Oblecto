@@ -4,7 +4,7 @@ import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import { Movie, movieColumns } from '../../src/models/movie.js';
 import { TrackMovie, trackMovieColumns } from '../../src/models/trackMovie.js';
 import { UserFavourite, userFavouriteColumns } from '../../src/models/userFavourite.js';
-import { browseFacets } from '../../src/submodules/REST/routes/helpers/facets.js';
+import { browseFacets } from '../../src/lib/library/facets.js';
 import { parseBrowseParams } from '../../src/submodules/REST/routes/helpers/browse.js';
 
 describe('Browse facet aggregation and freshness', () => {

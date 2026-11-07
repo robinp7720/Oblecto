@@ -4,7 +4,7 @@ import { QueryTypes } from 'sequelize';
 import { Episode } from '../../../models/episode.js';
 import { TrackEpisode } from '../../../models/trackEpisode.js';
 import { Person } from '../../../models/person.js';
-import { creditsFor } from '../../../submodules/REST/routes/helpers/credits.js';
+import { creditsFor, type LibraryCredit } from '../../library/credits.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
 import { favouritesAmong, isFavouriteType } from '../../users/favourites.js';
 import { TrackMovie } from '../../../models/trackMovie.js';
@@ -107,14 +107,6 @@ const CREW_TYPES: Array<[RegExp, string]> = [
     [/^editor$/i, 'Editor']
 ];
 
-type Credit = {
-    person?: { id?: number; name?: string };
-    creditType?: string;
-    character?: string | null;
-    job?: string | null;
-    department?: string | null;
-};
-
 /** The cast and key crew of a movie, series or episode, as Jellyfin BaseItemPerson entries. */
 export async function peopleFor(type: string, id: number): Promise<Dto[]> {
     const mediaType = type === 'season' ? 'series' : type;
@@ -124,13 +116,13 @@ export async function peopleFor(type: string, id: number): Promise<Dto[]> {
     // Credits only mean anything next to the media they belong to
     if (!Person.sequelize || Person.sequelize !== Episode.sequelize) return [];
 
-    const { cast, crew } = await creditsFor(mediaType, mediaId, Episode.sequelize) as { cast: Credit[]; crew: Credit[] };
+    const { cast, crew } = await creditsFor(mediaType, mediaId, Episode.sequelize);
     const personIds = [...cast, ...crew].map(credit => Number(credit.person?.id)).filter(Number.isSafeInteger);
     const withProfile = new Set((await Person.findAll({ where: { id: personIds }, attributes: ['id', 'profilePath'] }))
         .filter(person => person.profilePath)
         .map(person => person.id));
 
-    const entry = (credit: Credit, personType: string, role: string | null | undefined): Dto => {
+    const entry = (credit: LibraryCredit, personType: string, role: string | null | undefined): Dto => {
         const personId = Number(credit.person?.id);
 
         return {

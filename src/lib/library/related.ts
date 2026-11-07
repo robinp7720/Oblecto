@@ -1,5 +1,5 @@
 import { QueryTypes, type Sequelize } from 'sequelize';
-import { genreCondition, genresFrom } from '../../../../lib/common/genres.js';
+import { genreCondition, genresFrom } from '../common/genres.js';
 
 /** Rank in the database; only the twelve selected cards cross the API boundary. */
 export async function relatedTitles(sequelize: Sequelize, type: 'movie' | 'series', id: number, genres: unknown): Promise<Record<string, unknown>[]> {

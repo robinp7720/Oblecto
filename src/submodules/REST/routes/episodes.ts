@@ -15,7 +15,7 @@ import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
 import { containsText } from '../../../lib/common/textSearch.js';
-import { creditsFor } from './helpers/credits.js';
+import { creditsFor } from '../../../lib/library/credits.js';
 import { buildEpisodeContext } from './helpers/episodeContext.js';
 import { pickNextEpisodes } from './helpers/nextEpisodes.js';
 import { favouritesAmong, setFavourite } from '../../../lib/users/favourites.js';

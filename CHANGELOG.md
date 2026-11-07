@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Shared library queries
+
+- Movie and series browse queries, facet caching, typed credits and related-title ranking live in `src/lib/library/`. REST routes handle request/response conversion, and Jellyfin uses shared watch predicates, credits and related titles without importing REST helpers.
+- Native genre filters now match whole names in JSON and legacy comma-separated metadata, consistently with Jellyfin. Regression coverage checks literal wildcard characters, filtered facets and pagination, viewer isolation, completion thresholds and grouped credit roles. Native any-episode and Jellyfin whole-series watched semantics are preserved.
+
 ### Backend lifecycle
 
 - Server startup is awaited, including database preparation, group seeding and playback cache preparation; required startup failures release acquired services. HTTP listener errors reject startup instead of throwing from a callback. Optional Jellyfin, federation and seedbox startup errors remain logged without preventing the native API from starting.

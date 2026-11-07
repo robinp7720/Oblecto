@@ -6,9 +6,10 @@ Status of the feature tracks this file used to plan in detail, as of 7 November 
 
 | Track | Where it lives |
 |---|---|
+| Shared library queries, typed credits, related titles and watch predicates; whole-genre filtering across native and Jellyfin APIs | `src/lib/library/`, `src/lib/common/genres.ts`, library contract tests |
 | Awaited startup, partial-startup rollback, ordered shutdown and background job draining | `src/lib/oblecto/ServiceLifecycle.ts`, `src/lib/queue/`, startup smoke tests |
 | Adaptive playback defaults/240p, audio-only conversion, delivery overlap, bounded sequential HLS (opt-in), persistent preparation and constrained-network benchmark | `src/lib/playback/`, migration 0017, [streaming](docs/STREAMING.md) |
-| Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/submodules/REST/routes/helpers/facets.ts`, `src/lib/playback/`, migration 0015 |
+| Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/lib/library/facets.ts`, `src/lib/playback/`, migration 0015 |
 | Viewing history, personal/admin statistics, server and per-folder library totals in statistics/library settings, and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |
 | Library browsing: filters, sorting, cursor pagination, URL state | `src/submodules/REST/routes/helpers/browse.ts`, `Oblecto-Web/src/views/LibraryView.vue` |
 | Focused TV detail pages: manager-only episode matching workspace, scoped season actions, library viewing progress, spoilers, chapters, crew and provider links | `src/lib/series/SeriesExtras.ts`, `Oblecto-Web/src/components/details/` |

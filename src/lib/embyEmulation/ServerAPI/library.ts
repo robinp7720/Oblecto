@@ -13,7 +13,7 @@ import { containsText } from '../../common/textSearch.js';
 import { enrichPerson } from '../../people/index.js';
 import { favouriteIdsSql } from '../../users/favourites.js';
 import { WATCHED_PROGRESS } from '../../playback/progress.js';
-import { relatedTitles } from '../../../submodules/REST/routes/helpers/related.js';
+import { relatedTitles } from '../../library/related.js';
 import { formatId, formatMediaItem, genreId, parseId, type MediaItem } from '../helpers.js';
 import { libraryView } from '../views.js';
 import { decorateItems } from './itemDetails.js';

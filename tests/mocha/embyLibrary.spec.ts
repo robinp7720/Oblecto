@@ -1,3 +1,6 @@
+import { browseResponse } from '../../src/submodules/REST/routes/helpers/browseResponse.js';
+import { parseBrowseParams } from '../../src/submodules/REST/routes/helpers/browse.js';
+import { creditsFor } from '../../src/lib/library/credits.js';
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any */
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
@@ -494,4 +497,121 @@ describe('Jellyfin library browsing', () => {
             assert.equal(res.statusCode, 404);
         });
     });
+    describe('shared library query contracts', () => {
+        const native = (kind: 'movie' | 'series', query: Record<string, unknown>) =>
+            browseResponse(kind, kind === 'movie' ? 'movieName' : 'seriesName', parseBrowseParams({ mode: 'browse', count: 100, ...query }), user.id);
+        const nativeNames = (result: Awaited<ReturnType<typeof native>>): string[] =>
+            result.items.map(item => String(item.get(item instanceof Movie ? 'movieName' : 'seriesName'))).sort();
+
+        for (const kind of ['movie', 'series'] as const) {
+            it(`matches exact JSON and legacy CSV genres consistently for ${kind} lists and facets`, async () => {
+                const prefix = `Shared ${kind} genre`;
+                const special = "100%_fun's !";
+                const values = [
+                    ['CSV', 'Comedy, Drama'],
+                    ['JSON', '["Comedy","Drama"]'],
+                    ['Partial', '["Dark Comedy"]'],
+                    ['Combined', '["Comedy-Drama"]'],
+                    ['Literal', JSON.stringify([special])],
+                    ['Wildcard', '["100ABCfunX"]'],
+                    ['Missing', null]
+                ] as const;
+                const created: Array<Movie | Series> = [];
+                try {
+                    for (const [label, genre] of values) created.push(kind === 'movie'
+                        ? await Movie.create({ movieName: `${prefix} ${label}`, genres: genre })
+                        : await Series.create({ seriesName: `${prefix} ${label}`, genre }));
+                    const query = { IncludeItemTypes: kind === 'movie' ? 'Movie' : 'Series', SearchTerm: prefix, SortBy: 'SortName', Limit: '100' };
+                    const expected = [`${prefix} CSV`, `${prefix} JSON`];
+                    const result = await native(kind, { q: prefix, genre: 'Comedy' });
+                    assert.deepEqual(nativeNames(result), expected);
+                    assert.deepEqual(result.facets.genres, ['Comedy', 'Drama']);
+                    assert.deepEqual(names(await call('GET /items', { ...query, Genres: 'Comedy' })).sort(), expected);
+                    for (const genre of [special, '\" OR 1=1 --']) {
+                        const matches = genre === special ? [`${prefix} Literal`] : [];
+                        assert.deepEqual(nativeNames(await native(kind, { q: prefix, genre })), matches);
+                        assert.deepEqual(names(await call('GET /items', { ...query, Genres: genre })).sort(), matches);
+                    }
+                    const page = await native(kind, { q: prefix, genre: 'Comedy', count: 1 });
+                    const next = await native(kind, { q: prefix, genre: 'Comedy', count: 1, cursor: page.pageInfo.nextCursor });
+                    assert.deepEqual([...nativeNames(page), ...nativeNames(next)], expected);
+                    assert.equal(next.pageInfo.hasNextPage, false);
+                    assert.deepEqual(next.facets, page.facets);
+                } finally { for (const item of created) await item.destroy(); }
+            });
+        }
+
+        it('shares movie completion thresholds and viewer scoping while preserving unstarted versus unfinished', async () => {
+            const prefix = 'Shared progress movie';
+            const created: Movie[] = [];
+            try {
+                for (const [label, progress] of [['Zero', 0], ['Partial', 0.899], ['Threshold', 0.9], ['Finished', 1], ['Other viewer', null]] as const) {
+                    const movie = await Movie.create({ movieName: `${prefix} ${label}` });
+                    created.push(movie);
+                    await TrackMovie.create({ movieId: movie.id, userId: progress === null ? user.id + 1 : user.id, progress: progress ?? 1 });
+                }
+                const query = { IncludeItemTypes: 'Movie', SearchTerm: prefix, SortBy: 'SortName', Limit: '100' };
+                const expected = ['Finished', 'Threshold'].map(label => `${prefix} ${label}`);
+                assert.deepEqual(nativeNames(await native('movie', { q: prefix, watched: 'watched' })), expected);
+                assert.deepEqual(names(await call('GET /items', { ...query, IsPlayed: 'true' })).sort(), expected);
+                assert.deepEqual(nativeNames(await native('movie', { q: prefix, watched: 'inprogress' })), [`${prefix} Partial`]);
+                assert.deepEqual(names(await call('GET /items', { ...query, Filters: 'IsResumable' })), [`${prefix} Partial`]);
+                assert.deepEqual(nativeNames(await native('movie', { q: prefix, watched: 'unwatched' })), ['Other viewer', 'Zero'].map(label => `${prefix} ${label}`));
+                assert.deepEqual(names(await call('GET /items', { ...query, IsPlayed: 'false' })).sort(), ['Other viewer', 'Partial', 'Zero'].map(label => `${prefix} ${label}`));
+            } finally {
+                for (const movie of created) {
+                    await TrackMovie.destroy({ where: { movieId: movie.id } });
+                    await movie.destroy();
+                }
+            }
+        });
+
+        it('preserves native any-episode and Jellyfin whole-series completion, including empty series', async () => {
+            const prefix = 'Shared progress series';
+            const created: Series[] = [];
+            const episodes: Episode[] = [];
+            try {
+                for (const [label, progresses] of [
+                    ['Empty', []], ['Unstarted', [0, 0]], ['Partial', [0.9, 0]], ['Finished', [0.9, 1]], ['Inprogress', [0.899, 0]]
+                ] as const) {
+                    const series = await Series.create({ seriesName: `${prefix} ${label}` });
+                    created.push(series);
+                    for (const [index, progress] of progresses.entries()) {
+                        const episode = await Episode.create({ SeriesId: series.id, episodeName: `${label} ${index}`, airedSeason: '1', airedEpisodeNumber: String(index + 1) });
+                        episodes.push(episode);
+                        await TrackEpisode.create({ episodeId: episode.id, userId: user.id, progress });
+                    }
+                }
+                const query = { IncludeItemTypes: 'Series', SearchTerm: prefix, SortBy: 'SortName', Limit: '100' };
+                assert.deepEqual(nativeNames(await native('series', { q: prefix, watched: 'watched' })), ['Finished', 'Partial'].map(label => `${prefix} ${label}`));
+                assert.deepEqual(names(await call('GET /items', { ...query, IsPlayed: 'true' })), [`${prefix} Finished`]);
+                assert.deepEqual(nativeNames(await native('series', { q: prefix, watched: 'unwatched' })), ['Empty', 'Unstarted'].map(label => `${prefix} ${label}`));
+                assert.deepEqual(names(await call('GET /items', { ...query, IsPlayed: 'false' })).sort(), ['Inprogress', 'Partial', 'Unstarted'].map(label => `${prefix} ${label}`));
+                assert.deepEqual(nativeNames(await native('series', { q: prefix, watched: 'inprogress' })), [`${prefix} Inprogress`]);
+                assert.deepEqual(names(await call('GET /items', { ...query, Filters: 'IsResumable' })), [`${prefix} Inprogress`]);
+            } finally {
+                for (const episode of episodes) {
+                    await TrackEpisode.destroy({ where: { episodeId: episode.id } });
+                    await episode.destroy();
+                }
+                for (const series of created) await series.destroy();
+            }
+        });
+
+        it('retains grouped credit roles, display order and library connections in the typed service', async () => {
+            const actor = (await Person.findOne({ where: { name: 'Keanu Reeves' } }))!;
+            const extra = await MovieCredit.create({ movieId: movies[0].id, personId: actor.id, creditType: 'cast', character: 'Thomas Anderson', sortOrder: 5 });
+            const elsewhere = await MovieCredit.create({ movieId: movies[1].id, personId: actor.id, creditType: 'cast', character: 'Other role', sortOrder: 0 });
+            try {
+                const result = await creditsFor('movie', movies[0].id, sequelize);
+                const credit = result.cast.find(entry => entry.person?.id === actor.id)!;
+                assert.equal(credit.character, 'Neo / Thomas Anderson');
+                assert.equal(credit.order, 0);
+                assert.equal(credit.roles.length, 2);
+                assert.deepEqual(credit.libraryConnections, { movies: 1, series: 0 });
+                assert.equal(result.crew[0].job, 'Director / Screenplay');
+            } finally { await extra.destroy(); await elsewhere.destroy(); }
+        });
+    });
+
 });

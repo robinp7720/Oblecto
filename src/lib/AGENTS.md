@@ -4,6 +4,7 @@ What lives here
 - Indexers, collectors, updaters and cleaners for movies, series and files (`indexers/`, `updaters/`,
   `cleaners/`); credits and people (`updaters/common/CreditSync.ts`, `people/`).
 - Artwork processing and downloading (`artwork/`).
+- Library browsing, facets, typed credits, related titles and watch predicates (`library/`). Keep HTTP parsing, cursor encoding and protocol-specific response formatting in the API adapters; shared library services must not import REST route helpers.
 - Queue and maintenance job tracking (`queue/`, `maintenance/`).
 - Playback sessions and transcoding (`playback/`, see `docs/STREAMING.md`).
 - Accounts: tokens, permissions, sign-in policy and throttling (`auth/`); avatars, preferences,

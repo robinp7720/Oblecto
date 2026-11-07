@@ -4,7 +4,7 @@ import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import AggregateUpdateRetriever from '../../src/lib/common/AggregateUpdateRetriever.js';
 import TmdbMovieRetriever from '../../src/lib/updaters/movies/informationRetrievers/TmdbMovieRetriever.js';
 import TmdbSeriesRetriever from '../../src/lib/updaters/series/informationRetrievers/TmdbSeriesRetriever.js';
-import { relatedTitles } from '../../src/submodules/REST/routes/helpers/related.js';
+import { relatedTitles } from '../../src/lib/library/related.js';
 import { buildEpisodeContext } from '../../src/submodules/REST/routes/helpers/episodeContext.js';
 import { libraryConnectionLabel, mediaCapabilities, nextSeriesEpisode, playbackLabel, ratingLabel, relationshipLabel, seasonSummary } from '../../Oblecto-Web/src/utils/media.js';
 

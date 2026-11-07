@@ -1,9 +1,8 @@
-import { browseFacets } from './helpers/facets.js';
-import { relatedTitles } from './helpers/related.js';
+import { relatedTitles } from '../../../lib/library/related.js';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unused-vars */
 import { Express, Request, Response, NextFunction } from 'express';
 import errors from '../errors.js';
-import { Op, literal } from 'sequelize';
+import { Op } from 'sequelize';
 
 import authMiddleWare from '../middleware/auth.js';
 
@@ -13,29 +12,21 @@ import { Stream } from '../../../models/stream.js';
 import { Movie } from '../../../models/movie.js';
 import { MovieSet } from '../../../models/movieSet.js';
 import { visibleMovieSets } from '../../../lib/sets/visibility.js';
-import { MovieCredit } from '../../../models/movieCredit.js';
 import Oblecto from '../../../lib/oblecto/index.js';
 import { OblectoRequest } from '../index.js';
-import { parseBrowseParams, decodeCursor, buildCursorWhere, encodeCursor } from './helpers/browse.js';
+import { parseBrowseParams } from './helpers/browse.js';
+import { browseResponse } from './helpers/browseResponse.js';
+import { InvalidBrowseQueryError } from '../../../lib/library/types.js';
 import { saveArtwork } from '../../../lib/artwork/ArtworkUpload.js';
 import { firstUpload } from '../../../lib/users/avatars.js';
 import upload from '../middleware/upload.js';
-import { containsText, startsWithText } from '../../../lib/common/textSearch.js';
-import { creditsFor } from './helpers/credits.js';
-import { setPlayed } from '../../../lib/playback/progress.js';
-import { favouritesAmong, favouriteIdsSql, setFavourite } from '../../../lib/users/favourites.js';
-import { isWatchlisted, setWatchlisted, watchlistIdsSql } from '../../../lib/users/watchlist.js';
+import { containsText } from '../../../lib/common/textSearch.js';
+import { creditsFor } from '../../../lib/library/credits.js';
+import { setPlayed, WATCHED_PROGRESS } from '../../../lib/playback/progress.js';
+import { favouritesAmong, setFavourite } from '../../../lib/users/favourites.js';
+import { isWatchlisted, setWatchlisted } from '../../../lib/users/watchlist.js';
 
 const LEGACY_ALLOWED_ORDERS = ['desc', 'asc'];
-const BROWSE_SORT_FIELDS = new Set([
-    'movieName',
-    'releaseDate',
-    'createdAt',
-    'updatedAt',
-    'popularity',
-    'runtime'
-]);
-
 export default (server: Express, oblecto: Oblecto) => {
     server.get('/movies/list/:sorting', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
         const params = req.combined_params || {};
@@ -82,186 +73,12 @@ export default (server: Express, oblecto: Oblecto) => {
             return res.send(results);
         }
 
-        const sorting = String(req.params.sorting);
-
-        if (!BROWSE_SORT_FIELDS.has(sorting)) {
-            return res.status(400).send({ message: 'Sorting method is invalid' });
+        try {
+            return res.send(await browseResponse('movie', String(req.params.sorting), browseParams, Number(req.authorization!.user.id)));
+        } catch (error) {
+            if (error instanceof InvalidBrowseQueryError) return res.status(400).send({ message: error.message });
+            throw error;
         }
-
-        const whereClauses: any[] = [];
-        const includeClauses: any[] = [];
-
-        if (browseParams.list !== 'all') {
-            const userId = Number(req.authorization!.user.id);
-            const ids = browseParams.list === 'favourites' ? favouriteIdsSql(userId, 'movie') : watchlistIdsSql(userId);
-            whereClauses.push({ id: { [Op.in]: literal(ids) } });
-        }
-
-        if (browseParams.q) {
-            whereClauses.push({
-                [Op.or]: [
-                    containsText('movieName', browseParams.q),
-                    containsText('originalName', browseParams.q)
-                ]
-            });
-        }
-
-        if (browseParams.genres.length > 0) {
-            whereClauses.push({
-                [Op.or]: browseParams.genres.map((genre: string) => {
-                    return containsText('genres', genre);
-                })
-            });
-        }
-
-        if (browseParams.yearFrom !== null || browseParams.yearTo !== null) {
-            const releaseDateFilter: any = {};
-
-            if (browseParams.yearFrom !== null) {
-                releaseDateFilter[Op.gte] = `${browseParams.yearFrom.toString().padStart(4, '0')}-01-01`;
-            }
-
-            if (browseParams.yearTo !== null) {
-                releaseDateFilter[Op.lte] = `${browseParams.yearTo.toString().padStart(4, '0')}-12-31`;
-            }
-
-            whereClauses.push({ releaseDate: releaseDateFilter });
-        }
-
-        const trackInclude: any = {
-            model: TrackMovie,
-            required: false,
-            where: { userId: req.authorization!.user.id }
-        };
-
-        if (browseParams.watched === 'watched') {
-            trackInclude.required = true;
-            trackInclude.where.progress = { [Op.gte]: 0.9 };
-        } else if (browseParams.watched === 'inprogress') {
-            trackInclude.required = true;
-            trackInclude.where.progress = { [Op.gt]: 0, [Op.lt]: 0.9 };
-        } else if (browseParams.watched === 'unwatched') {
-            whereClauses.push({
-                [Op.or]: [
-                    { '$TrackMovies.id$': null },
-                    { '$TrackMovies.progress$': { [Op.lte]: 0 } }
-                ]
-            });
-        }
-
-        includeClauses.push(trackInclude);
-
-        if (browseParams.libraryPath) {
-            includeClauses.push({
-                model: File,
-                attributes: [],
-                through: { attributes: [] },
-                required: true,
-                where: startsWithText('path', browseParams.libraryPath)
-            });
-        }
-
-        if (browseParams.personId) {
-            const creditWhere: any = { personId: browseParams.personId };
-            if (browseParams.creditRole === 'cast') creditWhere.creditType = 'cast';
-            if (browseParams.creditRole === 'director') creditWhere.job = 'Director';
-            if (browseParams.creditRole === 'writer') creditWhere.job = { [Op.in]: ['Writer', 'Screenplay', 'Story'] };
-            if (browseParams.creditRole === 'creator') creditWhere.job = 'Creator';
-            includeClauses.push({
-                model: MovieCredit,
-                as: 'Credits',
-                attributes: [],
-                required: true,
-                where: creditWhere
-            });
-        }
-
-        const baseWhereClauses = [...whereClauses];
-
-        const facetQueryOptions: any = {
-            attributes: ['genres', 'releaseDate'],
-            include: includeClauses,
-            distinct: true,
-            subQuery: false
-        };
-
-        if (baseWhereClauses.length > 0) {
-            facetQueryOptions.where = { [Op.and]: baseWhereClauses };
-        }
-
-        const { genres, years } = await browseFacets(Movie, browseParams, Number(req.authorization!.user.id), facetQueryOptions, 'genres', 'releaseDate');
-
-        if (browseParams.cursor) {
-            try {
-                const parsedCursor = decodeCursor(
-                    browseParams.cursor,
-                    sorting,
-                    browseParams.order,
-                    browseParams.filterHash
-                );
-                whereClauses.push(buildCursorWhere(sorting, browseParams.order, parsedCursor.sortValue, parsedCursor.id));
-            } catch (error: any) {
-                return res.status(400).send({ message: error.message || 'cursor is invalid' });
-            }
-        }
-
-        const queryOptions: any = {
-            include: includeClauses,
-            order: [[sorting, browseParams.order], ['id', browseParams.order]],
-            limit: browseParams.count + 1,
-            distinct: true,
-            subQuery: false
-        };
-
-        if (whereClauses.length > 0) {
-            queryOptions.where = { [Op.and]: whereClauses };
-        }
-
-        if (!browseParams.cursor && browseParams.page > 0) {
-            queryOptions.offset = browseParams.count * browseParams.page;
-        }
-
-        const results = await Movie.findAll(queryOptions);
-
-        const hasNextPage = results.length > browseParams.count;
-        const items = hasNextPage ? results.slice(0, browseParams.count) : results;
-
-        let nextCursor: string | null = null;
-
-        if (hasNextPage && items.length > 0) {
-            const lastItem: any = items[items.length - 1];
-            nextCursor = encodeCursor(
-                sorting,
-                browseParams.order,
-                lastItem[sorting as keyof Movie] ?? null,
-                Number(lastItem.id),
-                browseParams.filterHash
-            );
-        }
-
-        return res.send({
-            items,
-            pageInfo: {
-                hasNextPage,
-                nextCursor,
-                count: items.length
-            },
-            appliedFilters: {
-                q: browseParams.q,
-                genre: browseParams.genres,
-                yearFrom: browseParams.yearFrom,
-                yearTo: browseParams.yearTo,
-                watched: browseParams.watched,
-                list: browseParams.list,
-                libraryPath: browseParams.libraryPath,
-                personId: browseParams.personId,
-                creditRole: browseParams.creditRole
-            },
-            facets: {
-                genres,
-                years
-            }
-        });
     });
 
     server.get('/movies/sets', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
@@ -494,7 +311,7 @@ export default (server: Express, oblecto: Oblecto) => {
             ],
             where: {
                 userId: req.authorization!.user.id,
-                progress: { [Op.lt]: 0.9 },
+                progress: { [Op.lt]: WATCHED_PROGRESS },
                 updatedAt: { [Op.gt]: new Date(Date.now() - (1000*60*60*24*7)) }
             },
             order: [['updatedAt', 'DESC'],],

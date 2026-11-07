@@ -15,7 +15,7 @@ import { SeriesCredit } from '../../../models/seriesCredit.js';
 import { EpisodeCredit } from '../../../models/episodeCredit.js';
 import { containsText } from '../../common/textSearch.js';
 import { genreCondition } from '../../common/genres.js';
-import { WATCHED_PROGRESS } from '../../playback/progress.js';
+import { itemWatchCondition } from '../../library/watchState.js';
 import { formatMediaItem, parseId, parseUuid, type MediaItem } from '../helpers.js';
 import { isLibraryView, type LibraryViewId } from '../views.js';
 import { getRequestList, getRequestValue } from './requestUtils.js';
@@ -294,34 +294,6 @@ const quoter = (sequelize: Sequelize): (name: string) => string => {
 const castNumber = (sequelize: Sequelize, column: string): ReturnType<typeof fn> =>
     fn('CAST', literal(`${column} AS ${sequelize.getDialect() === 'sqlite' ? 'INTEGER' : 'SIGNED'}`));
 
-/** SQL for "this user has watched / started / not finished this item", per kind. */
-function watchCondition(sequelize: Sequelize, kind: RowKind, userId: number, state: 'played' | 'unplayed' | 'resumable'): string {
-    const q = quoter(sequelize);
-    const user = Number(userId);
-    const watched = `${q('t')}.${q('progress')} >= ${WATCHED_PROGRESS}`;
-    const started = `${q('t')}.${q('progress')} > 0 AND ${q('t')}.${q('progress')} < ${WATCHED_PROGRESS}`;
-
-    if (kind === 'series') {
-        const episodes = q(Episode.getTableName() as string);
-        const tracks = q(TrackEpisode.getTableName() as string);
-        const ofSeries = `${q('e')}.${q('SeriesId')} = ${q('Series')}.${q('id')}`;
-        const track = (condition: string): string => `EXISTS (SELECT 1 FROM ${tracks} ${q('t')} WHERE ${q('t')}.${q('episodeId')} = ${q('e')}.${q('id')} AND ${q('t')}.${q('userId')} = ${user} AND ${condition})`;
-        const unwatchedEpisode = `EXISTS (SELECT 1 FROM ${episodes} ${q('e')} WHERE ${ofSeries} AND NOT ${track(watched)})`;
-
-        if (state === 'unplayed') return unwatchedEpisode;
-        if (state === 'resumable') return `EXISTS (SELECT 1 FROM ${episodes} ${q('e')} WHERE ${ofSeries} AND ${track(started)})`;
-        return `(EXISTS (SELECT 1 FROM ${episodes} ${q('e')} WHERE ${ofSeries}) AND NOT ${unwatchedEpisode})`;
-    }
-
-    const spec = SPECS[kind]();
-    const track = spec.track!;
-    const exists = (condition: string): string => `EXISTS (SELECT 1 FROM ${q(track.table)} ${q('t')} WHERE ${q('t')}.${q(track.key)} = ${q(spec.alias)}.${q('id')} AND ${q('t')}.${q('userId')} = ${user} AND ${condition})`;
-
-    if (state === 'played') return exists(watched);
-    if (state === 'resumable') return exists(started);
-    return `NOT ${exists(watched)}`;
-}
-
 /** When the user last watched this item: for a series, any of its episodes. */
 function lastPlayedSql(sequelize: Sequelize, kind: RowKind, userId: number | null): string {
     const q = quoter(sequelize);
@@ -412,8 +384,8 @@ function whereFor(sequelize: Sequelize, kind: RowKind, query: ItemQuery): WhereO
         if (!query.userId) {
             if (played === true || query.filters.has('isresumable')) return null;
         } else {
-            if (played !== null) conditions.push(literal(watchCondition(sequelize, kind, query.userId, played ? 'played' : 'unplayed')));
-            if (query.filters.has('isresumable')) conditions.push(literal(watchCondition(sequelize, kind, query.userId, 'resumable')));
+            if (played !== null) conditions.push(literal(itemWatchCondition(sequelize, kind, query.userId, played ? 'finished' : 'unfinished')));
+            if (query.filters.has('isresumable')) conditions.push(literal(itemWatchCondition(sequelize, kind, query.userId, 'inprogress')));
         }
     }
 

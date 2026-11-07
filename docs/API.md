@@ -171,7 +171,7 @@ Send `mode=browse` to filter and page with a cursor. The same parameters work fo
 
 - `count`: 1–100 (default `20`).
 - `cursor`: `pageInfo.nextCursor` from the previous page. A cursor only works with the sort, order and filters it came from; anything else returns 400.
-- `q`: title search. `genre`: one or more genres, repeated or comma-separated.
+- `q`: title search. `genre`: one or more whole genre names, repeated or comma-separated. Matching supports JSON arrays and legacy comma-separated storage: `Comedy` does not match `Dark Comedy` or `Comedy-Drama`. `%`, `_` and punctuation are literal characters, not query operators, as in Jellyfin genre filters.
 - `yearFrom`, `yearTo`: release or first-aired year range.
 - `watched`: `all` (default), `watched` (90% or more), `inprogress` or `unwatched`.
 - `list`: `all` (default), `favourites`, or `watchlist`. Saved lists are private to the authenticated user and apply to movies and series in browse mode. List selection participates in cursor validation and combines with the other filters.
@@ -191,7 +191,7 @@ Invalid filters, sorts and cursors return 400 with `{ "message": "..." }`; `coun
 
 The example shows a one-item page with abbreviated movie fields and an illustrative opaque cursor. `facets` lists genres and years matching all active filters, before cursor paging. Multiple genres are ORed; other filter categories combine with AND. `pageInfo.count` is the number returned, not a total; `nextCursor` is null at the end. Reset cursors after changing filters, sort, order, server or user. These are live queries, not snapshots; deduplicate by ID when refreshing during library changes.
 
-Browse facets are aggregated in the database and cached for up to 30 seconds per database, signed-in user and filter set. Cursor, sort and page-size changes reuse those facets. Catalogue changes invalidate affected entries; watched and saved-list filters also invalidate after relevant user-state writes, including transaction commits. External database writes become visible when the cache expires. The response envelope and filtering rules are unchanged.
+Browse facets are aggregated in the database and cached for up to 30 seconds per database, signed-in user and filter set. Cursor, sort and page-size changes reuse those facets. Catalogue changes invalidate affected entries; watched and saved-list filters also invalidate after relevant user-state writes, including transaction commits. External database writes become visible when the cache expires. Library queries, facets, credits and related-title ranking live in `src/lib/library/`; HTTP parsing, opaque cursor encoding and the response envelope stay in the REST adapter.
 
 Movie watch filters use progress >= 0.9 for `watched`, 0 < progress < 0.9 for `inprogress`, and missing/zero progress for `unwatched`. For series, `watched` means **at least one** episode is watched, `inprogress` means at least one is partially watched, and `unwatched` means none has positive progress. A series can match both watched and in-progress queries. Series browse items have no aggregate tracking; fetch `/series/:id/episodes` to compute completion.
 

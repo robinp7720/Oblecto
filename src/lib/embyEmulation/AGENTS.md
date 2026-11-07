@@ -14,6 +14,7 @@ An Express 5 server on `jellyfin.port` (8096). Middleware, in order:
 - **Session guard** (`sessionGuard.ts`): everything but discovery, sign-in, branding, localisation, images and the web client needs a session. It sets `req.embyUserId` and pins every user id in the path, query and body to the signed-in user.
 
 ### 3. Shared building blocks (`ServerAPI/`)
+- Library watch predicates, typed credits and related-title ranking live in `src/lib/library/`. Import these domain services directly; do not import native REST route helpers. Preserve native any-episode versus Jellyfin whole-series watched semantics.
 - `itemQuery.ts`: the one engine behind `GET /Items`, `/Users/{id}/Items` and the `/Shows` lists. `readItemQuery` turns a request into an `ItemQuery` (kinds, parent, filters, sort, page), and `runItemQuery` runs it. Add new filters here, not in routes. Routes that fix some parameters pass them as `queryItems(req, emby, overrides)`: `req.query` is read-only in Express 5.
 - `itemDetails.ts`: `decorateItems` fills in favourites, folder counts and unplayed counts for a page in batched queries. `describeItem` adds People for detail pages. `userItemData` builds one item's UserData.
 - `library.ts`: collections (BoxSets from movie sets the user may see), people, genres, similar titles, ancestors, and `resolveLibraryItem` for those ids.

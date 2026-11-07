@@ -9,8 +9,9 @@ What lives here
 
 REST API notes
 - Entry: `src/submodules/REST/index.ts`.
-- Routes live under `src/submodules/REST/routes/` (V1 routes in `routes/v1/`, shared query helpers in
-  `routes/helpers/`) with middleware in `src/submodules/REST/middleware/`.
+- Routes live under `src/submodules/REST/routes/` (V1 routes in `routes/v1/`, request/response helpers in
+  `routes/helpers/`) with middleware in `src/submodules/REST/middleware/`. Library query rules, facets,
+  credits and related titles live in `src/lib/library/`, shared with Jellyfin where applicable.
 - Shared error helpers live in `src/submodules/REST/errors.ts`.
 
 Database notes

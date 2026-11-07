@@ -1,25 +1,15 @@
-import { createHash } from 'crypto';
-import { Op } from 'sequelize';
+import { filterKey, type LibraryFilters } from '../../../../lib/library/types.js';
 
 const ALLOWED_ORDERS = new Set(['asc', 'desc']);
 const ALLOWED_WATCHED = new Set(['all', 'watched', 'unwatched', 'inprogress']);
 const ALLOWED_CREDIT_ROLES = new Set(['any', 'cast', 'director', 'writer', 'creator']);
 
-export interface BrowseParams {
+export interface BrowseParams extends LibraryFilters {
     mode: 'legacy' | 'browse';
     order: 'asc' | 'desc';
     count: number;
     page: number;
     cursor: string | null;
-    q: string | null;
-    genres: string[];
-    yearFrom: number | null;
-    yearTo: number | null;
-    watched: 'all' | 'watched' | 'unwatched' | 'inprogress';
-    list: 'all' | 'favourites' | 'watchlist';
-    libraryPath: string | null;
-    personId: number | null;
-    creditRole: 'any' | 'cast' | 'director' | 'writer' | 'creator';
     filterHash: string;
 }
 
@@ -129,7 +119,7 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
     if (!ALLOWED_CREDIT_ROLES.has(rawCreditRole)) throw new Error('creditRole is invalid');
     const creditRole = rawCreditRole as BrowseParams['creditRole'];
 
-    const filterHash = hashFilters({
+    const filterHash = filterKey({
         q,
         genres: [...genres].sort((a, b) => a.localeCompare(b)),
         yearFrom,
@@ -158,10 +148,6 @@ export function parseBrowseParams(rawParams: Record<string, unknown>): BrowsePar
         creditRole,
         filterHash
     };
-}
-
-function hashFilters(payload: Record<string, unknown>): string {
-    return createHash('sha1').update(JSON.stringify(payload)).digest('hex');
 }
 
 export function encodeCursor(sort: string, order: 'asc' | 'desc', sortValue: unknown, id: number, filterHash: string): string {
@@ -198,31 +184,4 @@ export function decodeCursor(cursor: string, expectedSort: string, expectedOrder
     }
 
     return payload;
-}
-
-export function buildCursorWhere(sortField: string, order: 'asc' | 'desc', sortValue: unknown, id: number): Record<string, unknown> {
-    const sortOp = order === 'asc' ? Op.gt : Op.lt;
-    const idOp = order === 'asc' ? Op.gt : Op.lt;
-
-    if (sortValue === null || sortValue === undefined) {
-        return {
-            [Op.or]: [
-                {
-                    [sortField]: null,
-                    id: {[idOp]: id}
-                },
-                {[sortField]: {[Op.not]: null}}
-            ]
-        };
-    }
-
-    return {
-        [Op.or]: [
-            {[sortField]: {[sortOp]: sortValue}},
-            {
-                [sortField]: sortValue,
-                id: {[idOp]: id}
-            }
-        ]
-    };
 }
