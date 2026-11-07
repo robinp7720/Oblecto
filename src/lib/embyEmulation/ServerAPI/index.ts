@@ -1,3 +1,4 @@
+import { HttpListener } from '../../../submodules/httpListener.js';
 import express, { type Request, type Response, type NextFunction, type Application } from 'express';
 import routes from './routes/index.js';
 import { resolveJellyfinWebPath } from './webPath.js';
@@ -56,6 +57,7 @@ export default class EmbyServerAPI {
     public embyEmulation: EmbyEmulation;
     public app: Application;
     public server: Server;
+    private listener: HttpListener;
 
     /**
      * @param embyEmulation - The EmbyEmulation instance
@@ -151,18 +153,16 @@ export default class EmbyServerAPI {
             });
         });
 
-        // Start express server
-        const { port, host } = embyEmulation.oblecto.config.jellyfin;
-
-        // Express 5 calls this on failure too, with the error. A port already in use should not take
-        // the rest of Oblecto down with it.
-        this.server = this.app.listen(port, host, (error?: NodeJS.ErrnoException) => {
-            if (error) {
-                logger.error(`Jellyfin emulation server could not listen on ${host}:${port}: ${error.code ?? error.message}`);
-                return;
-            }
-
-            logger.info(`Jellyfin emulation server listening at http://${host}:${(this.server.address() as AddressInfo).port}`);
-        });
+        this.listener = new HttpListener(this.app);
+        this.server = this.listener.server;
     }
+
+    async start(): Promise<void> {
+        const { port, host } = this.embyEmulation.oblecto.config.jellyfin;
+        await this.listener.start({ port, host });
+        logger.info(`Jellyfin emulation server listening at http://${host}:${(this.server.address() as AddressInfo).port}`);
+    }
+
+    stop(): void { this.listener.stop(); }
+    close(): Promise<void> { return this.listener.close(); }
 }

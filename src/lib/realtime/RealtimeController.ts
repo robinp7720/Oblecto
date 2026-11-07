@@ -36,6 +36,8 @@ export default class RealtimeController {
     public registry: DeviceRegistry<Socket>;
     public server: Server;
     private unsubscribeProgress?: () => void;
+    private stopping = false;
+    private stopped?: Promise<void>;
 
     publishProgress(userId: number, change: ProgressChange): void {
         for (const client of Object.values(this.clients)) {
@@ -98,7 +100,7 @@ export default class RealtimeController {
         }
 
         verifyAccessToken(auth.token, this.oblecto.config.authentication).then(claims => {
-            if (!claims) {
+            if (this.stopping || !claims) {
                 logger.warn('An unauthorized user attempted connection to realtime server');
                 next(new Error('Authentication failed'));
 
@@ -127,6 +129,7 @@ export default class RealtimeController {
     }
 
     connectionHandler(socket: Socket): void {
+        if (this.stopping) { socket.disconnect(true); return; }
         const { user, identity } = socket.data as SocketData;
 
         const client = new RealtimeClient(this.oblecto, this, socket, user, identity);
@@ -215,10 +218,16 @@ export default class RealtimeController {
         this.server.emit(event, payload);
     }
 
-    async close(): Promise<void> {
+    stop(): Promise<void> {
+        this.stopping = true;
         this.unsubscribeProgress?.();
-        await Promise.all(Object.values(this.clients).map(client => client.disconnect()));
-        this.registry.clear();
+        this.stopped ??= Promise.all(Object.values(this.clients).map(client => client.disconnect()))
+            .then(() => { this.registry.clear(); });
+        return this.stopped;
+    }
+
+    async close(): Promise<void> {
+        await this.stop();
         await new Promise<void>((resolve, reject) => {
             void this.server.close(() => resolve()).catch(reject);
         });

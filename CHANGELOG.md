@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Backend lifecycle
+
+- Server startup is awaited, including database preparation, group seeding and playback cache preparation; required startup failures release acquired services. HTTP listener errors reject startup instead of throwing from a callback. Optional Jellyfin, federation and seedbox startup errors remain logged without preventing the native API from starting.
+- Shutdown stops request intake and seedbox polling, drains accepted jobs and their descendants, and closes playback and connections before persistence and the database. Cleanup failures are collected while remaining services still close. Concurrent shutdown calls share one cleanup operation. The existing 15-second process shutdown deadline still applies.
+- Seedbox shutdown waits for discovery and transfers and closes FTP/SFTP listing connections. Regression checks cover occupied ports, partial startup, concurrent startup/shutdown, cleanup failures, and job draining; the TUI smoke test now requires natural process exit.
+
 Upgrading from 1.0? The database updates itself at start (migrations 0006 to 0017). If you use federation, upgrade both servers together: synchronization now needs metadata protocol 2 on each end. See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ### New

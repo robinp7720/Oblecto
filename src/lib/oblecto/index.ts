@@ -1,3 +1,5 @@
+import { ServiceLifecycle } from './ServiceLifecycle.js';
+import { prepareDatabase } from '../../submodules/prepareDatabase.js';
 import { StatisticsService } from '../statistics/StatisticsService.js';
 import { FederationService } from '../federation/FederationService.js';
 import pkg from '../../../package.json';
@@ -59,54 +61,66 @@ export default class Oblecto {
     public version = pkg.version;
 
     public config: IConfig;
-    public database: Sequelize;
-    private databaseOptimizer: DatabaseOptimizer;
-    public tvdb: InstanceType<typeof TVDB>;
-    public tmdb: MovieDb;
-    public movieExtras: MovieExtras;
-    public seriesExtras: SeriesExtras;
-    public queue: Queue;
-    public downloader: Downloader;
-    public fileIndexer: FileIndexer;
-    public seriesIndexer: SeriesIndexer;
-    public movieIndexer: MovieIndexer;
-    public seriesCollector: SeriesCollector;
-    public movieCollector: MovieCollector;
-    public seriesArtworkDownloader: SeriesArtworkDownloader;
-    public movieArtworkDownloader: MovieArtworkDownloader;
-    public movieArtworkCollector: MovieArtworkCollector;
-    public seriesArtworkCollector: SeriesArtworkCollector;
-    public artworkUtils: ArtworkUtils;
-    public imageScaler: ImageScaler;
-    public fileUpdater: FileUpdater;
-    public seriesUpdater: SeriesUpdater;
-    public movieUpdater: MovieUpdater;
-    public fileUpdateCollector: FileUpdateCollector;
-    public seriesUpdateCollector: SeriesUpdateCollector;
-    public movieUpdateCollector: MovieUpdateCollector;
-    public fileCleaner: FileCleaner;
-    public movieCleaner: MovieCleaner;
-    public seriesCleaner: SeriesCleaner;
-    public mediaAnalyser: MediaAnalyser;
-    public playback: PlaybackService;
-    public statistics: StatisticsService;
-    public federation: FederationService;
-    private federationStart: Promise<void>;
-    public seedboxController: SeedboxController;
-    public oblectoAPI: OblectoAPI;
-    public realTimeController: RealtimeController;
+    public database!: Sequelize;
+    private databaseOptimizer!: DatabaseOptimizer;
+    public tvdb!: InstanceType<typeof TVDB>;
+    public tmdb!: MovieDb;
+    public movieExtras!: MovieExtras;
+    public seriesExtras!: SeriesExtras;
+    public queue!: Queue;
+    public downloader!: Downloader;
+    public fileIndexer!: FileIndexer;
+    public seriesIndexer!: SeriesIndexer;
+    public movieIndexer!: MovieIndexer;
+    public seriesCollector!: SeriesCollector;
+    public movieCollector!: MovieCollector;
+    public seriesArtworkDownloader!: SeriesArtworkDownloader;
+    public movieArtworkDownloader!: MovieArtworkDownloader;
+    public movieArtworkCollector!: MovieArtworkCollector;
+    public seriesArtworkCollector!: SeriesArtworkCollector;
+    public artworkUtils!: ArtworkUtils;
+    public imageScaler!: ImageScaler;
+    public fileUpdater!: FileUpdater;
+    public seriesUpdater!: SeriesUpdater;
+    public movieUpdater!: MovieUpdater;
+    public fileUpdateCollector!: FileUpdateCollector;
+    public seriesUpdateCollector!: SeriesUpdateCollector;
+    public movieUpdateCollector!: MovieUpdateCollector;
+    public fileCleaner!: FileCleaner;
+    public movieCleaner!: MovieCleaner;
+    public seriesCleaner!: SeriesCleaner;
+    public mediaAnalyser!: MediaAnalyser;
+    public playback!: PlaybackService;
+    public statistics!: StatisticsService;
+    public federation!: FederationService;
+    public seedboxController!: SeedboxController;
+    public oblectoAPI!: OblectoAPI;
+    public realTimeController!: RealtimeController;
     public embyServer?: EmbyEmulation;
-    public tools: ToolReport;
+    public tools!: ToolReport;
+
+    private lifecycle = new ServiceLifecycle();
 
     constructor(config: IConfig) {
         this.config = config;
+    }
+
+    start(): Promise<void> {
+        return this.lifecycle.start(() => this.initialize());
+    }
+
+    private async initialize(): Promise<void> {
+        const config = this.config;
 
         this.tools = probeTools(config);
         for (const problem of describeMissingTools(this.tools)) logger.warn(problem);
 
         this.database = initDatabase();
+        this.lifecycle.defer('database', 'database', () => this.database.close());
+        await prepareDatabase(config);
+        await this.prepareGroups();
         this.databaseOptimizer = new DatabaseOptimizer(this.database);
-        void this.prepareGroups();
+        this.lifecycle.defer('database optimizer', 'persistence', () => this.databaseOptimizer.close());
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
         this.tvdb = this.config.tvdb.key ? new (TVDB)(this.config.tvdb.key) : unconfiguredClient('TVDB', 'tvdb.key');
@@ -118,6 +132,7 @@ export default class Oblecto {
             if (!key) logger.warn(`No ${provider} API key is set, so ${provider} lookups will fail until a key is added and Oblecto is restarted`);
 
         this.queue = new Queue(this.config.queue.concurrency);
+        this.lifecycle.defer('job queue', 'jobs', () => this.queue.close());
 
         this.downloader = new Downloader(this);
 
@@ -149,22 +164,41 @@ export default class Oblecto {
         this.seriesCleaner = new SeriesCleaner(this);
 
         this.mediaAnalyser = new MediaAnalyser(this);
+        this.lifecycle.defer('media analyser', 'playback', () => this.mediaAnalyser.close());
 
         this.statistics = new StatisticsService(this.database, this);
+        this.lifecycle.defer('statistics', 'persistence', () => this.statistics.close());
         this.playback = new PlaybackService(this);
+        this.lifecycle.defer('playback', 'playback', () => this.playback.close());
+        await this.playback.cache.root;
         this.playback.remoteFactory = host => connectPlaybackPeer(this, host);
 
         this.seedboxController = new SeedboxController(this);
-        void this.seedboxController.loadAllSeedboxes();
+        this.lifecycle.defer('seedboxes', 'producers', () => this.seedboxController.close());
 
         this.federation = new FederationService(this);
-        this.federationStart = this.federation.start().catch(error => logger.error('Federation startup failed', error));
+        this.lifecycle.defer('federation', 'producers', () => this.federation.close());
 
         this.oblectoAPI = new OblectoAPI(this);
+        this.lifecycle.defer('REST intake', 'intake', () => this.oblectoAPI.stop());
+        this.lifecycle.defer('REST connections', 'connections', () => this.oblectoAPI.close());
         this.realTimeController = new RealtimeController(this);
+        this.lifecycle.defer('realtime intake', 'intake', () => this.realTimeController.stop());
+        this.lifecycle.defer('realtime connections', 'connections', () => this.realTimeController.close());
 
         // Jellyfin-compatible API for Jellyfin apps
-        if (this.config.jellyfin.enabled) this.embyServer = new EmbyEmulation(this);
+        if (this.config.jellyfin.enabled) {
+            const emby = this.embyServer = new EmbyEmulation(this);
+            this.lifecycle.defer('Jellyfin intake', 'intake', () => emby.stop());
+            this.lifecycle.defer('Jellyfin connections', 'connections', () => emby.close());
+        }
+
+        await this.statistics.settled();
+        await this.seedboxController.loadAllSeedboxes().catch((error: unknown) => logger.error('Seedbox startup failed', error));
+        await this.federation.start().catch((error: unknown) => logger.error('Federation startup failed', error));
+        await this.oblectoAPI.start();
+        // Jellyfin is optional: preserve native service availability if its port is occupied.
+        await this.embyServer?.start().catch((error: unknown) => logger.error('Jellyfin startup failed', error));
 
         // Tracked like jobs started from the maintenance page, so they show up there.
         for (const [enabled, action] of [[this.config.cleaner.runAtBoot, 'clean'], [this.config.indexer.runAtBoot, 'scan']] as const) {
@@ -175,36 +209,14 @@ export default class Oblecto {
     }
 
     private async prepareGroups(): Promise<void> {
-        try {
-            await seedGroups();
-
-            if (await countAdmins() === 0) {
-                logger.warn('No user can manage users or server settings yet. Make one an administrator with:');
-                logger.warn('    oblecto usergroup USERNAME Administrators');
-            }
-        } catch (error) {
-            logger.error('Could not prepare user groups. Does the Groups table exist?', error);
+        await seedGroups();
+        if (await countAdmins() === 0) {
+            logger.warn('No user can manage users or server settings yet. Make one an administrator with:');
+            logger.warn('    oblecto usergroup USERNAME Administrators');
         }
     }
 
-    async close(): Promise<void> {
-        await this.federationStart;
-        await this.federation.close();
-        await this.playback.close();
-        await this.mediaAnalyser.close();
-
-        // Wrapped so a synchronous throw from one service can't keep the others or the database open
-        const closers: (() => unknown)[] = [
-            () => this.oblectoAPI.close(),
-            () => this.realTimeController.close(),
-            () => this.embyServer?.close(),
-            () => this.seedboxController.close()
-        ];
-
-        await Promise.allSettled(closers.map(close => Promise.resolve().then(close)));
-
-        await this.statistics.close();
-        await this.databaseOptimizer.close();
-        await this.database.close();
+    close(): Promise<void> {
+        return this.lifecycle.close();
     }
 }

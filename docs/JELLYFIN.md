@@ -4,6 +4,10 @@ Oblecto answers the Jellyfin API on port 8096 (`jellyfin.port`), so Jellyfin app
 
 For a new native Oblecto desktop client, start with [DESKTOP_CLIENTS.md](DESKTOP_CLIENTS.md) and the [native API](API.md) on port 8080. This compatibility surface uses its own token format, ID scheme, DTOs and tick-based playback times. Its reported Jellyfin version is not a promise that every Jellyfin feature is implemented; the coverage tables below distinguish working routes from stubs.
 
+## Service lifecycle
+
+The compatibility listener starts explicitly after shared services are initialized. A Jellyfin port conflict is logged and leaves the native API available. During shutdown, new requests on existing HTTP connections receive 503 with `{ "code": 503, "message": "Server is shutting down" }`; sockets are disconnected and pending authentication cannot admit new sessions. Playback and active responses finish or are cancelled before the database closes, within the process's 15-second shutdown deadline.
+
 ## Client connection contract
 
 An existing Jellyfin client can discover public server information with `GET /System/Info/Public`, then sign in with `POST /Users/AuthenticateByName` and JSON `{ "Username": "alice", "Pw": "password" }`. Identify the app/device in the header:

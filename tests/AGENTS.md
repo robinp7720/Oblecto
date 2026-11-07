@@ -3,7 +3,7 @@
 What lives here
 - Mocha specs in `tests/mocha/`, reading `tests/fixtures/config.json`.
 - Specs that call the real TMDb, TVDB and fanart.tv APIs in `tests/network/` (opt-in).
-- Startup smoke tests: `tests/startup.ts` (the built server) and `tests/startupTui.ts`.
+- Startup smoke tests: `tests/startup.ts` (the built server) and `tests/startupTui.ts`, and `tests/startupFailure.ts`.
 - Shared helpers in `tests/helpers/` (`federationServer.ts` starts a real server process for the federation
   integration spec).
 - Playwright suites in `tests/browser/`: `playback.spec.ts` drives PlaybackController against a real

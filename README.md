@@ -106,7 +106,9 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `federation`, `seedboxes` | Federation with other Oblecto servers ([docs/FEDERATION.md](docs/FEDERATION.md)) and seedbox imports |
 | `web.enabled` | Serve the web app (on) |
 
-Oblecto refuses to start without a config file or a signing secret, and says why.
+Oblecto refuses to start without a config file or a signing secret, and says why. Startup awaits database migration, group initialization and playback cache preparation before opening the APIs. If required startup fails, acquired services and the database are closed.
+
+On SIGINT or SIGTERM, Oblecto stops accepting requests and polling seedboxes, drains accepted background jobs (including their follow-up work), ends playback, and closes the database last. Cleanup continues if a service fails, and failures produce a nonzero exit. The shutdown deadline is 15 seconds; work still running at that deadline is interrupted. Requests arriving on existing HTTP connections during shutdown receive HTTP 503.
 
 ## Groups and permissions
 

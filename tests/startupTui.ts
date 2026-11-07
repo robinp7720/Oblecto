@@ -1,23 +1,45 @@
 import assert from 'node:assert/strict';
+import { setImmediate } from 'node:timers/promises';
 import { startupConfig } from './startupConfig.js';
 
 const config = await startupConfig();
 process.env.OBLECTO_CONFIG_PATH = config.file;
-const timer = setTimeout(() => { console.error('TUI startup/shutdown timed out'); process.exit(1); }, 25000);
+setTimeout(() => { console.error('TUI startup/shutdown left resources open'); process.exit(1); }, 25000).unref();
 try {
     const { default: core } = await import('../src/core/graphical.js');
     await core.start();
-    await new Promise(resolve => setTimeout(resolve, 250));
     assert.ok(core.oblecto);
-    await core.close();
+    const running = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const events: string[] = [];
+    const app = core.oblecto;
+    app.queue.registerJob('shutdownChild', async () => {
+        await app.database.query('SELECT 1');
+        events.push('child');
+    });
+    app.queue.registerJob('shutdownParent', async () => {
+        running.resolve();
+        await release.promise;
+        await app.database.query('SELECT 1');
+        events.push('parent');
+        app.queue.queueJob('shutdownChild', null);
+    });
+    app.queue.queueJob('shutdownParent', null);
+    await running.promise;
+    let closed = false;
+    const closing = core.close().then(() => { closed = true; });
+    await setImmediate();
+    assert.equal(closed, false);
+    release.resolve();
+    await closing;
+    assert.deepEqual(events, ['parent', 'child']);
+    assert.ok(app.queue.getStats().idle);
+    await assert.rejects(app.database.query('SELECT 1'), /closed/);
     assert.equal(core.oblecto.playback.sessions.size, 0);
-    console.log('TUI starts and awaits playback shutdown');
+    console.log('TUI starts, drains active jobs and descendants, and closes the database last');
 } catch (error) {
     console.error(error);
     process.exitCode = 1;
 } finally {
-    clearTimeout(timer);
     await config.cleanup();
 }
-// The legacy seedbox poller keeps the process alive after the services close.
-process.exit(process.exitCode ?? 0);

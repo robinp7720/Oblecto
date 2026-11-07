@@ -38,6 +38,8 @@ export default class SeedboxImportSSH extends SeedboxImportDriver {
         }));
     }
 
+    async close(): Promise<void> { await this.client.end(); }
+
     async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
         // A separate connection per transfer, so imports can run beside directory listings.
         const client = new Client();

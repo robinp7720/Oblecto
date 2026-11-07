@@ -21,11 +21,14 @@ interface Tracked { job: MaintenanceJob; pending: number }
 export class JobTracker {
     private context = new AsyncLocalStorage<Tracked | undefined>();
     private jobs: Tracked[] = [];
+    private discoveries = new Set<Promise<void>>();
+    private closing = false;
 
     current(): Tracked | undefined { return this.context.getStore(); }
     run<T>(tracked: Tracked | undefined, work: () => T): T { return this.context.run(tracked, work); }
 
     start(action: string, target: string, work: () => Promise<void>): MaintenanceJob {
+        if (this.closing) throw new Error('Maintenance is shutting down');
         const existing = this.jobs.find(({ job }) => job.action === action && job.target === target && job.finishedAt === undefined);
         if (existing) return { ...existing.job };
         const tracked: Tracked = {
@@ -43,7 +46,7 @@ export class JobTracker {
             }
         };
         this.jobs.unshift(tracked);
-        void Promise.resolve().then(() => this.run(tracked, async () => {
+        const discovery = Promise.resolve().then(() => this.run(tracked, async () => {
             tracked.job.state = 'running';
             try {
                 await work();
@@ -56,6 +59,8 @@ export class JobTracker {
                 this.finish(tracked);
             }
         }));
+        this.discoveries.add(discovery);
+        void discovery.finally(() => this.discoveries.delete(discovery));
         return { ...tracked.job };
     }
 
@@ -82,4 +87,10 @@ export class JobTracker {
         this.jobs = this.jobs.filter(({ job }) => job.finishedAt === undefined || ++finished <= 100);
     }
     list(): MaintenanceJob[] { return this.jobs.map(({ job }) => ({ ...job })); }
+
+    /** Stop new scans and wait for every accepted scan to finish discovering jobs. */
+    async close(): Promise<void> {
+        this.closing = true;
+        await Promise.all([...this.discoveries]);
+    }
 }

@@ -1,11 +1,12 @@
 # Oblecto roadmap
 
-Status of the feature tracks this file used to plan in detail, as of 23 October 2026 (after 1.0.1). Pick open work from "Next".
+Status of the feature tracks this file used to plan in detail, as of 7 November 2026 (after 1.0.1). Pick open work from "Next".
 
 ## Done
 
 | Track | Where it lives |
 |---|---|
+| Awaited startup, partial-startup rollback, ordered shutdown and background job draining | `src/lib/oblecto/ServiceLifecycle.ts`, `src/lib/queue/`, startup smoke tests |
 | Adaptive playback defaults/240p, audio-only conversion, delivery overlap, bounded sequential HLS (opt-in), persistent preparation and constrained-network benchmark | `src/lib/playback/`, migration 0017, [streaming](docs/STREAMING.md) |
 | Browse indexes and facet aggregation/cache, shared playback preparation and complete startup diagnostics, deferred web routes/player | `src/submodules/REST/routes/helpers/facets.ts`, `src/lib/playback/`, migration 0015 |
 | Viewing history, personal/admin statistics, server and per-folder library totals in statistics/library settings, and playback-health charts | `src/lib/statistics/`, `Oblecto-Web/src/views/StatisticsView.vue`, [API](docs/API.md#statistics) |

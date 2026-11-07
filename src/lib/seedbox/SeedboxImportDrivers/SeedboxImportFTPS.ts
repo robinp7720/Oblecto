@@ -43,6 +43,11 @@ export default class SeedboxImportFTPS extends SeedboxImportDriver {
         });
     }
 
+    close(): Promise<void> {
+        this.client.close();
+        return Promise.resolve();
+    }
+
     async copy(origin: string, destination: string, callback?: ProgressCallback): Promise<void> {
         const client = new ftp.Client();
 

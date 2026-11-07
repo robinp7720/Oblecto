@@ -20,6 +20,8 @@ See the [desktop client guide](DESKTOP_CLIENTS.md#realtime-updates-and-remote-pl
 
 ## Connection and authentication
 
+During server shutdown, devices are disconnected and pending handshakes cannot admit new connections. Progress subscriptions are removed before background jobs drain; clients should fetch current state after reconnecting to the restarted server.
+
 Authentication happens in the **handshake**, not in a post-connect event. A socket that fails to authenticate never reaches the server's connection handler, so there is no window in which a connected socket has no user.
 
 ```javascript

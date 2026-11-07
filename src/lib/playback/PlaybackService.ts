@@ -110,6 +110,8 @@ export class PlaybackService {
                     500
                 );
         }
+        if (config?.encoderMode !== undefined && !['segment', 'window'].includes(config.encoderMode))
+            throw new PlaybackError('INVALID_CONFIG', 'Invalid playback encoder mode', 500);
         this.scheduler = new Scheduler(
             config?.encodingConcurrency ?? 2,
             config?.maxQueue ?? 64
@@ -118,8 +120,6 @@ export class PlaybackService {
             config?.cacheBytes ?? 10 * 1024 ** 3,
             config?.cacheDirectory
         );
-        if (config?.encoderMode !== undefined && !['segment', 'window'].includes(config.encoderMode))
-            throw new PlaybackError('INVALID_CONFIG', 'Invalid playback encoder mode', 500);
         this.windows = new SegmentWindows(this.cache);
         this.idleMs = config?.idleTimeoutMs ?? 30 * 60 * 1000;
         this.timer = setInterval(() => {

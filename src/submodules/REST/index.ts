@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain */
+import { HttpListener } from '../httpListener.js';
 import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
 import logger from '../logger/index.js';
@@ -23,6 +24,7 @@ export interface OblectoRequest extends Request {
 export default class OblectoAPI {
     public oblecto: Oblecto;
     public server: Server;
+    private listener: HttpListener;
 
     constructor(oblecto: Oblecto) {
         this.oblecto = oblecto;
@@ -80,31 +82,21 @@ export default class OblectoAPI {
             });
         });
 
-        // Start express server
-        // Express 5 calls this on failure too, with the error. Without its main port Oblecto is of no
-        // use, so stop and let a supervisor such as systemd try again.
+        this.listener = new HttpListener(app);
+        this.server = this.listener.server;
+    }
+
+    async start(): Promise<void> {
         const port = this.oblecto.config.server.port;
-
-        this.server = app.listen(port, (error?: NodeJS.ErrnoException) => {
-            if (error) throw new Error(`Could not listen on port ${port}: ${error.code ?? error.message}. Is another server already using it?`);
-
-            logger.info( 'REST API Listening at', `http://localhost:${port}`);
-        });
-    }
-
-    close(): Promise<void> {
-        if (this.server && this.server.listening) {
-            return new Promise((resolve, reject) => {
-                this.server.close(err => {
-                    if (err) {
-                        logger.error( 'Error closing REST server:', err);
-                        return reject(err);
-                    }
-                    logger.info( 'REST server closed successfully');
-                    resolve();
-                });
-            });
+        try {
+            await this.listener.start({ port });
+        } catch (cause) {
+            const error = cause as NodeJS.ErrnoException;
+            throw new Error(`Could not listen on port ${port}: ${error.code ?? error.message}. Is another server already using it?`, { cause });
         }
-        return Promise.resolve();
+        logger.info('REST API Listening at', `http://localhost:${port}`);
     }
+
+    stop(): void { this.listener.stop(); }
+    close(): Promise<void> { return this.listener.close(); }
 }

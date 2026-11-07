@@ -1,4 +1,5 @@
 import async from 'async';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { JobTracker } from '../maintenance/JobTracker.js';
 import logger from '../../submodules/logger/index.js';
 
@@ -14,6 +15,9 @@ export default class Queue {
     public maintenance = new JobTracker();
     private jobs = new Map<string, Job>();
     private queue: async.AsyncPriorityQueue<QueueItem>;
+    private execution = new AsyncLocalStorage<{ active: boolean }>();
+    private closing?: Promise<void>;
+    private accepting = true;
 
     /**
      * @param concurrency - Amount of tasks to handle simultaneously
@@ -27,12 +31,15 @@ export default class Queue {
                 return callback();
             }
 
-            Promise.resolve().then(() => this.maintenance.run(job.maintenance, () => run(job.attr)))
+            const execution = { active: true };
+            Promise.resolve().then(() => this.execution.run(execution, () => this.maintenance.run(job.maintenance, () => run(job.attr))))
                 .then(() => {
+                    execution.active = false;
                     this.maintenance.complete(job.maintenance, false);
                     callback();
                 })
                 .catch((err: unknown) => {
+                    execution.active = false;
                     const level = (err as { level?: unknown } | null)?.level;
 
                     if (typeof level === 'string' && level) {
@@ -71,6 +78,10 @@ export default class Queue {
      * @param priority - Priority for the job
      */
     queueJob(id: string, attr: unknown, priority: number = 5): void {
+        // Accepted jobs and in-flight discovery may enqueue descendants while draining. A stale
+        // async context (for example a detached timer after its job finished) grants no admission.
+        if (!this.accepting && !this.execution.getStore()?.active && !this.maintenance.current()?.job.discovering)
+            throw new Error('Queue is shutting down');
         const maintenance = this.maintenance.current();
         this.maintenance.enqueue(maintenance);
         void this.queue.push({
@@ -120,5 +131,15 @@ export default class Queue {
             running: this.queue.running(),
             idle: this.queue.idle()
         };
+    }
+
+    /** Reject new work and wait for discovery, queued jobs, and their descendants to finish. */
+    close(): Promise<void> {
+        this.accepting = false;
+        this.closing ??= (async () => {
+            await this.maintenance.close();
+            if (!this.queue.idle()) await this.queue.drain();
+        })();
+        return this.closing;
     }
 }

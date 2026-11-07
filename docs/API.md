@@ -30,6 +30,8 @@ When `web.enabled` is on, `/` redirects to `/web/`, which serves the web app, an
 
 ### Errors and retries
 
+During shutdown the server stops accepting new connections. Requests arriving on existing connections receive **503** with `{ "code": 503, "message": "Server is shutting down" }` and `Connection: close`. Clients should reconnect after the server is available again. Accepted background jobs drain before the database closes, subject to the 15-second process shutdown deadline.
+
 The HTTP status is authoritative. Error bodies vary:
 
 ```json

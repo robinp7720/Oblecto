@@ -240,6 +240,7 @@ Notes
 - When extending or modifying endpoints, update this file and the change log below.
 
 Change log
+- 2026-11-07: Separated HTTP construction from awaited listener startup; preserved optional-port failure behavior. Shutdown stops intake and disconnects sockets before draining shared work, then awaits HTTP closure. Pending socket authentication cannot admit a connection during shutdown. Endpoint shapes remain aligned with the bundled Jellyfin 12.1.0 OpenAPI spec.
 - 2026-01-18: Added image-type handling for /items/{id}/images/* with size selection + episode thumb tags; added regression test for episode Thumb tags; created PLAN.md + AGENTS.md for Jellyfin emulation tracking.
 - 2026-01-18: Implemented search hints + multi-type search handling for /items; added tests for array query params in items/users search flows.
 

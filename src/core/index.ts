@@ -1,7 +1,6 @@
 import Oblecto from '../lib/oblecto/index.js';
 import config, { ConfigManager } from '../config.js';
 import { startupProblems } from '../lib/settings/startupChecks.js';
-import { prepareDatabase } from './database.js';
 
 const core = {
     oblecto: undefined as Oblecto | undefined,
@@ -12,9 +11,8 @@ const core = {
 
         if (problems.length) throw new Error(`Oblecto cannot start:\n  - ${problems.join('\n  - ')}`);
 
-        await prepareDatabase(config);
-
-        this.oblecto = new Oblecto(config);
+        this.oblecto ??= new Oblecto(config);
+        await this.oblecto.start();
     },
 
     async close(): Promise<void> {

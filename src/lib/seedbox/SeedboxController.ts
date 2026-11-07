@@ -15,6 +15,10 @@ export default class SeedboxController {
     public seedBoxes: Seedbox[];
     public importQueue: Queue;
     private poller?: NodeJS.Timeout;
+    private starting?: Promise<void>;
+    private polling?: Promise<void>;
+    private closing?: Promise<void>;
+    private stopping = false;
 
     /**
      *
@@ -31,7 +35,13 @@ export default class SeedboxController {
         this.importQueue.registerJob('importEpisode', async (job: { seedbox: Seedbox; origin: string; destination: string }) => await this.importEpisode(job.seedbox, job.origin, job.destination));
     }
 
-    async loadAllSeedboxes(): Promise<void> {
+    loadAllSeedboxes(): Promise<void> {
+        if (this.stopping) return Promise.reject(new Error('Seedboxes are shutting down'));
+        this.starting ??= this.load();
+        return this.starting;
+    }
+
+    private async load(): Promise<void> {
         logger.debug( 'Loading all Seedboxes');
         for (const seedbox of this.oblecto.config.seedboxes) {
             if (!seedbox.enabled) continue;
@@ -39,29 +49,46 @@ export default class SeedboxController {
             await this.addSeedbox(seedbox);
         }
 
-        await this.importAllEpisodes();
-        await this.importAllMovies();
+        await this.poll();
 
+        if (this.stopping) return;
         this.poller = setInterval(() => {
-            void (async () => {
-                await this.importAllEpisodes();
-                await this.importAllMovies();
-            })();
+            void this.poll().catch((error: unknown) => logger.error('Seedbox polling failed', error));
         },
         30 * 60 * 1000
         );
     }
 
-    close(): void {
-        if (this.poller) clearInterval(this.poller);
+    private poll(): Promise<void> {
+        this.polling ??= (async () => {
+            await this.importAllEpisodes();
+            await this.importAllMovies();
+        })().finally(() => { this.polling = undefined; });
+        return this.polling;
+    }
+
+    close(): Promise<void> {
+        this.stopping = true;
+        clearInterval(this.poller);
+        this.closing ??= (async () => {
+            await this.starting?.catch(() => {});
+            await this.polling?.catch(() => {});
+            const failures: unknown[] = [];
+            try { await this.importQueue.close(); } catch (error) { failures.push(error); }
+            const results = await Promise.allSettled(this.seedBoxes.map(seedbox => Promise.resolve().then(() => seedbox.storageDriver.close())));
+            for (const result of results) if (result.status === 'rejected') failures.push(result.reason);
+            if (failures.length) throw new AggregateError(failures, 'Could not close seedbox imports');
+        })();
+        return this.closing;
     }
 
     async addSeedbox(seedboxConfig: ConstructorParameters<typeof Seedbox>[0]): Promise<void> {
         const newSeedbox = new Seedbox(seedboxConfig);
 
+        // Own the connection even if its setup fails partway through.
+        this.seedBoxes.push(newSeedbox);
         await newSeedbox.setupDriver();
 
-        this.seedBoxes.push(newSeedbox);
         logger.debug( `Loaded seedbox ${seedboxConfig.name}`);
     }
 

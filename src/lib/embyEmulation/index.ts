@@ -60,7 +60,9 @@ export default class EmbyEmulation {
     public version: string;
     public serverAPI: EmbyServerAPI;
     public primus: Primus;
-    private sweeper: NodeJS.Timeout;
+    private sweeper?: NodeJS.Timeout;
+    private stopping = false;
+    private closing?: Promise<void>;
     private unsubscribe: () => void;
     // Tokens signed out since start. Tokens are stateless, so this only holds until a restart;
     // changing the password is what revokes every token for good.
@@ -84,9 +86,6 @@ export default class EmbyEmulation {
 
         this.serverAPI = new EmbyServerAPI(this);
 
-        this.sweeper = setInterval(() => this.sweep(), 60 * 60 * 1000);
-        this.sweeper.unref();
-
         // Older apps send ?api_key=, the Jellyfin SDK (and so jellyfin-web) ?ApiKey=
         const apiKeyOf = (req: unknown): string | undefined => {
             const query = (req as { query?: Record<string, unknown> }).query ?? {};
@@ -100,7 +99,7 @@ export default class EmbyEmulation {
             pathname: '/socket',
             authorization: (req, done) => {
                 this.resolveSession(apiKeyOf(req)).then(session => {
-                    if (!session) return done({ statusCode: 403, message: '' });
+                    if (this.stopping || !session) return done({ statusCode: 403, message: '' });
                     done();
                 }).catch(() => done({ statusCode: 403, message: '' }));
             }
@@ -109,7 +108,7 @@ export default class EmbyEmulation {
         this.primus.on('connection', (spark: Spark) => {
             const token = apiKeyOf(spark.request);
 
-            if (!token || !this.sessions[token])
+            if (this.stopping || !token || !this.sessions[token])
                 return spark.end(undefined, { reconnect: false });
 
             this.websocketSessions[token] = spark;
@@ -183,13 +182,32 @@ export default class EmbyEmulation {
         return this.oblecto.config.jellyfin.serverName?.trim() || 'Oblecto';
     }
 
-    close(): Promise<void> {
+    async start(): Promise<void> {
+        await this.serverAPI.start();
+        this.sweeper ??= setInterval(() => this.sweep(), 60 * 60 * 1000);
+        this.sweeper.unref();
+    }
+
+    stop(): void {
+        if (this.stopping) return;
+        this.stopping = true;
+        this.serverAPI.stop();
         clearInterval(this.sweeper);
         this.unsubscribe();
+        for (const spark of Object.values(this.websocketSessions))
+            (spark as Spark).end(undefined, { reconnect: false });
+    }
 
-        return new Promise(resolve => this.primus.destroy({
-            close: true, reconnect: false, timeout: 1000
-        }, resolve));
+    close(): Promise<void> {
+        this.stop();
+        this.closing ??= (async () => {
+            // The HTTP listener owns HTTP shutdown; Primus only tears down its sockets here.
+            await new Promise<void>(resolve => this.primus.destroy({
+                close: false, reconnect: false, timeout: 1000
+            }, resolve));
+            await this.serverAPI.close();
+        })();
+        return this.closing;
     }
 
     private sessionFor(user: User, client: ClientInfo = {}): SessionInfo {

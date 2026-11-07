@@ -5,8 +5,11 @@ Entry points
 - `src/bin/oblecto.ts` provides the CLI (see `src/bin/AGENTS.md`).
 
 Core architecture
-- `src/core/index.ts` checks the configuration (`lib/settings/startupChecks.ts`), brings the database up
-  to date (`core/database.ts`), then constructs `lib/oblecto`. `core/lifecycle.ts` handles signals.
+- `src/core/index.ts` checks the configuration (`lib/settings/startupChecks.ts`), constructs `lib/oblecto`,
+  and awaits its `start()`. Startup owns database preparation (`submodules/prepareDatabase.ts`), group
+  seeding and service initialization. `core/lifecycle.ts` handles signals and the shutdown deadline.
+- `lib/oblecto/ServiceLifecycle.ts` owns partial-startup rollback and ordered, idempotent shutdown.
+  Register cleanup as soon as a resource is acquired; keep database users ahead of database closure.
 - `src/lib/oblecto` wires the queue, indexers, collectors, updaters, cleaners, artwork, playback,
   seedboxes, federation, the REST API, the realtime socket and the Jellyfin emulation.
 - REST API lives in `src/submodules/REST` (Express 5).

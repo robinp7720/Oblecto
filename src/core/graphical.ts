@@ -3,7 +3,6 @@ import blessed from 'neo-blessed';
 import Oblecto from '../lib/oblecto/index.js';
 import config, { ConfigManager } from '../config.js';
 import { startupProblems } from '../lib/settings/startupChecks.js';
-import { prepareDatabase } from './database.js';
 import logger from '../submodules/logger/index.js';
 
 type TaskAttr = {
@@ -25,6 +24,7 @@ const graphical = {
     logBox: null as ReturnType<typeof blessed.list> | null,
     sessionBox: null as ReturnType<typeof blessed.list> | null,
     updater: null as NodeJS.Timeout | null,
+    logListener: undefined as ((log: unknown) => void) | undefined,
 
     initScreen(): void {
         // Create a screen object.
@@ -90,14 +90,14 @@ const graphical = {
 
         if (problems.length) throw new Error(`Oblecto cannot start:\n  - ${problems.join('\n  - ')}`);
 
-        // Before the screen takes over the terminal, so a database problem is readable.
-        await prepareDatabase(config);
-
+        this.oblecto ??= new Oblecto(config);
+        await this.oblecto.start();
+        if (this.updater) return;
         this.initScreen();
 
         logger.silent = true;
 
-        logger.on('log', (log: unknown) => {
+        this.logListener = (log: unknown) => {
             if (!this.logBox) return;
 
             if (log instanceof Error) {
@@ -114,9 +114,8 @@ const graphical = {
 
             this.logBox.down(1);
             this.screen.render();
-        });
-
-        this.oblecto = new Oblecto(config);
+        };
+        logger.on('log', this.logListener);
 
         this.updater = setInterval(() => {
             this.renderStreamerSessions();
@@ -127,11 +126,14 @@ const graphical = {
     },
 
     async close(): Promise<void> {
-        await this.oblecto?.close();
-        if (this.updater) {
-            clearInterval(this.updater);
+        try {
+            await this.oblecto?.close();
+        } finally {
+            if (this.updater) clearInterval(this.updater);
+            if (this.logListener) logger.off('log', this.logListener);
+            this.screen.destroy();
+            logger.silent = false;
         }
-        this.screen.destroy();
     },
 
     renderStreamerSessions(): void {

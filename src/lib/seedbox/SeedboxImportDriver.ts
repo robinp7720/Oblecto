@@ -24,6 +24,8 @@ export default class SeedboxImportDriver {
         // implemented by subclasses
     }
 
+    close(): Promise<void> { return Promise.resolve(); }
+
     async list(path: string): Promise<SeedboxListEntry[]> {
         void path;
         return [];

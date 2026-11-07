@@ -1,8 +1,8 @@
 # Scripts (scripts/)
 
 What lives here
-- `test.sh` (`npm run test:startup`) runs the startup smoke tests, `tests/startup.ts` and
-  `tests/startupTui.ts`, with a throwaway config and in-memory databases. It never touches
+- `test.sh` (`npm run test:startup`) runs the startup smoke tests, `tests/startup.ts`,
+  `tests/startupTui.ts`, and `tests/startupFailure.ts`, with a throwaway config and in-memory databases. It never touches
   `/etc/oblecto`.
 - `fetch-jellyfin-openapi.sh` downloads `jellyfin-openapi-stable.json`, the spec the Jellyfin
   emulation is compared against (see `src/lib/embyEmulation/PLAN.md`).

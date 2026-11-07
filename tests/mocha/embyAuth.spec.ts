@@ -2,7 +2,6 @@
 import nodeSqlite from '../../src/submodules/nodeSqlite.js';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
-import { once } from 'node:events';
 import bcrypt from 'bcrypt';
 import { Sequelize } from 'sequelize';
 import EmbyEmulation from '../../src/lib/embyEmulation/index.js';
@@ -45,7 +44,7 @@ describe('Jellyfin emulation sign-in and sessions', function () {
         const emby = new EmbyEmulation(oblecto() as any);
 
         servers.push(emby);
-        if (!emby.serverAPI.server.listening) await once(emby.serverAPI.server, 'listening');
+        await emby.start();
 
         return { emby, base: `http://127.0.0.1:${(emby.serverAPI.server.address() as AddressInfo).port}` };
     };
