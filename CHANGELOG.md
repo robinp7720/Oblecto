@@ -30,6 +30,7 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 ### New
 
+- The series name beneath an episode title links to its series page with the episode's season selected.
 - Per-library folder statistics in Settings → Statistics and Settings → Libraries: distinct title counts, indexed local files, known storage, missing sizes and problem files. Library managers can read folder inventory without viewing-history access. Nested folders include descendants; overlapping totals are not additive.
 
 - Desktop-client API documentation with a complete native endpoint index, response models, HTTP examples, playback lifecycle, realtime integration and an implementation checklist.
