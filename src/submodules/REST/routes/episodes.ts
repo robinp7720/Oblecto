@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, cast, col, where } from 'sequelize';
 import { Express, Response, NextFunction } from 'express';
 import errors from '../errors.js';
 
@@ -163,29 +163,34 @@ export default (server: Express, oblecto: Oblecto) => {
 
     // Endpoint to retrieve the episode next in series based on the local episode ID
     server.get('/episode/:id/next', authMiddleWare.requiresAuth, async function (req: OblectoRequest, res: Response) {
-        // search for attributes
         const results = await Episode.findByPk(req.params.id);
 
         if (!results) {
             res.status(404).send({ message: 'Episode not found' });
             return;
         }
+        // Both fields are stored as text. Compare AND sort numerically so 10
+        // follows 9, and a season finale advances to the next numbered season.
+        const integerType = Episode.sequelize!.getDialect() === 'sqlite' ? 'INTEGER' : 'SIGNED';
+        const season = cast(col('airedSeason'), integerType);
+        const episodeNumber = cast(col('airedEpisodeNumber'), integerType);
         const episode = await Episode.findOne({
             where: {
                 SeriesId: results.SeriesId,
                 [Op.or]: [
                     {
                         [Op.and]: [
-                            { airedEpisodeNumber: { [Op.gt]: results.airedEpisodeNumber } },
-                            { airedSeason: { [Op.gte]: results.airedSeason } },
+                            where(season, Number(results.airedSeason)),
+                            where(episodeNumber, { [Op.gt]: Number(results.airedEpisodeNumber) }),
                         ]
                     },
-                    { [Op.and]: [{ airedSeason: { [Op.gt]: results.airedSeason } },] }
+                    where(season, { [Op.gt]: Number(results.airedSeason) })
                 ]
             },
             order: [
-                ['airedSeason', 'ASC'],
-                ['airedEpisodeNumber', 'ASC'],
+                [season, 'ASC'],
+                [episodeNumber, 'ASC'],
+                ['id', 'ASC'],
             ]
         });
 

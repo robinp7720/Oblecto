@@ -406,7 +406,7 @@ Get the next episode in the series relative to the given episode ID.
 - **URL:** `/episode/:id/next`
 - **Method:** `GET`
 
-Returns a bare episode, without files/tracks, or an empty 200 body at the end. This legacy query compares text season/episode fields; use `/episode/:id/context` for numeric ordering, specials handling and playable `nextUnwatched` navigation.
+Returns a bare episode from the same series, without files/tracks, or an empty 200 body at the end. Season and episode numbers are compared and sorted numerically: episode 9 advances to 10, and a season finale advances to the first stored episode of the next numbered season. Unknown episode IDs return `404`. Use `/episode/:id/context` for separate specials handling and playable `nextUnwatched` navigation.
 
 ### Episode Banner
 - **URL:** `/episode/:id/banner`

@@ -7,6 +7,7 @@ import { pickNextEpisodes } from '../../src/submodules/REST/routes/helpers/nextE
 import { Series, seriesColumns } from '../../src/models/series.js';
 import { Episode, episodeColumns } from '../../src/models/episode.js';
 import { TrackEpisode, trackEpisodesColumns } from '../../src/models/trackEpisode.js';
+import { makeServer as makeRouteServer, makeRes as makeRouteRes } from '../helpers/routes.js';
 
 const makeServer = () => {
     const handlers = new Map();
@@ -38,6 +39,63 @@ const makeRes = () => ({
 });
 
 describe('Next episodes', () => {
+    describe('GET /episode/:id/next on SQLite', () => {
+        let sequelize: Sequelize;
+        let handler: (request: object, response: object) => Promise<void>;
+        const ids: Record<string, number> = {};
+
+        before(async () => {
+            sequelize = new Sequelize({ dialect: 'sqlite', dialectModule: nodeSqlite, storage: ':memory:', logging: false });
+            Series.init(seriesColumns, { sequelize, modelName: 'Series' });
+            Episode.init(episodeColumns, { sequelize, modelName: 'Episode' });
+            await sequelize.sync({ force: true });
+
+            const series = await Series.create({ seriesName: 'Numeric order' });
+            const other = await Series.create({ seriesName: 'Other series' });
+            await Episode.create({ SeriesId: other.id, airedSeason: '1', airedEpisodeNumber: '3' });
+            // Insert out of order so neither row IDs nor text sorting give the right sequence.
+            for (const [season, episode] of [
+                ['10', '1'], ['1', '10'], ['2', '1'], ['1', '1'], ['1', '9'],
+                ['1', '2'], ['1', '11'], ['9', '1'], ['11', '1'], ['01', '04']
+            ]) {
+                ids[`${season}:${episode}`] = (await Episode.create({
+                    SeriesId: series.id, airedSeason: season, airedEpisodeNumber: episode
+                })).id;
+            }
+            const server = makeRouteServer();
+            episodeRoutes(server, {} as Parameters<typeof episodeRoutes>[1]);
+            handler = server.handlers.get('GET /episode/:id/next');
+        });
+
+        after(async () => { await sequelize.close(); });
+
+        for (const [current, next] of [
+            ['1:1', '1:2'], ['1:2', '01:04'], ['01:04', '1:9'],
+            ['1:9', '1:10'], ['1:10', '1:11'], ['1:11', '2:1'],
+            ['2:1', '9:1'], ['9:1', '10:1'], ['10:1', '11:1']
+        ]) {
+            it(`plays ${next} after ${current} in the same series`, async () => {
+                const res = makeRouteRes<Episode | null>();
+                await handler({ params: { id: String(ids[current]) } }, res);
+                assert.equal(res.statusCode, 200);
+                assert.equal(res.body?.id, ids[next]);
+            });
+        }
+
+        it('returns no next episode at the end of the series', async () => {
+            const res = makeRouteRes<Episode | null>();
+            await handler({ params: { id: String(ids['11:1']) } }, res);
+            assert.equal(res.body, null);
+        });
+
+        it('returns 404 for an unknown episode', async () => {
+            const res = makeRouteRes<{ message: string }>();
+            await handler({ params: { id: '999999' } }, res);
+            assert.equal(res.statusCode, 404);
+            assert.deepEqual(res.body, { message: 'Episode not found' });
+        });
+    });
+
     describe('pickNextEpisodes', () => {
         const episode = (id: number, SeriesId: number, airedSeason: string, airedEpisodeNumber: string) => ({ id, SeriesId, airedSeason, airedEpisodeNumber });
 

@@ -71,6 +71,7 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 ### Fixed
 
+- The player's next-episode action and autoplay now follow numeric season and episode order, fixing jumps from episode 1 to 10, skipped episodes after 9, and incorrect season transitions.
 - Moving the mouse over the player reveals the progress bar and controls, and keeps them visible until the cursor is idle.
 
 - Legacy MySQL/MariaDB upgrades recover from the 64-index limit caused by older Sequelize alter-syncs. Migration 0016 removes only numbered exact copies of provider-ID indexes, retaining the original unique constraints and every row.
