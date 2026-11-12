@@ -4,12 +4,13 @@ import { Series } from '../../models/series.js';
 import tls from 'node:tls';
 import type { Socket } from 'node:net';
 import { promises as fs } from 'node:fs';
-import { randomBytes, randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { createPublicKey, randomBytes, randomUUID } from 'node:crypto';
 import { Op } from 'sequelize';
 import type Oblecto from '../oblecto/index.js';
 import type { IConfig } from '../../interfaces/config.js';
 import { ConfigManager } from '../../config.js';
-import { FederationRecord } from '../../models/federationRecord.js';
+import { ConfigManager, configPath } from '../../config.js';
 import { File } from '../../models/file.js';
 import { MovieFiles } from '../../models/movieFiles.js';
 import { EpisodeFiles } from '../../models/episodeFiles.js';
@@ -128,6 +129,21 @@ export class FederationService {
         });
     }
     apply(): Promise<void> { return this.serialize(() => this.applyNow()); }
+    /** Authorizes a peer's public key as a federation client and persists it in the configuration. */
+    async addClientKey(uuid: string, publicKey: string): Promise<void> {
+        if (!/^[a-zA-Z0-9_-]{1,128}$/.test(uuid) || ['local', '__proto__', 'constructor', 'prototype'].includes(uuid))
+            throw new Error('Invalid server identity');
+        const key = createPublicKey(publicKey);
+        if (key.asymmetricKeyType !== 'rsa' || (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048)
+            throw new Error('Use an RSA key of at least 2048 bits');
+        const directory = path.join(path.dirname(configPath()), 'federation', 'trust');
+        await fs.mkdir(directory, { recursive: true, mode: 0o700 });
+        const file = path.join(directory, `${uuid}-${digest(publicKey).slice(0, 16)}.pub`);
+        await fs.writeFile(file, key.export({ type: 'spki', format: 'pem' }) as string, { mode: 0o600 });
+        await this.configure(draft => {
+            draft.federation.clients[uuid] = { key: file, enabled: true };
+        });
+    }
     private async applyNow(): Promise<void> {
         if (this.stopped)
             return;
