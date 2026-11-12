@@ -1,6 +1,7 @@
 import { HttpListener } from '../httpListener.js';
 import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
+import auth from './middleware/auth.js';
 import logger from '../logger/index.js';
 import { corsFor } from '../../lib/network/cors.js';
 import { Server } from 'http';
@@ -65,6 +66,14 @@ export default class OblectoAPI {
             }
             req.combined_params = { ...req.query, ...req.body };
             next();
+        });
+
+        // Authorize a federation peer's public key as a client
+        app.post('/api/v1/federation/clients', auth.requiresAuth, (req: OblectoRequest, res: Response, next: NextFunction) => {
+            const body = req.combined_params ?? {};
+            this.oblecto.federation.addClientKey(String(body.uuid ?? ''), String(body.publicKey ?? ''))
+                .then(() => res.status(201).json({ uuid: body.uuid }))
+                .catch(next);
         });
 
         // Initialize routes
