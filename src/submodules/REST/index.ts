@@ -1,6 +1,7 @@
 import { HttpListener } from '../httpListener.js';
 import express, { Request, Response, NextFunction } from 'express';
 import routes from './routes/index.js';
+import authMiddleWare from './middleware/auth.js';
 import logger from '../logger/index.js';
 import { corsFor } from '../../lib/network/cors.js';
 import { Server } from 'http';
@@ -65,6 +66,12 @@ export default class OblectoAPI {
             }
             req.combined_params = { ...req.query, ...req.body };
             next();
+        });
+
+        // Active streaming sessions
+        app.get('/streaming/sessions', authMiddleWare.requiresAuth, (req: OblectoRequest, res: Response) => {
+            const sessions = this.oblecto.playback?.sessions;
+            res.send(sessions ? Array.from(sessions.values()) : []);
         });
 
         // Initialize routes
