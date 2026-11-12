@@ -5,9 +5,43 @@ import { embyUserCan } from '../../permission.js';
 import { maintenanceWork } from '../../../../maintenance/dispatch.js';
 import { getRequestList, getRequestValue } from '../../requestUtils.js';
 import { allGenres, formatGenre } from '../../library.js';
+import { Movie } from '../../../../../models/movie.js';
+import { Series } from '../../../../../models/series.js';
+import { Episode } from '../../../../../models/episode.js';
+import { File } from '../../../../../models/file.js';
+import { join } from 'node:path';
+import { mkdir, rename } from 'node:fs/promises';
 
 export default (server: Application, embyEmulation: EmbyEmulation): void => {
     // Collections
+    const cleanup = async (type: 'movie' | 'series', groupBy: string[], separateSeasons: boolean): Promise<void> => {
+        const root = type === 'movie' ? embyEmulation.oblecto.config.movies : embyEmulation.oblecto.config.series;
+        if (!root) return;
+        const items = type === 'movie'
+            ? await Movie.findAll({ include: [File] })
+            : await Series.findAll({ include: [{ model: Episode, include: [File] }] });
+        for (const item of items) {
+            const episodes = type === 'series' ? (item.get('Episodes') as Episode[] | undefined) ?? [] : [];
+            const files = type === 'movie' ? (item.get('Files') as File[] | undefined) ?? [] : episodes.flatMap(episode => (episode.get('Files') as File[] | undefined) ?? []);
+            for (const file of files) {
+                const source = file.get('path') as string | undefined;
+                if (!source) continue;
+                const parts = groupBy.map(key => {
+                    if (key === 'year') return String(item.get('releaseDate') ?? '').slice(0, 4);
+                    if (key === 'genre') return String(item.get('genres') ?? '').split(',').map(genre => genre.trim()).filter(Boolean).join(', ');
+                    return item.get(key) as string | undefined;
+                }).filter((part): part is string => Boolean(part));
+                if (type === 'series' && separateSeasons) {
+                    const episode = episodes.find(candidate => ((candidate.get('Files') as File[] | undefined) ?? []).some(candidateFile => candidateFile.id === file.id));
+                    if (episode) parts.push(`Season ${episode.get('airedSeason') as number}`);
+                }
+                const targetDir = join(root, ...parts);
+                await mkdir(targetDir, { recursive: true });
+                const target = join(targetDir, source.split(/[\\/]/).pop() as string);
+                if (target !== source) await rename(source, target);
+            }
+        }
+    };
     server.get('/collections', (_req: Request, res: Response) => { res.send([]); });
     server.get('/collections/:collectionid/items', (_req: Request, res: Response) => { res.send([]); });
 
@@ -28,6 +62,12 @@ export default (server: Application, embyEmulation: EmbyEmulation): void => {
         const work = maintenanceWork(embyEmulation.oblecto, 'scan', 'all');
 
         if (work) embyEmulation.oblecto.queue.maintenance.start('scan', 'all', work);
+        res.status(204).send();
+    });
+    server.post('/library/cleanup', async (req: EmbyRequest, res: Response) => {
+        if (!await embyUserCan(req, 'libraries.manage')) return res.status(403).send('Forbidden');
+        const body = (req.body ?? {}) as { type?: 'movie' | 'series'; groupBy?: string[]; separateSeasons?: boolean };
+        await cleanup(body.type ?? 'series', body.groupBy ?? [], body.separateSeasons ?? false);
         res.status(204).send();
     });
     server.get('/library/series/added', (_req: Request, res: Response) => { res.send([]); });
