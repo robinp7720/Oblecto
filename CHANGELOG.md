@@ -30,6 +30,8 @@ Upgrading from 1.0? The database updates itself at start (migrations 0006 to 001
 
 ### New
 
+- Playback controls now have separate Audio and Subtitles menus. The settings gear shows a compact list of Quality, Speed, Source, and Chapters, opening one category at a time while keeping technical details inside each menu.
+
 - The series name beneath an episode title links to its series page with the episode's season selected.
 - Per-library folder statistics in Settings → Statistics and Settings → Libraries: distinct title counts, indexed local files, known storage, missing sizes and problem files. Library managers can read folder inventory without viewing-history access. Nested folders include descendants; overlapping totals are not additive.
 

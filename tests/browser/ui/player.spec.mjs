@@ -63,9 +63,11 @@ function json (route, body, status = 200) {
 
 // `me` answers /api/v1/me; the body of every new playback session is pushed
 // onto `sessions`.
-async function stub (page, { me = account(), sessions = [], progress = [], markers = {}, thumbnailStatus = 200, nextEpisode, artworkStatus = 404 } = {}) {
+async function stub (page, { me = account(), sessions = [], updates = [], progress = [], markers = {}, episode = EPISODE, thumbnailStatus = 200, nextEpisode, artworkStatus = 404 } = {}) {
   // Everything is namespaced under a dedicated API origin so the stubs cannot
   // collide with the dev server's own module paths.
+  const selectedTracks = { ...SESSION.selectedTracks }
+  let fileId = episode.Files[0]?.id
   await page.route('**oblecto.test/**', route => {
     const request = route.request()
     const url = new URL(request.url())
@@ -90,9 +92,17 @@ async function stub (page, { me = account(), sessions = [], progress = [], marke
 
     if (path.startsWith('/playback/sessions')) {
       const method = request.method()
-      if (method === 'POST' && path === '/playback/sessions') sessions.push(request.postDataJSON())
+      if ((method === 'POST' && path === '/playback/sessions') || method === 'PATCH') {
+        const requestBody = request.postDataJSON()
+        if (method === 'POST') sessions.push(requestBody)
+        else updates.push(requestBody)
+        fileId = requestBody.fileId ?? fileId
+        for (const key of ['audioStreamIndex', 'subtitleStreamIndex', 'subtitleMode']) {
+          if (requestBody[key] !== undefined) selectedTracks[key] = requestBody[key]
+        }
+      }
       if (method === 'POST' && path.endsWith('/progress')) progress.push(request.postDataJSON())
-      if (method === 'POST' || method === 'PATCH') return json(route, { ...SESSION, ...markers })
+      if (method === 'POST' || method === 'PATCH') return json(route, { ...SESSION, ...markers, selectedTracks, tracks: episode.Files.find(file => file.id === fileId)?.Streams || [] })
       return route.fulfill({ status: 204, headers: CORS, body: '' })
     }
 
@@ -101,7 +111,7 @@ async function stub (page, { me = account(), sessions = [], progress = [], marke
     }
 
     if (/^\/episode\/\d+\/next/.test(path)) return json(route, nextEpisode === undefined ? { id: Number(path.split('/')[2]) + 1, episodeName: 'Paradigm Shift', airedSeason: '2', airedEpisodeNumber: '5', runtime: 42 } : nextEpisode)
-    if (/^\/episode\/\d+(?:\/info)?$/.test(path)) return json(route, { ...EPISODE, id: Number(path.split('/')[2]) })
+    if (/^\/episode\/\d+(?:\/info)?$/.test(path)) return json(route, { ...episode, id: Number(path.split('/')[2]) })
 
     return json(route, [])
   })
@@ -124,10 +134,10 @@ async function boot (page, options) {
   return errors
 }
 
-async function play (page) {
+async function play (page, media = EPISODE) {
   await page.evaluate(episode => {
     window.__store.setPlaying({ title: episode.episodeName, type: 'episode', entity: episode })
-  }, EPISODE)
+  }, media)
   await page.waitForSelector('.player-root video')
   await page.waitForFunction(() => {
     const video = document.querySelector('.player-root video')
@@ -312,10 +322,36 @@ test.describe('@desktop player', () => {
     await expect(page.locator('.as-popover .container')).toHaveCount(0)
   })
 
+  test('menu triggers switch directly and radio arrows do not change volume', async ({ page }) => {
+    const updates = []
+    await boot(page, { updates })
+    await play(page)
+    const audio = page.getByRole('button', { name: 'Audio tracks', exact: true })
+    const subtitles = page.getByRole('button', { name: 'Subtitles', exact: true })
+    const gear = page.getByRole('button', { name: 'Playback settings', exact: true })
+    await gear.click()
+    await audio.click()
+    await expect(page.locator('.surface')).toHaveCount(1)
+    await expect(audio).toHaveAttribute('aria-expanded', 'true')
+    await expect(gear).toHaveAttribute('aria-expanded', 'false')
+    const volume = await page.evaluate(() => document.querySelector('.player-root video').volume)
+    await page.keyboard.press('ArrowDown')
+    await expect.poll(() => updates.at(-1)?.audioStreamIndex).toBe(2)
+    expect(await page.evaluate(() => document.querySelector('.player-root video').volume)).toBe(volume)
+    await subtitles.click()
+    await expect(page.locator('.surface')).toHaveCount(1)
+    await expect(subtitles).toHaveAttribute('aria-expanded', 'true')
+    await expect(audio).toHaveAttribute('aria-expanded', 'false')
+    await subtitles.click()
+    await expect(page.locator('.surface')).toHaveCount(0)
+    await expect(subtitles).toBeFocused()
+  })
+
   test('240p quality can be selected without interrupting player controls', async ({ page }) => {
     const errors = await boot(page)
     await play(page)
     await page.click('button[aria-label="Playback settings"]')
+    await page.getByRole('button', { name: /^Quality / }).click()
     await page.click('button[role="radio"]:has-text("240p")')
     await expect(page.locator('button[role="radio"]:has-text("240p")')).toHaveAttribute('aria-checked', 'true')
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').readyState)).toBeGreaterThanOrEqual(2)
@@ -327,17 +363,131 @@ test.describe('@desktop player', () => {
     await play(page)
 
     await page.click('button[aria-label="Playback settings"]')
+    await page.getByRole('button', { name: /^Speed / }).click()
     await page.click('button[role="radio"]:has-text("1.5x")')
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').playbackRate))
       .toBe(1.5)
 
     // Switching a track re-opens the session and re-attaches the element, which
     // resets rate and volume unless they are explicitly re-applied.
+    await page.getByRole('button', { name: 'Audio tracks', exact: true }).click()
     await page.click('button[role="radio"]:has-text("German")')
     await page.waitForFunction(() => document.querySelector('.player-root video').readyState >= 2, { timeout: 20000 })
 
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').playbackRate), { timeout: 8000 })
       .toBe(1.5)
+  })
+})
+
+test.describe('@desktop @phone playback menus', () => {
+  test('settings shows categories, restores focus on Back, and resets on reopen', async ({ page }, testInfo) => {
+    await boot(page)
+    await play(page)
+    const gear = page.getByRole('button', { name: 'Playback settings', exact: true })
+    await gear.click()
+    const surface = page.locator('.surface')
+    await expect(surface.getByRole('radio')).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath('settings-menu.png') })
+    await expect(surface.getByRole('button', { name: /^Quality Auto$/ })).toBeVisible()
+    await expect(surface.getByRole('button', { name: /^Chapters / })).toHaveCount(0)
+    await expect(surface.getByText('Audio', { exact: true })).toHaveCount(0)
+    await surface.getByRole('button', { name: /^Quality / }).click()
+    await expect(surface.getByRole('radio', { name: 'Auto', exact: true })).toBeFocused()
+    await expect(surface.getByRole('radiogroup')).toHaveCount(1)
+    await surface.getByRole('button', { name: 'Back to playback settings' }).click()
+    await expect(surface.getByRole('button', { name: /^Quality / })).toBeFocused()
+    await surface.getByRole('button', { name: /^Speed / }).click()
+    await surface.getByRole('radio', { name: '1.5x', exact: true }).click()
+    await surface.getByRole('button', { name: 'Back to playback settings' }).click()
+    await expect(surface.getByRole('button', { name: 'Speed 1.5x', exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(surface).toHaveCount(0)
+    await expect(gear).toBeFocused()
+    await gear.click()
+    await expect(surface.getByRole('heading', { name: 'Playback settings' })).toBeVisible()
+  })
+
+  test('audio and subtitles keep technical labels and apply their own selections', async ({ page }) => {
+    const updates = []
+    await boot(page, { updates })
+    await play(page)
+    const audio = page.getByRole('button', { name: 'Audio tracks', exact: true })
+    const subtitles = page.getByRole('button', { name: 'Subtitles', exact: true })
+    await audio.click()
+    const surface = page.locator('.surface')
+    await expect(surface.getByRole('radiogroup', { name: 'Audio track', exact: true })).toBeVisible()
+    await surface.getByRole('radio', { name: 'German · AC3', exact: true }).click()
+    await expect.poll(() => updates.at(-1)?.audioStreamIndex).toBe(2)
+    await expect(surface.getByRole('radio', { name: 'German · AC3', exact: true })).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
+    await expect(audio).toBeFocused()
+    await subtitles.click()
+    await expect(surface.getByRole('radiogroup', { name: 'Audio track', exact: true })).toHaveCount(0)
+    const english = surface.getByRole('radio', { name: 'English', exact: true })
+    await expect(english).toBeVisible()
+    await surface.getByRole('radio', { name: 'Off', exact: true }).click()
+    await expect.poll(() => updates.at(-1)?.subtitleMode).toBe('off')
+    await expect(english).toBeDisabled()
+    await surface.getByRole('radio', { name: 'Forced only', exact: true }).click()
+    await expect.poll(() => updates.at(-1)?.subtitleMode).toBe('forced')
+    await expect(english).toBeEnabled()
+    await surface.getByRole('radio', { name: 'Automatic', exact: true }).click()
+    await expect.poll(() => updates.at(-1)?.subtitleMode).toBe('auto')
+    await english.click()
+    await expect.poll(() => updates.at(-1)?.subtitleStreamIndex).toBe(3)
+    await expect(english).toHaveAttribute('aria-checked', 'true')
+    await page.keyboard.press('Escape')
+    await expect(subtitles).toBeFocused()
+    await page.keyboard.press('c')
+    await expect.poll(() => updates.at(-1)?.subtitleMode).toBe('off')
+  })
+
+  test('playback errors open the source page directly', async ({ page }) => {
+    await boot(page)
+    await page.route('**/playback/sessions', route => json(route, { message: 'Cannot play this file' }, 422))
+    await page.evaluate(episode => window.__store.setPlaying({ title: episode.episodeName, type: 'episode', entity: episode }), EPISODE)
+    await page.getByRole('button', { name: 'Choose another source', exact: true }).click()
+    await expect(page.locator('.surface').getByRole('heading', { name: 'Source', exact: true })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /godspeed.720p/ })).toBeVisible()
+  })
+
+  test('source choices preserve filenames and close after changing files', async ({ page }) => {
+    const sessions = []
+    await boot(page, { sessions })
+    await play(page)
+    await page.getByRole('button', { name: 'Playback settings', exact: true }).click()
+    await page.getByRole('button', { name: /^Source / }).click()
+    await page.getByRole('radio', { name: /godspeed.720p/ }).click()
+    await expect.poll(() => sessions.at(-1)?.fileId).toBe(12)
+    await expect(page.locator('.surface')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Subtitles', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Audio tracks', exact: true })).toHaveCount(0)
+  })
+
+  test('long duplicate tracks scroll without horizontal overflow', async ({ page }, testInfo) => {
+    const episode = structuredClone(EPISODE)
+    episode.Files = [episode.Files[0]]
+    episode.Files[0].Streams = Array.from({ length: 25 }, (_, index) => ({
+      index, codec_type: 'audio', codec_name: 'ac3', channels: 6,
+      tags: { language: 'eng', title: 'Director commentary and production notes about the original theatrical release' }
+    }))
+    await boot(page, { episode })
+    await play(page, episode)
+    await page.getByRole('button', { name: 'Audio tracks', exact: true }).click()
+    const body = page.locator('.surface .body')
+    await expect(body.getByRole('radio', { name: /Track 25$/ })).toHaveCount(1)
+    await body.getByRole('radio', { name: /Track 25$/ }).scrollIntoViewIfNeeded()
+    expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true)
+    expect(await body.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    const box = await page.locator('.surface .container').boundingBox()
+    const heading = await body.getByRole('heading', { name: 'Audio', exact: true }).boundingBox()
+    expect(heading.y).toBeGreaterThanOrEqual(box.y)
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width + 1)
+    await page.screenshot({ path: testInfo.outputPath('audio-menu.png') })
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Playback settings', exact: true }).click()
+    await expect(page.locator('.surface').getByRole('button', { name: /^Source / })).toHaveCount(0)
   })
 })
 
@@ -430,6 +580,30 @@ test.describe('@phone player', () => {
     expect(box.width).toBeCloseTo(viewport.width, 0)
   })
 
+  test('menus fit narrow portrait and landscape and sheet traps focus', async ({ page }) => {
+    await boot(page)
+    await play(page)
+    for (const viewport of [{ width: 352, height: 740 }, { width: 740, height: 352 }]) {
+      await page.setViewportSize(viewport)
+      const controls = page.locator('.player-root .controls')
+      expect(await controls.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      await page.getByRole('button', { name: 'Subtitles', exact: true }).click()
+      const sheet = page.locator('.as-sheet .container')
+      const buttons = sheet.locator('button:not(:disabled)')
+      await buttons.last().focus()
+      await page.keyboard.press('Tab')
+      await expect(buttons.first()).toBeFocused()
+      await page.keyboard.press('Shift+Tab')
+      await expect(buttons.last()).toBeFocused()
+      const box = await sheet.boundingBox()
+      expect(box.y).toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1)
+      await page.locator('.as-sheet .backdrop').click({ position: { x: 5, y: 5 } })
+      await expect(sheet).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Subtitles', exact: true })).toBeFocused()
+    }
+  })
+
   test('double tap seeks back ten seconds', async ({ page }) => {
     await boot(page)
     await play(page)
@@ -468,6 +642,7 @@ test.describe('@desktop @phone playback markers', () => {
     await expect.poll(() => page.evaluate(() => document.querySelector('.player-root video').currentTime)).toBeGreaterThanOrEqual(10)
     await expect(page.getByRole('button', { name: 'Skip intro', exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'Playback settings', exact: true }).click()
+    await page.getByRole('button', { name: /^Chapters / }).click()
     await page.getByRole('button', { name: 'Credits 0:40' }).click()
     await expect(page.getByRole('button', { name: 'Skip credits', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Skip credits', exact: true }).click()
