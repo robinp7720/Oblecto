@@ -136,6 +136,7 @@ export function planPlayback(
         !burnSubtitles &&
         !adaptive &&
         !options.forceHls &&
+        media.container !== 'mp4' &&
         (c.containers ?? ['mp4', 'm4v']).includes(media.container);
     const method = direct
         ? 'direct'
