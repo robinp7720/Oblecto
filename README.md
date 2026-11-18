@@ -97,7 +97,7 @@ Oblecto reads `OBLECTO_CONFIG_PATH`, or `/etc/oblecto/config.json`. Anything the
 | `authentication.localSubnets`, `trustProxy` | What counts as the local network, and whether to trust `X-Forwarded-For` |
 | `server.corsOrigins` | Other web origins allowed to call the APIs from a browser (none) |
 | `logging` | Log `directory` (beside the config file), `level`, `maxSizeMB`, `maxFiles` |
-| `indexer.runAtBoot`, `cleaner.runAtBoot` | Scan the libraries, or clean up missing files, at every start (off) |
+| `indexer.runAtBoot`, `cleaner.runAtBoot` | Scan the libraries, or clean up missing files, at every start (off). Cleanup keeps catalog entries on permission and I/O errors. |
 | `queue.concurrency` | How many background jobs (identifying, metadata, artwork) run at once (1) |
 | `files.doHash`, `fileExtensions.video` | Hash files to find duplicates (on), and which extensions count as video |
 | `ffmpeg.pathFFmpeg`, `ffmpeg.pathFFprobe` | FFmpeg and ffprobe to use, if not the ones on `PATH` |

@@ -313,4 +313,56 @@ describe('Movies browse list route', () => {
         assert.equal(invalidRes.statusCode, 400);
         assert.match(String(invalidRes.body.message), /cursor/i);
     });
+    it('counts a movie with several matching files once and returns viewer progress', async () => {
+        const file = await File.create({ path: '/media/movies/action-hero-4k.mkv' });
+        await MovieFiles.create({ MovieId: 1, FileId: file.id });
+        const server = makeServer();
+        moviesRoutes(server as any, {} as any);
+        const handler = server.handlers.get('GET /movies/list/:sorting');
+        const page = async (cursor?: string) => {
+            const res = makeRes();
+            await handler({
+                params: { sorting: 'movieName' }, authorization: { user: { id: 1 } },
+                combined_params: { mode: 'browse', count: 1, order: 'asc', libraryPath: '/media/', cursor }
+            }, res);
+            assert.equal(res.statusCode, 200);
+            return res.body;
+        };
+        try {
+            const first = await page();
+            assert.deepEqual(first.items.map((item: Movie) => item.id), [1]);
+            assert.equal(first.items[0].TrackMovies[0].progress, 0.95);
+            assert.ok(first.pageInfo.nextCursor);
+            const last = await page(first.pageInfo.nextCursor);
+            assert.deepEqual(last.items.map((item: Movie) => item.id), [2]);
+            assert.equal(last.pageInfo.nextCursor, null);
+        } finally { await file.destroy(); }
+    });
+
+    it('paginates through equal and missing release dates in both directions', async () => {
+        const dates = [null, null, '2020-01-01', '2020-01-01'];
+        const movies = await Movie.bulkCreate(dates.map((releaseDate, i) => ({ movieName: `Cursor fixture ${i}`, releaseDate })));
+        const server = makeServer();
+        moviesRoutes(server as any, {} as any);
+        const handler = server.handlers.get('GET /movies/list/:sorting');
+        try {
+            for (const order of ['asc', 'desc']) {
+                const expected = movies.map(movie => movie.id);
+                if (order === 'desc') expected.reverse();
+                let cursor: string | null = null;
+                for (const id of expected) {
+                    const res = makeRes();
+                    await handler({
+                        params: { sorting: 'releaseDate' }, authorization: { user: { id: 1 } },
+                        combined_params: { mode: 'browse', q: 'Cursor fixture', count: 1, order, cursor }
+                    }, res);
+                    assert.equal(res.statusCode, 200);
+                    assert.deepEqual(res.body.items.map((item: Movie) => item.id), [id]);
+                    cursor = res.body.pageInfo.nextCursor;
+                    assert.equal(Boolean(cursor), id !== expected.at(-1));
+                }
+            }
+        } finally { await Movie.destroy({ where: { id: movies.map(movie => movie.id) } }); }
+    });
+
 });

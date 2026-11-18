@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Library cleanup, browsing and imports
+
+- Cleanup keeps catalog entries when a file check fails because of permissions or a storage error.
+- Movie and series browse pages count each matching title once and include titles with missing sort values in both directions.
+- Seedbox imports queue indexing after the transfer finishes and the file reaches its destination. Failed transfers remain eligible for retry.
+- Web search preserves punctuation in movie, series and episode titles, including slashes, question marks and number signs.
+
 ### Backend contracts and service boundaries
 
 - Queue job names and payloads are checked together for handlers and producers, including seedbox imports. Duplicate registrations and unknown jobs fail immediately; accepted-job draining and maintenance tracking are preserved.

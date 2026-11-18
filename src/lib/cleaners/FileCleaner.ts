@@ -37,8 +37,13 @@ export default class FileCleaner {
 
             try {
                 await fs.stat(path);
-            } catch (_) {
-                logger.info( file.path, 'not found. Removing from database');
+            } catch (error) {
+                const code = (error as NodeJS.ErrnoException).code;
+                if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+                    logger.warn(`Keeping ${path} after stat failed: ${String(error)}`);
+                    continue;
+                }
+                logger.info(`Removing missing file ${path} from the database`);
 
                 await file.destroy();
                 await this.oblecto.mediaAnalyser?.removeFile(file.id);

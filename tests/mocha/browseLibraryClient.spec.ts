@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import EpisodeLibraryClient from '../../Oblecto-Web/src/oblecto-client/src/OblectoLibraryClients/EpisodeLibraryClient.js';
 import MovieLibraryClient from '../../Oblecto-Web/src/oblecto-client/src/OblectoLibraryClients/MovieLibraryClient.js';
 import SeriesLibraryClient from '../../Oblecto-Web/src/oblecto-client/src/OblectoLibraryClients/SeriesLibraryClient.js';
 
@@ -63,3 +64,15 @@ cursor: 'previous-page'
         });
     });
 }
+
+describe('Media search clients', () => {
+    for (const [route, Client] of [['movies', MovieLibraryClient], ['shows', SeriesLibraryClient], ['episodes', EpisodeLibraryClient]] as const) {
+        it(`encodes the search term as one path segment for ${route}`, async () => {
+            const client = new Client({ axios: { get: async (url: string) => {
+                assert.equal(url, `/${route}/search/Face%2FOff%3F%20%231%20(100%25)`);
+                return { data: ['match'] };
+            } } });
+            assert.deepEqual(await client.search('Face/Off? #1 (100%)'), ['match']);
+        });
+    }
+});

@@ -337,4 +337,33 @@ describe('Series browse list route', () => {
         assert.ok(Array.isArray(res.body));
         assert.equal(res.body.length, 2);
     });
+    it('counts a series with multiple matching episodes once in library pages', async () => {
+        const episode = await Episode.create({ SeriesId: 2, episodeName: 'Town Finale', airedSeason: '1', airedEpisodeNumber: '2' });
+        const file = await File.create({ path: '/tv/drama/town-finale.mkv' });
+        await EpisodeFiles.create({ EpisodeId: episode.id, FileId: file.id });
+        const server = makeServer();
+        seriesRoutes(server as any, {} as any);
+        const handler = server.handlers.get('GET /series/list/:sorting');
+        const page = async (cursor?: string) => {
+            const res = makeRes();
+            await handler({
+                params: { sorting: 'seriesName' }, authorization: { user: { id: 5 } },
+                combined_params: { mode: 'browse', count: 1, order: 'asc', libraryPath: '/tv/', cursor }
+            }, res);
+            assert.equal(res.statusCode, 200);
+            return res.body;
+        };
+        try {
+            const first = await page();
+            assert.deepEqual(first.items.map((item: Series) => item.seriesName), ['Cozy Town']);
+            assert.ok(first.pageInfo.nextCursor);
+            const last = await page(first.pageInfo.nextCursor);
+            assert.deepEqual(last.items.map((item: Series) => item.seriesName), ['Galaxy Patrol']);
+            assert.equal(last.pageInfo.nextCursor, null);
+        } finally {
+            await episode.destroy();
+            await file.destroy();
+        }
+    });
+
 });

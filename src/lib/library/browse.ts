@@ -1,4 +1,4 @@
-import { Op, literal, type IncludeOptions, type Model, type ModelStatic, type WhereOptions } from 'sequelize';
+import { Op, col, literal, type FindOptions, type IncludeOptions, type Model, type ModelStatic, type WhereOptions } from 'sequelize';
 import { Movie } from '../../models/movie.js';
 import { Series } from '../../models/series.js';
 import { Episode } from '../../models/episode.js';
@@ -70,23 +70,43 @@ function creditFilter(filters: LibraryFilters): WhereOptions {
     return { [Op.and]: conditions };
 }
 
-async function page<M extends Model>(
+async function page<M extends Model & { id: number }>(
     model: ModelStatic<M>, query: LibraryBrowseQuery, userId: number,
-    clauses: WhereOptions[], include: IncludeOptions[], genreField: string, dateField: string
+    clauses: WhereOptions[], filterJoins: IncludeOptions[], genreField: string, dateField: string, track?: IncludeOptions
 ): Promise<LibraryPage<M>> {
+    const include = track ? [track, ...filterJoins] : filterJoins;
     // Facets describe the whole filtered library, independently of the page or sort direction.
     const facets = await browseFacets(model, query.filters, userId, {
         include, where: { [Op.and]: clauses }, subQuery: false
     }, genreField, dateField);
     if (query.after) clauses.push(buildCursorWhere(query.sort, query.order, query.after.sortValue, query.after.id));
-    const rows = await model.findAll({
-        include,
+    let options: FindOptions = {
         where: { [Op.and]: clauses },
         order: [[query.sort, query.order], ['id', query.order]],
         limit: query.limit + 1,
-        offset: query.after ? undefined : query.offset,
-        subQuery: false
-    });
+        offset: query.after ? undefined : query.offset
+    };
+    // Filter joins can match several files, episodes, credits or progress rows per title.
+    // Page the distinct title keys before loading their data and the viewer's progress.
+    const joins = track && query.filters.watched !== 'all' ? [{ ...track, attributes: [] }, ...filterJoins] : filterJoins;
+    if (joins.length > 0) {
+        const keys = await model.findAll({
+            ...options,
+            attributes: ['id', query.sort],
+            include: joins,
+            group: [col(`${model.name}.id`), col(`${model.name}.${query.sort}`)],
+            subQuery: false,
+            raw: true
+        });
+        if (keys.length === 0) return {
+            items: [], next: null, facets
+        };
+        options = {
+            where: { [Op.and]: [...clauses, { id: { [Op.in]: keys.map(row => row.id) } }] },
+            order: options.order
+        };
+    }
+    const rows = await model.findAll({ ...options, include: track ? [track] : [] });
     const hasNext = rows.length > query.limit;
     const items = hasNext ? rows.slice(0, query.limit) : rows;
     const last = items.at(-1);
@@ -111,7 +131,7 @@ export function browseMovies(query: LibraryBrowseQuery, userId: number): Promise
         const unstarted = [{ '$TrackMovies.id$': null }, { '$TrackMovies.progress$': { [Op.lte]: 0 } }];
         clauses.push({ [Op.or]: unstarted });
     }
-    const include: IncludeOptions[] = [track];
+    const include: IncludeOptions[] = [];
     if (filters.libraryPath !== null && filters.libraryPath !== '') include.push({
         model: File,
         attributes: [],
@@ -122,7 +142,7 @@ export function browseMovies(query: LibraryBrowseQuery, userId: number): Promise
     if (filters.personId !== null) include.push({
         model: MovieCredit, as: 'Credits', attributes: [], required: true, where: creditFilter(filters)
     });
-    return page(Movie, query, userId, clauses, include, 'genres', 'releaseDate');
+    return page(Movie, query, userId, clauses, include, 'genres', 'releaseDate', track);
 }
 
 export function browseSeries(query: LibraryBrowseQuery, userId: number): Promise<LibraryPage<Series>> {

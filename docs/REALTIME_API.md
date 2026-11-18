@@ -201,7 +201,7 @@ Sent after playback progress or a manual watched/unwatched change is persisted, 
 
 ### Server → Client: `seedbox`
 
-Status of seedbox imports.
+Status of seedbox imports. A successful transfer moves the file to its destination before indexing starts. A failed transfer emits `import_error` and can be retried on a later poll.
 
 ```json
 {

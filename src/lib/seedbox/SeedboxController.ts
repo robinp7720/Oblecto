@@ -1,13 +1,11 @@
 import Seedbox from './Seedbox.js';
 import logger from '../../submodules/logger/index.js';
-import { Movie } from '../../models/movie.js';
 import { File } from '../../models/file.js';
 import Queue from '../queue/index.js';
 import type { ImportJobs } from '../queue/jobs.js';
 import { basename, parse, dirname } from 'path';
 import path from 'path';
-import { rename } from 'fs/promises';
-import { mkdirp } from 'mkdirp';
+import { mkdir, rename } from 'fs/promises';
 
 import type Oblecto from '../oblecto/index.js';
 
@@ -109,8 +107,6 @@ export default class SeedboxController {
             destination
         });
 
-        mkdirp.sync(dirname(destination));
-
         let lastUpdate = 0;
         const progressCallback = (transferred: number, total: number) => {
             const now = Date.now();
@@ -129,6 +125,7 @@ export default class SeedboxController {
         };
 
         try {
+            await mkdir(dirname(destination), { recursive: true });
             // Add a suffix to the file while downloading to prevent potential errors while running an import
             // and also to know if a file was successfully downloaded or not
             await seedbox.storageDriver.copy(origin, destination + '.oblectoimport', progressCallback);
@@ -152,6 +149,7 @@ export default class SeedboxController {
                 destination,
                 error: (e as Error).message
             });
+            throw e;
         }
     }
 

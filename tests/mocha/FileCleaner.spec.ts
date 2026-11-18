@@ -1,5 +1,6 @@
 
 import assert from 'node:assert/strict';
+import { mock } from 'node:test';
 import { promises as fs } from 'fs';
 import { File } from '../../src/models/file.js';
 import FileCleaner from '../../src/lib/cleaners/FileCleaner.js';
@@ -36,6 +37,19 @@ describe('FileCleaner', function () {
     });
 
     describe('removedDeletedFiled', function () {
+        it('retains files after I/O or permission errors and continues checking other files', async () => {
+            const destroyed: string[] = [];
+            const codes = ['EIO', 'EACCES', 'ENOTDIR'];
+            mock.method(File, 'findAll', async () => codes.map(code => ({
+                path: code, destroy: async () => { destroyed.push(code); }
+            })));
+            fs.stat = async path => { throw Object.assign(new Error(String(path)), { code: path }); };
+
+            await fileCleaner.removedDeletedFiled();
+
+            assert.deepEqual(destroyed, ['ENOTDIR']);
+        });
+
         it('should remove files that do not exist on disk', async function () {
             const destroyedIds: number[] = [];
 
@@ -60,7 +74,7 @@ describe('FileCleaner', function () {
             // @ts-ignore
             fs.stat = async (path: string) => {
                 if (path.includes('missing')) {
-                    throw new Error('File not found');
+                    throw Object.assign(new Error('File not found'), { code: 'ENOENT' });
                 }
                 return {}; // Success
             };
@@ -85,7 +99,7 @@ describe('FileCleaner', function () {
                 { id: 2, path: '/local/gone.mkv', destroy: async () => { destroyedIds.push(2); } }
             ];
             // @ts-ignore
-            fs.stat = async () => { throw new Error('File not found'); };
+            fs.stat = async () => { throw Object.assign(new Error('File not found'), { code: 'ENOENT' }); };
             // @ts-ignore
             fs.readdir = async (path: string) => (path === '/mnt/share' ? [] : ['other.mkv']);
 
